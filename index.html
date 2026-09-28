@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F4C5C">
+<title>Maata — free calls & messages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF7; --panel:#FFFFFF; --ink:#1C2230; --muted:#667085; --line:#E4E7EC;
+  --peacock:#0F4C5C; --peacock-soft:#E3EFF1; --turmeric:#E8A317; --leaf:#2E8B57; --chili:#C8413A;
+  --mine:#0F4C5C; --mine-ink:#FFFFFF; --theirs:#FFFFFF;
+  font-family:"Sora",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:var(--ink); background:var(--paper);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#12181F;--panel:#1A222B;--ink:#EEF1F4;--muted:#98A2B3;--line:#2A343F;
+    --peacock-soft:#1E3A42;--mine:#1B6B7F;--theirs:#222C36}
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--paper);overflow:hidden}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--turmeric);outline-offset:2px}
+[hidden]{display:none!important}
+svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Auth ---------- */
+.auth{height:100%;display:grid;place-items:center;padding:24px;
+  background:
+   radial-gradient(circle at 15% 20%, rgba(232,163,23,.18) 0 120px, transparent 121px),
+   radial-gradient(circle at 85% 80%, rgba(15,76,92,.14) 0 180px, transparent 181px), var(--paper)}
+.auth-card{width:100%;max-width:380px}
+.wordmark{font-size:56px;font-weight:700;letter-spacing:-.04em;line-height:1;margin:0;color:var(--peacock)}
+@media (prefers-color-scheme:dark){.wordmark{color:#7CC4D4}}
+.wordmark span{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--turmeric);margin-left:4px}
+.tagline{color:var(--muted);margin:10px 0 28px;line-height:1.5}
+.field{display:block;margin-bottom:14px}
+.field span{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.field input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);font-size:16px}
+.field input:focus{border-color:var(--peacock);outline:none}
+.primary{width:100%;padding:14px;border-radius:12px;background:var(--peacock);color:#fff;font-weight:600;font-size:16px}
+.primary:disabled{opacity:.6}
+.switch{margin-top:16px;text-align:center;color:var(--muted);font-size:14px}
+.switch button{color:var(--peacock);font-weight:600;text-decoration:underline}
+@media (prefers-color-scheme:dark){.switch button{color:#7CC4D4}}
+.error{color:var(--chili);font-size:14px;min-height:20px;margin:4px 0 10px}
+
+/* ---------- App shell ---------- */
+.app{height:100%;display:grid;grid-template-columns:340px 1fr}
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side-head{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 8px}
+.brand{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--peacock)}
+@media (prefers-color-scheme:dark){.brand{color:#7CC4D4}}
+.icon-btn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{background:var(--peacock-soft);color:var(--ink)}
+.me{display:flex;gap:10px;align-items:center;padding:4px 16px 12px;font-size:13px;color:var(--muted)}
+.search{margin:0 16px 10px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:15px}
+.contacts{list-style:none;margin:0;padding:0 8px 12px;overflow-y:auto;flex:1}
+.contact{display:flex;gap:12px;align-items:center;padding:10px;border-radius:14px;width:100%;text-align:left}
+.contact:hover{background:var(--paper)}
+.contact[aria-current="true"]{background:var(--peacock-soft)}
+.c-body{flex:1;min-width:0}
+.c-top{display:flex;justify-content:space-between;gap:8px}
+.c-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-time{font-size:12px;color:var(--muted);flex:none}
+.c-last{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.badge{background:var(--turmeric);color:#1C2230;font-size:12px;font-weight:700;border-radius:10px;padding:1px 7px;flex:none}
+.empty-list{padding:24px 16px;color:var(--muted);line-height:1.5;font-size:14px}
+
+.avatar{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:600;color:#fff;flex:none;font-size:16px}
+.avatar.sm{width:34px;height:34px;font-size:13px}
+.avatar .dot{position:absolute;right:0;bottom:0;width:12px;height:12px;border-radius:50%;background:var(--leaf);border:2px solid var(--panel)}
+
+/* ---------- Chat ---------- */
+.chat{display:flex;flex-direction:column;min-height:0;min-width:0}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);padding:24px;max-width:320px;line-height:1.6}
+.chat-empty strong{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+.chat-head{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.chat-head .who{flex:1;min-width:0}
+.chat-head .name{font-weight:600}
+.chat-head .status{font-size:13px;color:var(--muted)}
+.chat-head .status.on{color:var(--leaf)}
+.call-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--peacock);background:var(--peacock-soft)}
+@media (prefers-color-scheme:dark){.call-btn{color:#7CC4D4}}
+.back{display:none}
+.messages{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:6px}
+.day{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:3px 10px;border-radius:10px;margin:10px 0}
+.bubble{max-width:min(78%,520px);padding:9px 12px 6px;border-radius:16px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;background:var(--theirs);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.bubble.mine{align-self:flex-end;background:var(--mine);color:var(--mine-ink);border-color:transparent;border-bottom-left-radius:16px;border-bottom-right-radius:4px}
+.meta{display:flex;justify-content:flex-end;gap:4px;font-size:11px;opacity:.75;margin-top:2px}
+.tick.read{color:var(--turmeric);opacity:1}
+.composer{display:flex;gap:8px;padding:10px 12px;background:var(--panel);border-top:1px solid var(--line);align-items:flex-end}
+.composer textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:22px;padding:11px 16px;background:var(--paper);max-height:120px;font-size:16px;line-height:1.35}
+.send{width:46px;height:46px;border-radius:50%;background:var(--peacock);color:#fff;display:grid;place-items:center;flex:none}
+
+/* ---------- Call screen ---------- */
+.call{position:fixed;inset:0;z-index:20;background:#0B2A33;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:calc(40px + env(safe-area-inset-top,0px)) 20px calc(36px + env(safe-area-inset-bottom,0px))}
+.call video{background:#000}
+#remoteVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
+.call.video.live #remoteVideo{opacity:1}
+#localVideo{position:absolute;right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:110px;aspect-ratio:3/4;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,.6);transform:scaleX(-1);display:none;z-index:2}
+.call.video #localVideo{display:block}
+.call-info{position:relative;z-index:1;text-align:center;margin-top:8vh}
+.call.video.live .call-info{margin-top:0;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.call.video.live .call-info .avatar{display:none}
+.call-info .avatar{width:120px;height:120px;font-size:40px;margin:0 auto 18px;box-shadow:0 0 0 0 rgba(232,163,23,.5)}
+.call.ringing .call-info .avatar{animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,163,23,.55)}100%{box-shadow:0 0 0 34px rgba(232,163,23,0)}}
+@media (prefers-reduced-motion:reduce){.call.ringing .call-info .avatar{animation:none}}
+.call-info h2{margin:0;font-size:26px;font-weight:600}
+.call-info p{margin:6px 0 0;opacity:.8}
+.call-controls{position:relative;z-index:1;display:flex;gap:18px}
+.round{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(6px)}
+.round[aria-pressed="true"]{background:#fff;color:#0B2A33}
+.round.end{background:var(--chili)}
+.round.accept{background:var(--leaf)}
+.round svg{width:26px;height:26px}
+.call:not(.video) .video-only{display:none}
+
+/* Incoming sheet */
+.incoming{position:fixed;inset:0;z-index:30;background:rgba(11,42,51,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:calc(70px + env(safe-area-inset-top,0px)) 20px calc(50px + env(safe-area-inset-bottom,0px))}
+.incoming .avatar{width:120px;height:120px;font-size:40px;margin:0 auto 18px;animation:pulse 1.6s infinite}
+.incoming .labels{text-align:center}
+.incoming h2{margin:0;font-size:28px}
+.incoming p{margin:6px 0 0;opacity:.8}
+.incoming .row{display:flex;gap:70px}
+.incoming .round{width:72px;height:72px}
+
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:40;max-width:90vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+
+/* ---------- Mascot ---------- */
+.hero{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hero .wordmark{font-size:clamp(44px,13vw,56px)}
+.mascot{width:min(42vw,160px);height:auto;flex:none;overflow:visible}
+.mascot,.mascot *,.mini,.mini *,#parrot *{stroke:none}
+.hero .wordmark{white-space:nowrap}
+.brand-row{display:flex;align-items:center;gap:6px}
+.brand-row .mini{width:40px;height:40px}
+.bird{animation:bob 3s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.float1{animation:floaty 2.6s ease-in-out infinite;transform-box:fill-box}
+.float2{animation:floaty 3.2s ease-in-out .4s infinite;transform-box:fill-box}
+.float3{animation:floaty 2.9s ease-in-out .8s infinite;transform-box:fill-box}
+.bubble-hi{animation:pop 3s ease-in-out infinite;transform-box:fill-box;transform-origin:0% 100%}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(-3deg)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.bird,.float1,.float2,.float3,.bubble-hi{animation:none}}
+
+/* ---------- Announcement ---------- */
+.notice{margin:0 16px 10px;padding:10px 12px;border-radius:12px;background:#FFF4D6;color:#5A4300;font-size:14px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
+@media (prefers-color-scheme:dark){.notice{background:#3A2F12;color:#FFE6A6}}
+.notice p{margin:0;flex:1}
+.notice button{font-size:18px;line-height:1;padding:0 4px;opacity:.7}
+.flag-btn{background:transparent}
+/* ---------- Mobile ---------- */
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .chat{display:none}
+  .app.in-chat .side{display:none}
+  .app.in-chat .chat{display:flex}
+  .back{display:grid}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="parrot" viewBox="18 22 157 155">
+      <g class="bird">
+        <path d="M72 122 Q52 158 40 166 Q64 152 84 130Z" fill="#1F9E6E"/>
+        <path d="M80 126 Q68 162 62 170 Q82 152 92 132Z" fill="#2D7FF9"/>
+        <path d="M86 128 Q84 160 84 168 Q96 150 98 132Z" fill="#FFC23D"/>
+        <ellipse cx="95" cy="105" rx="32" ry="38" fill="#3CCB7F"/>
+        <ellipse cx="104" cy="113" rx="18" ry="24" fill="#C6F6D5"/>
+        <path d="M70 92 Q56 120 76 142 Q94 128 90 102Z" fill="#22A868"/>
+        <path d="M74 110 Q70 124 78 134" style="stroke:#1A8A55;stroke-width:3;fill:none;stroke-linecap:round"/>
+        <path d="M88 142 v8 M84 150 h8 M104 142 v8 M100 150 h8" style="stroke:#FF7A3D;stroke-width:3.5;stroke-linecap:round;fill:none"/>
+        <circle cx="105" cy="68" r="28" fill="#3CCB7F"/>
+        <path d="M96 44 Q96 26 108 30 Q102 36 104 44Z" fill="#22A868"/>
+        <path d="M104 42 Q110 28 120 34 Q112 38 110 45Z" fill="#FFC23D"/>
+        <path d="M127 62 Q148 63 143 86 Q137 76 125 76Z" fill="#FF7A3D"/>
+        <path d="M126 78 Q134 80 137 87 Q128 90 123 83Z" fill="#E0531F"/>
+        <circle cx="113" cy="61" r="8.5" fill="#fff"/>
+        <circle cx="115" cy="61" r="5" fill="#1C2230"/>
+        <circle cx="117" cy="59" r="1.8" fill="#fff"/>
+        <ellipse cx="116" cy="78" rx="5.5" ry="3.2" fill="#FF8FAB" opacity=".85"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ LOGIN / REGISTER ============ -->
+<section id="auth" class="auth" hidden>
+  <form id="authForm" class="auth-card" novalidate>
+    <div class="hero">
+      <h1 class="wordmark">Maata<span></span></h1>
+      <svg class="mascot" viewBox="0 0 180 175" role="img" aria-label="Friendly green parrot saying hi">
+        <circle cx="95" cy="98" r="64" fill="#FFE08A" opacity=".55"/>
+        <use href="#parrot" x="18" y="18" width="150" height="150"/>
+        <g class="bubble-hi">
+          <rect x="128" y="6" width="50" height="28" rx="14" fill="#FF5C8A"/>
+          <path d="M136 32 L132 44 L146 33Z" fill="#FF5C8A"/>
+          <text x="153" y="25" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="Sora,system-ui,sans-serif">Hi!</text>
+        </g>
+        <g class="float1">
+          <circle cx="22" cy="60" r="15" fill="#2D7FF9"/>
+          <rect x="13" y="54" width="12" height="12" rx="2.5" fill="#fff"/>
+          <path d="M25 58 L32 54 V66 L25 62Z" fill="#fff"/>
+        </g>
+        <g class="float2">
+          <circle cx="28" cy="112" r="13" fill="#E8A317"/>
+          <path d="M23 106 q-2 2 0 6 q4 7 10 10 q3 1 5-1 l-3-3 q-2 1-3 0 q-3-2-5-5 q-1-1 0-3z" fill="#fff"/>
+        </g>
+        <g class="float3">
+          <path d="M160 118 c-4-6-13-2-9 5 l9 8 l9-8 c4-7-5-11-9-5z" fill="#FF5C8A"/>
+        </g>
+      </svg>
+    </div>
+    <p class="tagline" id="authTagline">Free voice calls, video calls and messages with anyone on Maata. Just internet, no call charges.</p>
+    <label class="field" id="nameField" hidden><span>Your name</span><input id="name" autocomplete="name" maxlength="40"></label>
+    <label class="field"><span>Mobile number</span><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="9876543210"></label>
+    <label class="field"><span>Password</span><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters"></label>
+    <p class="error" id="authError" role="alert"></p>
+    <button class="primary" id="authSubmit" type="submit">Log in</button>
+    <p class="switch"><span id="switchText">New to Maata?</span> <button type="button" id="switchMode">Create account</button></p>
+  </form>
+</section>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" class="app" hidden>
+  <aside class="side">
+    <header class="side-head">
+      <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand">Maata</div></div>
+      <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </header>
+    <div class="me" id="meBox"></div>
+    <div class="notice" id="notice" hidden role="status"><span aria-hidden="true">📢</span><p id="noticeText"></p><button id="noticeClose" aria-label="Dismiss announcement">×</button></div>
+    <input class="search" id="search" type="search" placeholder="Search name or number" aria-label="Search contacts">
+    <ul class="contacts" id="contacts"></ul>
+  </aside>
+
+  <main class="chat" id="chat">
+    <div class="chat-empty" id="chatEmpty"><strong>Pick someone to talk to</strong>Choose a contact on the left to send a message or start a free call.</div>
+    <header class="chat-head" id="chatHead" hidden>
+      <button class="icon-btn back" id="backBtn" aria-label="Back to contacts"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div id="chatAvatar"></div>
+      <div class="who"><div class="name" id="chatName"></div><div class="status" id="chatStatus"></div></div>
+      <button class="call-btn" id="voiceBtn" aria-label="Voice call" title="Voice call">
+        <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+      </button>
+      <button class="call-btn flag-btn" id="reportBtn" aria-label="Report this user" title="Report this user">
+        <svg viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>
+      </button>
+      <button class="call-btn" id="videoBtn" aria-label="Video call" title="Video call">
+        <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      </button>
+    </header>
+    <div class="messages" id="messages" hidden></div>
+    <form class="composer" id="composer" hidden>
+      <textarea id="msgInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
+      <button class="send" aria-label="Send message"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+    </form>
+  </main>
+</div>
+
+<!-- ============ CALL SCREEN ============ -->
+<section class="call" id="callScreen" hidden aria-live="polite">
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <div class="call-info">
+    <div id="callAvatar"></div>
+    <h2 id="callName"></h2>
+    <p id="callStatus"></p>
+  </div>
+  <div class="call-controls">
+    <button class="round" id="muteBtn" aria-pressed="false" aria-label="Mute microphone">
+      <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+    </button>
+    <button class="round video-only" id="camBtn" aria-pressed="false" aria-label="Turn camera off">
+      <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    </button>
+    <button class="round video-only" id="flipBtn" aria-label="Switch camera">
+      <svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg>
+    </button>
+    <button class="round end" id="endBtn" aria-label="End call">
+      <svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- ============ INCOMING CALL ============ -->
+<section class="incoming" id="incoming" hidden role="alertdialog" aria-labelledby="inName">
+  <div class="labels">
+    <div id="inAvatar"></div>
+    <h2 id="inName"></h2>
+    <p id="inKind"></p>
+  </div>
+  <div class="row">
+    <button class="round end" id="declineBtn" aria-label="Decline call">
+      <svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+    </button>
+    <button class="round accept" id="acceptBtn" aria-label="Accept call">
+      <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+    </button>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch {} },
+  del(k){ try { localStorage.removeItem(k); } catch {} },
+};
+
+let token = store.get('maata_token');
+let me = null, socket = null, iceServers = [], users = [], activeId = null, messagesCache = {};
+let call = null; // current call state
+
+// ---------------- helpers ----------------
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && token) { logout(); }
+  if (!res.ok) throw new Error(data.error || 'Something went wrong. Try again.');
+  return data;
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+const palette = ['#0F4C5C','#B5651D','#2E8B57','#7A4E9E','#C8413A','#1F6FB2','#8A6D1F','#4A5568'];
+function avatar(user, size = '', withDot = false) {
+  const el = document.createElement('div');
+  el.className = 'avatar ' + size;
+  let h = 0; for (const c of user.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  el.style.background = palette[h % palette.length];
+  el.textContent = user.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  if (withDot && user.online) { const d = document.createElement('span'); d.className = 'dot'; el.appendChild(d); }
+  return el;
+}
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+function fmtDay(ts) {
+  const d = new Date(ts), t = new Date(); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Today';
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+}
+const userById = (id) => users.find((u) => u.id === id);
+
+// ---------------- auth ----------------
+let mode = 'login';
+function setMode(m) {
+  mode = m;
+  $('#nameField').hidden = m === 'login';
+  $('#authSubmit').textContent = m === 'login' ? 'Log in' : 'Create account';
+  $('#switchText').textContent = m === 'login' ? 'New to Maata?' : 'Already have an account?';
+  $('#switchMode').textContent = m === 'login' ? 'Create account' : 'Log in';
+  $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('#authError').textContent = '';
+}
+$('#switchMode').onclick = () => setMode(mode === 'login' ? 'register' : 'login');
+$('#authForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = $('#authSubmit'); btn.disabled = true; $('#authError').textContent = '';
+  try {
+    const body = { phone: $('#phone').value, password: $('#password').value };
+    if (mode === 'register') body.name = $('#name').value;
+    const r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
+    token = r.token; store.set('maata_token', token);
+    await start();
+  } catch (err) { $('#authError').textContent = err.message; }
+  finally { btn.disabled = false; }
+};
+function logout() {
+  token = null; store.del('maata_token');
+  if (socket) socket.disconnect();
+  if (call) endCall('', true);
+  location.reload();
+}
+$('#logoutBtn').onclick = logout;
+
+// ---------------- boot ----------------
+async function start() {
+  try {
+    me = await api('/api/me');
+    [iceServers, users] = await Promise.all([api('/api/ice'), api('/api/users')]);
+  } catch { $('#auth').hidden = false; $('#app').hidden = true; return; }
+  $('#auth').hidden = true; $('#app').hidden = false;
+  const box = $('#meBox'); box.innerHTML = '';
+  box.append(avatar(me, 'sm'), Object.assign(document.createElement('div'), { textContent: me.name + ' · ' + me.phone }));
+  renderContacts();
+  connectSocket();
+  api('/api/announcement').then(showNotice).catch(() => {});
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+}
+
+function connectSocket() {
+  socket = io({ auth: { token } });
+  socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
+  socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
+  socket.on('announcement', showNotice);
+  socket.on('user:removed', ({ id }) => {
+    users = users.filter((u) => u.id !== id);
+    if (activeId === id) { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; }
+    renderContacts();
+  });
+  socket.on('presence', ({ userId, online }) => {
+    const u = userById(userId); if (!u) return;
+    u.online = online; renderContacts(); if (activeId === userId) renderChatHead();
+  });
+  socket.on('user:new', (u) => { if (u.id !== me.id && !userById(u.id)) { users.push(u); renderContacts(); } });
+  socket.on('msg:new', onMessage);
+  socket.on('msg:status', ({ ids, status }) => {
+    for (const list of Object.values(messagesCache)) for (const m of list) if (ids.includes(m.id)) m.status = status;
+    for (const u of users) if (u.lastMessage && ids.includes(u.lastMessage.id)) u.lastMessage.status = status;
+    if (activeId) renderMessages();
+  });
+  // calls
+  socket.on('call:incoming', onIncoming);
+  socket.on('call:answered', onAnswered);
+  socket.on('call:ice', onRemoteIce);
+  socket.on('call:rejected', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' declined the call.'); });
+  socket.on('call:busy', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is on another call.'); });
+  socket.on('call:unavailable', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is offline. Try again later.'); });
+  socket.on('call:ended', (p) => { if (call && call.id === p.callId) endCall(call.state === 'incoming' ? 'Missed call from ' + call.peerName : 'Call ended.'); });
+  socket.on('call:taken-elsewhere', (p) => { if (call && call.id === p.callId && call.state === 'incoming') endCall('Answered on another device.'); });
+}
+
+// ---------------- announcements & reports ----------------
+function showNotice(a) {
+  const box = $('#notice');
+  if (!a || store.get('maata_notice_dismissed') === a.id) { box.hidden = true; return; }
+  $('#noticeText').textContent = a.text; box.hidden = false; box.dataset.id = a.id;
+}
+$('#noticeClose').onclick = () => { store.set('maata_notice_dismissed', $('#notice').dataset.id); $('#notice').hidden = true; };
+$('#reportBtn').onclick = async () => {
+  const u = userById(activeId); if (!u) return;
+  const reason = prompt('Report ' + u.name + ' to Maata support. What happened? (spam, abuse, fraud…)');
+  if (reason === null) return;
+  try { await api('/api/report', { method: 'POST', body: JSON.stringify({ userId: u.id, reason }) }); toast('Report sent. Our team will review it.'); }
+  catch (e) { toast(e.message); }
+};
+
+// ---------------- contacts ----------------
+$('#search').oninput = renderContacts;
+function renderContacts() {
+  const q = $('#search').value.trim().toLowerCase();
+  const list = $('#contacts'); list.innerHTML = '';
+  const shown = users
+    .filter((u) => !q || u.name.toLowerCase().includes(q) || u.phone.includes(q))
+    .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || a.name.localeCompare(b.name));
+  if (!shown.length) {
+    list.innerHTML = '<li class="empty-list">' + (users.length ? 'No one matches that search.' : 'No other users yet. Share Maata with friends — once they sign up, they appear here.') + '</li>';
+    return;
+  }
+  for (const u of shown) {
+    const li = document.createElement('li');
+    const b = document.createElement('button'); b.className = 'contact';
+    if (u.id === activeId) b.setAttribute('aria-current', 'true');
+    const body = document.createElement('div'); body.className = 'c-body';
+    const top = document.createElement('div'); top.className = 'c-top';
+    const name = document.createElement('span'); name.className = 'c-name'; name.textContent = u.name;
+    const time = document.createElement('span'); time.className = 'c-time'; time.textContent = u.lastMessage ? fmtTime(u.lastMessage.ts) : '';
+    top.append(name, time);
+    const last = document.createElement('div'); last.className = 'c-last';
+    last.textContent = u.lastMessage ? (u.lastMessage.from === me.id ? 'You: ' : '') + u.lastMessage.text : (u.online ? 'Online' : u.phone);
+    body.append(top, last);
+    b.append(avatar(u, '', true), body);
+    if (u.unread) { const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = u.unread; b.append(bd); }
+    b.onclick = () => openChat(u.id);
+    li.append(b); list.append(li);
+  }
+}
+
+// ---------------- chat ----------------
+async function openChat(id) {
+  activeId = id;
+  $('#app').classList.add('in-chat');
+  $('#chatEmpty').hidden = true; $('#chatHead').hidden = false; $('#messages').hidden = false; $('#composer').hidden = false;
+  renderChatHead(); renderContacts();
+  if (!messagesCache[id]) {
+    $('#messages').innerHTML = '';
+    try { messagesCache[id] = await api('/api/messages/' + id); } catch (e) { toast(e.message); messagesCache[id] = []; }
+  }
+  if (activeId !== id) return;
+  renderMessages(); markRead();
+  if (matchMedia('(min-width:761px)').matches) $('#msgInput').focus();
+}
+$('#backBtn').onclick = () => { activeId = null; $('#app').classList.remove('in-chat'); renderContacts(); };
+function renderChatHead() {
+  const u = userById(activeId); if (!u) return;
+  const a = $('#chatAvatar'); a.innerHTML = ''; a.append(avatar(u, 'sm'));
+  $('#chatName').textContent = u.name;
+  const s = $('#chatStatus'); s.textContent = u.online ? 'Online' : u.phone; s.classList.toggle('on', !!u.online);
+}
+function renderMessages() {
+  const box = $('#messages');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.innerHTML = '';
+  let lastDay = '';
+  for (const m of messagesCache[activeId] || []) {
+    const day = fmtDay(m.ts);
+    if (day !== lastDay) { const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.append(d); lastDay = day; }
+    const b = document.createElement('div'); b.className = 'bubble' + (m.from === me.id ? ' mine' : '');
+    b.append(document.createTextNode(m.text));
+    const meta = document.createElement('div'); meta.className = 'meta';
+    meta.append(document.createTextNode(fmtTime(m.ts)));
+    if (m.from === me.id) {
+      const t = document.createElement('span'); t.className = 'tick' + (m.status === 'read' ? ' read' : '');
+      t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓';
+      t.title = m.status; meta.append(t);
+    }
+    b.append(meta); box.append(b);
+  }
+  if (atBottom || box.dataset.first !== activeId) { box.scrollTop = box.scrollHeight; box.dataset.first = activeId; }
+}
+function markRead() {
+  const u = userById(activeId);
+  if (u && u.unread && document.visibilityState === 'visible') { u.unread = 0; socket.emit('msg:read', { from: activeId }); renderContacts(); }
+}
+document.addEventListener('visibilitychange', () => { if (activeId) markRead(); });
+
+function onMessage(m) {
+  const other = m.from === me.id ? m.to : m.from;
+  if (messagesCache[other] && !messagesCache[other].some((x) => x.id === m.id)) messagesCache[other].push(m);
+  const u = userById(other);
+  if (u) { u.lastMessage = m; if (m.from !== me.id) u.unread = (u.unread || 0) + 1; }
+  renderContacts();
+  if (other === activeId) { renderMessages(); markRead(); }
+  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? u.name : 'New message', m.text);
+}
+function notify(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+    try { new Notification(title, { body }); } catch {}
+  }
+}
+
+const input = $('#msgInput');
+input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; });
+input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#composer').requestSubmit(); } });
+$('#composer').onsubmit = (e) => {
+  e.preventDefault();
+  const text = input.value.trim(); if (!text || !activeId) return;
+  const to = activeId;
+  const temp = { id: 'tmp' + Date.now(), from: me.id, to, text, ts: Date.now(), status: 'pending' };
+  (messagesCache[to] = messagesCache[to] || []).push(temp);
+  input.value = ''; input.style.height = 'auto'; renderMessages();
+  socket.timeout(10000).emit('msg:send', { to, text }, (err, res) => {
+    const list = messagesCache[to]; const i = list.indexOf(temp);
+    if (err || res?.error) { if (i > -1) list.splice(i, 1); input.value = text; toast('Message not sent. Check your internet and try again.'); }
+    else { if (i > -1) list[i] = res.message; const u = userById(to); if (u) u.lastMessage = res.message; renderContacts(); }
+    if (activeId === to) renderMessages();
+  });
+};
+
+// ---------------- ringtones (Web Audio, no files needed) ----------------
+let audioCtx = null, ringTimer = null;
+function ring(type) {
+  stopRing();
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch { return; }
+  const beep = (freq, dur, at) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
+    const t = audioCtx.currentTime + at; g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+  };
+  const play = type === 'incoming'
+    ? () => { beep(880, .25, 0); beep(660, .25, .3); beep(880, .25, .6); }
+    : () => { beep(425, 1, 0); };
+  play(); ringTimer = setInterval(play, type === 'incoming' ? 2000 : 3000);
+  if (type === 'incoming' && navigator.vibrate) navigator.vibrate([400, 200, 400]);
+}
+function stopRing() { clearInterval(ringTimer); ringTimer = null; if (navigator.vibrate) navigator.vibrate(0); }
+
+// ---------------- calls (WebRTC) ----------------
+const callEl = $('#callScreen');
+function showCallScreen(status) {
+  callEl.hidden = false;
+  callEl.classList.toggle('video', call.kind === 'video');
+  callEl.classList.remove('live');
+  const u = userById(call.peerId) || { id: call.peerId, name: call.peerName };
+  const a = $('#callAvatar'); a.innerHTML = ''; a.append(avatar(u));
+  $('#callName').textContent = call.peerName;
+  setCallStatus(status);
+  $('#muteBtn').setAttribute('aria-pressed', 'false'); $('#camBtn').setAttribute('aria-pressed', 'false');
+}
+function setCallStatus(s) { $('#callStatus').textContent = s; callEl.classList.toggle('ringing', /Calling|Ringing|Connecting/.test(s)); }
+
+async function getMedia(kind, facing = 'user') {
+  return navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: kind === 'video' ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+  });
+}
+function mediaError(e) {
+  if (e && e.name === 'NotAllowedError') return 'Allow microphone' + (call?.kind === 'video' ? ' and camera' : '') + ' access in your browser settings to make calls.';
+  if (!window.isSecureContext) return 'Calls need HTTPS. Open the app with https:// (or on localhost).';
+  return 'Could not start your microphone or camera.';
+}
+
+function createPeer() {
+  const pc = new RTCPeerConnection({ iceServers });
+  pc.onicecandidate = (e) => { if (e.candidate && call) socket.emit('call:ice', { to: call.peerId, callId: call.id, candidate: e.candidate }); };
+  pc.ontrack = (e) => {
+    const rv = $('#remoteVideo');
+    if (rv.srcObject !== e.streams[0]) { rv.srcObject = e.streams[0]; rv.play().catch(() => {}); }
+  };
+  pc.onconnectionstatechange = () => {
+    if (!call || call.pc !== pc) return;
+    const s = pc.connectionState;
+    if (s === 'connected') onConnected();
+    else if (s === 'disconnected') setCallStatus('Reconnecting…');
+    else if (s === 'failed') endCall('Call dropped. The connection could not be kept.', true);
+  };
+  return pc;
+}
+function attachLocal() {
+  $('#localVideo').srcObject = call.local;
+  for (const t of call.local.getTracks()) call.pc.addTrack(t, call.local);
+}
+async function flushIce() {
+  for (const c of call.pendingIce.splice(0)) { try { await call.pc.addIceCandidate(c); } catch {} }
+}
+function onConnected() {
+  stopRing(); clearTimeout(call.timeout);
+  callEl.classList.add('live');
+  if (!call.startedAt) {
+    call.startedAt = Date.now();
+    call.ticker = setInterval(() => {
+      const s = Math.floor((Date.now() - call.startedAt) / 1000);
+      setCallStatus(String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'));
+    }, 1000);
+  }
+  setCallStatus('00:00');
+}
+
+async function startCall(kind) {
+  if (call) return toast('You are already on a call.');
+  const u = userById(activeId); if (!u) return;
+  if (!u.online) return toast(u.name + ' is offline. Calls go through when they have the app open.');
+  call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: u.name, kind, role: 'caller', state: 'calling', pendingIce: [] };
+  showCallScreen('Calling…');
+  try { call.local = await getMedia(kind); }
+  catch (e) { const msg = mediaError(e); endCall(msg); return; }
+  if (!call) { return; }
+  call.pc = createPeer(); attachLocal();
+  const offer = await call.pc.createOffer();
+  await call.pc.setLocalDescription(offer);
+  socket.emit('call:offer', { to: call.peerId, callId: call.id, kind, sdp: call.pc.localDescription });
+  setCallStatus('Ringing…'); ring('outgoing');
+  call.timeout = setTimeout(() => { if (call && !call.startedAt) endCall(call.peerName + ' did not answer.', true); }, 45000);
+}
+$('#voiceBtn').onclick = () => startCall('voice');
+$('#videoBtn').onclick = () => startCall('video');
+
+function onIncoming(p) {
+  if (call) { socket.emit('call:busy', { to: p.from, callId: p.callId }); return; }
+  call = { id: p.callId, peerId: p.from, peerName: p.fromName, kind: p.kind, role: 'callee', state: 'incoming', offer: p.sdp, pendingIce: [] };
+  const u = userById(p.from) || { id: p.from, name: p.fromName };
+  const a = $('#inAvatar'); a.innerHTML = ''; a.append(avatar(u));
+  $('#inName').textContent = p.fromName;
+  $('#inKind').textContent = p.kind === 'video' ? 'Maata video call' : 'Maata voice call';
+  $('#incoming').hidden = false; ring('incoming');
+  notify('Incoming ' + (p.kind === 'video' ? 'video' : 'voice') + ' call', p.fromName + ' is calling you');
+  call.timeout = setTimeout(() => { if (call && call.state === 'incoming') { socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall('Missed call from ' + call.peerName); } }, 45000);
+}
+$('#declineBtn').onclick = () => { if (!call) return; socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(''); };
+$('#acceptBtn').onclick = async () => {
+  if (!call || call.state !== 'incoming') return;
+  stopRing(); clearTimeout(call.timeout);
+  call.state = 'connecting'; $('#incoming').hidden = true;
+  showCallScreen('Connecting…');
+  try { call.local = await getMedia(call.kind); }
+  catch (e) { const msg = mediaError(e); socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(msg); return; }
+  call.pc = createPeer();
+  await call.pc.setRemoteDescription(call.offer);
+  attachLocal();
+  const answer = await call.pc.createAnswer();
+  await call.pc.setLocalDescription(answer);
+  socket.emit('call:answer', { to: call.peerId, callId: call.id, sdp: call.pc.localDescription });
+  await flushIce();
+};
+async function onAnswered(p) {
+  if (!call || call.id !== p.callId || call.role !== 'caller' || !call.pc) return;
+  stopRing(); setCallStatus('Connecting…'); call.state = 'connecting';
+  await call.pc.setRemoteDescription(p.sdp);
+  await flushIce();
+}
+async function onRemoteIce(p) {
+  if (!call || call.id !== p.callId) return;
+  if (call.pc && call.pc.remoteDescription) { try { await call.pc.addIceCandidate(p.candidate); } catch {} }
+  else call.pendingIce.push(p.candidate);
+}
+
+function endCall(reason, notifyPeer = false) {
+  if (!call) return;
+  if (notifyPeer) socket.emit('call:end', { to: call.peerId, callId: call.id });
+  stopRing(); clearTimeout(call.timeout); clearInterval(call.ticker);
+  if (call.local) call.local.getTracks().forEach((t) => t.stop());
+  if (call.pc) { call.pc.ontrack = call.pc.onicecandidate = call.pc.onconnectionstatechange = null; call.pc.close(); }
+  $('#remoteVideo').srcObject = null; $('#localVideo').srcObject = null;
+  callEl.hidden = true; $('#incoming').hidden = true;
+  const dur = call.startedAt ? Math.round((Date.now() - call.startedAt) / 1000) : 0;
+  call = null;
+  if (reason) toast(dur ? reason + ' (' + Math.floor(dur / 60) + 'm ' + (dur % 60) + 's)' : reason);
+}
+$('#endBtn').onclick = () => endCall('Call ended.', true);
+window.addEventListener('beforeunload', () => { if (call) socket.emit('call:end', { to: call.peerId, callId: call.id }); });
+
+$('#muteBtn').onclick = () => {
+  if (!call?.local) return;
+  const t = call.local.getAudioTracks()[0]; if (!t) return;
+  t.enabled = !t.enabled;
+  $('#muteBtn').setAttribute('aria-pressed', String(!t.enabled));
+  $('#muteBtn').setAttribute('aria-label', t.enabled ? 'Mute microphone' : 'Unmute microphone');
+};
+$('#camBtn').onclick = () => {
+  if (!call?.local) return;
+  const t = call.local.getVideoTracks()[0]; if (!t) return;
+  t.enabled = !t.enabled;
+  $('#camBtn').setAttribute('aria-pressed', String(!t.enabled));
+  $('#camBtn').setAttribute('aria-label', t.enabled ? 'Turn camera off' : 'Turn camera on');
+};
+$('#flipBtn').onclick = async () => {
+  if (!call?.local || !call.pc) return;
+  call.facing = call.facing === 'environment' ? 'user' : 'environment';
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: call.facing } });
+    const newTrack = s.getVideoTracks()[0];
+    const sender = call.pc.getSenders().find((x) => x.track && x.track.kind === 'video');
+    if (sender) await sender.replaceTrack(newTrack);
+    const old = call.local.getVideoTracks()[0];
+    if (old) { call.local.removeTrack(old); old.stop(); }
+    call.local.addTrack(newTrack);
+    $('#localVideo').style.transform = call.facing === 'user' ? 'scaleX(-1)' : 'none';
+  } catch { toast('This device has only one camera.'); }
+};
+
+// ---------------- go ----------------
+setMode('login');
+if (token) start(); else $('#auth').hidden = false;
+</script>
+</body>
+</html>

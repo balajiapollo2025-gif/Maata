@@ -1,0 +1,16 @@
+{
+  "name": "maata",
+  "version": "1.0.0",
+  "description": "Free app-to-app voice calls, video calls and messages over the internet (WebRTC + Socket.io)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.7.5"
+  }
+}

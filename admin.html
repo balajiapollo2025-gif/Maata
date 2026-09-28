@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F4C5C">
+<meta name="robots" content="noindex">
+<title>Maata Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F8; --panel:#FFFFFF; --ink:#1C2230; --muted:#667085; --line:#E4E7EC;
+  --peacock:#0F4C5C; --peacock-2:#1B7A8F; --peacock-soft:#E3EFF1; --turmeric:#E8A317; --leaf:#2E8B57; --chili:#C8413A;
+  --blue:#2D7FF9; --pink:#FF5C8A; --green:#3CCB7F;
+  font-family:"Sora",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:var(--ink); background:var(--paper);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#10161C;--panel:#18212A;--ink:#EEF1F4;--muted:#98A2B3;--line:#28323D;--peacock-soft:#1E3A42}
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--paper)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--turmeric);outline-offset:2px}
+[hidden]{display:none!important}
+.ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* login */
+.login{min-height:100%;display:grid;place-items:center;padding:24px}
+.login form{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px}
+.login h1{margin:0 0 4px;font-size:28px;color:var(--peacock);letter-spacing:-.03em}
+@media (prefers-color-scheme:dark){.login h1{color:#7CC4D4}}
+.login p{margin:0 0 22px;color:var(--muted);font-size:14px}
+.field{display:block;margin-bottom:14px}
+.field span{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);font-size:15px}
+.input:focus{border-color:var(--peacock-2);outline:none}
+.btn{padding:10px 16px;border-radius:10px;background:var(--peacock);color:#fff;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--chili)}
+.btn.ok{background:var(--leaf)}
+.btn.block{width:100%;justify-content:center;padding:13px}
+.btn:disabled{opacity:.55}
+.err{color:var(--chili);font-size:14px;min-height:20px;margin:0 0 10px}
+
+/* shell */
+.shell{display:grid;grid-template-columns:230px 1fr;min-height:100%}
+.nav{background:var(--peacock);color:#DDEFF3;padding:18px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+.nav .logo{white-space:nowrap;display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:20px;padding:0 8px 18px;letter-spacing:-.02em}
+.nav .logo small{font-weight:500;font-size:12px;background:var(--turmeric);color:#1C2230;border-radius:6px;padding:2px 6px}
+.nav button{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;text-align:left;font-size:14px;color:inherit}
+.nav button:hover{background:rgba(255,255,255,.08)}
+.nav button[aria-current="page"]{background:#fff;color:var(--peacock);font-weight:600}
+.nav .count{margin-left:auto;background:var(--chili);color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;font-weight:700}
+.nav .spacer{flex:1}
+.main{min-width:0;padding:22px clamp(14px,3vw,32px) 60px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.top h2{margin:0;font-size:24px;letter-spacing:-.02em;flex:1}
+.live-pill{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
+.live-dot{width:9px;height:9px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 0 rgba(46,139,87,.6);animation:ping 1.8s infinite}
+@keyframes ping{to{box-shadow:0 0 0 9px rgba(46,139,87,0)}}
+@media (prefers-reduced-motion:reduce){.live-dot{animation:none}}
+
+/* cards & kpis */
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi .v{font-size:28px;font-weight:700;letter-spacing:-.03em;margin-top:4px}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--peacock-2))}
+.livebar{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.livebox{border-radius:16px;padding:16px;color:#fff;display:flex;align-items:center;gap:14px}
+.livebox .v{font-size:32px;font-weight:700;line-height:1}
+.livebox .l{font-size:13px;opacity:.9}
+.livebox .emo{font-size:28px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.card h3{margin:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3 .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:auto}
+.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));margin-bottom:14px}
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* tables */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar .input{width:auto;min-width:0;flex:1 1 200px;padding:9px 12px}
+select.input{flex:0 1 auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:13px}
+.chip[aria-pressed="true"]{background:var(--peacock);color:#fff;border-color:var(--peacock)}
+.tbl-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--paper);position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--peacock-soft)}
+.muted{color:var(--muted)}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.t-green{background:#DDF5E7;color:#17663F}.t-red{background:#FBE3E1;color:#9B2C24}.t-amber{background:#FFF1CC;color:#7A5600}
+.t-blue{background:#DCEAFE;color:#1D4FB0}.t-grey{background:#EDEFF2;color:#4A5568}.t-pink{background:#FFE1EA;color:#A1204A}
+@media (prefers-color-scheme:dark){.t-green{background:#17402B;color:#9BE3BA}.t-red{background:#4A1E1B;color:#F5B3AD}.t-amber{background:#45360F;color:#FFD979}.t-blue{background:#1A2F55;color:#A8C8FF}.t-grey{background:#2A323C;color:#C5CCD6}.t-pink{background:#4A1B2A;color:#FFB3C8}}
+.who{display:flex;align-items:center;gap:10px}
+.av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:600;flex:none;position:relative}
+.av .on{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--leaf);border:2px solid var(--panel)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+/* feed & lists */
+.feed{list-style:none;margin:0;padding:0;max-height:330px;overflow-y:auto}
+.feed li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:flex-start}
+.feed li:last-child{border-bottom:0}
+.feed .t{color:var(--muted);font-size:12px;margin-left:auto;white-space:nowrap}
+.rank{list-style:none;margin:0;padding:0}
+.rank li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.rank li:last-child{border-bottom:0}
+.rank .n{margin-left:auto;font-size:12px;color:var(--muted);text-align:right}
+
+/* drawer */
+.drawer-bg{position:fixed;inset:0;background:rgba(16,22,28,.5);z-index:30;display:flex;justify-content:flex-end}
+.drawer{width:min(520px,100%);height:100%;background:var(--paper);overflow-y:auto;padding:20px;padding-top:calc(20px + env(safe-area-inset-top,0px))}
+.drawer .head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.drawer .head .av{width:56px;height:56px;font-size:18px}
+.drawer h3{margin:0;font-size:20px}
+.mini-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.mini-kpis div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+.mini-kpis b{display:block;font-size:18px}
+.mini-kpis span{font-size:12px;color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.section-title{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 8px}
+.privacy{font-size:13px;color:var(--muted);background:var(--peacock-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+
+.report{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.report .r-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+.report blockquote{margin:10px 0;padding:8px 12px;border-left:3px solid var(--turmeric);background:var(--paper);border-radius:0 8px 8px 0;font-size:14px;white-space:pre-wrap}
+textarea.input{min-height:110px;resize:vertical}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:50}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .nav{position:sticky;top:0;height:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top,0px));gap:4px;z-index:10}
+  .nav > *{flex:none}
+  .nav .logo{padding:0 8px 0 4px}
+  .nav .logo small{display:none}
+  .nav button{padding:8px 11px;white-space:nowrap}
+  .nav button .ico{display:none}
+  .nav .spacer{display:none}
+  .livebar{grid-template-columns:repeat(3,1fr);gap:8px}
+  .livebox{flex-direction:column;align-items:flex-start;gap:4px;padding:12px}
+  .livebox .v{font-size:24px}
+  .livebox .emo{font-size:20px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi .v{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<section class="login" id="loginView" hidden>
+  <form id="loginForm">
+    <h1>Maata Admin</h1>
+    <p>Operations panel for the Maata team.</p>
+    <label class="field"><span>Username</span><input class="input" id="lu" autocomplete="username" value="admin"></label>
+    <label class="field"><span>Password</span><input class="input" id="lp" type="password" autocomplete="current-password"></label>
+    <p class="err" id="lerr" role="alert"></p>
+    <button class="btn block" id="lbtn">Log in</button>
+  </form>
+</section>
+
+<div class="shell" id="shell" hidden>
+  <nav class="nav" aria-label="Admin sections">
+    <div class="logo">🦜 Maata <small>Admin</small></div>
+    <button data-view="dash"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+    <button data-view="customers"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M22 21a6 6 0 0 0-4-5.6"/></svg>Customers</button>
+    <button data-view="calls"><svg class="ico" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>Call report</button>
+    <button data-view="messages"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat report</button>
+    <button data-view="logins"><svg class="ico" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>Login report</button>
+    <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
+    <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
+    <button data-view="audit"><svg class="ico" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin log</button>
+    <div class="spacer"></div>
+    <button id="logoutBtn"><svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Log out</button>
+  </nav>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <section data-page="dash">
+      <div class="top"><h2>Today at a glance</h2><span class="live-pill"><span class="live-dot"></span><span id="updated">Live</span></span></div>
+      <div class="livebar">
+        <div class="livebox" style="background:linear-gradient(135deg,#2E8B57,#3CCB7F)"><span class="emo">🟢</span><div><div class="v" id="lvOnline">0</div><div class="l">Online now</div></div></div>
+        <div class="livebox" style="background:linear-gradient(135deg,#1D4FB0,#2D7FF9)"><span class="emo">📞</span><div><div class="v" id="lvCall">0</div><div class="l">In a call now</div></div></div>
+        <div class="livebox" style="background:linear-gradient(135deg,#C07A00,#E8A317)"><span class="emo">🔔</span><div><div class="v" id="lvRing">0</div><div class="l">Ringing now</div></div></div>
+      </div>
+      <div class="grid kpis" id="kpis"></div>
+      <div class="grid two">
+        <div class="card chart"><h3>Daily logins &amp; new customers <span class="hint">last 14 days</span></h3><div id="chLogins"></div></div>
+        <div class="card chart"><h3>Voice &amp; video calls <span class="hint">last 14 days</span></h3><div id="chCalls"></div></div>
+      </div>
+      <div class="grid two">
+        <div class="card chart"><h3>Chat messages per day <span class="hint">last 14 days</span></h3><div id="chMsgs"></div></div>
+        <div class="card chart"><h3>Busiest hours <span class="hint">last 7 days, all activity</span></h3><div id="chHours"></div></div>
+      </div>
+      <div class="grid two">
+        <div class="card"><h3>Most active customers <span class="hint">last 7 days</span></h3><ul class="rank" id="topUsers"></ul></div>
+        <div class="card"><h3>Live activity <span class="hint">updates as it happens</span></h3><ul class="feed" id="feed"><li class="muted">Waiting for activity…</li></ul></div>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section data-page="customers" hidden>
+      <div class="top"><h2>Customers</h2><button class="btn ghost" data-csv="/admin/api/users">⬇ Export CSV</button></div>
+      <div class="chips" id="custChips">
+        <button class="chip" data-f="all" aria-pressed="true">All</button>
+        <button class="chip" data-f="online" aria-pressed="false">Online now</button>
+        <button class="chip" data-f="today" aria-pressed="false">Logged in today</button>
+        <button class="chip" data-f="new" aria-pressed="false">New this week</button>
+        <button class="chip" data-f="inactive" aria-pressed="false">Inactive 30+ days</button>
+        <button class="chip" data-f="blocked" aria-pressed="false">Blocked</button>
+      </div>
+      <div class="toolbar"><input class="input" id="custQ" type="search" placeholder="Search name or mobile number"></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Status</th><th>Joined</th><th>Last login</th><th>Logins</th><th>Calls</th><th>Talk time</th><th>Messages</th></tr></thead><tbody id="custBody"></tbody></table></div>
+    </section>
+
+    <!-- CALLS -->
+    <section data-page="calls" hidden>
+      <div class="top"><h2>Call report</h2><button class="btn ghost" data-csv="/admin/api/calls">⬇ Export CSV</button></div>
+      <div class="toolbar">
+        <select class="input" id="callRange"><option value="today">Today</option><option value="7d" selected>Last 7 days</option><option value="30d">Last 30 days</option><option value="all">All time</option></select>
+        <select class="input" id="callKind"><option value="">Voice &amp; video</option><option value="voice">Voice only</option><option value="video">Video only</option></select>
+        <select class="input" id="callStatus"><option value="">Any result</option><option value="completed">Completed</option><option value="missed">Missed</option><option value="declined">Declined</option><option value="busy">Busy</option><option value="unavailable">Offline</option></select>
+        <input class="input" id="callQ" type="search" placeholder="Search name or number">
+      </div>
+      <div class="grid kpis" id="callKpis"></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Caller</th><th>Receiver</th><th>Type</th><th>Result</th><th>Duration</th></tr></thead><tbody id="callBody"></tbody></table></div>
+    </section>
+
+    <!-- MESSAGES -->
+    <section data-page="messages" hidden>
+      <div class="top"><h2>Chat report</h2><button class="btn ghost" data-csv="/admin/api/messages">⬇ Export CSV</button></div>
+      <p class="privacy">🔒 This report shows counts only. Message text stays private between customers and is never shown here.</p>
+      <div class="toolbar"><select class="input" id="msgRange"><option value="today">Today</option><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option><option value="all">All time</option></select></div>
+      <div class="grid kpis" id="msgKpis"></div>
+      <div class="grid two">
+        <div class="card chart"><h3>Messages per day</h3><div id="chMsgDays"></div></div>
+        <div class="card"><h3>Top senders</h3><ul class="rank" id="msgTop"></ul></div>
+      </div>
+    </section>
+
+    <!-- LOGINS -->
+    <section data-page="logins" hidden>
+      <div class="top"><h2>Login report</h2><button class="btn ghost" data-csv="/admin/api/logins">⬇ Export CSV</button></div>
+      <div class="toolbar">
+        <select class="input" id="loginRange"><option value="today" selected>Today</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="all">All time</option></select>
+        <input class="input" id="loginQ" type="search" placeholder="Search name or number">
+      </div>
+      <div class="grid kpis" id="loginKpis"></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Customer</th><th>Type</th><th>Device</th><th>IP address</th></tr></thead><tbody id="loginBody"></tbody></table></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section data-page="reports" hidden>
+      <div class="top"><h2>Customer complaints</h2></div>
+      <div class="chips" id="repChips"><button class="chip" data-f="open" aria-pressed="true">Open</button><button class="chip" data-f="resolved" aria-pressed="false">Resolved</button><button class="chip" data-f="all" aria-pressed="false">All</button></div>
+      <div id="repList"></div>
+    </section>
+
+    <!-- ANNOUNCEMENTS -->
+    <section data-page="announce" hidden>
+      <div class="top"><h2>Announcements</h2></div>
+      <div class="grid two">
+        <div class="card">
+          <h3>Send to all customers</h3>
+          <p class="muted" style="font-size:13px;margin:-4px 0 12px">Shows as a banner in every customer's app right away, and to anyone who opens the app later.</p>
+          <textarea class="input" id="annText" maxlength="300" placeholder="Example: Maata will be under maintenance tonight 11 PM – 11:30 PM."></textarea>
+          <div class="actions" style="margin-top:10px;margin-bottom:0"><button class="btn" id="annSend">📢 Send announcement</button><button class="btn ghost" id="annEnd">Remove current banner</button></div>
+        </div>
+        <div class="card"><h3>History</h3><ul class="rank" id="annList"></ul></div>
+      </div>
+    </section>
+
+    <!-- AUDIT -->
+    <section data-page="audit" hidden>
+      <div class="top"><h2>Admin log</h2></div>
+      <p class="privacy">Every admin action is recorded here: logins, blocks, deletes, announcements.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Customer / target</th><th>Note</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+    </section>
+  </main>
+</div>
+
+<div class="drawer-bg" id="drawer" hidden><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dName" id="drawerBody"></aside></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }, del: (k) => { try { localStorage.removeItem(k); } catch {} } };
+let token = store.get('maata_admin_token');
+let socket = null, view = 'dash';
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token } });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && path !== '/admin/api/login') { logout(); throw new Error(data.error); }
+  if (!res.ok) throw new Error(data.error || 'Request failed.');
+  return data;
+}
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3000); }
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = (n) => Number(n || 0).toLocaleString('en-IN');
+const dt = (ts) => ts ? new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—';
+const ago = (ts) => { if (!ts) return 'never'; const s = (Date.now() - ts) / 1000; if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + ' min ago'; if (s < 86400) return Math.floor(s / 3600) + ' hr ago'; return Math.floor(s / 86400) + ' days ago'; };
+const dur = (s) => { s = Math.round(s || 0); if (!s) return '—'; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + 'h ' : '') + (h || m ? m + 'm ' : '') + (h ? '' : x + 's'); };
+const palette = ['#0F4C5C', '#B5651D', '#2E8B57', '#7A4E9E', '#C8413A', '#1F6FB2', '#8A6D1F', '#4A5568'];
+function av(u, online) {
+  let h = 0; for (const c of String(u.id || u.name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const ini = String(u.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  return `<span class="av" style="background:${palette[h % palette.length]}">${esc(ini)}${online ? '<span class="on"></span>' : ''}</span>`;
+}
+const statusTag = { completed: 't-green', answered: 't-green', missed: 't-amber', declined: 't-red', busy: 't-grey', unavailable: 't-grey', ringing: 't-blue' };
+const statusName = { completed: 'Completed', answered: 'In progress', missed: 'Missed', declined: 'Declined', busy: 'Busy', unavailable: 'Offline', ringing: 'Ringing' };
+function device(ua) {
+  ua = ua || '';
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iPhone' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Other';
+  const br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  return os + ' · ' + br;
+}
+
+// ---------- SVG charts (no library needed) ----------
+function barChart(el, labels, series, opts = {}) {
+  const narrow = innerWidth < 600, fs = narrow ? 19 : 11, W = 620, H = narrow ? 300 : 230, L = narrow ? 46 : 36, B = narrow ? 36 : 26, T = narrow ? 16 : 10, R = 8;
+  const n = labels.length, stacked = !!opts.stacked;
+  const totals = labels.map((_, i) => stacked ? series.reduce((a, s) => a + (s.values[i] || 0), 0) : Math.max(...series.map((s) => s.values[i] || 0)));
+  const raw = Math.max(4, ...totals) / 4; const p10 = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p10; const tick = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p10; const max = tick * 4;
+  const cw = (W - L - R) / n, y = (v) => T + (H - T - B) * (1 - v / max);
+  let g = '';
+  for (let k = 0; k <= 4; k++) { const v = (max / 4) * k, yy = y(v); g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="currentColor" stroke-opacity=".12"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" font-size="${fs}" fill="currentColor" fill-opacity=".55">${Math.round(v)}</text>`; }
+  const every = Math.ceil(n / (narrow ? 4 : (opts.maxLabels || 7)));
+  labels.forEach((lab, i) => {
+    const x0 = L + i * cw, pad = cw * 0.18, bw = cw - pad * 2;
+    if (stacked) {
+      let acc = 0;
+      series.forEach((s) => { const v = s.values[i] || 0; if (!v) return; const y1 = y(acc + v), y0 = y(acc); g += `<rect x="${x0 + pad}" y="${y1}" width="${bw}" height="${Math.max(0, y0 - y1)}" rx="3" fill="${s.color}"><title>${esc(lab)}: ${s.name} ${v}</title></rect>`; acc += v; });
+    } else {
+      const each = bw / series.length;
+      series.forEach((s, j) => { const v = s.values[i] || 0; g += `<rect x="${x0 + pad + j * each}" y="${y(v)}" width="${Math.max(1, each - 2)}" height="${Math.max(0, y(0) - y(v))}" rx="3" fill="${s.color}"><title>${esc(lab)}: ${s.name} ${v}</title></rect>`; });
+    }
+    if ((i % every === 0 && n - 1 - i >= every / 2) || i === n - 1) g += `<text x="${i === n - 1 ? W - R : x0 + cw / 2}" y="${H - 8}" text-anchor="${i === n - 1 ? 'end' : 'middle'}" font-size="${fs}" fill="currentColor" fill-opacity=".55">${esc(opts.fmt ? opts.fmt(lab) : lab)}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'chart')}">${g}</svg>` +
+    (series.length > 1 || opts.legend ? `<div class="legend">${series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>` : '');
+}
+const shortDay = (d) => { const x = new Date(d + 'T00:00:00'); return x.getDate() + ' ' + x.toLocaleString('en-IN', { month: 'short' }); };
+
+// ---------- auth ----------
+$('#loginForm').onsubmit = async (e) => {
+  e.preventDefault(); $('#lbtn').disabled = true; $('#lerr').textContent = '';
+  try {
+    const r = await fetch('/admin/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: $('#lu').value, password: $('#lp').value }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not log in.');
+    token = d.token; store.set('maata_admin_token', token); boot();
+  } catch (err) { $('#lerr').textContent = err.message === 'Failed to fetch' ? 'Cannot reach the server. Open this page from your server link (…/admin).' : err.message; }
+  finally { $('#lbtn').disabled = false; }
+};
+function logout() { store.del('maata_admin_token'); token = null; if (socket) socket.disconnect(); $('#shell').hidden = true; $('#loginView').hidden = false; }
+$('#logoutBtn').onclick = logout;
+
+function boot() {
+  $('#loginView').hidden = true; $('#shell').hidden = false;
+  socket = io({ auth: { adminToken: token } });
+  socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
+  socket.on('live', setLive);
+  socket.on('feed', addFeed);
+  socket.on('report:new', () => { toast('New customer complaint received.'); loadRepCount(); if (view === 'reports') loadReports(); });
+  go(location.hash.slice(1) || 'dash');
+  loadRepCount();
+  setInterval(() => { if (view === 'dash' && !document.hidden) loadDash(); }, 60000);
+}
+
+// ---------- navigation ----------
+const loaders = { dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+function go(v) {
+  if (!loaders[v]) v = 'dash';
+  view = v; history.replaceState(null, '', '#' + v);
+  $$('.nav [data-view]').forEach((b) => b.dataset.view === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  $$('[data-page]').forEach((s) => (s.hidden = s.dataset.page !== v));
+  $('.nav [aria-current]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  loaders[v]().catch((e) => toast(e.message));
+  window.scrollTo(0, 0);
+}
+$$('.nav [data-view]').forEach((b) => (b.onclick = () => go(b.dataset.view)));
+
+// ---------- CSV export ----------
+$$('[data-csv]').forEach((b) => b.onclick = async () => {
+  const params = new URLSearchParams({ format: 'csv', ...currentFilters(b.dataset.csv) });
+  try {
+    const r = await fetch(b.dataset.csv + '?' + params, { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) throw new Error('Export failed.');
+    const blob = await r.blob();
+    const name = (r.headers.get('Content-Disposition') || '').match(/filename="(.+)"/)?.[1] || 'maata-report.csv';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Downloaded ' + name);
+  } catch (e) { toast(e.message); }
+});
+function currentFilters(path) {
+  if (path.includes('users')) return { q: $('#custQ').value, filter: custFilter };
+  if (path.includes('calls')) return { range: $('#callRange').value, kind: $('#callKind').value, status: $('#callStatus').value, q: $('#callQ').value };
+  if (path.includes('logins')) return { range: $('#loginRange').value, q: $('#loginQ').value };
+  if (path.includes('messages')) return { range: $('#msgRange').value };
+  return {};
+}
+const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+// ---------- dashboard ----------
+function setLive(l) {
+  $('#lvOnline').textContent = num(l.online); $('#lvCall').textContent = num(l.inCall); $('#lvRing').textContent = num(l.ringing);
+  $('#updated').textContent = 'Live · ' + new Date(l.ts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+}
+const feedIcon = { login: '🔑', signup: '🎉', call: '📞', message: '💬', report: '🚩' };
+function addFeed(f) {
+  const ul = $('#feed'); if (ul.firstElementChild?.classList.contains('muted')) ul.innerHTML = '';
+  const li = document.createElement('li');
+  li.innerHTML = `<span>${feedIcon[f.type] || '•'}</span><span>${esc(f.text)}</span><span class="t">${new Date(f.ts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</span>`;
+  ul.prepend(li); while (ul.children.length > 40) ul.lastChild.remove();
+  if (f.type === 'signup' || f.type === 'call') debounceDash();
+}
+const debounceDash = debounce(() => { if (view === 'dash') loadDash(); }, 4000);
+function kpi(label, value, sub, color) { return `<div class="kpi" style="--c:${color || 'var(--peacock-2)'}"><div class="l">${label}</div><div class="v">${value}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`; }
+
+async function loadDash() {
+  const s = await api('/admin/api/stats?days=14');
+  setLive(s.live);
+  const t = s.today;
+  $('#kpis').innerHTML =
+    kpi('Customers logged in today', num(t.uniqueLogins), num(t.loginEvents) + ' login sessions', '#2E8B57') +
+    kpi('New customers today', num(t.signups), num(s.totals.customers) + ' total customers', '#7A4E9E') +
+    kpi('Voice calls today', num(t.voiceCalls), 'Talk time ' + num(t.talkMinutes) + ' min', '#E8A317') +
+    kpi('Video calls today', num(t.videoCalls), 'Avg call ' + dur(t.avgCallSec), '#2D7FF9') +
+    kpi('Chat messages today', num(t.messages), num(s.totals.messages) + ' all time', '#FF5C8A') +
+    kpi('Call answer rate', t.successRate + '%', 'Calls answered today', t.successRate >= 60 ? '#2E8B57' : '#C8413A') +
+    kpi('Open complaints', num(s.totals.openReports), num(s.totals.blocked) + ' blocked customers', '#C8413A');
+  const d = s.series.days;
+  barChart($('#chLogins'), d, [{ name: 'Customers logged in', color: '#1B7A8F', values: s.series.logins }, { name: 'New sign-ups', color: '#E8A317', values: s.series.signups }], { fmt: shortDay, label: 'Daily logins' });
+  barChart($('#chCalls'), d, [{ name: 'Voice', color: '#3CCB7F', values: s.series.voice }, { name: 'Video', color: '#2D7FF9', values: s.series.video }], { stacked: true, fmt: shortDay, label: 'Daily calls' });
+  barChart($('#chMsgs'), d, [{ name: 'Messages', color: '#FF5C8A', values: s.series.messages }], { fmt: shortDay, label: 'Daily messages' });
+  barChart($('#chHours'), s.hours.map((_, h) => h), [{ name: 'Activity', color: '#E8A317', values: s.hours }], { maxLabels: 8, fmt: (h) => (h % 12 || 12) + (h < 12 ? 'am' : 'pm'), label: 'Activity by hour' });
+  $('#topUsers').innerHTML = s.topUsers.length ? s.topUsers.map((u, i) =>
+    `<li><b style="width:18px">${i + 1}</b>${av(u)}<span>${esc(u.name)}<br><span class="muted" style="font-size:12px">${esc(u.phone)}</span></span><span class="n">${num(u.calls)} call${u.calls === 1 ? '' : 's'}<br>${num(u.messages)} message${u.messages === 1 ? '' : 's'}</span></li>`).join('') : '<li class="muted">No activity in the last 7 days yet.</li>';
+}
+
+// ---------- customers ----------
+let custFilter = 'all';
+$$('#custChips .chip').forEach((c) => c.onclick = () => { custFilter = c.dataset.f; $$('#custChips .chip').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); loadCustomers(); });
+$('#custQ').oninput = debounce(() => loadCustomers());
+async function loadCustomers() {
+  const list = await api('/admin/api/users?' + new URLSearchParams({ q: $('#custQ').value, filter: custFilter }));
+  $('#custBody').innerHTML = list.length ? list.map((u) => `<tr class="click" data-id="${esc(u.id)}" tabindex="0">
+    <td><div class="who">${av(u, u.online)}<div><b>${esc(u.name)}</b><br><span class="muted">${esc(u.phone)}</span></div></div></td>
+    <td>${u.status === 'blocked' ? '<span class="tag t-red">Blocked</span>' : u.online ? '<span class="tag t-green">Online</span>' : '<span class="tag t-grey">Offline · ' + ago(u.lastSeenAt || u.lastLoginAt) + '</span>'}</td>
+    <td>${dt(u.createdAt)}</td><td>${dt(u.lastLoginAt)}</td><td>${num(u.logins)}</td><td>${num(u.calls)}</td><td>${dur(u.talkSec)}</td><td>${num(u.sent)}</td></tr>`).join('')
+    : '<tr><td colspan="8" class="empty">No customers match this filter.</td></tr>';
+  $$('#custBody tr.click').forEach((tr) => { tr.onclick = () => openCustomer(tr.dataset.id); tr.onkeydown = (e) => e.key === 'Enter' && openCustomer(tr.dataset.id); });
+}
+
+async function openCustomer(id) {
+  let d; try { d = await api('/admin/api/users/' + id); } catch (e) { return toast(e.message); }
+  const u = d.user, s = d.stats;
+  $('#drawerBody').innerHTML = `
+    <div class="head">${av(u, u.online)}<div style="flex:1"><h3 id="dName">${esc(u.name)}</h3><div class="muted">${esc(u.phone)}</div></div><button class="btn ghost" id="dClose" aria-label="Close">✕</button></div>
+    <div style="margin-bottom:12px">${u.status === 'blocked' ? '<span class="tag t-red">Blocked</span>' : u.online ? '<span class="tag t-green">Online now</span>' : '<span class="tag t-grey">Last seen ' + ago(u.lastSeenAt || u.lastLoginAt) + '</span>'}
+      <span class="muted" style="font-size:13px;margin-left:6px">Joined ${dt(u.createdAt)}</span></div>
+    <div class="mini-kpis">
+      <div><b>${num(s.logins)}</b><span>Logins</span></div>
+      <div><b>${num(s.calls)}</b><span>Calls</span></div>
+      <div><b>${dur(s.talkSec)}</b><span>Talk time</span></div>
+      <div><b>${num(s.sent)}</b><span>Messages sent</span></div>
+      <div><b>${num(s.received)}</b><span>Received</span></div>
+      <div><b>${num(s.chatPartners)}</b><span>Chat contacts</span></div>
+    </div>
+    <div class="actions">
+      ${u.status === 'blocked' ? '<button class="btn ok" id="aUnblock">Unblock customer</button>' : '<button class="btn danger" id="aBlock">Block customer</button>'}
+      <button class="btn ghost" id="aLogout">Log out all devices</button>
+      <button class="btn ghost" id="aDelete" style="color:var(--chili)">Delete account</button>
+    </div>
+    ${d.reports.length ? `<div class="section-title">Complaints against this customer (${d.reports.length})</div>${d.reports.map((r) => `<div class="report"><div class="r-top"><b>${esc(r.reporterName)}</b><span class="muted">${dt(r.ts)}</span><span class="tag ${r.status === 'open' ? 't-amber' : 't-green'}">${r.status === 'open' ? 'Open' : 'Resolved'}</span></div><blockquote>${esc(r.reason)}</blockquote></div>`).join('')}` : ''}
+    <div class="section-title">Recent calls</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>With</th><th>Type</th><th>Result</th><th>Duration</th></tr></thead><tbody>
+      ${d.calls.length ? d.calls.map((c) => { const out = c.from === u.id; return `<tr><td>${dt(c.startedAt)}</td><td>${out ? '↗ ' + esc(c.toName) : '↙ ' + esc(c.fromName)}</td><td>${c.kind === 'video' ? '🎥 Video' : '📞 Voice'}</td><td><span class="tag ${statusTag[c.status] || 't-grey'}">${statusName[c.status] || c.status}</span></td><td>${dur(c.duration)}</td></tr>`; }).join('') : '<tr><td colspan="5" class="empty">No calls yet.</td></tr>'}
+    </tbody></table></div>
+    <div class="section-title">Login history</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Device</th><th>IP address</th></tr></thead><tbody>
+      ${d.logins.length ? d.logins.map((l) => `<tr><td>${dt(l.ts)}${l.kind === 'signup' ? ' <span class="tag t-pink">Sign-up</span>' : ''}</td><td>${esc(device(l.ua))}</td><td class="muted">${esc(l.ip)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">No logins recorded.</td></tr>'}
+    </tbody></table></div>`;
+  $('#drawer').hidden = false; $('#dClose').focus();
+  $('#dClose').onclick = closeDrawer;
+  const act = async (fn, msg) => { try { await fn(); toast(msg); openCustomer(id); if (view === 'customers') loadCustomers(); } catch (e) { toast(e.message); } };
+  $('#aBlock') && ($('#aBlock').onclick = () => { const note = prompt('Block ' + u.name + '? They will be logged out and cannot log in. Reason (optional):'); if (note === null) return; act(() => api(`/admin/api/users/${id}/block`, { method: 'POST', body: JSON.stringify({ blocked: true, note }) }), u.name + ' is blocked.'); });
+  $('#aUnblock') && ($('#aUnblock').onclick = () => act(() => api(`/admin/api/users/${id}/block`, { method: 'POST', body: JSON.stringify({ blocked: false }) }), u.name + ' is unblocked.'));
+  $('#aLogout').onclick = () => { if (confirm('Log ' + u.name + ' out of every device?')) act(() => api(`/admin/api/users/${id}/logout`, { method: 'POST' }), u.name + ' was logged out.'); };
+  $('#aDelete').onclick = async () => {
+    if (prompt('This permanently deletes ' + u.name + ' and their chats. Type DELETE to confirm.') !== 'DELETE') return;
+    try { await api('/admin/api/users/' + id, { method: 'DELETE' }); toast(u.name + ' was deleted.'); closeDrawer(); loadCustomers(); } catch (e) { toast(e.message); }
+  };
+}
+function closeDrawer() { $('#drawer').hidden = true; }
+$('#drawer').onclick = (e) => { if (e.target.id === 'drawer') closeDrawer(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) closeDrawer(); });
+
+// ---------- calls ----------
+['#callRange', '#callKind', '#callStatus'].forEach((s) => $(s).onchange = () => loadCalls());
+$('#callQ').oninput = debounce(() => loadCalls());
+async function loadCalls() {
+  const d = await api('/admin/api/calls?' + new URLSearchParams(currentFilters('calls')));
+  const s = d.summary, rate = s.total ? Math.round((s.completed / s.total) * 100) : 0;
+  $('#callKpis').innerHTML = kpi('Total calls', num(s.total), num(s.voice) + ' voice · ' + num(s.video) + ' video', '#1B7A8F') +
+    kpi('Completed', num(s.completed), rate + '% answer rate', '#2E8B57') + kpi('Missed / offline', num(s.missed), '', '#E8A317') +
+    kpi('Declined / busy', num(s.declined), '', '#C8413A') + kpi('Total talk time', dur(s.talkSec), s.completed ? 'Avg ' + dur(s.talkSec / s.completed) : '', '#2D7FF9');
+  $('#callBody').innerHTML = d.calls.length ? d.calls.map((c) => `<tr><td>${dt(c.startedAt)}</td>
+    <td><div class="who">${av({ id: c.from, name: c.fromName })}<div>${esc(c.fromName)}<br><span class="muted">${esc(c.fromPhone)}</span></div></div></td>
+    <td><div class="who">${av({ id: c.to, name: c.toName })}<div>${esc(c.toName)}<br><span class="muted">${esc(c.toPhone)}</span></div></div></td>
+    <td>${c.kind === 'video' ? '🎥 Video' : '📞 Voice'}</td><td><span class="tag ${statusTag[c.status] || 't-grey'}">${statusName[c.status] || c.status}</span></td><td>${dur(c.duration)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">No calls in this period.</td></tr>';
+}
+
+// ---------- messages ----------
+$('#msgRange').onchange = () => loadMessages();
+async function loadMessages() {
+  const d = await api('/admin/api/messages?range=' + $('#msgRange').value);
+  $('#msgKpis').innerHTML = kpi('Messages sent', num(d.total), '', '#FF5C8A') + kpi('Read rate', d.readRate + '%', 'Messages opened by receiver', '#2E8B57') +
+    kpi('Conversations', num(d.conversations), 'Customer pairs chatting', '#1B7A8F') + kpi('Customers chatting', num(d.activeSenders), 'Sent at least 1 message', '#E8A317');
+  const days = Object.keys(d.perDay).sort();
+  if (days.length) barChart($('#chMsgDays'), days, [{ name: 'Messages', color: '#FF5C8A', values: days.map((k) => d.perDay[k]) }], { fmt: shortDay, label: 'Messages per day' });
+  else $('#chMsgDays').innerHTML = '<p class="empty">No messages in this period.</p>';
+  $('#msgTop').innerHTML = d.top.length ? d.top.map((u, i) => `<li><b style="width:18px">${i + 1}</b>${av(u)}<span>${esc(u.name)}<br><span class="muted" style="font-size:12px">${esc(u.phone)}</span></span><span class="n">${num(u.sent)} sent</span></li>`).join('') : '<li class="muted">No messages in this period.</li>';
+}
+
+// ---------- logins ----------
+$('#loginRange').onchange = () => loadLogins();
+$('#loginQ').oninput = debounce(() => loadLogins());
+async function loadLogins() {
+  const d = await api('/admin/api/logins?' + new URLSearchParams(currentFilters('logins')));
+  const signups = d.logins.filter((l) => l.kind === 'signup').length;
+  const android = d.logins.filter((l) => /Android/i.test(l.ua)).length;
+  $('#loginKpis').innerHTML = kpi('Unique customers', num(d.unique), 'Logged in during this period', '#2E8B57') + kpi('Login sessions', num(d.total), '', '#1B7A8F') +
+    kpi('New sign-ups', num(signups), '', '#7A4E9E') + kpi('From Android', d.total ? Math.round((android / d.total) * 100) + '%' : '—', 'Share of sessions', '#E8A317');
+  $('#loginBody').innerHTML = d.logins.length ? d.logins.map((l) => `<tr><td>${dt(l.ts)}</td><td><div class="who">${av({ id: l.userId, name: l.name })}<div>${esc(l.name)}<br><span class="muted">${esc(l.phone)}</span></div></div></td>
+    <td>${l.kind === 'signup' ? '<span class="tag t-pink">Sign-up</span>' : '<span class="tag t-blue">Login</span>'}</td><td>${esc(device(l.ua))}</td><td class="muted">${esc(l.ip)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty">No logins in this period.</td></tr>';
+}
+
+// ---------- complaints ----------
+let repFilter = 'open';
+$$('#repChips .chip').forEach((c) => c.onclick = () => { repFilter = c.dataset.f; $$('#repChips .chip').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); loadReports(); });
+async function loadRepCount() {
+  try { const all = await api('/admin/api/reports'); const n = all.filter((r) => r.status === 'open').length; const b = $('#repCount'); b.textContent = n; b.hidden = !n; } catch {}
+}
+async function loadReports() {
+  const all = await api('/admin/api/reports');
+  const list = all.filter((r) => repFilter === 'all' || r.status === repFilter);
+  const n = all.filter((r) => r.status === 'open').length; $('#repCount').textContent = n; $('#repCount').hidden = !n;
+  $('#repList').innerHTML = list.length ? list.map((r) => `<div class="report">
+    <div class="r-top">${av({ id: r.target, name: r.targetName })}<b>${esc(r.targetName)}</b><span class="muted">${esc(r.targetPhone)}</span>
+      <span class="tag ${r.status === 'open' ? 't-amber' : 't-green'}">${r.status === 'open' ? 'Open' : 'Resolved'}</span>${r.targetStatus === 'blocked' ? '<span class="tag t-red">Blocked</span>' : ''}</div>
+    <blockquote>${esc(r.reason)}</blockquote>
+    <div class="muted" style="font-size:13px;margin-bottom:10px">Reported by ${esc(r.reporterName)} · ${dt(r.ts)}${r.resolvedAt ? ' · resolved by ' + esc(r.resolvedBy) + ' ' + dt(r.resolvedAt) + (r.note ? ': ' + esc(r.note) : '') : ''}</div>
+    <div class="actions" style="margin:0">
+      <button class="btn ghost" data-open="${esc(r.target)}">View customer</button>
+      ${r.status === 'open' ? `<button class="btn ok" data-resolve="${esc(r.id)}">Mark resolved</button>` : ''}
+    </div></div>`).join('') : '<div class="card empty">No complaints here. 🎉</div>';
+  $$('[data-open]').forEach((b) => b.onclick = () => openCustomer(b.dataset.open));
+  $$('[data-resolve]').forEach((b) => b.onclick = async () => {
+    const note = prompt('What action was taken? (optional)'); if (note === null) return;
+    try { await api(`/admin/api/reports/${b.dataset.resolve}/resolve`, { method: 'POST', body: JSON.stringify({ note }) }); toast('Complaint resolved.'); loadReports(); } catch (e) { toast(e.message); }
+  });
+}
+
+// ---------- announcements ----------
+async function loadAnnouncements() {
+  const list = await api('/admin/api/announcements');
+  $('#annList').innerHTML = list.length ? list.map((a) => `<li style="align-items:flex-start"><span style="flex:1;white-space:pre-wrap">${esc(a.text)}<br><span class="muted" style="font-size:12px">${dt(a.ts)} · ${esc(a.by)}</span></span>${a.active ? '<span class="tag t-green">Showing now</span>' : ''}</li>`).join('') : '<li class="muted">No announcements sent yet.</li>';
+}
+$('#annSend').onclick = async () => {
+  const text = $('#annText').value.trim(); if (!text) return toast('Write the announcement first.');
+  if (!confirm('Send this to every customer now?')) return;
+  try { await api('/admin/api/announcements', { method: 'POST', body: JSON.stringify({ text }) }); $('#annText').value = ''; toast('Announcement sent to all customers.'); loadAnnouncements(); } catch (e) { toast(e.message); }
+};
+$('#annEnd').onclick = async () => { try { await api('/admin/api/announcements/active', { method: 'DELETE' }); toast('Banner removed from customer apps.'); loadAnnouncements(); } catch (e) { toast(e.message); } };
+
+// ---------- audit ----------
+const actionName = { login: 'Admin login', block: 'Blocked customer', unblock: 'Unblocked customer', 'force-logout': 'Logged out customer', delete: 'Deleted customer', announce: 'Sent announcement', 'end-announcement': 'Removed announcement', 'resolve-report': 'Resolved complaint' };
+async function loadAudit() {
+  const list = await api('/admin/api/audit');
+  $('#auditBody').innerHTML = list.length ? list.map((a) => `<tr><td>${dt(a.ts)}</td><td>${esc(a.admin)}</td><td>${esc(actionName[a.action] || a.action)}</td><td>${esc(a.target)}</td><td class="muted" style="white-space:normal;min-width:180px">${esc(a.detail)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No admin actions yet.</td></tr>';
+}
+
+if (token) boot(); else $('#loginView').hidden = false;
+</script>
+</body>
+</html>
