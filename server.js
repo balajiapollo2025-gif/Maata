@@ -22,23 +22,86 @@ const TZ = Number(process.env.TZ_OFFSET_MINUTES ?? 330); // 330 = India (IST)
 if (!process.env.JWT_SECRET) console.warn('[warn] JWT_SECRET is not set. Set it before going live.');
 if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is locked until you set it.');
 
-// ---------- Tiny JSON database (swap for MongoDB/PostgreSQL when you scale) ----------
+// ---------- Database ----------
+// With MONGODB_URI set, data is kept permanently in MongoDB (survives restarts & redeploys).
+// Without it, data goes to data/db.json (fine for testing only).
+const { MongoClient } = require('mongodb');
+const MONGODB_URI = process.env.MONGODB_URI || '';
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
-fs.mkdirSync(DATA_DIR, { recursive: true });
 let db = {};
-try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch { /* first run */ }
-for (const k of ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit']) db[k] = db[k] || [];
-// Calls left open by a server restart are closed so reports stay accurate
-for (const c of db.calls) if (!c.endedAt) { c.endedAt = c.answeredAt || c.startedAt; c.status = c.answeredAt ? 'completed' : 'missed'; c.duration = c.duration || 0; }
-let saveTimer = null;
+for (const k of COLLS) db[k] = [];
+let mongo = null;
+const snap = {}; // collection -> Map(id -> last saved JSON), so only changed records are written
+
+async function loadDb() {
+  if (MONGODB_URI) {
+    const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
+    await client.connect();
+    mongo = client.db(process.env.MONGODB_DB || 'maata');
+    for (const c of COLLS) {
+      const docs = await mongo.collection(c).find({}).toArray();
+      db[c] = docs.map(({ _id, ...rest }) => ({ id: _id, ...rest })).sort((a, b) => (a[SORT_BY[c]] || 0) - (b[SORT_BY[c]] || 0));
+      snap[c] = new Map(db[c].map((d) => [d.id, JSON.stringify(d)]));
+    }
+    await mongo.collection('messages').createIndex({ from: 1, to: 1, ts: 1 }).catch(() => {});
+    console.log(`Connected to MongoDB: ${db.users.length} customers, ${db.messages.length} messages loaded`);
+  } else {
+    console.warn('[warn] MONGODB_URI is not set. Using data/db.json - data is lost when the server restarts.');
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    try { const f = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); for (const k of COLLS) db[k] = f[k] || []; } catch { /* first run */ }
+  }
+  // Calls left open by a restart are closed so reports stay accurate
+  let fixed = false;
+  for (const c of db.calls) if (!c.endedAt) { c.endedAt = c.answeredAt || c.startedAt; c.status = c.answeredAt ? 'completed' : 'missed'; c.duration = c.duration || 0; fixed = true; }
+  if (fixed) save();
+}
+
+let saveTimer = null, saving = false, saveAgain = false;
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
+  saveTimer = setTimeout(flush, 400);
+}
+async function flush() {
+  if (!mongo) {
     const tmp = DB_FILE + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(db));
     fs.renameSync(tmp, DB_FILE);
-  }, 200);
+    return;
+  }
+  if (saving) { saveAgain = true; return; }
+  saving = true;
+  try {
+    for (const c of COLLS) {
+      const prev = snap[c] || new Map();
+      const next = new Map();
+      const ops = [];
+      for (const d of db[c]) {
+        const j = JSON.stringify(d);
+        next.set(d.id, j);
+        if (prev.get(d.id) !== j) { const { id, ...rest } = d; ops.push({ replaceOne: { filter: { _id: id }, replacement: rest, upsert: true } }); }
+      }
+      for (const id of prev.keys()) if (!next.has(id)) ops.push({ deleteOne: { filter: { _id: id } } });
+      if (ops.length) await mongo.collection(c).bulkWrite(ops, { ordered: false });
+      snap[c] = next;
+    }
+  } catch (e) {
+    console.error('[db] save failed, retrying in 5s:', e.message);
+    setTimeout(save, 5000);
+  } finally {
+    saving = false;
+    if (saveAgain) { saveAgain = false; save(); }
+  }
+}
+// Render stops the old server on every redeploy: write pending changes first
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, async () => {
+    clearTimeout(saveTimer);
+    try { await flush(); } catch {}
+    process.exit(0);
+  });
 }
 
 // ---------- Helpers ----------
@@ -599,4 +662,10 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`));
+loadDb()
+  .then(() => server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`)))
+  .catch((e) => {
+    console.error('[db] Could not connect to MongoDB. Check MONGODB_URI, the database password, and Network Access (allow 0.0.0.0/0).');
+    console.error(e.message);
+    process.exit(1);
+  });
