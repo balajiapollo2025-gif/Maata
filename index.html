@@ -136,6 +136,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:40;max-width:90vw}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+.call:not([hidden]) ~ .toast{bottom:auto;top:calc(16px + env(safe-area-inset-top,0px))}
 
 
 /* ---------- Mascot ---------- */
@@ -162,6 +163,82 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 .notice p{margin:0;flex:1}
 .notice button{font-size:18px;line-height:1;padding:0 4px;opacity:.7}
 .flag-btn{background:transparent}
+/* ---------- Settings ---------- */
+.settings-bg{position:fixed;inset:0;z-index:25;background:rgba(16,22,28,.5);display:flex;justify-content:center;align-items:flex-end}
+.settings{width:min(520px,100%);max-height:92vh;overflow-y:auto;background:var(--paper);border-radius:22px 22px 0 0;padding:18px 18px calc(24px + env(safe-area-inset-bottom,0px))}
+@media (min-width:761px){.settings-bg{align-items:center}.settings{border-radius:22px}}
+.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.settings-head h2{margin:0;font-size:22px}
+.set-group{background:var(--panel);border:1px solid var(--line);border-radius:16px;margin:14px 0 0;overflow:hidden}
+.set-title{font-size:13px;font-weight:600;color:var(--muted);margin:18px 4px 0;text-transform:uppercase;letter-spacing:.04em}
+.set-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:0}
+.set-row .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
+.set-row .txt{flex:1;min-width:0}
+.set-row .txt b{display:block;font-weight:600;font-size:15px}
+.set-row .txt small{color:var(--muted);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set-row.tone{flex-wrap:wrap;row-gap:10px}
+.tone-pick{display:flex;gap:10px;align-items:center;flex:1 1 100%;padding-left:52px}
+.tone-pick select{flex:1;min-width:0;font:inherit;font-size:15px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.play-btn{width:40px;height:40px;border-radius:50%;background:var(--peacock-soft);color:var(--peacock);display:grid;place-items:center;flex:none;font-size:15px}
+@media (prefers-color-scheme:dark){.play-btn{color:#7CC4D4}}
+.play-btn[aria-pressed="true"]{background:var(--peacock);color:#fff}
+.switch-ui{position:relative;width:50px;height:30px;flex:none}
+.switch-ui input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
+.switch-ui span{position:absolute;inset:0;border-radius:15px;background:var(--line);transition:.2s}
+.switch-ui span::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.2s}
+.switch-ui input:checked + span{background:var(--leaf)}
+.switch-ui input:checked + span::after{transform:translateX(20px)}
+.switch-ui input:focus-visible + span{outline:3px solid var(--turmeric);outline-offset:2px}
+input[type=range].vol{flex:1;accent-color:var(--peacock)}
+.danger-btn{width:100%;padding:13px;border-radius:12px;background:var(--panel);border:1px solid var(--line);color:var(--chili);font-weight:600;margin-top:14px}
+/* ---------- Live translation ---------- */
+.subs{position:relative;z-index:1;width:min(560px,100%);margin:auto 0 16px;display:flex;flex-direction:column;gap:8px}
+.sub-them{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border-radius:16px;padding:12px 16px;text-align:center}
+.sub-them b{display:block;font-size:20px;line-height:1.4;font-weight:600}
+.sub-them small{display:block;opacity:.7;font-size:13px;margin-top:4px}
+.sub-me{background:rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;font-size:13px;text-align:center;opacity:.9;min-height:0}
+.sub-me:empty{display:none}
+.tr-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(232,163,23,.9);color:#1C2230;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;margin-top:10px}
+.round.tr[aria-pressed="true"]{background:var(--turmeric);color:#1C2230}
+.round.tr svg{width:24px;height:24px}
+.lang-chip{font-size:12px;color:var(--muted)}
+.bubble .tr-orig{display:block;font-size:12px;opacity:.7;margin-top:4px;border-top:1px dashed currentColor;padding-top:4px}
+.bubble .tr-tag{font-size:11px;opacity:.7}
+.info-note{font-size:13px;color:var(--muted);padding:10px 16px 14px;line-height:1.5}
+/* ---------- Contacts & privacy ---------- */
+.add-row{display:flex;gap:8px;margin:0 16px 10px}
+.add-row .search{margin:0;flex:1}
+.add-btn{flex:none;display:flex;align-items:center;gap:6px;padding:0 14px;border-radius:12px;background:var(--peacock);color:#fff;font-weight:600;font-size:14px}
+.add-btn svg{width:18px;height:18px}
+.chip-sm{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px;background:#FFF1CC;color:#7A5600}
+.chip-sm.red{background:#FBE3E1;color:#9B2C24}
+.empty-card{margin:18px 16px;padding:22px 18px;border:1.5px dashed var(--line);border-radius:18px;text-align:center;color:var(--muted);line-height:1.6;font-size:14px}
+.empty-card b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.empty-card .primary{margin-top:14px}
+.stranger{margin:10px 12px 0;padding:12px 14px;border-radius:14px;background:#FFF6DC;border:1px solid #F3DDA0;color:#5A4300;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (prefers-color-scheme:dark){.stranger{background:#3A2F12;border-color:#5A4A1C;color:#FFE6A6}}
+.stranger span{flex:1 1 180px}
+.stranger button{padding:7px 12px;border-radius:10px;font-weight:600;font-size:13px;background:var(--panel);border:1px solid var(--line)}
+.stranger button.warn{color:var(--chili)}
+.sheet-btn{width:100%;display:flex;align-items:center;gap:12px;padding:15px 16px;text-align:left;font-size:15px;border-bottom:1px solid var(--line);background:var(--panel)}
+.sheet-btn:last-child{border-bottom:0}
+.sheet-btn.warn{color:var(--chili)}
+.field-sm{display:block;margin:0 0 12px}
+.field-sm span{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+.field-sm input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);font-size:16px}
+.field-sm input:focus{border-color:var(--peacock);outline:none}
+.result{margin-top:14px}
+.result .card-ok{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center}
+.invite{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;font-size:14px;line-height:1.5}
+.invite .row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.invite .row button,.invite .row a{padding:10px 14px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none}
+.wa{background:#25D366;color:#fff}
+.or-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:16px 0}
+.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+.found-list{list-style:none;margin:10px 0 0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.found-list li{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.found-list li:last-child{border-bottom:0}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -241,13 +318,20 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
   <aside class="side">
     <header class="side-head">
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand">Maata</div></div>
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" style="margin-left:auto">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
       </button>
     </header>
     <div class="me" id="meBox"></div>
+    <div class="notice" id="langNotice" hidden><span aria-hidden="true">🌐</span><p>Choose your language to use live call translation.</p><button id="langNoticeBtn" style="font-size:14px;font-weight:600;opacity:1;text-decoration:underline">Choose</button></div>
     <div class="notice" id="notice" hidden role="status"><span aria-hidden="true">📢</span><p id="noticeText"></p><button id="noticeClose" aria-label="Dismiss announcement">×</button></div>
-    <input class="search" id="search" type="search" placeholder="Search name or number" aria-label="Search contacts">
+    <div class="add-row">
+      <input class="search" id="search" type="search" placeholder="Search my contacts" aria-label="Search contacts">
+      <button class="add-btn" id="addContactBtn" aria-label="Add contact"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>Add</button>
+    </div>
     <ul class="contacts" id="contacts"></ul>
   </aside>
 
@@ -260,13 +344,18 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
       <button class="call-btn" id="voiceBtn" aria-label="Voice call" title="Voice call">
         <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
       </button>
-      <button class="call-btn flag-btn" id="reportBtn" aria-label="Report this user" title="Report this user">
-        <svg viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>
-      </button>
       <button class="call-btn" id="videoBtn" aria-label="Video call" title="Video call">
         <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
       </button>
+      <button class="call-btn flag-btn" id="moreBtn" aria-label="More options" title="More options">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+      </button>
     </header>
+    <div class="stranger" id="strangerBar" hidden>
+      <span>⚠️ This number is not in your contacts.</span>
+      <button id="strangerSave">Save contact</button>
+      <button class="warn" id="strangerBlock">Block</button>
+    </div>
     <div class="messages" id="messages" hidden></div>
     <form class="composer" id="composer" hidden>
       <textarea id="msgInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
@@ -283,8 +372,16 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
     <div id="callAvatar"></div>
     <h2 id="callName"></h2>
     <p id="callStatus"></p>
+    <div class="tr-badge" id="trBadge" hidden>🌐 <span id="trBadgeText"></span></div>
+  </div>
+  <div class="subs" id="subs" hidden aria-live="polite">
+    <div class="sub-them" id="subThemBox" hidden><b id="subThem"></b><small id="subThemOrig"></small></div>
+    <div class="sub-me" id="subMe"></div>
   </div>
   <div class="call-controls">
+    <button class="round tr" id="trBtn" aria-pressed="false" aria-label="Live translation" title="Live translation">
+      <svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+    </button>
     <button class="round" id="muteBtn" aria-pressed="false" aria-label="Mute microphone">
       <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
     </button>
@@ -316,6 +413,114 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
     </button>
   </div>
 </section>
+
+<!-- ============ ADD CONTACT ============ -->
+<div class="settings-bg" id="addSheet" hidden>
+  <section class="settings" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="settings-head"><h2 id="addTitle">Add contact</h2><button class="icon-btn" id="addClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <p style="color:var(--muted);font-size:14px;margin:0 0 14px;line-height:1.5">🔒 Only people you save can appear in your list. Nobody can see all Maata users.</p>
+    <button class="primary" id="pickContacts" hidden>📱 Choose from my phone contacts</button>
+    <p id="pickNote" style="color:var(--muted);font-size:13px;margin:0" hidden>Picking from phone contacts works in Chrome on Android. You can add by number below.</p>
+    <div class="or-line">add by mobile number</div>
+    <form id="addForm" novalidate>
+      <label class="field-sm"><span>Name (as you want to see it)</span><input id="addName" maxlength="40" autocomplete="off" placeholder="e.g. Ramesh Delhi"></label>
+      <label class="field-sm"><span>Mobile number</span><input id="addPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="98xxxxxxxx"></label>
+      <button class="primary" id="addSubmit">Add contact</button>
+    </form>
+    <div class="result" id="addResult" aria-live="polite"></div>
+  </section>
+</div>
+
+<!-- ============ CHAT OPTIONS ============ -->
+<div class="settings-bg" id="moreSheet" hidden>
+  <section class="settings" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+    <div class="settings-head"><h2 id="moreTitle"></h2><button class="icon-btn" id="moreClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="set-group" id="moreList"></div>
+  </section>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div class="settings-bg" id="settingsSheet" hidden>
+  <section class="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="settings-head"><h2 id="setTitle">Settings</h2><button class="icon-btn" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+
+    <div class="set-title">Language &amp; translation</div>
+    <div class="set-group">
+      <div class="set-row tone">
+        <span class="ico" style="background:#FFF1CC">🌐</span>
+        <div class="txt"><b>My language</b><small>You speak &amp; read in this language</small></div>
+        <div class="tone-pick"><select id="myLang" aria-label="My language"></select></div>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#DCEAFE">🗣️</span>
+        <div class="txt"><b>Live call translation</b><small>Auto-start when the other person speaks another language</small></div>
+        <label class="switch-ui"><input type="checkbox" id="liveTr" aria-label="Live call translation"><span></span></label>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#DDF5E7">🔈</span>
+        <div class="txt"><b>Speak translation aloud</b><small>Hear their words in your language</small></div>
+        <label class="switch-ui"><input type="checkbox" id="speakTr" aria-label="Speak translation aloud"><span></span></label>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#EDEFF2">🔉</span>
+        <div class="txt"><b>Lower their original voice</b><small>While the translation plays</small></div>
+        <label class="switch-ui"><input type="checkbox" id="duckTr" aria-label="Lower original voice"><span></span></label>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#FFE1EA">💬</span>
+        <div class="txt"><b>Translate chat messages</b><small>Show messages in your language</small></div>
+        <label class="switch-ui"><input type="checkbox" id="chatTr" aria-label="Translate chat messages"><span></span></label>
+      </div>
+      <p class="info-note">Works best in Google Chrome. Use earphones during translated calls so the translation is not picked up by your microphone.</p>
+    </div>
+
+    <div class="set-title">Ringtones</div>
+    <div class="set-group">
+      <div class="set-row tone">
+        <span class="ico" style="background:#DDF5E7">📞</span>
+        <div class="txt"><b>Voice call ringtone</b><small id="voiceToneName"></small></div>
+        <div class="tone-pick">
+          <select id="voiceTone" aria-label="Voice call ringtone"></select>
+          <button class="play-btn" data-preview="voice" aria-label="Play voice call ringtone" aria-pressed="false">▶</button>
+        </div>
+      </div>
+      <div class="set-row tone">
+        <span class="ico" style="background:#DCEAFE">🎥</span>
+        <div class="txt"><b>Video call ringtone</b><small id="videoToneName"></small></div>
+        <div class="tone-pick">
+          <select id="videoTone" aria-label="Video call ringtone"></select>
+          <button class="play-btn" data-preview="video" aria-label="Play video call ringtone" aria-pressed="false">▶</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#FFF1CC">🔊</span>
+        <div class="txt" style="flex:none"><b>Volume</b></div>
+        <input class="vol" type="range" id="ringVol" min="10" max="100" step="5" aria-label="Ringtone volume">
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#EDE4F7">📳</span>
+        <div class="txt"><b>Vibrate on incoming calls</b><small>Works on Android phones</small></div>
+        <label class="switch-ui"><input type="checkbox" id="vibrateOn" aria-label="Vibrate on incoming calls"><span></span></label>
+      </div>
+    </div>
+
+    <div class="set-title">Messages</div>
+    <div class="set-group">
+      <div class="set-row">
+        <span class="ico" style="background:#FFE1EA">💬</span>
+        <div class="txt"><b>Message sound</b><small>Short sound when a new message arrives</small></div>
+        <label class="switch-ui"><input type="checkbox" id="msgSound" aria-label="Message sound"><span></span></label>
+      </div>
+    </div>
+
+    <div class="set-title">Account</div>
+    <div class="set-group">
+      <div class="set-row" id="setAccount"></div>
+    </div>
+    <button class="danger-btn" id="setLogout">Log out</button>
+    <input type="file" id="toneFile" accept="audio/*" hidden>
+  </section>
+</div>
 
 <div class="toast" id="toast" role="status"></div>
 
@@ -408,6 +613,7 @@ async function start() {
   renderContacts();
   connectSocket();
   api('/api/announcement').then(showNotice).catch(() => {});
+  $('#langNotice').hidden = !!me.lang;
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
 }
 
@@ -425,6 +631,11 @@ function connectSocket() {
     const u = userById(userId); if (!u) return;
     u.online = online; renderContacts(); if (activeId === userId) renderChatHead();
   });
+  socket.on('user:update', (x) => {
+    const u = userById(x.id); if (u) { u.lang = x.lang; if (activeId === x.id) { renderChatHead(); renderMessages(); } }
+  });
+  socket.on('call:caption', onCaption);
+  socket.on('call:caption:self', onCaptionSelf);
   socket.on('user:new', (u) => { if (u.id !== me.id && !userById(u.id)) { users.push(u); renderContacts(); } });
   socket.on('msg:new', onMessage);
   socket.on('msg:status', ({ ids, status }) => {
@@ -450,13 +661,12 @@ function showNotice(a) {
   $('#noticeText').textContent = a.text; box.hidden = false; box.dataset.id = a.id;
 }
 $('#noticeClose').onclick = () => { store.set('maata_notice_dismissed', $('#notice').dataset.id); $('#notice').hidden = true; };
-$('#reportBtn').onclick = async () => {
-  const u = userById(activeId); if (!u) return;
-  const reason = prompt('Report ' + u.name + ' to Maata support. What happened? (spam, abuse, fraud…)');
+async function reportUser(u) {
+  const reason = prompt('Report ' + nameOf(u) + ' to Maata support. What happened? (spam, abuse, fraud…)');
   if (reason === null) return;
   try { await api('/api/report', { method: 'POST', body: JSON.stringify({ userId: u.id, reason }) }); toast('Report sent. Our team will review it.'); }
   catch (e) { toast(e.message); }
-};
+}
 
 // ---------------- contacts ----------------
 $('#search').oninput = renderContacts;
@@ -464,10 +674,14 @@ function renderContacts() {
   const q = $('#search').value.trim().toLowerCase();
   const list = $('#contacts'); list.innerHTML = '';
   const shown = users
-    .filter((u) => !q || u.name.toLowerCase().includes(q) || u.phone.includes(q))
-    .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || a.name.localeCompare(b.name));
+    .filter((u) => !q || nameOf(u).toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.phone.includes(q))
+    .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
   if (!shown.length) {
-    list.innerHTML = '<li class="empty-list">' + (users.length ? 'No one matches that search.' : 'No other users yet. Share Maata with friends — once they sign up, they appear here.') + '</li>';
+    if (users.length) { list.innerHTML = '<li class="empty-list">No saved contact matches that search.</li>'; return; }
+    const li = document.createElement('li');
+    li.innerHTML = '<div class="empty-card"><b>No contacts yet</b>Add friends and family by their mobile number, or pick them from your phone contacts. Only people you add will show here.<button class="primary" type="button">＋ Add contact</button></div>';
+    li.querySelector('button').onclick = openAdd;
+    list.append(li);
     return;
   }
   for (const u of shown) {
@@ -476,7 +690,9 @@ function renderContacts() {
     if (u.id === activeId) b.setAttribute('aria-current', 'true');
     const body = document.createElement('div'); body.className = 'c-body';
     const top = document.createElement('div'); top.className = 'c-top';
-    const name = document.createElement('span'); name.className = 'c-name'; name.textContent = u.name;
+    const name = document.createElement('span'); name.className = 'c-name'; name.textContent = nameOf(u);
+    if (u.blocked) { const c = document.createElement('span'); c.className = 'chip-sm red'; c.textContent = 'Blocked'; name.append(c); }
+    else if (!u.inContacts) { const c = document.createElement('span'); c.className = 'chip-sm'; c.textContent = 'Not saved'; name.append(c); }
     const time = document.createElement('span'); time.className = 'c-time'; time.textContent = u.lastMessage ? fmtTime(u.lastMessage.ts) : '';
     top.append(name, time);
     const last = document.createElement('div'); last.className = 'c-last';
@@ -507,8 +723,9 @@ $('#backBtn').onclick = () => { activeId = null; $('#app').classList.remove('in-
 function renderChatHead() {
   const u = userById(activeId); if (!u) return;
   const a = $('#chatAvatar'); a.innerHTML = ''; a.append(avatar(u, 'sm'));
-  $('#chatName').textContent = u.name;
-  const s = $('#chatStatus'); s.textContent = u.online ? 'Online' : u.phone; s.classList.toggle('on', !!u.online);
+  $('#chatName').textContent = nameOf(u);
+  $('#strangerBar').hidden = !!u.inContacts || !!u.blocked;
+  const s = $('#chatStatus'); s.textContent = (u.online ? 'Online' : u.phone) + (u.lang && LANGS[u.lang] ? ' · ' + LANGS[u.lang].native : ''); s.classList.toggle('on', !!u.online);
 }
 function renderMessages() {
   const box = $('#messages');
@@ -519,7 +736,16 @@ function renderMessages() {
     const day = fmtDay(m.ts);
     if (day !== lastDay) { const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.append(d); lastDay = day; }
     const b = document.createElement('div'); b.className = 'bubble' + (m.from === me.id ? ' mine' : '');
-    b.append(document.createTextNode(m.text));
+    const sender = m.from === me.id ? me : userById(m.from);
+    const needTr = m.from !== me.id && settings.chatTranslate && me.lang && sender && sender.lang && sender.lang !== me.lang;
+    const trText = needTr ? trMsg.get(m.id) : null;
+    if (trText) {
+      b.append(document.createTextNode(trText));
+      const o = document.createElement('span'); o.className = 'tr-orig'; o.textContent = '🌐 ' + (LANGS[sender.lang]?.name || '') + ': ' + m.text; b.append(o);
+    } else {
+      b.append(document.createTextNode(m.text));
+      if (needTr) queueTranslate(m, sender.lang);
+    }
     const meta = document.createElement('div'); meta.className = 'meta';
     meta.append(document.createTextNode(fmtTime(m.ts)));
     if (m.from === me.id) {
@@ -537,14 +763,18 @@ function markRead() {
 }
 document.addEventListener('visibilitychange', () => { if (activeId) markRead(); });
 
-function onMessage(m) {
+async function onMessage(m) {
   const other = m.from === me.id ? m.to : m.from;
+  if (!userById(other)) {
+    try { const nu = await api('/api/users/' + other); if (!userById(other)) users.push(nu); } catch { return; }
+  }
   if (messagesCache[other] && !messagesCache[other].some((x) => x.id === m.id)) messagesCache[other].push(m);
   const u = userById(other);
   if (u) { u.lastMessage = m; if (m.from !== me.id) u.unread = (u.unread || 0) + 1; }
   renderContacts();
   if (other === activeId) { renderMessages(); markRead(); }
-  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? u.name : 'New message', m.text);
+  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? nameOf(u) : 'New message', m.text);
+  if (m.from !== me.id) messageSound();
 }
 function notify(title, body) {
   if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
@@ -570,25 +800,198 @@ $('#composer').onsubmit = (e) => {
   });
 };
 
-// ---------------- ringtones (Web Audio, no files needed) ----------------
-let audioCtx = null, ringTimer = null;
-function ring(type) {
-  stopRing();
-  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch { return; }
-  const beep = (freq, dur, at) => {
-    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-    o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
-    const t = audioCtx.currentTime + at; g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.18, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.start(t); o.stop(t + dur + 0.05);
-  };
-  const play = type === 'incoming'
-    ? () => { beep(880, .25, 0); beep(660, .25, .3); beep(880, .25, .6); }
-    : () => { beep(425, 1, 0); };
-  play(); ringTimer = setInterval(play, type === 'incoming' ? 2000 : 3000);
-  if (type === 'incoming' && navigator.vibrate) navigator.vibrate([400, 200, 400]);
+// ---------------- settings & ringtones ----------------
+// Built-in ringtones are generated with Web Audio (no sound files needed).
+// Customers can also pick their own song/tone file; it is kept only on their device (IndexedDB).
+const TONES = {
+  classic: { name: 'Maata Classic', every: 2000, notes: [[880, 0, .25], [660, .3, .25], [880, .6, .25]] },
+  marimba: { name: 'Marimba', every: 2200, wave: 'triangle', decay: true, notes: [[523, 0, .35], [659, .18, .35], [784, .36, .35], [1047, .54, .6], [784, .9, .35], [1047, 1.08, .7]] },
+  chime:   { name: 'Soft Chime', every: 2600, decay: true, notes: [[1319, 0, 1.2], [988, .4, 1.2], [1175, .8, 1.4]] },
+  flute:   { name: 'Flute Melody', every: 3000, vibrato: true, notes: [[587, 0, .3], [659, .32, .3], [784, .64, .45], [880, 1.1, .3], [784, 1.42, .3], [659, 1.74, .6]] },
+  digital: { name: 'Digital', every: 1600, wave: 'square', gain: .08, notes: [[1200, 0, .08], [1200, .12, .08], [1200, .24, .08], [1600, .5, .08], [1600, .62, .08], [1600, .74, .08]] },
+  retro:   { name: 'Old Phone', every: 4000, dual: 480, notes: [[440, 0, 1.8]] },
+  sitar:   { name: 'Sitar Pluck', every: 2800, wave: 'sawtooth', decay: true, gain: .09, notes: [[392, 0, .5], [440, .25, .5], [523, .5, .5], [587, .75, .8], [523, 1.3, .5], [440, 1.55, .9]] },
+  ding:    { name: 'Ding Dong', every: 2500, decay: true, notes: [[659, 0, 1], [523, .55, 1.3]] },
+};
+const OUTGOING = { every: 3000, notes: [[425, 0, 1]] };
+const defaults = { voiceTone: 'classic', videoTone: 'marimba', volume: 70, vibrate: true, msgSound: true, liveTranslate: true, speakTranslation: true, duckOriginal: true, chatTranslate: true };
+let settings = { ...defaults };
+try { settings = { ...defaults, ...JSON.parse(store.get('maata_settings') || '{}') }; } catch {}
+const saveSettings = () => store.set('maata_settings', JSON.stringify(settings));
+
+// Custom ringtone files (IndexedDB)
+const idb = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      try {
+        const r = indexedDB.open('maata', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('tones');
+        r.onsuccess = () => { this.db = r.result; res(this.db); };
+        r.onerror = () => rej(r.error);
+      } catch (e) { rej(e); }
+    });
+  },
+  async get(k) { const d = await this.open(); return new Promise((res) => { const q = d.transaction('tones').objectStore('tones').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); },
+  async set(k, v) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('tones', 'readwrite'); t.objectStore('tones').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+};
+const customTone = {}; // kind -> { name, url }
+async function loadCustomTones() {
+  for (const kind of ['voice', 'video']) {
+    try { const rec = await idb.get(kind); if (rec && rec.blob) customTone[kind] = { name: rec.name, url: URL.createObjectURL(rec.blob) }; } catch {}
+  }
 }
-function stopRing() { clearInterval(ringTimer); ringTimer = null; if (navigator.vibrate) navigator.vibrate(0); }
+
+let audioCtx = null, ringTimer = null, ringAudio = null;
+function ctx() {
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playPattern(t) {
+  const ac = ctx(), vol = (settings.volume / 100);
+  const master = ac.createGain(); master.gain.value = vol; master.connect(ac.destination);
+  for (const [freq, at, dur] of t.notes) {
+    const start = ac.currentTime + at;
+    const g = ac.createGain(); g.connect(master);
+    const peak = t.gain || .2;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(peak, start + .02);
+    if (t.decay) g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    else { g.gain.setValueAtTime(peak, start + Math.max(.03, dur - .05)); g.gain.exponentialRampToValueAtTime(0.0001, start + dur); }
+    const freqs = t.dual ? [freq, t.dual] : [freq];
+    for (const f of freqs) {
+      const o = ac.createOscillator(); o.type = t.wave || 'sine'; o.frequency.value = f; o.connect(g);
+      if (t.vibrato) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 6; lg.gain.value = 6; l.connect(lg); lg.connect(o.frequency); l.start(start); l.stop(start + dur + .05); }
+      if (t.dual) { const am = ac.createOscillator(), ag = ac.createGain(); am.frequency.value = 20; ag.gain.value = .5; am.connect(ag); ag.connect(g.gain); am.start(start); am.stop(start + dur); }
+      o.start(start); o.stop(start + dur + .05);
+    }
+  }
+}
+function startTone(toneId, kind) {
+  if (toneId === 'custom' && customTone[kind]) {
+    ringAudio = new Audio(customTone[kind].url);
+    ringAudio.loop = true; ringAudio.volume = settings.volume / 100;
+    ringAudio.play().catch(() => { ringAudio = null; startTone('classic', kind); });
+    return;
+  }
+  const t = TONES[toneId] || TONES.classic;
+  try { playPattern(t); ringTimer = setInterval(() => playPattern(t), t.every); } catch {}
+}
+function ring(type, kind = 'voice') {
+  stopRing();
+  if (type === 'outgoing') {
+    try { playPattern(OUTGOING); ringTimer = setInterval(() => playPattern(OUTGOING), OUTGOING.every); } catch {}
+    return;
+  }
+  startTone(kind === 'video' ? settings.videoTone : settings.voiceTone, kind);
+  if (settings.vibrate && navigator.vibrate) {
+    navigator.vibrate([500, 300, 500, 300, 500]);
+    ringVibe = setInterval(() => navigator.vibrate([500, 300, 500, 300, 500]), 2500);
+  }
+}
+let ringVibe = null;
+function messageSound() {
+  if (!settings.msgSound) return;
+  try { playPattern({ decay: true, notes: [[988, 0, .18], [1319, .09, .28]] }); } catch {}
+}
+function stopRing() {
+  clearInterval(ringTimer); ringTimer = null;
+  clearInterval(ringVibe); ringVibe = null;
+  if (ringAudio) { ringAudio.pause(); ringAudio = null; }
+  if (navigator.vibrate) navigator.vibrate(0);
+  $$('.play-btn').forEach((b) => { b.setAttribute('aria-pressed', 'false'); b.textContent = '▶'; });
+}
+
+// ---------------- settings screen ----------------
+const $$ = (sel) => [...document.querySelectorAll(sel)];
+function fillToneSelect(sel, kind, value) {
+  sel.innerHTML = '';
+  for (const [id, t] of Object.entries(TONES)) sel.add(new Option(t.name, id));
+  sel.add(new Option(customTone[kind] ? '🎵 ' + customTone[kind].name : '🎵 My own tone…', 'custom'));
+  if (customTone[kind]) sel.add(new Option('Choose another file…', 'upload'));
+  sel.value = value === 'custom' && !customTone[kind] ? 'classic' : value;
+}
+function toneLabel(kind) {
+  const v = kind === 'video' ? settings.videoTone : settings.voiceTone;
+  return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
+}
+function renderSettings() {
+  const ls = $('#myLang'); ls.innerHTML = '';
+  if (!me || !me.lang) ls.add(new Option('Choose…', ''));
+  for (const [code, l] of Object.entries(LANGS)) ls.add(new Option(l.native + ' — ' + l.name, code));
+  ls.value = (me && me.lang) || '';
+  $('#liveTr').checked = settings.liveTranslate;
+  $('#speakTr').checked = settings.speakTranslation;
+  $('#duckTr').checked = settings.duckOriginal;
+  $('#chatTr').checked = settings.chatTranslate;
+  fillToneSelect($('#voiceTone'), 'voice', settings.voiceTone);
+  fillToneSelect($('#videoTone'), 'video', settings.videoTone);
+  $('#voiceToneName').textContent = 'Plays when someone voice-calls you';
+  $('#videoToneName').textContent = 'Plays when someone video-calls you';
+  $('#ringVol').value = settings.volume;
+  $('#vibrateOn').checked = settings.vibrate;
+  $('#msgSound').checked = settings.msgSound;
+  const acc = $('#setAccount'); acc.innerHTML = '';
+  if (me) {
+    const txt = document.createElement('div'); txt.className = 'txt';
+    const b = document.createElement('b'); b.textContent = me.name;
+    const sm = document.createElement('small'); sm.textContent = me.phone;
+    txt.append(b, sm); acc.append(avatar(me), txt);
+  }
+}
+let pickingFor = null;
+function onToneChange(kind) {
+  return (e) => {
+    const v = e.target.value;
+    stopRing();
+    if (v === 'upload' || (v === 'custom' && !customTone[kind])) {
+      pickingFor = kind; $('#toneFile').value = ''; $('#toneFile').click();
+      renderSettings();
+      return;
+    }
+    settings[kind === 'video' ? 'videoTone' : 'voiceTone'] = v; saveSettings(); renderSettings();
+    preview(kind);
+  };
+}
+$('#voiceTone').onchange = onToneChange('voice');
+$('#videoTone').onchange = onToneChange('video');
+$('#toneFile').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f || !pickingFor) return;
+  if (!f.type.startsWith('audio/')) return toast('Please choose an audio file (mp3, m4a, wav…).');
+  if (f.size > 8 * 1024 * 1024) return toast('That file is too big. Choose a tone under 8 MB.');
+  const kind = pickingFor; pickingFor = null;
+  try {
+    await idb.set(kind, { name: f.name.replace(/\.[^.]+$/, '').slice(0, 40), blob: f });
+    if (customTone[kind]) URL.revokeObjectURL(customTone[kind].url);
+    customTone[kind] = { name: f.name.replace(/\.[^.]+$/, '').slice(0, 40), url: URL.createObjectURL(f) };
+    settings[kind === 'video' ? 'videoTone' : 'voiceTone'] = 'custom'; saveSettings(); renderSettings();
+    toast('Ringtone set: ' + customTone[kind].name); preview(kind);
+  } catch { toast('Could not save that tone on this device.'); }
+};
+function preview(kind) {
+  stopRing();
+  const btn = $('[data-preview="' + kind + '"]');
+  startTone(kind === 'video' ? settings.videoTone : settings.voiceTone, kind);
+  btn.setAttribute('aria-pressed', 'true'); btn.textContent = '■';
+  clearTimeout(preview.t); preview.t = setTimeout(stopRing, 6000);
+}
+$$('.play-btn').forEach((b) => b.onclick = () => {
+  if (b.getAttribute('aria-pressed') === 'true') stopRing(); else preview(b.dataset.preview);
+});
+$('#ringVol').oninput = (e) => { settings.volume = Number(e.target.value); saveSettings(); if (ringAudio) ringAudio.volume = settings.volume / 100; };
+$('#ringVol').onchange = () => { if (!ringTimer && !ringAudio) preview('voice'); };
+$('#vibrateOn').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); if (settings.vibrate && navigator.vibrate) navigator.vibrate(200); };
+$('#msgSound').onchange = (e) => { settings.msgSound = e.target.checked; saveSettings(); messageSound(); };
+function openSettings() { if (call) return toast('Settings are available after the call.'); renderSettings(); $('#settingsSheet').hidden = false; $('#settingsClose').focus(); }
+function closeSettings() { stopRing(); $('#settingsSheet').hidden = true; }
+$('#settingsBtn').onclick = openSettings;
+$('#settingsClose').onclick = closeSettings;
+$('#settingsSheet').onclick = (e) => { if (e.target.id === 'settingsSheet') closeSettings(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#settingsSheet').hidden) closeSettings(); });
+$('#setLogout').onclick = () => { if (confirm('Log out of Maata on this device?')) logout(); };
+loadCustomTones();
 
 // ---------------- calls (WebRTC) ----------------
 const callEl = $('#callScreen');
@@ -650,13 +1053,14 @@ function onConnected() {
     }, 1000);
   }
   setCallStatus('00:00');
+  if (!tr.on && translationWanted()) startTranslation();
 }
 
 async function startCall(kind) {
   if (call) return toast('You are already on a call.');
   const u = userById(activeId); if (!u) return;
   if (!u.online) return toast(u.name + ' is offline. Calls go through when they have the app open.');
-  call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: u.name, kind, role: 'caller', state: 'calling', pendingIce: [] };
+  call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: nameOf(u), peerLang: u.lang, kind, role: 'caller', state: 'calling', pendingIce: [] };
   showCallScreen('Calling…');
   try { call.local = await getMedia(kind); }
   catch (e) { const msg = mediaError(e); endCall(msg); return; }
@@ -673,13 +1077,14 @@ $('#videoBtn').onclick = () => startCall('video');
 
 function onIncoming(p) {
   if (call) { socket.emit('call:busy', { to: p.from, callId: p.callId }); return; }
-  call = { id: p.callId, peerId: p.from, peerName: p.fromName, kind: p.kind, role: 'callee', state: 'incoming', offer: p.sdp, pendingIce: [] };
+  const saved = userById(p.from);
+  call = { id: p.callId, peerId: p.from, peerName: saved ? nameOf(saved) : p.fromName + ' (not saved)', peerLang: p.lang, kind: p.kind, role: 'callee', state: 'incoming', offer: p.sdp, pendingIce: [] };
   const u = userById(p.from) || { id: p.from, name: p.fromName };
   const a = $('#inAvatar'); a.innerHTML = ''; a.append(avatar(u));
-  $('#inName').textContent = p.fromName;
+  $('#inName').textContent = call.peerName;
   $('#inKind').textContent = p.kind === 'video' ? 'Maata video call' : 'Maata voice call';
-  $('#incoming').hidden = false; ring('incoming');
-  notify('Incoming ' + (p.kind === 'video' ? 'video' : 'voice') + ' call', p.fromName + ' is calling you');
+  $('#incoming').hidden = false; closeSettings(); ring('incoming', p.kind);
+  notify('Incoming ' + (p.kind === 'video' ? 'video' : 'voice') + ' call', call.peerName + ' is calling you');
   call.timeout = setTimeout(() => { if (call && call.state === 'incoming') { socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall('Missed call from ' + call.peerName); } }, 45000);
 }
 $('#declineBtn').onclick = () => { if (!call) return; socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(''); };
@@ -701,6 +1106,7 @@ $('#acceptBtn').onclick = async () => {
 async function onAnswered(p) {
   if (!call || call.id !== p.callId || call.role !== 'caller' || !call.pc) return;
   stopRing(); setCallStatus('Connecting…'); call.state = 'connecting';
+  if (p.lang) call.peerLang = p.lang;
   await call.pc.setRemoteDescription(p.sdp);
   await flushIce();
 }
@@ -713,6 +1119,7 @@ async function onRemoteIce(p) {
 function endCall(reason, notifyPeer = false) {
   if (!call) return;
   if (notifyPeer) socket.emit('call:end', { to: call.peerId, callId: call.id });
+  stopTranslation();
   stopRing(); clearTimeout(call.timeout); clearInterval(call.ticker);
   if (call.local) call.local.getTracks().forEach((t) => t.stop());
   if (call.pc) { call.pc.ontrack = call.pc.onicecandidate = call.pc.onconnectionstatechange = null; call.pc.close(); }
@@ -731,6 +1138,7 @@ $('#muteBtn').onclick = () => {
   t.enabled = !t.enabled;
   $('#muteBtn').setAttribute('aria-pressed', String(!t.enabled));
   $('#muteBtn').setAttribute('aria-label', t.enabled ? 'Mute microphone' : 'Unmute microphone');
+  if (!t.enabled) stopListening(); else listen();
 };
 $('#camBtn').onclick = () => {
   if (!call?.local) return;
@@ -753,6 +1161,267 @@ $('#flipBtn').onclick = async () => {
     $('#localVideo').style.transform = call.facing === 'user' ? 'scaleX(-1)' : 'none';
   } catch { toast('This device has only one camera.'); }
 };
+
+
+// ---------------- live translation ----------------
+const LANGS = {
+  te: { name: 'Telugu', native: 'తెలుగు', speech: 'te-IN' },
+  hi: { name: 'Hindi', native: 'हिन्दी', speech: 'hi-IN' },
+  en: { name: 'English', native: 'English', speech: 'en-IN' },
+  ta: { name: 'Tamil', native: 'தமிழ்', speech: 'ta-IN' },
+  kn: { name: 'Kannada', native: 'ಕನ್ನಡ', speech: 'kn-IN' },
+  ml: { name: 'Malayalam', native: 'മലയാളം', speech: 'ml-IN' },
+  mr: { name: 'Marathi', native: 'मराठी', speech: 'mr-IN' },
+  bn: { name: 'Bengali', native: 'বাংলা', speech: 'bn-IN' },
+  gu: { name: 'Gujarati', native: 'ગુજરાતી', speech: 'gu-IN' },
+  pa: { name: 'Punjabi', native: 'ਪੰਜਾਬੀ', speech: 'pa-IN' },
+  ur: { name: 'Urdu', native: 'اردو', speech: 'ur-IN' },
+  or: { name: 'Odia', native: 'ଓଡ଼ିଆ', speech: 'or-IN' },
+};
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const tr = { on: false, rec: null, speaking: false, restart: null, warnedVoice: {} };
+const peerLang = () => (call && ((userById(call.peerId) || {}).lang || call.peerLang)) || null;
+const langName = (c) => (LANGS[c] ? LANGS[c].name : 'their language');
+function translationWanted() { return !!(call && settings.liveTranslate && me.lang && peerLang() && peerLang() !== me.lang); }
+
+function updateTrUi() {
+  $('#trBtn').setAttribute('aria-pressed', String(tr.on));
+  $('#trBadge').hidden = !tr.on;
+  $('#subs').hidden = !tr.on;
+  if (tr.on) $('#trBadgeText').textContent = 'You speak ' + langName(me.lang) + ' · ' + (call ? call.peerName : '') + ' hears ' + langName(peerLang());
+}
+function startTranslation() {
+  if (!call) return;
+  if (!me.lang) { toast('Choose your language in Settings first.'); return; }
+  if (!peerLang()) { toast(call.peerName + ' has not chosen a language yet.'); return; }
+  if (peerLang() === me.lang) { toast('You both speak ' + langName(me.lang) + '.'); return; }
+  if (!SR) { toast('Live translation needs Google Chrome.'); return; }
+  tr.on = true; updateTrUi();
+  $('#subThemBox').hidden = true; $('#subMe').textContent = 'Speak in ' + langName(me.lang) + '…';
+  listen();
+}
+function stopTranslation() {
+  tr.on = false; stopListening();
+  try { speechSynthesis.cancel(); } catch {}
+  tr.speaking = false; duck(false);
+  if (call) updateTrUi(); else { $('#trBadge').hidden = true; $('#subs').hidden = true; $('#trBtn').setAttribute('aria-pressed', 'false'); }
+}
+$('#trBtn').onclick = () => { if (tr.on) stopTranslation(); else startTranslation(); };
+
+function listen() {
+  if (!tr.on || !call || tr.speaking || tr.rec) return;
+  const mic = call.local && call.local.getAudioTracks()[0];
+  if (mic && !mic.enabled) return; // muted
+  clearTimeout(tr.restart);
+  let r;
+  try { r = new SR(); } catch { return; }
+  tr.rec = r;
+  r.lang = LANGS[me.lang].speech; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
+  r.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const res = e.results[i], t = res[0].transcript.trim();
+      if (res.isFinal) { if (t) sendCaption(t); } else interim += t + ' ';
+    }
+    if (interim.trim()) $('#subMe').textContent = '🎙️ ' + interim.trim();
+  };
+  r.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { stopTranslation(); toast('Allow microphone access to use live translation.'); }
+    else if (e.error === 'audio-capture') { stopTranslation(); toast('This phone cannot translate during a call. Try Chrome on a computer.'); }
+    else if (e.error === 'language-not-supported') { stopTranslation(); toast(langName(me.lang) + ' speech is not supported on this browser.'); }
+  };
+  r.onend = () => { if (tr.rec === r) tr.rec = null; if (tr.on && !tr.speaking) tr.restart = setTimeout(listen, 300); };
+  try { r.start(); } catch { tr.rec = null; tr.restart = setTimeout(listen, 1000); }
+}
+function stopListening() {
+  clearTimeout(tr.restart);
+  if (tr.rec) { const r = tr.rec; tr.rec = null; r.onend = null; try { r.abort(); } catch {} }
+}
+function sendCaption(text) {
+  if (!call) return;
+  socket.emit('call:caption', { to: call.peerId, callId: call.id, text, lang: me.lang });
+  $('#subMe').textContent = '🎙️ ' + text + ' …';
+}
+function onCaption(c) {
+  if (!call || c.callId !== call.id) return;
+  if (!tr.on) { tr.on = true; updateTrUi(); listen(); } // other side turned translation on
+  $('#subThemBox').hidden = false;
+  $('#subThem').textContent = c.translated;
+  $('#subThemOrig').textContent = c.ok ? (LANGS[c.fromLang]?.native || '') + ': ' + c.text : 'Translation unavailable, showing original';
+  if (settings.speakTranslation && c.ok) speak(c.translated, c.toLang);
+}
+function onCaptionSelf(c) {
+  if (!call || c.callId !== call.id) return;
+  $('#subMe').textContent = c.ok ? '✓ ' + call.peerName + ' heard: ' + c.translated : '🎙️ ' + c.text;
+}
+function pickVoice(lang) {
+  const vs = speechSynthesis.getVoices(), base = lang.split('-')[0];
+  return vs.find((v) => v.lang.replace('_', '-') === lang) || vs.find((v) => v.lang.toLowerCase().startsWith(base));
+}
+function speak(text, code) {
+  if (!('speechSynthesis' in window) || !LANGS[code]) return;
+  const voice = pickVoice(LANGS[code].speech);
+  if (!voice) {
+    if (!tr.warnedVoice[code]) { tr.warnedVoice[code] = true; toast('No ' + langName(code) + ' voice on this device, showing subtitles only.'); }
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = voice; u.lang = voice.lang; u.rate = 1;
+  u.onstart = () => { tr.speaking = true; stopListening(); duck(true); };
+  u.onend = u.onerror = () => {
+    if (speechSynthesis.speaking || speechSynthesis.pending) return;
+    tr.speaking = false; duck(false); listen();
+  };
+  speechSynthesis.speak(u);
+}
+if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
+function duck(on) { const v = $('#remoteVideo'); if (v) v.volume = on && settings.duckOriginal ? 0.15 : 1; }
+
+// Chat translation
+const trMsg = new Map(), trPending = new Set();
+let trQueueTimer = null;
+function queueTranslate(m, from) {
+  if (trMsg.has(m.id) || trPending.has(m.id)) return;
+  trPending.add(m.id);
+  api('/api/translate', { method: 'POST', body: JSON.stringify({ text: m.text, from, to: me.lang }) })
+    .then((r) => { trMsg.set(m.id, r.translated); clearTimeout(trQueueTimer); trQueueTimer = setTimeout(() => { if (activeId) renderMessages(); }, 150); })
+    .catch(() => {})
+    .finally(() => trPending.delete(m.id));
+}
+
+// Settings: language & translation
+$('#myLang').onchange = async (e) => {
+  const lang = e.target.value; if (!lang) return;
+  try {
+    me = await api('/api/me/lang', { method: 'POST', body: JSON.stringify({ lang }) });
+    $('#langNotice').hidden = true; trMsg.clear();
+    toast('Your language: ' + LANGS[lang].native);
+    renderSettings(); if (activeId) renderMessages();
+  } catch (err) { toast(err.message); }
+};
+$('#liveTr').onchange = (e) => { settings.liveTranslate = e.target.checked; saveSettings(); };
+$('#speakTr').onchange = (e) => { settings.speakTranslation = e.target.checked; saveSettings(); };
+$('#duckTr').onchange = (e) => { settings.duckOriginal = e.target.checked; saveSettings(); };
+$('#chatTr').onchange = (e) => { settings.chatTranslate = e.target.checked; saveSettings(); if (activeId) renderMessages(); };
+$('#langNoticeBtn').onclick = () => openSettings();
+
+// ---------------- contacts & privacy ----------------
+const nameOf = (u) => (u && (u.displayName || u.name)) || '';
+function upsertUser(nu) {
+  const i = users.findIndex((x) => x.id === nu.id);
+  if (i > -1) users[i] = { ...users[i], ...nu, lastMessage: users[i].lastMessage || nu.lastMessage, unread: users[i].unread || nu.unread };
+  else users.push(nu);
+}
+function openSheet(id) { $('#' + id).hidden = false; }
+function closeSheet(id) { $('#' + id).hidden = true; }
+['addSheet', 'moreSheet'].forEach((id) => { $('#' + id).onclick = (e) => { if (e.target.id === id) closeSheet(id); }; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSheet('addSheet'); closeSheet('moreSheet'); } });
+
+const canPick = 'contacts' in navigator && 'ContactsManager' in window;
+function openAdd() {
+  $('#addResult').innerHTML = ''; $('#addName').value = ''; $('#addPhone').value = '';
+  $('#pickContacts').hidden = !canPick; $('#pickNote').hidden = canPick;
+  openSheet('addSheet');
+  setTimeout(() => (canPick ? $('#pickContacts') : $('#addPhone')).focus(), 50);
+}
+$('#addContactBtn').onclick = openAdd;
+$('#addClose').onclick = () => closeSheet('addSheet');
+
+function inviteCard(phone) {
+  const link = location.origin;
+  const text = 'Hi! Let\u2019s talk free on Maata \u2014 voice & video calls and chat with live translation. Join here: ' + link;
+  const box = document.createElement('div'); box.className = 'invite';
+  box.innerHTML = '<b>Not on Maata yet</b><br>Invite them so you can chat and call for free.<div class="row"></div>';
+  const row = box.querySelector('.row');
+  const digits = String(phone || '').replace(/\D/g, '');
+  const wa = document.createElement('a'); wa.className = 'wa'; wa.target = '_blank'; wa.rel = 'noopener';
+  wa.href = 'https://wa.me/' + (digits.length === 10 ? '91' + digits : digits) + '?text=' + encodeURIComponent(text);
+  wa.textContent = 'Invite on WhatsApp'; row.append(wa);
+  const sms = document.createElement('a'); sms.className = 'btn-sms'; sms.href = 'sms:' + digits + '?body=' + encodeURIComponent(text);
+  sms.textContent = 'Send SMS'; sms.style.cssText = 'background:var(--peacock-soft);color:var(--ink)'; row.append(sms);
+  return box;
+}
+$('#addForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const phone = $('#addPhone').value.trim(), name = $('#addName').value.trim();
+  const res = $('#addResult'); res.innerHTML = '';
+  if (phone.replace(/\D/g, '').length < 10) { toast('Enter a valid 10-digit mobile number.'); return; }
+  $('#addSubmit').disabled = true;
+  try {
+    const u = await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone, name }) });
+    upsertUser(u); renderContacts();
+    closeSheet('addSheet'); toast(nameOf(u) + ' added to your contacts.');
+    openChat(u.id);
+  } catch (err) {
+    if (/not on Maata/i.test(err.message)) res.append(inviteCard(phone)); else toast(err.message);
+  } finally { $('#addSubmit').disabled = false; }
+};
+$('#pickContacts').onclick = async () => {
+  let picked;
+  try { picked = await navigator.contacts.select(['name', 'tel'], { multiple: true }); } catch { return; }
+  if (!picked || !picked.length) return;
+  const contacts = picked.map((c) => ({ name: (c.name && c.name[0]) || '', phones: c.tel || [] })).filter((c) => c.phones.length);
+  const res = $('#addResult'); res.innerHTML = '<p style="color:var(--muted);font-size:14px">Checking ' + contacts.length + ' contacts…</p>';
+  try {
+    const r = await api('/api/contacts/match', { method: 'POST', body: JSON.stringify({ contacts }) });
+    r.users.forEach(upsertUser); renderContacts();
+    res.innerHTML = '';
+    const head = document.createElement('p'); head.style.cssText = 'font-size:15px;margin:0';
+    head.innerHTML = '<b>' + r.found + '</b> of ' + contacts.length + ' contacts are on Maata' + (r.found ? ' and were added.' : '.');
+    res.append(head);
+    if (r.users.length) {
+      const ul = document.createElement('ul'); ul.className = 'found-list';
+      for (const u of r.users) {
+        const li = document.createElement('li'); const t = document.createElement('span'); t.style.flex = '1';
+        t.textContent = nameOf(u); li.append(avatar(u, 'sm'), t);
+        const go = document.createElement('button'); go.textContent = 'Chat'; go.style.cssText = 'color:var(--peacock);font-weight:600';
+        go.onclick = () => { closeSheet('addSheet'); openChat(u.id); }; li.append(go); ul.append(li);
+      }
+      res.append(ul);
+    }
+    if (r.found < contacts.length) {
+      const p2 = document.createElement('p'); p2.style.cssText = 'color:var(--muted);font-size:13px;margin-top:12px';
+      p2.textContent = 'Others are not on Maata yet. Invite them from the "add by mobile number" box to send a WhatsApp invite.';
+      res.append(p2);
+    }
+  } catch (err) { res.innerHTML = ''; toast(err.message); }
+};
+
+// Chat options: save / remove / block / report
+async function saveContact(u) {
+  const name = prompt('Save ' + u.phone + ' as:', u.name);
+  if (name === null) return;
+  try { const nu = await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone: u.phone, name }) }); upsertUser(nu); renderContacts(); renderChatHead(); toast('Contact saved.'); }
+  catch (e) { toast(e.message); }
+}
+async function removeContact(u) {
+  if (!confirm('Remove ' + nameOf(u) + ' from your contacts? Your chat history stays.')) return;
+  try { await api('/api/contacts/' + u.id, { method: 'DELETE' }); u.inContacts = false; u.displayName = u.name; u.online = false; renderContacts(); renderChatHead(); toast('Contact removed.'); }
+  catch (e) { toast(e.message); }
+}
+async function setBlocked(u, blocked) {
+  if (blocked && !confirm('Block ' + nameOf(u) + '? They will not be able to message or call you.')) return;
+  try { await api('/api/block/' + u.id, { method: 'POST', body: JSON.stringify({ blocked }) }); u.blocked = blocked; renderContacts(); renderChatHead(); toast(blocked ? nameOf(u) + ' is blocked.' : nameOf(u) + ' is unblocked.'); }
+  catch (e) { toast(e.message); }
+}
+$('#moreBtn').onclick = () => {
+  const u = userById(activeId); if (!u) return;
+  $('#moreTitle').textContent = nameOf(u);
+  const list = $('#moreList'); list.innerHTML = '';
+  const add = (label, fn, warn) => { const b = document.createElement('button'); b.className = 'sheet-btn' + (warn ? ' warn' : ''); b.textContent = label; b.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(b); };
+  const info = document.createElement('div'); info.className = 'set-row';
+  const t = document.createElement('div'); t.className = 'txt'; t.innerHTML = '<b></b><small></small>';
+  t.querySelector('b').textContent = u.name; t.querySelector('small').textContent = u.phone + (u.lang && LANGS[u.lang] ? ' · ' + LANGS[u.lang].native : '');
+  info.append(avatar(u), t); list.append(info);
+  if (u.inContacts) { add('✏️  Rename contact', () => saveContact(u)); add('➖  Remove from contacts', () => removeContact(u)); }
+  else add('➕  Save to contacts', () => saveContact(u));
+  if (u.blocked) add('✅  Unblock', () => setBlocked(u, false)); else add('🚫  Block', () => setBlocked(u, true), true);
+  add('🚩  Report to Maata', () => reportUser(u), true);
+  openSheet('moreSheet');
+};
+$('#moreClose').onclick = () => closeSheet('moreSheet');
+$('#strangerSave').onclick = () => { const u = userById(activeId); if (u) saveContact(u); };
+$('#strangerBlock').onclick = () => { const u = userById(activeId); if (u) setBlocked(u, true); };
 
 // ---------------- go ----------------
 setMode('login');

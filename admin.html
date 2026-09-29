@@ -325,6 +325,7 @@ function av(u, online) {
   const ini = String(u.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   return `<span class="av" style="background:${palette[h % palette.length]}">${esc(ini)}${online ? '<span class="on"></span>' : ''}</span>`;
 }
+const LANG_NAMES = { te: 'తెలుగు Telugu', hi: 'हिन्दी Hindi', en: 'English', ta: 'தமிழ் Tamil', kn: 'ಕನ್ನಡ Kannada', ml: 'മലയാളം Malayalam', mr: 'मराठी Marathi', bn: 'বাংলা Bengali', gu: 'ગુજરાતી Gujarati', pa: 'ਪੰਜਾਬੀ Punjabi', ur: 'اردو Urdu', or: 'ଓଡ଼ିଆ Odia' };
 const statusTag = { completed: 't-green', answered: 't-green', missed: 't-amber', declined: 't-red', busy: 't-grey', unavailable: 't-grey', ringing: 't-blue' };
 const statusName = { completed: 'Completed', answered: 'In progress', missed: 'Missed', declined: 'Declined', busy: 'Busy', unavailable: 'Offline', ringing: 'Ringing' };
 function device(ua) {
@@ -448,7 +449,8 @@ async function loadDash() {
     kpi('Video calls today', num(t.videoCalls), 'Avg call ' + dur(t.avgCallSec), '#2D7FF9') +
     kpi('Chat messages today', num(t.messages), num(s.totals.messages) + ' all time', '#FF5C8A') +
     kpi('Call answer rate', t.successRate + '%', 'Calls answered today', t.successRate >= 60 ? '#2E8B57' : '#C8413A') +
-    kpi('Open complaints', num(s.totals.openReports), num(s.totals.blocked) + ' blocked customers', '#C8413A');
+    kpi('Open complaints', num(s.totals.openReports), num(s.totals.blocked) + ' blocked customers', '#C8413A') +
+    kpi('Translated calls', num(s.totals.translatedCalls), num(s.totals.translationsSinceRestart) + ' lines since restart', '#E8A317');
   const d = s.series.days;
   barChart($('#chLogins'), d, [{ name: 'Customers logged in', color: '#1B7A8F', values: s.series.logins }, { name: 'New sign-ups', color: '#E8A317', values: s.series.signups }], { fmt: shortDay, label: 'Daily logins' });
   barChart($('#chCalls'), d, [{ name: 'Voice', color: '#3CCB7F', values: s.series.voice }, { name: 'Video', color: '#2D7FF9', values: s.series.video }], { stacked: true, fmt: shortDay, label: 'Daily calls' });
@@ -476,7 +478,7 @@ async function openCustomer(id) {
   let d; try { d = await api('/admin/api/users/' + id); } catch (e) { return toast(e.message); }
   const u = d.user, s = d.stats;
   $('#drawerBody').innerHTML = `
-    <div class="head">${av(u, u.online)}<div style="flex:1"><h3 id="dName">${esc(u.name)}</h3><div class="muted">${esc(u.phone)}</div></div><button class="btn ghost" id="dClose" aria-label="Close">✕</button></div>
+    <div class="head">${av(u, u.online)}<div style="flex:1"><h3 id="dName">${esc(u.name)}</h3><div class="muted">${esc(u.phone)}${u.lang ? ' · 🌐 ' + esc(LANG_NAMES[u.lang] || u.lang) : ''}</div></div><button class="btn ghost" id="dClose" aria-label="Close">✕</button></div>
     <div style="margin-bottom:12px">${u.status === 'blocked' ? '<span class="tag t-red">Blocked</span>' : u.online ? '<span class="tag t-green">Online now</span>' : '<span class="tag t-grey">Last seen ' + ago(u.lastSeenAt || u.lastLoginAt) + '</span>'}
       <span class="muted" style="font-size:13px;margin-left:6px">Joined ${dt(u.createdAt)}</span></div>
     <div class="mini-kpis">
@@ -528,7 +530,7 @@ async function loadCalls() {
   $('#callBody').innerHTML = d.calls.length ? d.calls.map((c) => `<tr><td>${dt(c.startedAt)}</td>
     <td><div class="who">${av({ id: c.from, name: c.fromName })}<div>${esc(c.fromName)}<br><span class="muted">${esc(c.fromPhone)}</span></div></div></td>
     <td><div class="who">${av({ id: c.to, name: c.toName })}<div>${esc(c.toName)}<br><span class="muted">${esc(c.toPhone)}</span></div></div></td>
-    <td>${c.kind === 'video' ? '🎥 Video' : '📞 Voice'}</td><td><span class="tag ${statusTag[c.status] || 't-grey'}">${statusName[c.status] || c.status}</span></td><td>${dur(c.duration)}</td></tr>`).join('')
+    <td>${c.kind === 'video' ? '🎥 Video' : '📞 Voice'}${c.translated ? ' <span class="tag t-amber">🌐 Translated</span>' : ''}</td><td><span class="tag ${statusTag[c.status] || 't-grey'}">${statusName[c.status] || c.status}</span></td><td>${dur(c.duration)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">No calls in this period.</td></tr>';
 }
 

@@ -120,7 +120,50 @@ function rangeStart(range) {
   if (range === '30d') return s - 29 * 86400000;
   return 0;
 }
-const publicUser = (u) => ({ id: u.id, name: u.name, phone: u.phone });
+const publicUser = (u) => ({ id: u.id, name: u.name, phone: u.phone, lang: u.lang || null });
+
+// ---------- Translation ----------
+// Languages customers can choose. Speech recognition & voice playback happen in the browser;
+// the server only translates text.
+const LANGS = ['te', 'hi', 'en', 'ta', 'kn', 'ml', 'mr', 'bn', 'gu', 'pa', 'ur', 'or'];
+const GOOGLE_TRANSLATE_KEY = process.env.GOOGLE_TRANSLATE_KEY || '';
+const trCache = new Map();
+let trCount = 0;
+const decodeEntities = (t) => t.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n)).replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+async function translate(text, from, to) {
+  text = String(text || '').trim().slice(0, 500);
+  if (!text || !LANGS.includes(to) || from === to) return text || null;
+  const key = from + '|' + to + '|' + text;
+  if (trCache.has(key)) return trCache.get(key);
+  let out = null;
+  try {
+    if (GOOGLE_TRANSLATE_KEY) {
+      // Google Cloud Translation (best quality for Indian languages)
+      const r = await fetch('https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(GOOGLE_TRANSLATE_KEY), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: text, ...(LANGS.includes(from) ? { source: from } : {}), target: to, format: 'text' }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const d = await r.json();
+      out = d?.data?.translations?.[0]?.translatedText || null;
+      if (!out && d?.error) console.error('[translate] Google:', d.error.message);
+    } else {
+      // Free fallback (daily limit). Set MYMEMORY_EMAIL for a higher free limit.
+      const q = new URLSearchParams({ q: text, langpair: (LANGS.includes(from) ? from : 'en') + '|' + to });
+      if (process.env.MYMEMORY_EMAIL) q.set('de', process.env.MYMEMORY_EMAIL);
+      const r = await fetch('https://api.mymemory.translated.net/get?' + q, { signal: AbortSignal.timeout(8000) });
+      const d = await r.json();
+      const t = d?.responseData?.translatedText;
+      if (t && Number(d.responseStatus) === 200 && !/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(t)) out = decodeEntities(t);
+    }
+  } catch (e) { console.error('[translate]', e.message); }
+  if (out) {
+    trCount++;
+    trCache.set(key, out);
+    if (trCache.size > 5000) trCache.delete(trCache.keys().next().value);
+  }
+  return out;
+}
 const userById = (id) => db.users.find((u) => u.id === id);
 const nameOf = (id) => userById(id)?.name || 'Deleted user';
 const sign = (u) => jwt.sign({ sub: u.id, tv: u.tokenVersion || 0 }, JWT_SECRET, { expiresIn: '30d' });
@@ -206,7 +249,6 @@ app.post('/api/register', rateLimit, async (req, res) => {
   db.users.push(u);
   recordLogin(u, req, 'signup');
   save();
-  io.emit('user:new', { ...publicUser(u), online: false, lastMessage: null, unread: 0 });
   res.json({ token: sign(u), user: publicUser(u) });
 });
 
@@ -223,19 +265,130 @@ app.post('/api/login', rateLimit, async (req, res) => {
 
 app.get('/api/me', auth, (req, res) => res.json(publicUser(req.user)));
 
+app.post('/api/me/lang', auth, (req, res) => {
+  const lang = String(req.body?.lang || '');
+  if (!LANGS.includes(lang)) return res.status(400).json({ error: 'Choose a language from the list.' });
+  req.user.lang = lang; save();
+  toWatchers(req.user.id, 'user:update', { id: req.user.id, lang });
+  res.json(publicUser(req.user));
+});
+
+const trHits = new Map();
+app.post('/api/translate', auth, async (req, res) => {
+  const list = (trHits.get(req.user.id) || []).filter((t) => now() - t < 60_000);
+  list.push(now()); trHits.set(req.user.id, list);
+  if (list.length > 60) return res.status(429).json({ error: 'Too many translations. Wait a minute.' });
+  const to = String(req.body?.to || req.user.lang || 'en');
+  const from = String(req.body?.from || '');
+  const out = await translate(req.body?.text, from, to);
+  if (!out) return res.status(502).json({ error: 'Translation is not available right now.' });
+  res.json({ translated: out });
+});
+
+// ---------- Contacts (privacy) ----------
+// Customers only see people they saved by phone number, plus anyone who already chatted with them.
+const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+const contactsOf = (u) => (u.contacts = u.contacts || []);
+const blockedOf = (u) => (u.blocked = u.blocked || []);
+const hasContact = (u, id) => contactsOf(u).some((c) => c.id === id);
+const watchersOf = (id) => db.users.filter((u) => u.contacts && u.contacts.some((c) => c.id === id)).map((u) => u.id);
+function toWatchers(id, ev, data) { for (const w of watchersOf(id)) io.to('user:' + w).emit(ev, data); }
+function hasConversation(a, b) { return db.messages.some((m) => (m.from === a && m.to === b) || (m.from === b && m.to === a)); }
+function contactView(meUser, u, extra = {}) {
+  const c = contactsOf(meUser).find((x) => x.id === u.id);
+  const inContacts = !!c;
+  return {
+    ...publicUser(u),
+    displayName: (c && c.name) || u.name,
+    inContacts,
+    blocked: blockedOf(meUser).includes(u.id),
+    online: inContacts && isOnline(u.id),
+    ...extra,
+  };
+}
+
 app.get('/api/users', auth, (req, res) => {
   const me = req.user.id;
-  const list = db.users.filter((u) => u.id !== me && u.status !== 'blocked').map((u) => {
-    let lastMessage = null, unread = 0;
-    for (const m of db.messages) {
-      if ((m.from === me && m.to === u.id) || (m.from === u.id && m.to === me)) {
-        lastMessage = m;
-        if (m.from === u.id && m.status !== 'read') unread++;
-      }
-    }
-    return { ...publicUser(u), online: isOnline(u.id), lastMessage, unread };
-  });
+  const convo = {}; // partnerId -> { lastMessage, unread }
+  for (const m of db.messages) {
+    if (m.from !== me && m.to !== me) continue;
+    const other = m.from === me ? m.to : m.from;
+    const c = (convo[other] = convo[other] || { lastMessage: null, unread: 0 });
+    c.lastMessage = m;
+    if (m.from === other && m.status !== 'read') c.unread++;
+  }
+  const ids = new Set([...contactsOf(req.user).map((c) => c.id), ...Object.keys(convo)]);
+  const list = [];
+  for (const id of ids) {
+    const u = userById(id);
+    if (!u || u.id === me || u.status === 'blocked') continue;
+    list.push(contactView(req.user, u, convo[id] || { lastMessage: null, unread: 0 }));
+  }
   res.json(list);
+});
+
+app.get('/api/users/:id', auth, (req, res) => {
+  const u = userById(req.params.id);
+  if (!u || u.status === 'blocked' || !(hasContact(req.user, u.id) || hasConversation(req.user.id, u.id))) return res.status(404).json({ error: 'Not found.' });
+  res.json(contactView(req.user, u, { lastMessage: null, unread: 0 }));
+});
+
+// Add one contact by mobile number
+app.post('/api/contacts', auth, rateLimit, (req, res) => {
+  const want = last10(req.body?.phone);
+  const nick = String(req.body?.name || '').trim().slice(0, 40);
+  if (want.length < 10) return res.status(400).json({ error: 'Enter a valid 10-digit mobile number.' });
+  const u = db.users.find((x) => last10(x.phone) === want && x.status !== 'blocked');
+  if (!u) return res.status(404).json({ error: 'This number is not on Maata yet. Invite them!', notOnMaata: true });
+  if (u.id === req.user.id) return res.status(400).json({ error: 'That is your own number.' });
+  const list = contactsOf(req.user);
+  const existing = list.find((c) => c.id === u.id);
+  if (existing) { if (nick) existing.name = nick; } else list.push({ id: u.id, name: nick || '', addedAt: now() });
+  save();
+  res.json(contactView(req.user, u, { lastMessage: null, unread: 0 }));
+});
+
+// Match many numbers from the phone's contact list (limited, so nobody can scan all numbers)
+const matchUse = new Map();
+app.post('/api/contacts/match', auth, (req, res) => {
+  const day = dayKey(now());
+  const use = matchUse.get(req.user.id);
+  const used = use && use.day === day ? use.n : 0;
+  const input = Array.isArray(req.body?.contacts) ? req.body.contacts.slice(0, 500) : [];
+  const pairs = [];
+  for (const c of input) for (const ph of (Array.isArray(c?.phones) ? c.phones.slice(0, 5) : [])) {
+    const n = last10(ph); if (n.length === 10) pairs.push({ n, name: String(c?.name || '').trim().slice(0, 40) });
+  }
+  if (used + pairs.length > 2000) return res.status(429).json({ error: 'Daily contact sync limit reached. Try again tomorrow.' });
+  matchUse.set(req.user.id, { day, n: used + pairs.length });
+  const byPhone = new Map(db.users.filter((u) => u.status !== 'blocked' && u.id !== req.user.id).map((u) => [last10(u.phone), u]));
+  const list = contactsOf(req.user);
+  const added = [];
+  const seen = new Set();
+  for (const { n, name } of pairs) {
+    const u = byPhone.get(n);
+    if (!u || seen.has(u.id)) continue;
+    seen.add(u.id);
+    const ex = list.find((c) => c.id === u.id);
+    if (ex) { if (name && !ex.name) ex.name = name; } else list.push({ id: u.id, name, addedAt: now() });
+    added.push(contactView(req.user, u, { lastMessage: null, unread: 0 }));
+  }
+  save();
+  res.json({ checked: pairs.length, found: added.length, users: added });
+});
+
+app.delete('/api/contacts/:id', auth, (req, res) => {
+  req.user.contacts = contactsOf(req.user).filter((c) => c.id !== req.params.id);
+  save(); res.json({ ok: true });
+});
+
+app.post('/api/block/:id', auth, (req, res) => {
+  const u = userById(req.params.id);
+  if (!u || u.id === req.user.id) return res.status(404).json({ error: 'Not found.' });
+  const list = blockedOf(req.user);
+  const block = req.body?.blocked !== false;
+  req.user.blocked = block ? [...new Set([...list, u.id])] : list.filter((x) => x !== u.id);
+  save(); res.json({ ok: true, blocked: block });
 });
 
 app.get('/api/messages/:userId', auth, (req, res) => {
@@ -344,6 +497,8 @@ app.get('/admin/api/stats', adminAuth, (req, res) => {
       messages: db.messages.length,
       calls: db.calls.length,
       openReports: db.reports.filter((r) => r.status === 'open').length,
+      translatedCalls: db.calls.filter((c) => c.translated).length,
+      translationsSinceRestart: trCount,
     },
     today: {
       uniqueLogins: uniqueToday.size,
@@ -446,11 +601,13 @@ app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
   const u = userById(req.params.id);
   if (!u) return res.status(404).json({ error: 'Customer not found.' });
   kick(u.id, 'This account was deleted.');
+  const removedWatchers = watchersOf(u.id);
   db.users = db.users.filter((x) => x.id !== u.id);
+  for (const x of db.users) if (x.contacts) x.contacts = x.contacts.filter((c) => c.id !== u.id);
   db.messages = db.messages.filter((m) => m.from !== u.id && m.to !== u.id);
   audit(req.admin, 'delete', u.name + ' (' + u.phone + ')');
   save();
-  io.emit('user:removed', { id: u.id });
+  for (const w of removedWatchers) io.to('user:' + w).emit('user:removed', { id: u.id });
   res.json({ ok: true });
 });
 
@@ -583,7 +740,7 @@ io.on('connection', (socket) => {
 
   const wasOnline = isOnline(me);
   online.set(me, (online.get(me) || 0) + 1);
-  if (!wasOnline) socket.broadcast.emit('presence', { userId: me, online: true });
+  if (!wasOnline) toWatchers(me, 'presence', { userId: me, online: true });
   pushLive();
 
   const bySender = {};
@@ -600,6 +757,8 @@ io.on('connection', (socket) => {
     const to = String(p?.to || '');
     const target = userById(to);
     if (!text || to === me || !target || target.status === 'blocked') return typeof ack === 'function' && ack({ error: 'Message not sent.' });
+    if (blockedOf(socket.user).includes(to)) return typeof ack === 'function' && ack({ error: 'You blocked this person. Unblock them to send messages.' });
+    if (blockedOf(target).includes(me)) return typeof ack === 'function' && ack({ error: 'Message not delivered.' });
     const m = { id: newId(), from: me, to, text, ts: now(), status: isOnline(to) ? 'delivered' : 'sent' };
     db.messages.push(m); save();
     io.to(room(to)).emit('msg:new', m);
@@ -616,14 +775,14 @@ io.on('connection', (socket) => {
   });
 
   // ----- WebRTC call signaling + call records -----
-  const clean = (p) => ({ callId: String(p.callId || '').slice(0, 64), kind: p.kind === 'video' ? 'video' : 'voice', sdp: p.sdp, candidate: p.candidate, from: me, fromName: socket.user.name });
+  const clean = (p) => ({ callId: String(p.callId || '').slice(0, 64), kind: p.kind === 'video' ? 'video' : 'voice', sdp: p.sdp, candidate: p.candidate, from: me, fromName: socket.user.name, lang: socket.user.lang || null });
   const valid = (p) => p && typeof p.to === 'string' && p.to !== me && p.callId;
   const recFor = (p) => { const r = activeCalls.get(String(p.callId)); return r && (r.from === me || r.to === me) ? r : null; };
 
   socket.on('call:offer', (p) => {
     if (!valid(p)) return;
     const target = userById(p.to);
-    if (!target || target.status === 'blocked') return socket.emit('call:unavailable', { callId: p.callId });
+    if (!target || target.status === 'blocked' || blockedOf(target).includes(me) || blockedOf(socket.user).includes(p.to)) return socket.emit('call:unavailable', { callId: p.callId });
     const callId = String(p.callId).slice(0, 64);
     if (!db.calls.some((c) => c.id === callId)) {
       const rec = { id: callId, from: me, to: p.to, kind: p.kind === 'video' ? 'video' : 'voice', status: 'ringing', startedAt: now(), duration: 0 };
@@ -648,6 +807,23 @@ io.on('connection', (socket) => {
   });
   socket.on('call:busy', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'busy'); io.to(room(p.to)).emit('call:busy', clean(p)); });
   socket.on('call:ice', (p) => { if (valid(p)) io.to(room(p.to)).emit('call:ice', clean(p)); });
+  // Live call translation: the speaker's browser turns speech into text, the server translates it
+  // into the listener's language, and the listener's browser shows subtitles and speaks it aloud.
+  socket.on('call:caption', async (p) => {
+    if (!valid(p)) return;
+    const rec = recFor(p);
+    if (!rec || rec.status !== 'answered') return;
+    const text = String(p.text || '').trim().slice(0, 500);
+    if (!text) return;
+    const from = LANGS.includes(p.lang) ? p.lang : socket.user.lang || 'en';
+    const to = userById(p.to)?.lang || 'en';
+    const translated = from === to ? text : await translate(text, from, to);
+    rec.translated = (rec.translated || 0) + 1;
+    const out = { callId: rec.id, text, translated: translated || text, fromLang: from, toLang: to, ok: !!translated };
+    io.to(room(p.to)).emit('call:caption', out);
+    socket.emit('call:caption:self', out);
+  });
+
   socket.on('call:end', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'missed'); io.to(room(p.to)).emit('call:ended', clean(p)); });
 
   socket.on('disconnect', () => {
@@ -655,7 +831,7 @@ io.on('connection', (socket) => {
     if (n <= 0) {
       online.delete(me);
       const u = userById(me); if (u) { u.lastSeenAt = now(); save(); }
-      io.emit('presence', { userId: me, online: false });
+      toWatchers(me, 'presence', { userId: me, online: false });
       for (const rec of [...activeCalls.values()]) if (rec.from === me || rec.to === me) finishCall(rec, 'missed');
     } else online.set(me, n);
     pushLive();
