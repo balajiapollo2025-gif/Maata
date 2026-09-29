@@ -273,6 +273,37 @@ app.post('/api/me/lang', auth, (req, res) => {
   res.json(publicUser(req.user));
 });
 
+// Text-to-speech fallback: when a phone has no voice for a language (common for Telugu/Hindi on
+// computers), the server makes the audio with Google Cloud Text-to-Speech.
+const TTS_KEY = process.env.GOOGLE_TTS_KEY || process.env.GOOGLE_TRANSLATE_KEY || '';
+const TTS_LANG = { te: 'te-IN', hi: 'hi-IN', en: 'en-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', or: 'or-IN' };
+const ttsCache = new Map();
+const ttsHits = new Map();
+app.post('/api/tts', auth, async (req, res) => {
+  if (!TTS_KEY) return res.status(501).json({ error: 'Server voice is not set up.' });
+  const list = (ttsHits.get(req.user.id) || []).filter((t) => now() - t < 60_000);
+  list.push(now()); ttsHits.set(req.user.id, list);
+  if (list.length > 40) return res.status(429).json({ error: 'Too many voice requests. Wait a minute.' });
+  const text = String(req.body?.text || '').trim().slice(0, 400);
+  const lang = TTS_LANG[req.body?.lang];
+  const gender = req.body?.gender === 'MALE' ? 'MALE' : 'FEMALE';
+  if (!text || !lang) return res.status(400).json({ error: 'Nothing to speak.' });
+  const key = lang + '|' + gender + '|' + text;
+  if (ttsCache.has(key)) return res.json({ audio: ttsCache.get(key) });
+  try {
+    const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(TTS_KEY), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: { text }, voice: { languageCode: lang, ssmlGender: gender }, audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0 } }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const d = await r.json();
+    if (!d.audioContent) { console.error('[tts]', d?.error?.message || 'no audio'); return res.status(502).json({ error: 'Voice not available for this language.' }); }
+    ttsCache.set(key, d.audioContent);
+    if (ttsCache.size > 300) ttsCache.delete(ttsCache.keys().next().value);
+    res.json({ audio: d.audioContent });
+  } catch (e) { console.error('[tts]', e.message); res.status(502).json({ error: 'Voice not available right now.' }); }
+});
+
 const trHits = new Map();
 app.post('/api/translate', auth, async (req, res) => {
   const list = (trHits.get(req.user.id) || []).filter((t) => now() - t < 60_000);
@@ -327,9 +358,35 @@ app.get('/api/users', auth, (req, res) => {
   res.json(list);
 });
 
+// ---------- Call history (each customer sees only their own calls) ----------
+function hasCall(a, b) { return db.calls.some((c) => (c.from === a && c.to === b) || (c.from === b && c.to === a)); }
+function callView(meUser, c) {
+  const outgoing = c.from === meUser.id;
+  const otherId = outgoing ? c.to : c.from;
+  const u = userById(otherId);
+  return {
+    id: c.id, kind: c.kind, status: c.status, direction: outgoing ? 'out' : 'in',
+    startedAt: c.startedAt, duration: c.duration || 0, translated: !!c.translated,
+    other: u ? contactView(meUser, u, { lastMessage: null, unread: 0 }) : { id: otherId, name: 'Deleted user', displayName: 'Deleted user', phone: '', deleted: true },
+  };
+}
+app.get('/api/calls', auth, (req, res) => {
+  const me = req.user.id, since = req.user.callsClearedAt || 0;
+  const out = [];
+  for (let i = db.calls.length - 1; i >= 0 && out.length < 200; i--) {
+    const c = db.calls[i];
+    if ((c.from === me || c.to === me) && c.endedAt && c.startedAt > since) out.push(callView(req.user, c));
+  }
+  res.json(out);
+});
+app.delete('/api/calls', auth, (req, res) => {
+  req.user.callsClearedAt = now(); save();
+  res.json({ ok: true });
+});
+
 app.get('/api/users/:id', auth, (req, res) => {
   const u = userById(req.params.id);
-  if (!u || u.status === 'blocked' || !(hasContact(req.user, u.id) || hasConversation(req.user.id, u.id))) return res.status(404).json({ error: 'Not found.' });
+  if (!u || u.status === 'blocked' || !(hasContact(req.user, u.id) || hasConversation(req.user.id, u.id) || hasCall(req.user.id, u.id))) return res.status(404).json({ error: 'Not found.' });
   res.json(contactView(req.user, u, { lastMessage: null, unread: 0 }));
 });
 
@@ -725,6 +782,7 @@ function finishCall(rec, status) {
   else { rec.status = status; rec.duration = 0; }
   activeCalls.delete(rec.id);
   save(); pushLive();
+  for (const id of [rec.from, rec.to]) { const u = userById(id); if (u) io.to('user:' + id).emit('call:log', callView(u, rec)); }
   feed('call', `${rec.kind === 'video' ? 'Video' : 'Voice'} call ${nameOf(rec.from)} → ${nameOf(rec.to)}: ${rec.status}${rec.duration ? ' (' + Math.floor(rec.duration / 60) + 'm ' + (rec.duration % 60) + 's)' : ''}`);
 }
 

@@ -176,7 +176,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 .set-row .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
 .set-row .txt{flex:1;min-width:0}
 .set-row .txt b{display:block;font-weight:600;font-size:15px}
-.set-row .txt small{color:var(--muted);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set-row .txt small{color:var(--muted);font-size:13px;display:block;line-height:1.4;margin-top:2px}
 .set-row.tone{flex-wrap:wrap;row-gap:10px}
 .tone-pick{display:flex;gap:10px;align-items:center;flex:1 1 100%;padding-left:52px}
 .tone-pick select{flex:1;min-width:0;font:inherit;font-size:15px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
@@ -239,6 +239,24 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .found-list{list-style:none;margin:10px 0 0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .found-list li{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px}
 .found-list li:last-child{border-bottom:0}
+/* ---------- Tabs & call history ---------- */
+.tabs{display:flex;gap:6px;margin:0 16px 8px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:4px}
+.tab{flex:1;padding:9px 10px;border-radius:10px;font-weight:600;font-size:14px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.tab[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tab .badge{font-size:11px;padding:0 6px;background:var(--chili);color:#fff}
+.calls-head{display:flex;justify-content:space-between;align-items:center;padding:4px 18px 6px;font-size:13px;color:var(--muted)}
+.calls-head button{color:var(--chili);font-weight:600;font-size:13px}
+.call-row{display:flex;gap:12px;align-items:center;padding:10px;border-radius:14px}
+.call-row:hover{background:var(--paper)}
+.call-row .open{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left}
+.call-row .c-name.missed{color:var(--chili)}
+.call-meta{font-size:13px;color:var(--muted);margin-top:2px;display:flex;gap:5px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.call-meta .arrow{font-weight:700}
+.call-meta .arrow.in{color:var(--leaf)}.call-meta .arrow.out{color:var(--blue,#2D7FF9)}.call-meta .arrow.miss{color:var(--chili)}
+.recall{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--peacock);background:var(--peacock-soft);flex:none}
+@media (prefers-color-scheme:dark){.recall{color:#7CC4D4}}
+.recall svg{width:20px;height:20px}
+.call-day{font-size:12px;font-weight:600;color:var(--muted);padding:12px 10px 4px;text-transform:uppercase;letter-spacing:.04em}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -332,7 +350,15 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <input class="search" id="search" type="search" placeholder="Search my contacts" aria-label="Search contacts">
       <button class="add-btn" id="addContactBtn" aria-label="Add contact"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>Add</button>
     </div>
+    <div class="tabs" role="tablist" aria-label="Chats and calls">
+      <button class="tab" id="tabChats" role="tab" aria-selected="true">💬 Chats</button>
+      <button class="tab" id="tabCalls" role="tab" aria-selected="false">📞 Calls <span class="badge" id="missedBadge" hidden></span></button>
+    </div>
     <ul class="contacts" id="contacts"></ul>
+    <div id="callsPane" hidden style="flex:1;overflow-y:auto;min-height:0">
+      <div class="calls-head"><span id="callsCount"></span><button id="clearCalls">Clear history</button></div>
+      <ul class="contacts" id="callList" style="overflow:visible"></ul>
+    </div>
   </aside>
 
   <main class="chat" id="chat">
@@ -448,18 +474,28 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <div class="set-group">
       <div class="set-row tone">
         <span class="ico" style="background:#FFF1CC">🌐</span>
-        <div class="txt"><b>My language</b><small>You speak &amp; read in this language</small></div>
-        <div class="tone-pick"><select id="myLang" aria-label="My language"></select></div>
+        <div class="txt"><b>My language</b><small>I speak in this language · I hear every call in this language</small></div>
+        <div class="tone-pick"><select id="myLang" aria-label="My language"></select><button class="play-btn" id="testVoice" aria-label="Test my language voice" title="Test voice">▶</button></div>
       </div>
       <div class="set-row">
         <span class="ico" style="background:#DCEAFE">🗣️</span>
-        <div class="txt"><b>Live call translation</b><small>Auto-start when the other person speaks another language</small></div>
+        <div class="txt"><b>Live voice translation in calls</b><small>Starts by itself when the other person chose another language</small></div>
         <label class="switch-ui"><input type="checkbox" id="liveTr" aria-label="Live call translation"><span></span></label>
       </div>
       <div class="set-row">
         <span class="ico" style="background:#DDF5E7">🔈</span>
-        <div class="txt"><b>Speak translation aloud</b><small>Hear their words in your language</small></div>
-        <label class="switch-ui"><input type="checkbox" id="speakTr" aria-label="Speak translation aloud"><span></span></label>
+        <div class="txt"><b>Hear translated voice</b><small>Their words are spoken to you in your language</small></div>
+        <label class="switch-ui"><input type="checkbox" id="speakTr" aria-label="Hear translated voice"><span></span></label>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#FFE1EA">🎙️</span>
+        <div class="txt"><b>Translated voice type</b><small>Used when the server makes the voice</small></div>
+        <select id="voiceGender" aria-label="Translated voice type" style="font:inherit;font-size:14px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink)"><option value="FEMALE">Female</option><option value="MALE">Male</option></select>
+      </div>
+      <div class="set-row">
+        <span class="ico" style="background:#DCEAFE">📝</span>
+        <div class="txt"><b>Show subtitles too</b><small>Also show the words on the call screen</small></div>
+        <label class="switch-ui"><input type="checkbox" id="showSubs" aria-label="Show subtitles"><span></span></label>
       </div>
       <div class="set-row">
         <span class="ico" style="background:#EDEFF2">🔉</span>
@@ -471,7 +507,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
         <div class="txt"><b>Translate chat messages</b><small>Show messages in your language</small></div>
         <label class="switch-ui"><input type="checkbox" id="chatTr" aria-label="Translate chat messages"><span></span></label>
       </div>
-      <p class="info-note">Works best in Google Chrome. Use earphones during translated calls so the translation is not picked up by your microphone.</p>
+      <p class="info-note">How it works: you speak in your language → the other person hears <b>a voice in the language they chose</b>. They speak → you hear it in your language. Tap ▶ next to your language to test the voice on this phone. Works best in Google Chrome; use earphones during translated calls.</p>
     </div>
 
     <div class="set-title">Ringtones</div>
@@ -613,6 +649,7 @@ async function start() {
   renderContacts();
   connectSocket();
   api('/api/announcement').then(showNotice).catch(() => {});
+  loadCalls();
   $('#langNotice').hidden = !!me.lang;
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
 }
@@ -635,6 +672,7 @@ function connectSocket() {
     const u = userById(x.id); if (u) { u.lang = x.lang; if (activeId === x.id) { renderChatHead(); renderMessages(); } }
   });
   socket.on('call:caption', onCaption);
+  socket.on('call:log', onCallLog);
   socket.on('call:caption:self', onCaptionSelf);
   socket.on('user:new', (u) => { if (u.id !== me.id && !userById(u.id)) { users.push(u); renderContacts(); } });
   socket.on('msg:new', onMessage);
@@ -669,7 +707,7 @@ async function reportUser(u) {
 }
 
 // ---------------- contacts ----------------
-$('#search').oninput = renderContacts;
+$('#search').oninput = () => (tab === 'calls' ? renderCalls() : renderContacts());
 function renderContacts() {
   const q = $('#search').value.trim().toLowerCase();
   const list = $('#contacts'); list.innerHTML = '';
@@ -814,7 +852,7 @@ const TONES = {
   ding:    { name: 'Ding Dong', every: 2500, decay: true, notes: [[659, 0, 1], [523, .55, 1.3]] },
 };
 const OUTGOING = { every: 3000, notes: [[425, 0, 1]] };
-const defaults = { voiceTone: 'classic', videoTone: 'marimba', volume: 70, vibrate: true, msgSound: true, liveTranslate: true, speakTranslation: true, duckOriginal: true, chatTranslate: true };
+const defaults = { voiceTone: 'classic', videoTone: 'marimba', volume: 70, vibrate: true, msgSound: true, liveTranslate: true, speakTranslation: true, duckOriginal: true, chatTranslate: true, showSubs: true, voiceGender: 'FEMALE' };
 let settings = { ...defaults };
 try { settings = { ...defaults, ...JSON.parse(store.get('maata_settings') || '{}') }; } catch {}
 const saveSettings = () => store.set('maata_settings', JSON.stringify(settings));
@@ -926,6 +964,8 @@ function renderSettings() {
   $('#speakTr').checked = settings.speakTranslation;
   $('#duckTr').checked = settings.duckOriginal;
   $('#chatTr').checked = settings.chatTranslate;
+  $('#showSubs').checked = settings.showSubs;
+  $('#voiceGender').value = settings.voiceGender;
   fillToneSelect($('#voiceTone'), 'voice', settings.voiceTone);
   fillToneSelect($('#videoTone'), 'video', settings.videoTone);
   $('#voiceToneName').textContent = 'Plays when someone voice-calls you';
@@ -1187,7 +1227,7 @@ function translationWanted() { return !!(call && settings.liveTranslate && me.la
 function updateTrUi() {
   $('#trBtn').setAttribute('aria-pressed', String(tr.on));
   $('#trBadge').hidden = !tr.on;
-  $('#subs').hidden = !tr.on;
+  $('#subs').hidden = !tr.on || !settings.showSubs;
   if (tr.on) $('#trBadgeText').textContent = 'You speak ' + langName(me.lang) + ' · ' + (call ? call.peerName : '') + ' hears ' + langName(peerLang());
 }
 function startTranslation() {
@@ -1202,6 +1242,7 @@ function startTranslation() {
 }
 function stopTranslation() {
   tr.on = false; stopListening();
+  speakQueue.length = 0; if (curAudio) { curAudio.pause(); curAudio = null; }
   try { speechSynthesis.cancel(); } catch {}
   tr.speaking = false; duck(false);
   if (call) updateTrUi(); else { $('#trBadge').hidden = true; $('#subs').hidden = true; $('#trBtn').setAttribute('aria-pressed', 'false'); }
@@ -1246,6 +1287,7 @@ function onCaption(c) {
   if (!call || c.callId !== call.id) return;
   if (!tr.on) { tr.on = true; updateTrUi(); listen(); } // other side turned translation on
   $('#subThemBox').hidden = false;
+  if (!settings.speakTranslation) $('#subs').hidden = false;
   $('#subThem').textContent = c.translated;
   $('#subThemOrig').textContent = c.ok ? (LANGS[c.fromLang]?.native || '') + ': ' + c.text : 'Translation unavailable, showing original';
   if (settings.speakTranslation && c.ok) speak(c.translated, c.toLang);
@@ -1255,25 +1297,78 @@ function onCaptionSelf(c) {
   $('#subMe').textContent = c.ok ? '✓ ' + call.peerName + ' heard: ' + c.translated : '🎙️ ' + c.text;
 }
 function pickVoice(lang) {
-  const vs = speechSynthesis.getVoices(), base = lang.split('-')[0];
-  return vs.find((v) => v.lang.replace('_', '-') === lang) || vs.find((v) => v.lang.toLowerCase().startsWith(base));
+  if (!('speechSynthesis' in window)) return null;
+  const base = lang.split('-')[0];
+  const vs = speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-') === lang || v.lang.toLowerCase().startsWith(base));
+  const g = settings.voiceGender === 'MALE' ? /\bmale\b/i : /female/i;
+  return vs.find((v) => g.test(v.name)) || vs[0] || null;
 }
+// Voice output: phone's own voice first, then the server's voice, else subtitles only.
+const speakQueue = [];
+let speakBusy = false, curAudio = null;
 function speak(text, code) {
-  if (!('speechSynthesis' in window) || !LANGS[code]) return;
-  const voice = pickVoice(LANGS[code].speech);
-  if (!voice) {
-    if (!tr.warnedVoice[code]) { tr.warnedVoice[code] = true; toast('No ' + langName(code) + ' voice on this device, showing subtitles only.'); }
-    return;
-  }
-  const u = new SpeechSynthesisUtterance(text);
-  u.voice = voice; u.lang = voice.lang; u.rate = 1;
-  u.onstart = () => { tr.speaking = true; stopListening(); duck(true); };
-  u.onend = u.onerror = () => {
-    if (speechSynthesis.speaking || speechSynthesis.pending) return;
-    tr.speaking = false; duck(false); listen();
-  };
-  speechSynthesis.speak(u);
+  if (!LANGS[code]) return;
+  speakQueue.push({ text, code });
+  if (!speakBusy) nextSpeak();
 }
+async function nextSpeak() {
+  const item = speakQueue.shift();
+  if (!item) { speakBusy = false; tr.speaking = false; duck(false); listen(); return; }
+  speakBusy = true; tr.speaking = true; stopListening(); duck(true);
+  const ok = (await speakLocal(item.text, item.code)) || (await speakServer(item.text, item.code));
+  if (!ok && !tr.warnedVoice[item.code]) {
+    tr.warnedVoice[item.code] = true;
+    toast('No ' + langName(item.code) + ' voice on this phone, showing subtitles. Open Settings → ▶ Test voice.');
+    if (call) { $('#subs').hidden = false; }
+  }
+  nextSpeak();
+}
+function speakLocal(text, code) {
+  return new Promise((res) => {
+    const v = pickVoice(LANGS[code].speech);
+    if (!v) return res(false);
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = v; u.lang = v.lang; u.rate = 1;
+    let done = false; const fin = (ok) => { if (!done) { done = true; res(ok); } };
+    u.onend = () => fin(true); u.onerror = () => fin(false);
+    try { speechSynthesis.speak(u); } catch { fin(false); }
+    setTimeout(() => fin(true), 25000);
+  });
+}
+async function speakServer(text, code) {
+  try {
+    const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: code, gender: settings.voiceGender }) });
+    return await new Promise((res) => {
+      const a = new Audio('data:audio/mp3;base64,' + r.audio); curAudio = a;
+      a.onended = () => { curAudio = null; res(true); }; a.onerror = () => { curAudio = null; res(false); };
+      a.play().catch(() => { curAudio = null; res(false); });
+    });
+  } catch { return false; }
+}
+const VOICE_SAMPLE = {
+  te: 'నమస్కారం! మాట యాప్‌లో మీ కాల్స్ ఈ గొంతులో వినిపిస్తాయి.',
+  hi: 'नमस्ते! माटा ऐप में आपकी कॉल इस आवाज़ में सुनाई देंगी।',
+  en: 'Hello! On Maata, your calls will be spoken in this voice.',
+  ta: 'வணக்கம்! மாட்டா செயலியில் உங்கள் அழைப்புகள் இந்தக் குரலில் கேட்கும்.',
+  kn: 'ನಮಸ್ಕಾರ! ಮಾಟಾ ಆ್ಯಪ್‌ನಲ್ಲಿ ನಿಮ್ಮ ಕರೆಗಳು ಈ ಧ್ವನಿಯಲ್ಲಿ ಕೇಳಿಸುತ್ತವೆ.',
+  ml: 'നമസ്കാരം! മാട്ട ആപ്പിൽ നിങ്ങളുടെ കോളുകൾ ഈ ശബ്ദത്തിൽ കേൾക്കാം.',
+  mr: 'नमस्कार! माटा ॲपमध्ये तुमचे कॉल या आवाजात ऐकू येतील.',
+  bn: 'নমস্কার! মাটা অ্যাপে আপনার কল এই কণ্ঠে শোনা যাবে।',
+  gu: 'નમસ્તે! માટા એપમાં તમારા કૉલ આ અવાજમાં સંભળાશે.',
+  pa: 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮਾਟਾ ਐਪ ਵਿੱਚ ਤੁਹਾਡੀਆਂ ਕਾਲਾਂ ਇਸ ਆਵਾਜ਼ ਵਿੱਚ ਸੁਣਾਈ ਦੇਣਗੀਆਂ।',
+  ur: 'السلام علیکم! ماٹا ایپ میں آپ کی کالیں اس آواز میں سنائی دیں گی۔',
+  or: 'ନମସ୍କାର! ମାଟା ଆପରେ ଆପଣଙ୍କ କଲ ଏହି ସ୍ୱରରେ ଶୁଣାଯିବ।',
+};
+$('#testVoice').onclick = async () => {
+  const code = $('#myLang').value;
+  if (!code) return toast('Choose your language first.');
+  const b = $('#testVoice'); b.setAttribute('aria-pressed', 'true'); b.textContent = '…';
+  const ok = (await speakLocal(VOICE_SAMPLE[code], code)) || (await speakServer(VOICE_SAMPLE[code], code));
+  b.setAttribute('aria-pressed', 'false'); b.textContent = '▶';
+  if (!ok) toast('No ' + langName(code) + ' voice on this phone. On Android: Settings → Text-to-speech → Speech Services by Google → Install voice data → ' + langName(code) + '.');
+};
+$('#showSubs').onchange = (e) => { settings.showSubs = e.target.checked; saveSettings(); if (call && tr.on) updateTrUi(); };
+$('#voiceGender').onchange = (e) => { settings.voiceGender = e.target.value; saveSettings(); };
 if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
 function duck(on) { const v = $('#remoteVideo'); if (v) v.volume = on && settings.duckOriginal ? 0.15 : 1; }
 
@@ -1422,6 +1517,85 @@ $('#moreBtn').onclick = () => {
 $('#moreClose').onclick = () => closeSheet('moreSheet');
 $('#strangerSave').onclick = () => { const u = userById(activeId); if (u) saveContact(u); };
 $('#strangerBlock').onclick = () => { const u = userById(activeId); if (u) setBlocked(u, true); };
+
+// ---------------- call history ----------------
+let callLog = [], callsLoaded = false, tab = 'chats';
+const ICON_PHONE = '<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
+const ICON_VIDEO = '<svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+const isMissed = (c) => c.direction === 'in' && c.status !== 'completed';
+function callLabel(c) {
+  if (c.status === 'completed') return c.direction === 'out' ? 'Outgoing' : 'Incoming';
+  if (c.direction === 'in') return c.status === 'declined' ? 'Declined' : 'Missed';
+  return { declined: 'Declined', busy: 'Busy', unavailable: 'Not reachable', missed: 'No answer' }[c.status] || 'Not connected';
+}
+function fmtDur(s) { s = Math.round(s || 0); if (!s) return ''; const m = Math.floor(s / 60); return m ? m + 'm ' + (s % 60) + 's' : s + 's'; }
+function missedUnseen() {
+  const seen = Number(store.get('maata_calls_seen') || 0);
+  return callLog.filter((c) => isMissed(c) && c.startedAt > seen).length;
+}
+function updateMissedBadge() { const n = missedUnseen(); const b = $('#missedBadge'); b.textContent = n; b.hidden = !n || tab === 'calls'; }
+async function loadCalls() {
+  try { callLog = await api('/api/calls'); callsLoaded = true; } catch { return; }
+  updateMissedBadge(); if (tab === 'calls') renderCalls();
+}
+function setTab(t) {
+  tab = t;
+  $('#tabChats').setAttribute('aria-selected', String(t === 'chats'));
+  $('#tabCalls').setAttribute('aria-selected', String(t === 'calls'));
+  $('#contacts').hidden = t !== 'chats';
+  $('#callsPane').hidden = t !== 'calls';
+  if (t === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); if (!callsLoaded) loadCalls(); }
+  updateMissedBadge();
+}
+$('#tabChats').onclick = () => setTab('chats');
+$('#tabCalls').onclick = () => setTab('calls');
+function renderCalls() {
+  const q = $('#search').value.trim().toLowerCase();
+  const list = $('#callList'); list.innerHTML = '';
+  const shown = callLog.filter((c) => !q || nameOf(c.other).toLowerCase().includes(q) || (c.other.phone || '').includes(q));
+  $('#callsCount').textContent = shown.length ? shown.length + ' call' + (shown.length === 1 ? '' : 's') : '';
+  $('#clearCalls').hidden = !callLog.length;
+  if (!shown.length) {
+    list.innerHTML = '<li><div class="empty-card"><b>' + (callLog.length ? 'No calls match' : 'No calls yet') + '</b>' + (callLog.length ? 'Try another name or number.' : 'Your voice and video calls will show here.') + '</div></li>';
+    return;
+  }
+  let lastDay = '';
+  for (const c of shown) {
+    const day = fmtDay(c.startedAt);
+    if (day !== lastDay) { const d = document.createElement('li'); d.className = 'call-day'; d.textContent = day; list.append(d); lastDay = day; }
+    const li = document.createElement('li'); li.className = 'call-row';
+    const open = document.createElement('button'); open.className = 'open';
+    const body = document.createElement('div'); body.className = 'c-body';
+    const nm = document.createElement('div'); nm.className = 'c-name' + (isMissed(c) ? ' missed' : ''); nm.textContent = nameOf(c.other);
+    const meta = document.createElement('div'); meta.className = 'call-meta';
+    const arrow = document.createElement('span'); arrow.className = 'arrow ' + (isMissed(c) ? 'miss' : c.direction);
+    arrow.textContent = isMissed(c) ? '↙' : c.direction === 'out' ? '↗' : '↙';
+    const txt = document.createElement('span');
+    txt.textContent = (c.kind === 'video' ? '🎥 ' : '📞 ') + callLabel(c) + ' · ' + fmtTime(c.startedAt) + (c.duration ? ' · ' + fmtDur(c.duration) : '') + (c.translated ? ' · 🌐' : '');
+    meta.append(arrow, txt); body.append(nm, meta);
+    open.append(avatar(c.other), body);
+    open.onclick = () => { if (c.other.deleted) return toast('This account no longer exists.'); upsertUser(c.other); openChat(c.other.id); };
+    li.append(open);
+    if (!c.other.deleted) {
+      const again = document.createElement('button'); again.className = 'recall';
+      again.innerHTML = c.kind === 'video' ? ICON_VIDEO : ICON_PHONE;
+      again.setAttribute('aria-label', (c.kind === 'video' ? 'Video' : 'Voice') + ' call ' + nameOf(c.other));
+      again.onclick = () => { upsertUser(c.other); activeId = c.other.id; startCall(c.kind); };
+      li.append(again);
+    }
+    list.append(li);
+  }
+}
+$('#clearCalls').onclick = async () => {
+  if (!confirm('Clear your call history? This only clears it for you.')) return;
+  try { await api('/api/calls', { method: 'DELETE' }); callLog = []; renderCalls(); updateMissedBadge(); toast('Call history cleared.'); } catch (e) { toast(e.message); }
+};
+function onCallLog(c) {
+  callLog = [c, ...callLog.filter((x) => x.id !== c.id)];
+  if (tab === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); }
+  updateMissedBadge();
+  if (isMissed(c) && c.status !== 'declined') notify('Missed ' + (c.kind === 'video' ? 'video' : 'voice') + ' call', nameOf(c.other));
+}
 
 // ---------------- go ----------------
 setMode('login');
