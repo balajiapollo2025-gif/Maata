@@ -446,6 +446,13 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   .mv-nav{width:38px;height:38px}.mv-nav.prev{left:6px}.mv-nav.next{right:6px}
   .mv-strip button{width:56px;height:56px}
 }
+/* ---------- Message menu button (⌄) ---------- */
+.mbtn{position:absolute;top:6px;right:6px;z-index:2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(28,34,48,.55);color:#fff;opacity:0;transition:opacity .15s}
+.mbtn svg{width:18px;height:18px}
+.bubble:hover .mbtn,.bubble:focus-within .mbtn,.bubble.media .mbtn{opacity:1}
+.bubble:not(.media) .mbtn{top:2px;right:2px;width:24px;height:24px;background:transparent;color:inherit}
+.bubble:not(.media):hover .mbtn{background:rgba(127,127,127,.18)}
+@media (hover:none){.mbtn{opacity:.85}}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -2251,6 +2258,12 @@ function buildBubble(m) {
     t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓'; t.title = m.status; meta.append(t);
   }
   b.append(meta);
+  if (!m.uploading) {
+    const mb = el('button', 'mbtn'); mb.setAttribute('aria-label', 'Message options'); mb.title = 'Options';
+    mb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+    mb.onclick = (e) => { e.stopPropagation(); const cur = findMsg(m.id) || m; if (selectMode) return toggleSelect(m.id); openMsgMenu(cur, b); };
+    b.append(mb);
+  }
   const rs = Object.values(m.reactions || {});
   if (rs.length && !m.deleted) {
     b.classList.add('has-react');
@@ -2278,14 +2291,14 @@ function renderRich(b, m, mine) {
   if (m.type === 'image') {
     b.classList.add('media');
     const img = el('img', 'pic'); img.loading = 'lazy'; img.alt = m.text || 'Photo'; img.src = fileUrl(f);
-    img.onclick = (e) => { e.stopPropagation(); openMediaView(m.id); };
+    img.onclick = (e) => { e.stopPropagation(); selectMode ? toggleSelect(m.id) : openMediaView(m.id); };
     b.append(img); if (m.text) b.append(el('div', 'cap', m.text));
   } else if (m.type === 'video') {
     b.classList.add('media');
     const w = el('div', 'vidwrap'); w.setAttribute('role', 'button'); w.tabIndex = 0; w.setAttribute('aria-label', 'Play video');
     const v = el('video'); v.preload = 'metadata'; v.muted = true; v.playsInline = true; v.src = fileUrl(f) + '#t=0.1';
     const play = el('div', 'play'); play.append(el('span', null, '▶'));
-    w.append(v, play); w.onclick = (e) => { e.stopPropagation(); openMediaView(m.id); };
+    w.append(v, play); w.onclick = (e) => { e.stopPropagation(); selectMode ? toggleSelect(m.id) : openMediaView(m.id); };
     w.onkeydown = (e) => { if (e.key === 'Enter') openMediaView(m.id); };
     b.append(w); if (m.text) b.append(el('div', 'cap', m.text));
   } else if (m.type === 'audio') {
@@ -2764,6 +2777,7 @@ function openMsgMenu(m, bubble) {
   }
   const list = el('div', 'menu-list');
   const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = ICON[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
+  if (!dead && (m.type === 'image' || m.type === 'video')) item('open', m.type === 'image' ? 'View photo' : 'Play video', () => openMediaView(m.id));
   if (mine && !dead) item('info', 'Message info', () => msgInfo(m));
   if (!dead) item('reply', 'Reply', () => startReply(m));
   if (!dead && (copyableText(m) || m.type === 'image')) item('copy', 'Copy', () => (m.type === 'image' ? copyImage(m) : copyText(copyableText(m))));
