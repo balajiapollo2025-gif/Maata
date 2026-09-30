@@ -687,7 +687,7 @@ function connectSocket() {
   socket.on('call:ice', onRemoteIce);
   socket.on('call:rejected', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' declined the call.'); });
   socket.on('call:busy', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is on another call.'); });
-  socket.on('call:unavailable', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is offline. Try again later.'); });
+  socket.on('call:unavailable', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is not reachable right now. They need to have Maata open. Try again later.'); });
   socket.on('call:ended', (p) => { if (call && call.id === p.callId) endCall(call.state === 'incoming' ? 'Missed call from ' + call.peerName : 'Call ended.'); });
   socket.on('call:taken-elsewhere', (p) => { if (call && call.id === p.callId && call.state === 'incoming') endCall('Answered on another device.'); });
 }
@@ -1099,7 +1099,7 @@ function onConnected() {
 async function startCall(kind) {
   if (call) return toast('You are already on a call.');
   const u = userById(activeId); if (!u) return;
-  if (!u.online) return toast(u.name + ' is offline. Calls go through when they have the app open.');
+  // The server decides if the other person is reachable (online status is only shown for saved contacts).
   call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: nameOf(u), peerLang: u.lang, kind, role: 'caller', state: 'calling', pendingIce: [] };
   showCallScreen('Calling…');
   try { call.local = await getMedia(kind); }
