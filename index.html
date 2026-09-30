@@ -464,6 +464,88 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .fwd-foot .thumb{width:64px;height:64px;border-radius:10px;object-fit:cover;flex:none;background:var(--paper);display:grid;place-items:center;font-size:26px;overflow:hidden}
 .fwd-foot .thumb img{width:100%;height:100%;object-fit:cover}
 .fwd-foot textarea{flex:1;min-height:64px;resize:none}
+/* ---------- Chat list menu, filters, select, lock, quick replies ---------- */
+.chips-row{display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none}
+.chips-row::-webkit-scrollbar{display:none}
+.fchip{flex:none;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:600;color:var(--muted)}
+.fchip[aria-pressed="true"]{background:var(--peacock-soft);color:var(--peacock);border-color:transparent}
+@media (prefers-color-scheme:dark){.fchip[aria-pressed="true"]{color:#7CC4D4}}
+.fchip .n{font-weight:400;margin-left:3px}
+.main-menu{position:fixed;z-index:40;width:250px}
+.chat-sel-bar{display:flex;align-items:center;gap:4px;margin:0 16px 8px;padding:6px 8px;border-radius:12px;background:var(--peacock);color:#fff}
+.chat-sel-bar b{flex:1;font-size:14px;padding-left:4px}
+.chat-sel-bar button{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.chat-sel-bar button:hover{background:rgba(255,255,255,.15)}
+.chat-sel-bar svg{width:19px;height:19px}
+.contact .ck{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:13px;color:#fff}
+.contact.picked .ck{background:var(--leaf);border-color:var(--leaf)}
+.contact.picked{background:var(--peacock-soft)}
+.fav-star{color:var(--turmeric);font-size:12px;margin-left:4px}
+.lock{position:fixed;inset:0;z-index:60;background:linear-gradient(160deg,#0F4C5C,#1B6B7F);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+.lock h2{margin:0;font-size:22px}
+.lock .dots{display:flex;gap:14px}
+.lock .dots i{width:16px;height:16px;border-radius:50%;border:2px solid #fff}
+.lock .dots i.on{background:#fff}
+.lock .pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.lock .pad button{height:72px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:26px;font-weight:600}
+.lock .pad button:active{background:rgba(255,255,255,.3)}
+.lock .err{min-height:20px;color:#FFD2CC;font-size:14px}
+.lock .linkbtn{color:#fff;opacity:.85}
+.lock.shake .dots{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.qr-pop{position:absolute;left:12px;right:12px;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);max-height:260px;overflow-y:auto;z-index:5}
+.qr-pop button{display:block;width:100%;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+.qr-pop button:last-child{border-bottom:0}
+.qr-pop button b{color:var(--peacock);margin-right:6px}
+@media (prefers-color-scheme:dark){.qr-pop button b{color:#7CC4D4}}
+.qr-pop button span{color:var(--muted);font-size:14px}
+.qr-pop button[aria-selected="true"]{background:var(--peacock-soft)}
+.composer{position:relative}
+.star-item{display:block;width:100%;text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
+.star-item .top{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:6px}
+.star-item .top b{color:var(--ink)}
+.star-item .txt2{background:var(--peacock-soft);border-radius:10px;padding:8px 10px;font-size:14px;white-space:pre-wrap;word-break:break-word}
+/* ---------- Emoji / GIF / Sticker panel & voice recorder ---------- */
+.ep{position:absolute;left:8px;bottom:calc(100% + 8px);width:min(460px,calc(100vw - 16px));height:min(430px,60vh);background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 36px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden;z-index:6}
+.ep-cats{display:flex;justify-content:space-between;padding:6px 8px 0;border-bottom:1px solid var(--line)}
+.ep-cats button{flex:1;height:38px;font-size:19px;border-bottom:3px solid transparent;filter:grayscale(1);opacity:.7}
+.ep-cats button[aria-pressed="true"]{border-color:var(--leaf);filter:none;opacity:1}
+.ep-search{margin:8px 10px;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--paper);font:inherit;font-size:15px;color:var(--ink)}
+.ep-scroll{flex:1;overflow-y:auto;padding:0 8px 8px;min-height:0}
+.ep-scroll h4{margin:10px 4px 4px;font-size:13px;color:var(--muted);font-weight:600}
+.ep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr))}
+.ep-grid button{font-size:24px;height:40px;border-radius:8px;display:grid;place-items:center}
+.ep-grid button:hover,.ep-grid button:focus-visible{background:var(--peacock-soft)}
+.ep-foot{display:flex;justify-content:center;gap:4px;padding:6px;border-top:1px solid var(--line)}
+.ep-foot button{padding:6px 18px;border-radius:999px;font-weight:700;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.ep-foot button[aria-pressed="true"]{background:var(--peacock-soft);color:var(--ink)}
+.gif-grid{columns:3 120px;column-gap:6px}
+.gif-grid button{display:block;width:100%;margin:0 0 6px;border-radius:8px;overflow:hidden;background:var(--paper);break-inside:avoid}
+.gif-grid img{width:100%;display:block}
+.stk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.stk-grid button{aspect-ratio:1;border-radius:12px;padding:4px;display:grid;place-items:center}
+.stk-grid button:hover{background:var(--peacock-soft)}
+.stk-grid svg,.stk-grid img{width:100%;height:100%;object-fit:contain}
+.stk-grid .newstk{border:2px dashed var(--line);font-size:13px;color:var(--muted);font-weight:600;text-align:center}
+.bubble.stk{background:transparent!important;border:0!important;box-shadow:none;padding:0}
+.bubble.stk .meta{background:rgba(28,34,48,.55);color:#fff;border-radius:999px;padding:1px 8px;display:inline-flex;float:right}
+.bubble.stk .stkwrap svg,.bubble.stk img.stkimg{width:150px;height:150px;display:block;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+.gifbox{position:relative}
+.gifbox img{display:block;max-width:260px;width:100%;border-radius:12px}
+.gifbox .gtag{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:700;border-radius:4px;padding:1px 5px}
+.recbar{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.recbar .dotr{width:12px;height:12px;border-radius:50%;background:var(--chili);animation:blink 1s infinite;flex:none}
+.recbar .dotr.paused{animation:none;opacity:.4}
+.recbar .t{font-variant-numeric:tabular-nums;font-weight:600;min-width:44px}
+.recbar .lv{flex:1;display:flex;align-items:center;gap:2px;height:32px;overflow:hidden}
+.recbar .lv i{flex:1;max-width:4px;min-width:2px;border-radius:2px;background:var(--peacock);height:3px;transition:height .08s}
+@media (prefers-color-scheme:dark){.recbar .lv i{background:#7CC4D4}}
+.recbar .cbtn.del{color:var(--chili)}
+.composer.recording > :not(.recbar):not(.send){display:none!important}
+/* ---------- GPS camera ---------- */
+.gps-btn{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:13px}
+.gps-btn[aria-pressed="true"]{background:var(--leaf)}
+.gps-chip{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 24px);background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:5px 12px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -543,7 +625,8 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   <aside class="side">
     <header class="side-head">
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand">Maata</div></div>
-      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings" style="margin-left:auto">
+      <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
@@ -561,6 +644,15 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <button class="tab" id="tabChats" role="tab" aria-selected="true">💬 Chats</button>
       <button class="tab" id="tabStatus" role="tab" aria-selected="false">⭕ Status <span class="dot" id="statusDot" hidden></span></button>
       <button class="tab" id="tabCalls" role="tab" aria-selected="false">📞 Calls <span class="badge" id="missedBadge" hidden></span></button>
+    </div>
+    <div class="chips-row" id="chatFilters" role="toolbar" aria-label="Chat filters"></div>
+    <div class="chat-sel-bar" id="chatSelBar" hidden>
+      <button id="csCancel" aria-label="Cancel"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <b id="csCount">0 selected</b>
+      <button id="csRead" aria-label="Mark as read" title="Mark as read"><svg viewBox="0 0 24 24"><path d="M2 12l5 5L18 6"/><path d="M12 16l1 1L22 8"/></svg></button>
+      <button id="csFav" aria-label="Add to favourites" title="Favourite"><svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
+      <button id="csList" aria-label="Add to list" title="Add to list"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+      <button id="csDel" aria-label="Delete chats" title="Delete chats"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
     </div>
     <ul class="contacts" id="contacts"></ul>
     <div id="statusPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
@@ -610,9 +702,11 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <div class="messages" id="messages" hidden></div>
     <form class="composer" id="composer" hidden>
       <button type="button" class="cbtn" id="attachBtn" aria-label="Attach" title="Attach"><svg viewBox="0 0 24 24"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button>
+      <button type="button" class="cbtn" id="emojiBtn" aria-label="Emojis, GIFs and stickers" title="Emojis, GIFs, Stickers" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
       <textarea id="msgInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
       <button type="button" class="cbtn" id="camBtnChat" aria-label="Camera: photo or video" title="Camera"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-      <button class="send" aria-label="Send message"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      <button class="send" id="sendBtn" aria-label="Send message" hidden><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      <button type="button" class="send" id="micBtn" aria-label="Record voice message" title="Voice message"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg></button>
     </form>
   </main>
 </div>
@@ -702,6 +796,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   </section>
 </div>
 <input type="file" id="fDoc" hidden multiple>
+<input type="file" id="stkFile" accept="image/*" hidden>
 <input type="file" id="fMedia" accept="image/*,video/*" multiple hidden>
 <input type="file" id="fAudio" accept="audio/*" hidden>
 
@@ -710,6 +805,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   <div class="ov-head">
     <button class="ov-btn" id="camClose" aria-label="Close camera"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <div class="who"><b>Camera</b><small>Photo, or video up to 60 seconds</small></div>
+    <button class="gps-btn" id="camGps" aria-pressed="false" title="Add location, date and time to photos">📍 GPS</button>
     <button class="ov-btn" id="camFlip" aria-label="Switch camera"><svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg></button>
     <button class="ov-post" id="camSend" hidden>Send</button>
   </div>
@@ -961,6 +1057,7 @@ async function start() {
   api('/api/announcement').then(showNotice).catch(() => {});
   loadCalls();
   loadStatus();
+  loadPrefs();
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -1032,13 +1129,15 @@ async function reportUser(u) {
 // ---------------- contacts ----------------
 $('#search').oninput = () => (tab === 'calls' ? renderCalls() : renderContacts());
 function renderContacts() {
+  renderChips();
   const q = $('#search').value.trim().toLowerCase();
   const list = $('#contacts'); list.innerHTML = '';
   const shown = users
     .filter((u) => !q || nameOf(u).toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.phone.includes(q))
+    .filter((u) => filterOk(u))
     .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
   if (!shown.length) {
-    if (users.length) { list.innerHTML = '<li class="empty-list">No saved contact matches that search.</li>'; return; }
+    if (users.length) { list.innerHTML = '<li class="empty-list">' + (chatFilter === 'unread' ? 'No unread chats 🎉' : chatFilter === 'favs' ? 'No favourites yet. Select a chat and tap ☆.' : chatFilter !== 'all' ? 'No chats in this list yet.' : 'No saved contact matches that search.') + '</li>'; return; }
     const li = document.createElement('li');
     li.innerHTML = '<div class="empty-card"><b>No contacts yet</b>Add friends and family by their mobile number, or pick them from your phone contacts. Only people you add will show here.<button class="primary" type="button">＋ Add contact</button></div>';
     li.querySelector('button').onclick = openAdd;
@@ -1061,7 +1160,10 @@ function renderContacts() {
     body.append(top, last);
     b.append(avatar(u, '', true), body);
     if (u.unread) { const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = u.unread; b.append(bd); }
-    b.onclick = () => openChat(u.id);
+    if (chatSel) { const ck = el('span', 'ck', chatSel.has(u.id) ? '✓' : ''); b.prepend(ck); b.classList.toggle('picked', chatSel.has(u.id)); }
+    if (prefs.favs.includes(u.id)) name.append(el('span', 'fav-star', '★'));
+    b.onclick = () => (chatSel ? toggleChatSel(u.id) : openChat(u.id));
+    b.oncontextmenu = (e) => { e.preventDefault(); chatSel ? toggleChatSel(u.id) : startChatSelect(u.id); };
     li.append(b); list.append(li);
   }
 }
@@ -1071,6 +1173,7 @@ async function openChat(id) {
   if (selectMode && activeId !== id) exitSelect();
   if (activeId !== id) { cancelReply(); pinIndex = 0; }
   closeMsgMenu(); if (MV.id) closeMediaView();
+  if (typeof VR !== 'undefined' && VR.rec) stopVoice(true); if (EP.el) toggleEmojiPanel(false);
   activeId = id;
   $('#app').classList.add('in-chat');
   $('#chatEmpty').hidden = true; $('#chatHead').hidden = false; $('#messages').hidden = false; $('#composer').hidden = false;
@@ -1135,7 +1238,9 @@ input.addEventListener('input', () => { input.style.height = 'auto'; input.style
 input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#composer').requestSubmit(); } });
 $('#composer').onsubmit = (e) => {
   e.preventDefault();
+  if (VR.rec) return stopVoice(false);
   const text = input.value.trim(); if (!text || !activeId) return;
+  toggleEmojiPanel(false); setTimeout(syncMicSend, 0);
   const to = activeId;
   const temp = { id: 'tmp' + Date.now(), from: me.id, to, text, ts: Date.now(), status: 'pending' };
   (messagesCache[to] = messagesCache[to] || []).push(temp);
@@ -1825,6 +1930,8 @@ $('#moreBtn').onclick = () => {
   if (u.inContacts) { add('✏️  Rename contact', () => saveContact(u)); add('➖  Remove from contacts', () => removeContact(u)); }
   else add('➕  Save to contacts', () => saveContact(u));
   if (u.blocked) add('✅  Unblock', () => setBlocked(u, false)); else add('🚫  Block', () => setBlocked(u, true), true);
+  add(prefs.favs.includes(u.id) ? '☆  Remove from favourites' : '⭐  Add to favourites', () => savePrefs({ favs: prefs.favs.includes(u.id) ? prefs.favs.filter((f) => f !== u.id) : [...prefs.favs, u.id] }));
+  add('📋  Add to list', () => pickListFor([u.id]));
   add('🚩  Report to Maata', () => reportUser(u), true);
   openSheet('moreSheet');
 };
@@ -1860,6 +1967,7 @@ function setTab(t) {
   $('#contacts').hidden = t !== 'chats';
   $('#callsPane').hidden = t !== 'calls';
   $('#statusPane').hidden = t !== 'status';
+  $('#chatFilters').hidden = t !== 'chats'; if (t !== 'chats' && chatSel) endChatSelect();
   if (t === 'status') { $('#statusDot').hidden = true; renderStatus(); loadStatus(); }
   if (t === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); if (!callsLoaded) loadCalls(); }
   updateMissedBadge();
@@ -2222,7 +2330,9 @@ const isText = (m) => !m.type || m.type === 'text';
 function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
 function previewText(m) {
   switch (m.type) {
-    case 'image': return '📷 Photo' + (m.text ? ': ' + m.text : '');
+    case 'image': return m.file && m.file.sticker ? '💟 Sticker' : '📷 Photo' + (m.text ? ': ' + m.text : '');
+    case 'gif': return '🎞️ GIF';
+    case 'sticker': return '💟 Sticker';
     case 'video': return '🎥 Video' + (m.text ? ': ' + m.text : '');
     case 'audio': return m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio';
     case 'file': return '📄 ' + (m.file ? m.file.name : 'Document');
@@ -2305,6 +2415,13 @@ function renderRich(b, m, mine) {
     card.append(fn); b.append(card); return;
   }
   const f = m.file;
+  if (m.type === 'sticker') { b.classList.add('stk'); const w = el('div', 'stkwrap'); w.innerHTML = stickerSvg(m.sticker.id) || '💟'; b.append(w); return; }
+  if (m.type === 'gif') {
+    b.classList.add('media'); const box = el('div', 'gifbox'); const im = el('img'); im.loading = 'lazy'; im.alt = 'GIF'; im.src = m.gif.url;
+    if (m.gif.w && m.gif.h) im.style.aspectRatio = m.gif.w + '/' + m.gif.h;
+    box.append(im, el('span', 'gtag', 'GIF')); b.append(box); return;
+  }
+  if (m.type === 'image' && f && f.sticker) { b.classList.add('stk'); const im = el('img', 'stkimg'); im.alt = 'Sticker'; im.loading = 'lazy'; im.src = fileUrl(f); b.append(im); return; }
   if (m.type === 'image') {
     b.classList.add('media');
     const img = el('img', 'pic'); img.loading = 'lazy'; img.alt = m.text || 'Photo'; img.src = fileUrl(f);
@@ -2416,12 +2533,13 @@ function sendRich(payload, cb) {
     if (cb) cb(res.message);
   });
 }
-function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0 }) {
+function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0, sticker = false, onDone = null }) {
   const to = activeId; if (!to) return;
   if (blob.size > 16 * 1024 * 1024) return toast(name + ' is bigger than 16 MB.');
   const temp = { id: 'up' + Date.now() + Math.floor(Math.random() * 1e6), from: me.id, to, ts: Date.now(), status: 'pending', type: kind, uploading: true, progress: 0, file: { name, size: blob.size } };
   (messagesCache[to] = messagesCache[to] || []).push(temp); if (activeId === to) renderMessages();
   const q = new URLSearchParams({ to, kind, name, caption, mime: blob.type || 'application/octet-stream', sid: socket.id || '' });
+  if (sticker) q.set('sticker', '1');
   if (voice) q.set('voice', '1'); if (dur) q.set('dur', String(Math.round(dur)));
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/chat/upload?' + q);
@@ -2440,7 +2558,7 @@ function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0 }) 
   };
   xhr.onload = () => {
     let r = {}; try { r = JSON.parse(xhr.responseText); } catch {}
-    if (xhr.status >= 200 && xhr.status < 300 && r.message) done(r.message); else { toast(r.error || 'Upload failed. Try again.'); done(null); }
+    if (xhr.status >= 200 && xhr.status < 300 && r.message) { done(r.message); if (onDone) onDone(r.message); } else { toast(r.error || 'Upload failed. Try again.'); done(null); }
   };
   xhr.onerror = () => { toast('Upload failed. Check your internet.'); done(null); };
   xhr.send(blob);
@@ -2460,7 +2578,7 @@ $('#fAudio').onchange = (e) => { sendPickedFiles([...e.target.files], 'audio'); 
 // ----- attach sheet -----
 const ATT = [
   ['doc', '📄', 'Document', '#7A4E9E'], ['media', '🖼️', 'Photos & videos', '#1F6FB2'], ['camera', '📷', 'Camera', '#C8413A'], ['audio', '🎧', 'Audio', '#B5651D'],
-  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'],
+  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'],
 ];
 function openAttach() {
   if (!activeId) return;
@@ -2487,6 +2605,7 @@ function attachAction(id) {
   else if (id === 'poll') pollView();
   else if (id === 'event') eventView();
   else if (id === 'location') locationView();
+  else if (id === 'gps') { closeSheet('attachSheet'); openCamera({ gps: true }); }
 }
 
 // ----- audio: voice message or audio file -----
@@ -2636,10 +2755,12 @@ function stopLive(id) {
 
 // ----- in-app camera: photo & video -----
 const CAM = { stream: null, facing: 'environment', mode: 'photo', rec: null, chunks: [], t0: 0, timer: 0, blob: null, url: null, kind: null };
-async function openCamera() {
+async function openCamera(opts) {
   if (!activeId) return;
+  if (opts && opts.gps && !GPS.on) { GPS.on = true; store.set('maata_gps_cam', '1'); }
+  if (opts && opts.gps) CAM.mode = 'photo';
   if (call) return toast('You are on a call.');
-  $('#camView').hidden = false; camReset(); await camStart();
+  $('#camView').hidden = false; camReset(); await camStart(); gpsStart();
 }
 async function camStart() {
   camStopStream();
@@ -2655,8 +2776,9 @@ function camReset() {
   $('#camCaption').value = ''; $('#camShutter').classList.remove('rec-on');
   $('#camModePhoto').setAttribute('aria-pressed', String(CAM.mode === 'photo')); $('#camModeVideo').setAttribute('aria-pressed', String(CAM.mode === 'video'));
   $('#camShutter').setAttribute('aria-label', CAM.mode === 'photo' ? 'Take photo' : 'Start recording');
+  if (typeof gpsUi === 'function') try { gpsUi(); } catch {}
 }
-function closeCamera() { camStopRec(true); camStopStream(); camReset(); $('#camView').hidden = true; }
+function closeCamera() { camStopRec(true); camStopStream(); camReset(); gpsStop(); $('#camView').hidden = true; }
 $('#camBtnChat').onclick = openCamera;
 $('#camClose').onclick = () => (CAM.blob ? (camReset(), camStart()) : closeCamera());
 $('#camFlip').onclick = () => { if (CAM.rec) return; CAM.facing = CAM.facing === 'user' ? 'environment' : 'user'; camStart(); };
@@ -2667,7 +2789,7 @@ function camPreview(blob, kind) {
   camStopStream(); $('#camLive').hidden = true; $('#camControls').hidden = true; $('#camFlip').hidden = true;
   const node = kind === 'image' ? el('img') : el('video'); node.src = CAM.url;
   if (kind === 'video') { node.controls = true; node.playsInline = true; node.autoplay = true; } else node.alt = 'Photo preview';
-  $('#camStage').append(node); $('#camCapRow').hidden = false; $('#camSend').hidden = false;
+  $('#camStage').append(node); $('#camCapRow').hidden = false; $('#camSend').hidden = false; gpsUi();
 }
 $('#camShutter').onclick = () => {
   const v = $('#camLive'); if (!CAM.stream) return;
@@ -2676,7 +2798,20 @@ $('#camShutter').onclick = () => {
     c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
     const g = c.getContext('2d'); if (CAM.facing === 'user') { g.translate(c.width, 0); g.scale(-1, 1); }
     g.drawImage(v, 0, 0, c.width, c.height);
-    c.toBlob((b) => b && camPreview(b, 'image'), 'image/jpeg', 0.85);
+    if (CAM.facing === 'user') g.setTransform(1, 0, 0, 1, 0, 0);
+    const finish = () => c.toBlob((b) => b && camPreview(b, 'image'), 'image/jpeg', 0.88);
+    if (!GPS.on) return finish();
+    if (GPS.busy) return; GPS.busy = true; $('#camShutter').disabled = true; gpsChip('⏳ Adding location, date & time…');
+    (async () => {
+      try {
+        let pos = GPS.pos;
+        if (!pos) pos = await getPosition().catch(() => null);
+        if (!pos) { toast('Location not found. Photo saved without GPS stamp.'); return finish(); }
+        if (!GPS.addr || !GPS.addrAt || distM(GPS.addrAt, pos) > 40) await gpsAddress(pos);
+        await drawGpsStamp(c, pos, GPS.addr, new Date());
+        finish();
+      } finally { GPS.busy = false; $('#camShutter').disabled = false; }
+    })();
   } else if (!CAM.rec) {
     const mime = ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm', ''].find((t) => !t || MediaRecorder.isTypeSupported(t));
     try { CAM.rec = new MediaRecorder(CAM.stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 1500000 }); } catch { return toast('Video recording is not supported in this browser.'); }
@@ -2725,6 +2860,7 @@ function copyableText(m) {
   if (isText(m)) return m.text;
   if (m.type === 'contact') return m.contact.name + ' ' + m.contact.phone;
   if (m.type === 'location') return 'https://www.google.com/maps?q=' + m.location.lat + ',' + m.location.lng;
+  if (m.type === 'gif') return m.gif.url;
   if (m.type === 'poll') return m.poll.question + '\n' + m.poll.options.map((o) => '• ' + o).join('\n');
   if (m.type === 'event') { const E = m.event; return E.title + '\n' + E.date + (E.time ? ' ' + E.time : '') + (E.place ? '\n' + E.place : ''); }
   return m.text || (m.file ? m.file.name : '');
@@ -2993,7 +3129,7 @@ $('#pinBar').onkeydown = (e) => { if (e.key === 'Enter') $('#pinBar').click(); }
 
 // ================= in-app photo & video viewer =================
 const MV = { id: null, scale: 1, x: 0, y: 0, drag: null, pop: null };
-const mediaList = () => curList().filter((m) => !m.deleted && !m.uploading && (m.type === 'image' || m.type === 'video'));
+const mediaList = () => curList().filter((m) => !m.deleted && !m.uploading && ((m.type === 'image' && !(m.file && m.file.sticker)) || m.type === 'video'));
 function openMediaView(id) {
   closeMsgMenu(); MV.id = id; $('#mediaView').hidden = false; renderMediaView(true);
 }
@@ -3122,9 +3258,586 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
   });
 })();
 
+// ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
+let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
+const MI = {
+  broadcast: '<svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>',
+  quick: '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>',
+  star: '<svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>',
+  select: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12l3 3 5-6"/></svg>',
+  lists: '<svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  read: '<svg viewBox="0 0 24 24"><path d="M2 12l5 5L18 6"/><path d="M12 16l1 1L22 8"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+  logout: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
+};
+async function loadPrefs() { try { prefs = await api('/api/prefs'); } catch {} renderChips(); renderContacts(); }
+async function savePrefs(part) { try { prefs = await api('/api/prefs', { method: 'PUT', body: JSON.stringify(part) }); } catch (e) { toast(e.message); } renderChips(); renderContacts(); }
+
+// ----- ⋮ menu -----
+function openMainMenu(btn) {
+  closeMsgMenu();
+  const shade = el('div', 'menu-shade'); shade.onclick = closeMsgMenu;
+  const menu = el('div', 'main-menu'); menu.setAttribute('role', 'menu');
+  const list = el('div', 'menu-list');
+  const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = MI[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
+  item('broadcast', 'Business broadcast', openBroadcast);
+  item('quick', 'Quick replies', openQuickReplies);
+  item('star', 'Starred messages', openStarred);
+  item('select', 'Select chats', () => { setTab('chats'); startChatSelect(); });
+  item('lists', 'Lists', openLists);
+  item('read', 'Mark all as read', markAllRead);
+  list.append(el('hr'));
+  item('lock', 'App lock', openLockSettings);
+  item('settings', 'Settings', openSettings);
+  item('logout', 'Log out', () => { if (confirm('Log out of Maata on this device?')) logout(); }, true);
+  menu.append(list); document.body.append(shade, menu); menuEls = [shade, menu];
+  const r = btn.getBoundingClientRect();
+  menu.style.top = Math.min(r.bottom + 6, innerHeight - menu.offsetHeight - 8) + 'px';
+  menu.style.left = Math.max(8, Math.min(r.left, innerWidth - menu.offsetWidth - 8)) + 'px';
+  list.querySelector('button').focus();
+}
+$('#mainMenuBtn').onclick = (e) => openMainMenu(e.currentTarget);
+
+// ----- filter chips: All, Unread, Favourites, your lists, + -----
+function filterOk(u) {
+  if (chatFilter === 'unread') return (u.unread || 0) > 0;
+  if (chatFilter === 'favs') return prefs.favs.includes(u.id);
+  if (chatFilter !== 'all') { const l = prefs.lists.find((x) => x.id === chatFilter); return !!l && l.members.includes(u.id); }
+  return true;
+}
+function renderChips() {
+  const row = $('#chatFilters'); row.innerHTML = '';
+  if (!prefs.lists.some((l) => l.id === chatFilter) && !['all', 'unread', 'favs'].includes(chatFilter)) chatFilter = 'all';
+  const unread = users.filter((u) => u.unread > 0).length;
+  const chip = (id, label, n) => { const b = el('button', 'fchip', label); if (n) b.append(el('span', 'n', String(n))); b.setAttribute('aria-pressed', String(chatFilter === id)); b.onclick = () => { chatFilter = id; renderChips(); renderContacts(); }; row.append(b); };
+  chip('all', 'All'); chip('unread', 'Unread', unread); chip('favs', 'Favourites');
+  for (const l of prefs.lists) chip(l.id, l.name);
+  const add = el('button', 'fchip', '＋'); add.setAttribute('aria-label', 'Create a list'); add.onclick = () => editList(null); row.append(add);
+}
+
+// ----- select chats -----
+function startChatSelect(id) { chatSel = new Set(id ? [id] : []); $('#chatSelBar').hidden = false; updateChatSel(); renderContacts(); }
+function endChatSelect() { chatSel = null; $('#chatSelBar').hidden = true; renderContacts(); }
+function toggleChatSel(id) { chatSel.has(id) ? chatSel.delete(id) : chatSel.add(id); updateChatSel(); renderContacts(); }
+function updateChatSel() { $('#csCount').textContent = chatSel.size + ' selected'; }
+$('#csCancel').onclick = endChatSelect;
+$('#csRead').onclick = async () => { if (!chatSel.size) return; const ids = [...chatSel]; await api('/api/chats/read', { method: 'POST', body: JSON.stringify({ ids }) }).catch(() => {}); ids.forEach((id) => { const u = userById(id); if (u) u.unread = 0; }); toast('Marked as read'); endChatSelect(); renderChips(); };
+$('#csFav').onclick = () => { if (!chatSel.size) return; const ids = [...chatSel], allFav = ids.every((i) => prefs.favs.includes(i)); const favs = allFav ? prefs.favs.filter((f) => !ids.includes(f)) : [...new Set([...prefs.favs, ...ids])]; savePrefs({ favs }); toast(allFav ? 'Removed from favourites' : 'Added to favourites ⭐'); endChatSelect(); };
+$('#csList').onclick = () => { if (!chatSel.size) return; pickListFor([...chatSel]); };
+$('#csDel').onclick = () => {
+  if (!chatSel.size) return; const ids = [...chatSel];
+  if (!confirm('Delete ' + ids.length + ' chat' + (ids.length > 1 ? 's' : '') + '? Messages are removed only on your side.')) return;
+  api('/api/chats/delete', { method: 'POST', body: JSON.stringify({ ids }) }).then(() => {
+    for (const id of ids) { delete messagesCache[id]; bubbleCache.clear(); const u = userById(id); if (u) { u.lastMessage = null; u.unread = 0; if (!u.inContacts) users = users.filter((x) => x.id !== id); } if (activeId === id) { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; } }
+    toast('Chats deleted'); endChatSelect(); renderChips();
+  }).catch((e) => toast(e.message));
+};
+async function markAllRead() {
+  try { await api('/api/chats/read', { method: 'POST', body: JSON.stringify({ all: true }) }); users.forEach((u) => (u.unread = 0)); renderContacts(); renderChips(); toast('All chats marked as read ✓'); }
+  catch (e) { toast(e.message); }
+}
+
+// ----- starred messages -----
+async function openStarred() {
+  sheet('⭐ Starred messages', async (list) => {
+    list.append(el('p', 'info-note', 'Loading…'));
+    let items = []; try { items = await api('/api/starred/messages'); } catch {}
+    list.innerHTML = '';
+    if (!items.length) { list.append(el('p', 'info-note', 'No starred messages yet. Open any message and tap ☆ Star to keep it here.')); return; }
+    for (const { message: m, other } of items) {
+      const b = el('button', 'star-item');
+      const top = el('div', 'top'); top.append(avatar(other, 'sm'));
+      top.append(el('b', null, m.from === me.id ? 'You' : nameOf(other)), document.createTextNode(m.from === me.id ? ' → ' + nameOf(other) : ''), el('span', null, ' · ' + new Date(m.ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
+      b.append(top, el('div', 'txt2', isText(m) ? m.text : previewText(m)));
+      b.onclick = async () => { closeSheet('moreSheet'); upsertUser(other); if (!messagesCache[other.id]) { await openChat(other.id); } else openChat(other.id); setTimeout(() => scrollToMsg(m.id), 400); };
+      list.append(b);
+    }
+  });
+}
+
+// ----- quick replies (type "/" in the message box) -----
+function openQuickReplies() {
+  sheet('⚡ Quick replies', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Save answers you send often. In any chat type "/" and pick one. Example: /price, /address, /timings.'));
+    const ul = el('div');
+    const draw = () => {
+      ul.innerHTML = '';
+      if (!prefs.quickReplies.length) ul.append(el('p', 'info-note', 'No quick replies yet.'));
+      prefs.quickReplies.forEach((q, i) => {
+        const row = el('div', 'set-row'); const t = el('div', 'txt'); t.append(el('b', null, '/' + q.shortcut), el('small', null, q.text));
+        const del = el('button', 'icon-btn'); del.innerHTML = ICON.del; del.setAttribute('aria-label', 'Delete /' + q.shortcut);
+        del.onclick = async () => { await savePrefs({ quickReplies: prefs.quickReplies.filter((_, j) => j !== i) }); draw(); };
+        row.append(t, del); ul.append(row);
+      });
+    };
+    draw();
+    const s1 = el('label'); s1.append(el('span', null, 'Shortcut (one word)')); const si = el('input'); si.placeholder = 'e.g. address'; si.maxLength = 25; s1.append(si);
+    const s2 = el('label'); s2.append(el('span', null, 'Message')); const ti = el('textarea'); ti.maxLength = 1000; ti.placeholder = 'e.g. Shop No. 34, Adhithya Complex, Mount Road, Chennai'; s2.append(ti);
+    const add = el('button', 'primary', 'Save quick reply');
+    add.onclick = async () => {
+      const sc = si.value.trim().replace(/^\//, '').replace(/\s+/g, '');
+      if (!sc || !ti.value.trim()) return toast('Add a shortcut and a message.');
+      const rest = prefs.quickReplies.filter((q) => q.shortcut.toLowerCase() !== sc.toLowerCase());
+      await savePrefs({ quickReplies: [...rest, { shortcut: sc, text: ti.value.trim() }] }); si.value = ''; ti.value = ''; draw(); toast('Saved /' + sc);
+    };
+    box.append(ul, el('div', 'or-line', 'add new'), s1, s2, add); list.append(box);
+  });
+}
+(function quickReplyPicker() {
+  const input2 = $('#msgInput'); let pop = null, sel = 0, matches = [];
+  const close = () => { if (pop) pop.remove(); pop = null; };
+  const choose = (q) => { input2.value = q.text; input2.dispatchEvent(new Event('input')); close(); input2.focus(); };
+  input2.addEventListener('input', () => {
+    const v = input2.value;
+    if (!v.startsWith('/') || v.includes(' ') || !prefs.quickReplies.length) return close();
+    const k = v.slice(1).toLowerCase();
+    matches = prefs.quickReplies.filter((q) => q.shortcut.toLowerCase().startsWith(k)).slice(0, 8);
+    if (!matches.length) return close();
+    if (!pop) { pop = el('div', 'qr-pop'); pop.setAttribute('role', 'listbox'); $('#composer').append(pop); }
+    sel = 0; pop.innerHTML = '';
+    matches.forEach((q, i) => { const b = el('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(i === sel)); b.append(el('b', null, '/' + q.shortcut), el('span', null, q.text.slice(0, 80))); b.onmousedown = (e) => { e.preventDefault(); choose(q); }; pop.append(b); });
+  });
+  input2.addEventListener('keydown', (e) => {
+    if (!pop) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + matches.length) % matches.length; [...pop.children].forEach((c, i) => c.setAttribute('aria-selected', String(i === sel))); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); choose(matches[sel]); }
+    else if (e.key === 'Escape') close();
+  }, true);
+  input2.addEventListener('blur', () => setTimeout(close, 150));
+})();
+
+// ----- lists -----
+function openLists() {
+  sheet('📋 Lists', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Group your chats, like "Customers" or "Family". Each list shows as a filter above your chats.'));
+    if (!prefs.lists.length) box.append(el('p', 'info-note', 'No lists yet.'));
+    for (const l of prefs.lists) {
+      const row = el('div', 'set-row'); const t = el('div', 'txt'); t.append(el('b', null, l.name), el('small', null, l.members.length + ' chat' + (l.members.length === 1 ? '' : 's')));
+      const ed = el('button', 'linkbtn', 'Edit'); ed.onclick = () => editList(l);
+      row.append(t, ed); box.append(row);
+    }
+    const add = el('button', 'primary', '＋ Create list'); add.onclick = () => editList(null); box.append(add);
+    list.append(box);
+  });
+}
+function editList(l, preselect) {
+  const members = new Set(l ? l.members : preselect || []);
+  sheet(l ? 'Edit list' : 'New list', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const n = el('label'); n.append(el('span', null, 'List name')); const ni = el('input'); ni.maxLength = 30; ni.placeholder = 'e.g. Customers'; ni.value = l ? l.name : ''; n.append(ni); box.append(n);
+    const ul = el('ul', 'fwd-list');
+    for (const u of users.filter((x) => x.inContacts || x.lastMessage)) {
+      const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = members.has(u.id);
+      cb.onchange = () => (cb.checked ? members.add(u.id) : members.delete(u.id));
+      const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li);
+    }
+    const save2 = el('button', 'primary', l ? 'Save list' : 'Create list');
+    save2.onclick = async () => {
+      if (!ni.value.trim()) return toast('Give the list a name.');
+      const item = { id: l ? l.id : 'l' + Date.now(), name: ni.value.trim(), members: [...members] };
+      const lists = l ? prefs.lists.map((x) => (x.id === l.id ? item : x)) : [...prefs.lists, item];
+      await savePrefs({ lists }); closeSheet('moreSheet'); chatFilter = item.id; renderChips(); renderContacts(); if (chatSel) endChatSelect(); toast('List saved');
+    };
+    box.append(ul, save2);
+    if (l) { const del = el('button', 'danger-btn', 'Delete list'); del.onclick = async () => { if (!confirm('Delete the list "' + l.name + '"? Chats are not deleted.')) return; await savePrefs({ lists: prefs.lists.filter((x) => x.id !== l.id) }); closeSheet('moreSheet'); }; box.append(del); }
+    list.append(box); ni.focus();
+  });
+}
+function pickListFor(ids) {
+  sheet('Add to list', (list) => {
+    for (const l of prefs.lists) { const b = el('button', 'sheet-btn', '📋  ' + l.name); b.onclick = async () => { await savePrefs({ lists: prefs.lists.map((x) => (x.id === l.id ? { ...x, members: [...new Set([...x.members, ...ids])] } : x)) }); closeSheet('moreSheet'); endChatSelect(); toast('Added to ' + l.name); }; list.append(b); }
+    const nb = el('button', 'sheet-btn', '＋  New list'); nb.onclick = () => editList(null, ids); list.append(nb);
+  });
+}
+
+// ----- business broadcast -----
+function openBroadcast() {
+  const pick = new Set();
+  sheet('📢 Business broadcast', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Send one message to many customers. Each person gets it as a private message. Only people who saved your number receive it.'));
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q);
+    const allRow = el('div', 'row2'); allRow.style.cssText = 'display:flex;gap:8px;margin:8px 0';
+    const selAll = el('button', 'linkbtn', 'Select all'); const clr = el('button', 'linkbtn', 'Clear'); allRow.append(selAll, clr); box.append(allRow);
+    const ul = el('ul', 'fwd-list'); box.append(ul);
+    const people = () => users.filter((u) => !u.blocked && u.inContacts).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
+    const send = el('button', 'primary', 'Send broadcast');
+    const count = () => { send.textContent = pick.size ? 'Send to ' + pick.size : 'Send broadcast'; };
+    const draw = () => {
+      ul.innerHTML = '';
+      const ps = people(); if (!ps.length) ul.append(el('li', 'empty-list', 'Save contacts first to broadcast to them.'));
+      for (const u of ps) { const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id); cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); count(); }; const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li); }
+    };
+    selAll.onclick = () => { people().forEach((u) => pick.add(u.id)); draw(); count(); };
+    clr.onclick = () => { pick.clear(); draw(); count(); };
+    q.oninput = draw; draw();
+    const ml = el('label'); ml.append(el('span', null, 'Message')); const mt = el('textarea'); mt.maxLength = 4000; mt.placeholder = 'e.g. New stock arrived! 20% off on all earphones this week.'; ml.append(mt); box.append(ml);
+    if (prefs.quickReplies.length) {
+      const qs = el('select'); qs.add(new Option('Use a quick reply…', '')); prefs.quickReplies.forEach((x, i) => qs.add(new Option('/' + x.shortcut, i)));
+      qs.onchange = () => { if (qs.value !== '') mt.value = prefs.quickReplies[qs.value].text; }; box.append(qs);
+    }
+    send.onclick = async () => {
+      if (!pick.size || !mt.value.trim()) return toast('Choose people and write a message.');
+      if (!confirm('Send this message to ' + pick.size + ' people?')) return;
+      send.disabled = true;
+      try { const r = await api('/api/broadcast', { method: 'POST', body: JSON.stringify({ to: [...pick], text: mt.value }) }); closeSheet('moreSheet'); toast('Sent to ' + r.sent + (r.skipped ? ' · ' + r.skipped + ' skipped (they have not saved your number)' : '') + ' ✓'); for (const id of pick) delete messagesCache[id]; api('/api/users').then((l) => { users = l; renderContacts(); }).catch(() => {}); }
+      catch (e) { toast(e.message); send.disabled = false; }
+    };
+    box.append(send); list.append(box);
+  });
+}
+
+// ----- app lock (PIN on this device) -----
+const LOCK_KEY = 'maata_lock';
+async function sha(txt) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+const lockCfg = () => { try { return JSON.parse(store.get(LOCK_KEY) || 'null'); } catch { return null; } };
+let hiddenAt = 0;
+function openLockSettings() {
+  const cfg = lockCfg();
+  sheet('🔒 App lock', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', cfg ? 'App lock is ON. Maata asks for your PIN when you open it.' : 'Protect Maata with a PIN on this device. Your chats stay hidden until the PIN is entered.'));
+    if (!window.crypto || !crypto.subtle) { box.append(el('p', 'info-note', 'App lock needs a secure (https) connection.')); list.append(box); return; }
+    const a = el('label'); a.append(el('span', null, cfg ? 'New PIN (4–6 digits)' : 'PIN (4–6 digits)')); const p1 = el('input'); p1.type = 'password'; p1.inputMode = 'numeric'; p1.maxLength = 6; a.append(p1);
+    const b = el('label'); b.append(el('span', null, 'Enter PIN again')); const p2 = el('input'); p2.type = 'password'; p2.inputMode = 'numeric'; p2.maxLength = 6; b.append(p2);
+    const t = el('label'); t.append(el('span', null, 'Lock automatically after'));
+    const sel = el('select'); for (const [v, l] of [[0, 'Immediately'], [1, '1 minute'], [5, '5 minutes'], [30, '30 minutes']]) sel.add(new Option(l, v)); sel.value = String(cfg ? cfg.minutes : 1); t.append(sel);
+    const save2 = el('button', 'primary', cfg ? 'Change PIN' : 'Turn on app lock');
+    save2.onclick = async () => {
+      if (!/^\d{4,6}$/.test(p1.value)) return toast('PIN must be 4 to 6 digits.');
+      if (p1.value !== p2.value) return toast('The two PINs do not match.');
+      const salt = Math.random().toString(36).slice(2);
+      store.set(LOCK_KEY, JSON.stringify({ salt, hash: await sha(salt + p1.value), minutes: Number(sel.value) }));
+      closeSheet('moreSheet'); toast('App lock is on 🔒');
+    };
+    box.append(a, b, t, save2);
+    if (cfg) { const off = el('button', 'danger-btn', 'Turn off app lock'); off.onclick = () => { store.del(LOCK_KEY); closeSheet('moreSheet'); toast('App lock turned off'); }; box.append(off); }
+    list.append(box);
+  });
+}
+function showLock() {
+  const cfg = lockCfg(); if (!cfg || $('#lockScreen')) return;
+  const L = el('div', 'lock'); L.id = 'lockScreen'; L.setAttribute('role', 'dialog'); L.setAttribute('aria-label', 'Maata is locked');
+  L.append(el('div', null, '🦜'), el('h2', null, 'Enter your Maata PIN'));
+  const dots = el('div', 'dots'); for (let i = 0; i < 6; i++) dots.append(el('i')); L.append(dots);
+  const err = el('div', 'err'); L.append(err);
+  let pin = '';
+  const draw = () => [...dots.children].forEach((d, i) => { d.classList.toggle('on', i < pin.length); d.style.display = i < Math.max(4, pin.length) ? '' : 'none'; });
+  const tryPin = async () => {
+    if (pin.length < 4) return;
+    if ((await sha(cfg.salt + pin)) === cfg.hash) { L.remove(); return; }
+    if (pin.length >= 6) { err.textContent = 'Wrong PIN, try again'; L.classList.add('shake'); setTimeout(() => L.classList.remove('shake'), 400); pin = ''; draw(); }
+  };
+  const pad = el('div', 'pad');
+  for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫']) {
+    const b = el('button', null, k); if (!k) { b.style.visibility = 'hidden'; } b.setAttribute('aria-label', k === '⌫' ? 'Delete' : k);
+    b.onclick = () => { err.textContent = ''; if (k === '⌫') pin = pin.slice(0, -1); else if (pin.length < 6) pin += k; draw(); tryPin(); };
+    pad.append(b);
+  }
+  L.append(pad);
+  const forgot = el('button', 'linkbtn', 'Forgot PIN? Log out'); forgot.onclick = () => { if (confirm('Log out? You can log in again with your mobile number and password.')) { store.del(LOCK_KEY); logout(); } };
+  L.append(forgot);
+  L.addEventListener('keydown', (e) => { if (/^\d$/.test(e.key) && pin.length < 6) { pin += e.key; draw(); tryPin(); } else if (e.key === 'Backspace') { pin = pin.slice(0, -1); draw(); } });
+  L.tabIndex = -1; document.body.append(L); draw(); L.focus();
+}
+document.addEventListener('visibilitychange', () => {
+  const cfg = lockCfg(); if (!cfg || !token) return;
+  if (document.hidden) hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt >= cfg.minutes * 60000) showLock();
+});
+
+// ================= emoji data (category, emoji + search words) =================
+const EMOJI_CATS = [
+  ['smileys', '😀', 'Smileys & people', '😀 grin smile happy|😃 smile happy|😄 laugh smile|😁 beam grin|😆 laugh|😅 sweat laugh|🤣 rofl rolling laugh|😂 joy tears laugh lol|🙂 slight smile|🙃 upside down|😉 wink|😊 blush smile|😇 angel halo|🥰 love hearts|😍 heart eyes love|🤩 star struck|😘 kiss|😗 kiss|☺️ smile|😚 kiss|😙 kiss|🥲 smile tear|😋 yum tasty|😛 tongue|😜 wink tongue|🤪 zany crazy|😝 tongue|🤑 money|🤗 hug|🤭 oops giggle|🤫 shush quiet|🤔 think hmm|🤐 zip|🤨 raised eyebrow|😐 neutral|😑 expressionless|😶 no mouth|😏 smirk|😒 unamused|🙄 eye roll|😬 grimace|😮‍💨 exhale|🤥 lie|😌 relieved|😔 pensive sad|😪 sleepy|🤤 drool|😴 sleep|😷 mask sick|🤒 fever sick|🤕 hurt|🤢 nausea|🤮 vomit|🤧 sneeze|🥵 hot|🥶 cold|🥴 woozy|😵 dizzy|🤯 mind blown|🤠 cowboy|🥳 party|🥸 disguise|😎 cool sunglasses|🤓 nerd|🧐 monocle|😕 confused|😟 worried|🙁 frown|☹️ frown|😮 open mouth wow|😯 hushed|😲 astonished|😳 flushed|🥺 pleading|😦 frown|😧 anguished|😨 fearful|😰 anxious|😥 sad relieved|😢 cry sad|😭 sob cry|😱 scream|😖 confounded|😣 persevere|😞 disappointed|😓 sweat|😩 weary|😫 tired|🥱 yawn|😤 triumph|😡 angry pout|😠 angry|🤬 swear|😈 devil|👿 imp|💀 skull|💩 poop|🤡 clown|👻 ghost|👽 alien|🤖 robot|😺 cat smile|😸 cat grin|😹 cat joy|😻 cat love|🙈 see no evil monkey|🙉 hear no evil|🙊 speak no evil|👋 wave hi bye|🤚 hand|✋ hand stop|🖖 vulcan|👌 ok|🤌 pinched|✌️ victory peace|🤞 fingers crossed|🤟 love you|🤘 rock|🤙 call me|👈 left|👉 right|👆 up|👇 down|☝️ point|👍 thumbs up like yes|👎 thumbs down no|✊ fist|👊 punch|👏 clap|🙌 raise hands|👐 open hands|🤲 palms|🤝 handshake deal|🙏 pray thanks namaste please|✍️ write|💅 nails|💪 muscle strong|🧠 brain|👀 eyes look|👁️ eye|👶 baby|🧒 child|👦 boy|👧 girl|🧑 person|👨 man|👩 woman|🧓 old|👴 grandpa|👵 grandma|🙍 frown|🙋 raise hand|🙇 bow|🤦 facepalm|🤷 shrug|👮 police|👷 worker|💂 guard|🕵️ detective|👩‍⚕️ doctor|👨‍🌾 farmer|👨‍🍳 cook chef|👨‍🎓 student|👨‍🏫 teacher|👨‍💻 technologist computer|👨‍💼 office business|🤵 groom|👰 bride|🤰 pregnant|🎅 santa|🦸 hero|🧘 yoga|🏃 run|🚶 walk|💃 dance|🕺 dance|👨‍👩‍👧 family|💑 couple|💏 kiss couple'],
+  ['nature', '🐶', 'Animals & nature', '🐶 dog|🐱 cat|🐭 mouse|🐹 hamster|🐰 rabbit|🦊 fox|🐻 bear|🐼 panda|🐨 koala|🐯 tiger|🦁 lion|🐮 cow|🐷 pig|🐸 frog|🐵 monkey|🐔 chicken|🐧 penguin|🐦 bird|🐤 chick|🦆 duck|🦅 eagle|🦉 owl|🐺 wolf|🐗 boar|🐴 horse|🦄 unicorn|🐝 bee|🐛 bug|🦋 butterfly|🐌 snail|🐞 ladybug|🐜 ant|🕷️ spider|🦂 scorpion|🐢 turtle|🐍 snake|🦎 lizard|🐙 octopus|🦑 squid|🦐 shrimp|🦀 crab|🐠 fish|🐟 fish|🐬 dolphin|🐳 whale|🦈 shark|🐊 crocodile|🐅 tiger|🐆 leopard|🦓 zebra|🦍 gorilla|🐘 elephant|🦏 rhino|🐪 camel|🦒 giraffe|🐃 buffalo|🐄 cow|🐎 horse|🐖 pig|🐐 goat|🐑 sheep|🦌 deer|🐕 dog|🐈 cat|🐓 rooster|🦚 peacock|🦜 parrot|🕊️ dove|🐇 rabbit|🐿️ squirrel|🐾 paw|💐 bouquet flowers|🌸 blossom|🌺 hibiscus|🌻 sunflower|🌹 rose|🌷 tulip|🌼 flower|🌱 seedling plant|🌿 herb|☘️ shamrock|🍀 clover luck|🍁 maple|🍂 leaves|🌳 tree|🌴 palm|🌵 cactus|🌾 rice paddy|🌍 earth|🌙 moon night|⭐ star|🌟 star glow|✨ sparkles|⚡ lightning|🔥 fire hot|🌈 rainbow|☀️ sun|🌤️ sun cloud|⛅ cloud|🌧️ rain|⛈️ storm|❄️ snow|💧 drop water|🌊 wave sea'],
+  ['food', '🍔', 'Food & drink', '🍏 apple|🍎 apple|🍐 pear|🍊 orange|🍋 lemon|🍌 banana|🍉 watermelon|🍇 grapes|🍓 strawberry|🍈 melon|🍒 cherry|🍑 peach|🥭 mango|🍍 pineapple|🥥 coconut|🥝 kiwi|🍅 tomato|🍆 brinjal eggplant|🥑 avocado|🥦 broccoli|🥬 greens|🥒 cucumber|🌶️ chilli pepper|🌽 corn|🥕 carrot|🧄 garlic|🧅 onion|🥔 potato|🥜 peanuts|🍞 bread|🥐 croissant|🥖 bread|🧀 cheese|🥚 egg|🍳 cooking egg|🥞 pancakes|🍗 chicken leg|🍖 meat|🌭 hotdog|🍔 burger|🍟 fries|🍕 pizza|🥪 sandwich|🌮 taco|🌯 wrap|🥗 salad|🍝 pasta|🍜 noodles|🍲 curry pot|🍛 curry rice biryani|🍣 sushi|🍱 bento|🥟 dumpling momo|🍤 prawn|🍚 rice|🍘 cracker|🍥 fish cake|🥮 mooncake|🍢 oden|🍡 dango|🍧 shaved ice|🍨 ice cream|🍦 ice cream|🥧 pie|🧁 cupcake|🍰 cake|🎂 birthday cake|🍮 custard|🍭 lollipop|🍬 candy sweet|🍫 chocolate|🍿 popcorn|🍩 donut|🍪 cookie|🥛 milk|☕ tea coffee chai|🍵 tea|🧃 juice|🥤 cup drink|🧋 bubble tea|🍶 sake|🍺 beer|🍻 cheers|🥂 toast|🍷 wine|🥃 whisky|🍹 cocktail|🧊 ice|🥄 spoon|🍴 fork knife|🍽️ plate'],
+  ['activity', '⚽', 'Activities', '⚽ football soccer|🏀 basketball|🏈 football|⚾ baseball|🥎 softball|🎾 tennis|🏐 volleyball|🏉 rugby|🎱 pool|🏓 ping pong|🏸 badminton|🏏 cricket|🏑 hockey|🥅 goal|⛳ golf|🏹 archery|🎣 fishing|🥊 boxing|🥋 karate|🎽 shirt|⛸️ skate|🎿 ski|🛹 skateboard|🏋️ weight lifting gym|🤸 cartwheel|⛹️ ball|🤺 fencing|🏊 swim|🚴 cycling|🏆 trophy win|🥇 gold medal first|🥈 silver|🥉 bronze|🏅 medal|🎖️ medal|🎗️ ribbon|🎫 ticket|🎟️ tickets|🎪 circus|🎭 theatre|🎨 art paint|🎬 movie film|🎤 mic sing|🎧 headphones music|🎼 music|🎹 piano|🥁 drum|🎷 sax|🎺 trumpet|🎸 guitar|🎻 violin|🎲 dice|♟️ chess|🎯 target|🎳 bowling|🎮 game|🕹️ joystick|🧩 puzzle|🪁 kite|🎉 party tada celebrate|🎊 confetti|🎈 balloon|🎁 gift present|🎀 ribbon|🪔 diya diwali lamp|🎆 fireworks|🎇 sparkler|🧨 cracker|🎄 christmas|🎃 pumpkin'],
+  ['travel', '🚗', 'Travel & places', '🚗 car|🚕 taxi|🚙 suv|🚌 bus|🚎 trolley|🏎️ race car|🚓 police car|🚑 ambulance|🚒 fire engine|🚐 van|🛻 pickup|🚚 truck delivery|🚛 lorry|🚜 tractor|🛵 scooter bike|🏍️ motorcycle|🚲 bicycle|🛺 auto rickshaw|🚨 siren|🚔 police|🚍 bus|🚘 car|🚖 taxi|🚡 cable|🚠 cable car|🚃 train|🚋 tram|🚄 fast train|🚅 bullet train|🚆 train|🚇 metro|🚉 station|✈️ plane flight|🛫 departure|🛬 arrival|💺 seat|🚀 rocket|🛸 ufo|🚁 helicopter|🛶 canoe|⛵ boat|🚤 speedboat|🛳️ ship|⛴️ ferry|🚢 ship|⚓ anchor|⛽ fuel petrol|🚧 construction|🚦 signal|🚏 bus stop|🗺️ map|🗿 statue|🗽 liberty|🗼 tower|🏰 castle|🏯 palace|🏟️ stadium|🎡 ferris wheel|🎢 roller coaster|⛲ fountain|⛱️ umbrella beach|🏖️ beach|🏝️ island|🏜️ desert|🌋 volcano|⛰️ mountain|🏔️ snow mountain|🏕️ camping|🏠 house home|🏡 home garden|🏘️ houses|🏢 office building|🏬 mall|🏣 post office|🏥 hospital|🏦 bank|🏨 hotel|🏪 shop store|🏫 school|🏩 hotel|💒 wedding|🏛️ temple building|⛪ church|🕌 mosque|🛕 hindu temple|🕍 synagogue|🌅 sunrise|🌄 sunrise|🌠 shooting star|🎇 sparkler|🌃 night city|🏙️ city|🌉 bridge'],
+  ['objects', '💡', 'Objects', '⌚ watch|📱 mobile phone|📲 phone call|💻 laptop computer|⌨️ keyboard|🖥️ desktop|🖨️ printer|🖱️ mouse|💽 disk|💾 floppy|💿 cd|📀 dvd|📷 camera|📸 camera flash|📹 video camera|🎥 movie camera|📞 phone receiver|☎️ telephone|📟 pager|📠 fax|📺 tv|📻 radio|🎙️ microphone|⏰ alarm clock|⏳ hourglass|📡 antenna|🔋 battery|🔌 plug charger|💡 bulb idea|🔦 torch|🕯️ candle|🧯 extinguisher|💸 money flying|💵 dollar cash|💴 yen|💶 euro|💷 pound|💰 money bag|💳 card|🪙 coin|💎 diamond|⚖️ scale|🧰 toolbox|🔧 wrench|🔨 hammer|⚒️ tools|🛠️ tools|⛏️ pick|🔩 bolt|⚙️ gear settings|🧱 brick|⛓️ chain|🧲 magnet|🔫 water gun|💣 bomb|🔪 knife|🗡️ dagger|🛡️ shield|🚬 cigarette|🏺 vase|🔮 crystal|📿 beads|💈 barber|⚗️ lab|🔭 telescope|🔬 microscope|💊 pill medicine|💉 injection|🩺 stethoscope|🩹 bandage|🧬 dna|🧪 test tube|🌡️ thermometer|🧹 broom|🧺 basket|🧻 tissue|🚽 toilet|🚿 shower|🛁 bath|🧼 soap|🪒 razor|🧴 lotion|🛎️ bell|🔑 key|🗝️ key|🚪 door|🪑 chair|🛋️ sofa|🛏️ bed|🧸 teddy|🖼️ picture|🛍️ shopping bags|🛒 cart shopping|🎁 gift|✉️ envelope letter|📧 email|📨 incoming mail|📩 mail|📤 outbox|📥 inbox|📦 package box parcel order|🏷️ tag price|📪 mailbox|📮 postbox|📜 scroll|📃 page|📄 document|📑 tabs|🧾 receipt bill invoice|📊 chart bar|📈 chart up growth|📉 chart down|🗒️ notepad|🗓️ calendar|📆 calendar|📅 date calendar|📇 card index|📋 clipboard|📁 folder|📂 folder open|🗂️ dividers|📰 newspaper|📓 notebook|📔 notebook|📒 ledger|📕 book|📗 book|📘 book|📙 book|📚 books|📖 open book|🔖 bookmark|🔗 link|📎 paperclip|📐 ruler|📏 ruler|📌 pin|📍 pin location|✂️ scissors|🖊️ pen|🖋️ pen|✒️ nib|🖌️ brush|🖍️ crayon|📝 memo note|✏️ pencil|🔍 search|🔎 search|🔏 lock|🔐 lock key|🔒 locked|🔓 unlocked'],
+  ['symbols', '❤️', 'Symbols', '❤️ red heart love|🧡 orange heart|💛 yellow heart|💚 green heart|💙 blue heart|💜 purple heart|🖤 black heart|🤍 white heart|🤎 brown heart|💔 broken heart|❣️ heart|💕 two hearts|💞 hearts|💓 heartbeat|💗 growing heart|💖 sparkling heart|💘 cupid|💝 heart gift|💟 heart|☮️ peace|✝️ cross|☪️ star crescent|🕉️ om|☸️ wheel|✡️ star david|🔯 star|🪯 khanda|☯️ yin yang|☦️ cross|🛐 worship|⛎ ophiuchus|♈ aries|♉ taurus|♊ gemini|♋ cancer|♌ leo|♍ virgo|♎ libra|♏ scorpio|♐ sagittarius|♑ capricorn|♒ aquarius|♓ pisces|🆔 id|⚛️ atom|🉑 accept|☢️ radioactive|☣️ biohazard|📴 phone off|📳 vibrate|✴️ star|🆚 vs|💮 flower|💯 hundred perfect|💢 anger|♨️ hot springs|🚷 no pedestrians|🚯 no litter|🚳 no bicycles|🚱 non potable|🔞 18|📵 no phones|🚭 no smoking|❗ exclamation|❕ exclamation|❓ question|❔ question|‼️ double exclamation|⁉️ interrobang|🔅 dim|🔆 bright|〽️ part|⚠️ warning|🚸 children crossing|🔱 trident|⚜️ fleur|🔰 beginner|♻️ recycle|✅ check done yes|🈯 reserved|💹 chart|❇️ sparkle|✳️ asterisk|❎ cross|🌐 globe web internet|💠 diamond|Ⓜ️ metro|🌀 cyclone|💤 sleep zzz|🏧 atm|🚾 wc|♿ wheelchair|🅿️ parking|🛗 elevator|🈳 vacancy|🛂 passport|🛃 customs|🛄 baggage|🛅 locker|🚹 men|🚺 women|🚼 baby|🚻 restroom|🚮 litter|🎦 cinema|📶 signal network|🈁 here|🔣 symbols|ℹ️ info|🔤 abc|🔡 abc|🔠 ABC|🆖 ng|🆗 ok|🆙 up|🆒 cool|🆕 new|🆓 free|0️⃣ zero|1️⃣ one|2️⃣ two|3️⃣ three|4️⃣ four|5️⃣ five|6️⃣ six|7️⃣ seven|8️⃣ eight|9️⃣ nine|🔟 ten|🔢 numbers|#️⃣ hash|*️⃣ asterisk|▶️ play|⏸️ pause|⏹️ stop|⏺️ record|⏭️ next|⏮️ previous|⏩ fast forward|⏪ rewind|🔀 shuffle|🔁 repeat|🔂 repeat one|◀️ reverse|🔼 up|🔽 down|➡️ right arrow|⬅️ left arrow|⬆️ up arrow|⬇️ down arrow|↗️ up right|↘️ down right|↙️ down left|↖️ up left|↕️ up down|↔️ left right|🔄 refresh|➕ plus|➖ minus|➗ divide|✖️ multiply|🟰 equals|♾️ infinity|💲 dollar|💱 exchange|™️ trademark|©️ copyright|®️ registered|〰️ wavy|➰ loop|➿ loop|🔚 end|🔙 back|🔛 on|🔝 top|🔜 soon|✔️ check|☑️ checkbox|🔘 radio|🔴 red circle|🟠 orange circle|🟡 yellow circle|🟢 green circle|🔵 blue circle|🟣 purple circle|⚫ black circle|⚪ white circle|🟥 red square|🟩 green square|🟦 blue square|🔺 triangle|🔻 triangle|🔸 diamond|🔹 diamond|🔶 diamond|🔷 diamond|🔳 square|🔲 square|▪️ square|▫️ square|◾ square|◽ square|🔈 speaker|🔇 mute|🔉 volume|🔊 loud|🔔 bell|🔕 no bell|📣 megaphone|📢 loudspeaker announcement|💬 speech chat|💭 thought|🗯️ anger bubble|♠️ spade|♣️ club|♥️ heart|♦️ diamond|🃏 joker|🎴 cards|🀄 mahjong|🕐 one oclock|🕑 two|🕒 three|🕓 four|🕔 five|🕕 six|🕖 seven|🕗 eight|🕘 nine|🕙 ten|🕚 eleven|🕛 twelve'],
+];
+// Flags are built from country codes; names come from the browser, so search works ("india", "usa")
+const FLAG_CODES = 'IN US GB AE SA QA KW OM BH SG MY AU CA NZ DE FR IT ES NL CH SE NO DK IE PT BE AT PL RU UA TR IL EG ZA NG KE BR AR MX CO CL PE JP CN KR TW HK TH VN ID PH PK BD LK NP BT MM AF IR IQ'.split(' ');
+const regionName = (() => { try { const dn = new Intl.DisplayNames(['en'], { type: 'region' }); return (c) => dn.of(c) || c; } catch { return (c) => c; } })();
+function flagOf(cc) { return String.fromCodePoint(...[...cc].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)); }
+EMOJI_CATS.push(['flags', '🏳️', 'Flags', '🏳️ white flag|🏴 black flag|🏁 chequered race|🚩 red flag|🏳️‍🌈 rainbow flag|' + FLAG_CODES.map((c) => flagOf(c) + ' flag ' + regionName(c).toLowerCase() + ' ' + c.toLowerCase()).join('|')]);
+const EMOJI_DATA = EMOJI_CATS.map(([id, icon, title, raw]) => ({ id, icon, title, list: raw.split('|').map((x) => { const i = x.indexOf(' '); return { e: x.slice(0, i), k: x.slice(i + 1) }; }) }));
+
+// ================= stickers =================
+const STICKERS = [
+  ['thanks', '🙏', 'Thank you', '#2E8B57'], ['namaskaram', '🙏', 'నమస్కారం', '#B5651D'], ['super', '👍', 'Super!', '#1F6FB2'], ['love', '❤️', 'Love you', '#C8413A'],
+  ['bday', '🎂', 'Happy Birthday', '#AD1457'], ['gm', '☀️', 'Good morning', '#E8A317'], ['gn', '🌙', 'Good night', '#1C2230'], ['onway', '🛵', 'On the way', '#0F4C5C'],
+  ['callme', '📞', 'Call me', '#7A4E9E'], ['ok', '✅', 'OK', '#2E8B57'], ['offer', '🔥', 'Offer!', '#C8413A'], ['order', '📦', 'Order ready', '#B5651D'],
+  ['lol', '😂', 'LOL', '#E8A317'], ['sorry', '😔', 'Sorry', '#4A5568'], ['congrats', '🎉', 'Congrats!', '#7A4E9E'], ['maata', '🦜', 'Maata!', '#2E8B57'],
+];
+function stickerSvg(id) {
+  const d = STICKERS.find((x) => x[0] === id); if (!d) return '';
+  const esc3 = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  return '<svg viewBox="0 0 200 200" role="img" aria-label="' + esc3(d[2]) + ' sticker"><rect x="10" y="10" width="180" height="180" rx="44" fill="' + d[3] + '" stroke="#fff" stroke-width="10"/>' +
+    '<text x="100" y="108" text-anchor="middle" font-size="84" dominant-baseline="middle">' + d[1] + '</text>' +
+    '<text x="100" y="168" text-anchor="middle" font-size="' + (d[2].length > 11 ? 20 : 26) + '" font-weight="800" fill="#fff" font-family="Sora,\'Noto Sans Telugu\',system-ui,sans-serif">' + esc3(d[2]) + '</text></svg>';
+}
+
+// ================= emoji / GIF / sticker panel =================
+const EP = { tab: 'emoji', cat: 'recent', el: null };
+const recentEmoji = () => { try { return JSON.parse(store.get('maata_recent_emoji') || '[]'); } catch { return []; } };
+function addRecent(e) { store.set('maata_recent_emoji', JSON.stringify([e, ...recentEmoji().filter((x) => x !== e)].slice(0, 24))); }
+function insertAtCaret(t) {
+  const inp = $('#msgInput'), a = inp.selectionStart ?? inp.value.length, b2 = inp.selectionEnd ?? a;
+  inp.value = inp.value.slice(0, a) + t + inp.value.slice(b2); inp.selectionStart = inp.selectionEnd = a + t.length;
+  inp.dispatchEvent(new Event('input')); inp.focus();
+}
+function toggleEmojiPanel(force) {
+  const open = force ?? !EP.el;
+  if (!open) { if (EP.el) EP.el.remove(); EP.el = null; $('#emojiBtn').setAttribute('aria-pressed', 'false'); return; }
+  if (EP.el) return;
+  const p = el('div', 'ep'); p.id = 'emojiPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Emojis, GIFs and stickers');
+  const body = el('div'); body.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0';
+  const foot = el('div', 'ep-foot');
+  for (const [id, label] of [['emoji', '😊 Emoji'], ['gif', 'GIF'], ['sticker', '💟 Stickers']]) {
+    const b = el('button', null, label); b.type = 'button'; b.dataset.tab = id; b.onclick = () => { EP.tab = id; drawTab(); }; foot.append(b);
+  }
+  p.append(body, foot); $('#composer').append(p); EP.el = p; $('#emojiBtn').setAttribute('aria-pressed', 'true');
+  const drawTab = () => {
+    [...foot.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === EP.tab)));
+    body.innerHTML = '';
+    if (EP.tab === 'emoji') drawEmoji(body); else if (EP.tab === 'gif') drawGifs(body); else drawStickers(body);
+  };
+  drawTab();
+}
+function drawEmoji(body) {
+  const cats = el('div', 'ep-cats');
+  const search = el('input', 'ep-search'); search.type = 'search'; search.placeholder = 'Search emoji'; search.setAttribute('aria-label', 'Search emoji');
+  const scroll = el('div', 'ep-scroll');
+  const sections = [{ id: 'recent', icon: '🕘', title: 'Recent', list: recentEmoji().map((e) => ({ e, k: '' })) }, ...EMOJI_DATA];
+  const btn = (e) => { const b = el('button', null, e); b.type = 'button'; b.setAttribute('aria-label', e); b.onclick = () => { insertAtCaret(e); addRecent(e); }; return b; };
+  const drawAll = () => {
+    scroll.innerHTML = '';
+    for (const s2 of sections) {
+      if (!s2.list.length) continue;
+      const h = el('h4', null, s2.title); h.id = 'ep-' + s2.id; const g = el('div', 'ep-grid');
+      s2.list.forEach((x) => g.append(btn(x.e))); scroll.append(h, g);
+    }
+  };
+  const drawSearch = (q) => {
+    scroll.innerHTML = ''; const g = el('div', 'ep-grid'); const seen = new Set();
+    for (const s2 of EMOJI_DATA) for (const x of s2.list) if (!seen.has(x.e) && x.k.includes(q)) { seen.add(x.e); g.append(btn(x.e)); }
+    if (!g.children.length) scroll.append(el('p', 'info-note', 'No emoji found for "' + q + '"')); else scroll.append(g);
+  };
+  for (const s2 of sections) {
+    const b = el('button', null, s2.icon); b.type = 'button'; b.title = s2.title; b.setAttribute('aria-label', s2.title);
+    b.onclick = () => { search.value = ''; drawAll(); const h = scroll.querySelector('#ep-' + s2.id); if (h) scroll.scrollTop = h.offsetTop - 4; mark(s2.id); };
+    b.dataset.cat = s2.id; cats.append(b);
+  }
+  const mark = (id) => [...cats.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === id)));
+  scroll.addEventListener('scroll', () => { let cur = sections[0].id; for (const h of scroll.querySelectorAll('h4')) if (h.offsetTop - 10 <= scroll.scrollTop) cur = h.id.slice(3); mark(cur); });
+  search.oninput = () => { const q = search.value.trim().toLowerCase(); q ? drawSearch(q) : drawAll(); };
+  body.append(cats, search, scroll); drawAll(); mark(recentEmoji().length ? 'recent' : 'smileys'); search.focus();
+}
+function drawGifs(body) {
+  const search = el('input', 'ep-search'); search.type = 'search'; search.placeholder = 'Search GIFs (e.g. thank you, happy birthday)'; search.setAttribute('aria-label', 'Search GIFs');
+  const scroll = el('div', 'ep-scroll'); body.append(search, scroll);
+  let t = 0;
+  const load = async () => {
+    scroll.innerHTML = '<p class="info-note">Loading GIFs…</p>';
+    try {
+      const list = await api('/api/gifs?q=' + encodeURIComponent(search.value.trim()));
+      scroll.innerHTML = ''; const g = el('div', 'gif-grid');
+      for (const x of list) {
+        const b = el('button'); b.type = 'button'; b.setAttribute('aria-label', x.title || 'GIF');
+        const im = el('img'); im.loading = 'lazy'; im.alt = x.title || 'GIF'; im.src = x.preview; b.append(im);
+        b.onclick = () => { sendRich({ type: 'gif', gif: { url: x.url, preview: x.preview, w: x.w, h: x.h } }); toggleEmojiPanel(false); };
+        g.append(b);
+      }
+      scroll.append(list.length ? g : el('p', 'info-note', 'No GIFs found.'));
+      if (list.length) scroll.append(el('p', 'info-note', 'Powered by Tenor'));
+    } catch (e) { scroll.innerHTML = ''; scroll.append(el('p', 'info-note', /not set up/i.test(e.message) ? 'GIFs are not switched on yet. The Maata admin needs to enable the Tenor API on the Google key.' : e.message)); }
+  };
+  search.oninput = () => { clearTimeout(t); t = setTimeout(load, 400); };
+  load(); search.focus();
+}
+function drawStickers(body) {
+  const scroll = el('div', 'ep-scroll'); body.append(scroll);
+  scroll.append(el('h4', null, 'My stickers'));
+  const mine = el('div', 'stk-grid');
+  const nb = el('button', 'newstk', '＋ Make sticker from photo'); nb.type = 'button'; nb.onclick = () => $('#stkFile').click(); mine.append(nb);
+  for (const fid of (prefs.stickers || []).slice().reverse()) {
+    const b = el('button'); b.type = 'button'; b.setAttribute('aria-label', 'My sticker');
+    const im = el('img'); im.alt = 'Sticker'; im.loading = 'lazy'; im.src = fileUrl({ id: fid }); im.onerror = () => b.remove(); b.append(im);
+    b.onclick = () => sendMySticker(fid);
+    b.oncontextmenu = (e) => { e.preventDefault(); if (confirm('Remove this sticker from My stickers?')) savePrefs({ stickers: prefs.stickers.filter((x) => x !== fid) }).then(() => { b.remove(); }); };
+    mine.append(b);
+  }
+  scroll.append(mine, el('h4', null, 'Maata stickers'));
+  const g = el('div', 'stk-grid');
+  for (const [id] of STICKERS) { const b = el('button'); b.type = 'button'; b.innerHTML = stickerSvg(id); b.onclick = () => { sendRich({ type: 'sticker', sticker: { id } }); toggleEmojiPanel(false); }; g.append(b); }
+  scroll.append(g);
+}
+function sendMySticker(fileId) {
+  const to = activeId; if (!to) return;
+  socket.timeout(10000).emit('sticker:send', { to, fileId }, (err, res) => {
+    if (err || res?.error) return toast(res?.error || 'Sticker not sent.');
+    (messagesCache[to] = messagesCache[to] || []).push(res.message); const u = userById(to); if (u) u.lastMessage = res.message;
+    renderContacts(); if (activeId === to) renderMessages();
+  });
+  toggleEmojiPanel(false);
+}
+$('#stkFile').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const bmp = await createImageBitmap(f); const s2 = Math.min(bmp.width, bmp.height);
+    const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+    g.beginPath(); g.roundRect ? g.roundRect(0, 0, 512, 512, 90) : g.rect(0, 0, 512, 512); g.clip();
+    g.drawImage(bmp, (bmp.width - s2) / 2, (bmp.height - s2) / 2, s2, s2, 0, 0, 512, 512);
+    let blob = await new Promise((r) => c.toBlob(r, 'image/webp', 0.9));
+    if (!blob || blob.type !== 'image/webp') blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+    uploadFile(blob, { kind: 'image', name: 'sticker.' + (blob.type === 'image/webp' ? 'webp' : 'png'), sticker: true, onDone: (m) => savePrefs({ stickers: [...(prefs.stickers || []), m.file.id] }) });
+    toggleEmojiPanel(false); toast('Sticker made and sent 💟');
+  } catch { toast('Could not make a sticker from that photo.'); }
+};
+$('#emojiBtn').onclick = () => toggleEmojiPanel();
+document.addEventListener('pointerdown', (e) => { if (EP.el && !e.target.closest('#emojiPanel,#emojiBtn')) toggleEmojiPanel(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && EP.el) toggleEmojiPanel(false); });
+
+// ================= voice message button (right side) =================
+const VR = { rec: null, stream: null, chunks: [], t0: 0, paid: 0, pausedAt: 0, timer: 0, ctx: null, raf: 0, bar: null };
+function syncMicSend() { const has = !!$('#msgInput').value.trim(); $('#sendBtn').hidden = !has; $('#micBtn').hidden = has; }
+$('#msgInput').addEventListener('input', syncMicSend);
+async function startVoice() {
+  if (call) return toast('You are on a call.');
+  if (!activeId) return;
+  try { VR.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch { return toast('Allow microphone access to record a voice message.'); }
+  const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', ''].find((t) => !t || (window.MediaRecorder && MediaRecorder.isTypeSupported(t)));
+  try { VR.rec = new MediaRecorder(VR.stream, mime ? { mimeType: mime } : undefined); } catch { stopVoice(true); return toast('Voice messages are not supported in this browser.'); }
+  VR.chunks = []; VR.rec.ondataavailable = (e) => e.data.size && VR.chunks.push(e.data); VR.rec.start(250);
+  VR.t0 = Date.now(); VR.paid = 0; VR.pausedAt = 0;
+  toggleEmojiPanel(false);
+  const bar = el('div', 'recbar'); VR.bar = bar;
+  const del = el('button', 'cbtn del'); del.type = 'button'; del.setAttribute('aria-label', 'Delete recording'); del.innerHTML = ICON.del; del.onclick = () => stopVoice(true);
+  const dot = el('span', 'dotr'), time = el('span', 't', '0:00'), lv = el('div', 'lv'); for (let i = 0; i < 40; i++) lv.append(el('i'));
+  const pause = el('button', 'cbtn'); pause.type = 'button'; pause.setAttribute('aria-label', 'Pause recording'); pause.textContent = '⏸';
+  pause.onclick = () => {
+    if (VR.rec.state === 'recording') { VR.rec.pause(); VR.pausedAt = Date.now(); dot.classList.add('paused'); pause.textContent = '🎙️'; pause.setAttribute('aria-label', 'Resume recording'); }
+    else if (VR.rec.state === 'paused') { VR.rec.resume(); VR.paid += Date.now() - VR.pausedAt; VR.pausedAt = 0; dot.classList.remove('paused'); pause.textContent = '⏸'; pause.setAttribute('aria-label', 'Pause recording'); }
+  };
+  bar.append(del, dot, time, lv, pause);
+  $('#composer').classList.add('recording'); $('#composer').insertBefore(bar, $('#sendBtn'));
+  $('#micBtn').hidden = true; $('#sendBtn').hidden = false; $('#sendBtn').setAttribute('aria-label', 'Send voice message');
+  const secs = () => ((VR.pausedAt || Date.now()) - VR.t0 - VR.paid) / 1000;
+  VR.timer = setInterval(() => { const s2 = Math.floor(secs()); time.textContent = Math.floor(s2 / 60) + ':' + String(s2 % 60).padStart(2, '0'); if (s2 >= 600) stopVoice(false); }, 200);
+  try {
+    VR.ctx = new (window.AudioContext || window.webkitAudioContext)(); const an = VR.ctx.createAnalyser(); an.fftSize = 256;
+    VR.ctx.createMediaStreamSource(VR.stream).connect(an); const data = new Uint8Array(an.fftSize); const bars = [...lv.children];
+    const tick = () => { VR.raf = requestAnimationFrame(tick); if (VR.rec && VR.rec.state === 'paused') return; an.getByteTimeDomainData(data); let peak = 0; for (const v of data) peak = Math.max(peak, Math.abs(v - 128)); const h = Math.max(3, Math.min(30, peak / 1.6)); bars.push(bars.shift()); lv.append(bars[bars.length - 1]); bars[bars.length - 1].style.height = h + 'px'; };
+    tick();
+  } catch {}
+  VR.secs = secs;
+}
+function stopVoice(cancel) {
+  clearInterval(VR.timer); cancelAnimationFrame(VR.raf); if (VR.ctx) { VR.ctx.close().catch(() => {}); VR.ctx = null; }
+  const rec = VR.rec, dur = VR.secs ? VR.secs() : 0; VR.rec = null; VR.secs = null;
+  if (VR.bar) { VR.bar.remove(); VR.bar = null; }
+  $('#composer').classList.remove('recording'); $('#sendBtn').setAttribute('aria-label', 'Send message'); syncMicSend();
+  const finish = () => { if (VR.stream) VR.stream.getTracks().forEach((t) => t.stop()); VR.stream = null; };
+  if (!rec) return finish();
+  rec.onstop = () => {
+    finish(); if (cancel || dur < 1) { if (!cancel) toast('Hold on a bit longer to record.'); return; }
+    const type = (rec.mimeType || 'audio/webm').split(';')[0];
+    uploadFile(new Blob(VR.chunks, { type }), { kind: 'audio', name: 'Voice message.' + (type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm'), voice: true, dur });
+  };
+  try { rec.stop(); } catch { finish(); }
+}
+$('#micBtn').onclick = startVoice;
+
+// ================= GPS photo stamp (map + address + lat/long + date & time) =================
+const GPS = { on: store.get('maata_gps_cam') === '1', watch: null, pos: null, addr: null, addrAt: null, busy: false };
+function gpsChip(text) {
+  let chip = $('#camGpsChip');
+  if (!chip) { chip = el('div', 'gps-chip'); chip.id = 'camGpsChip'; $('#camStage').append(chip); }
+  chip.hidden = !GPS.on || CAM.mode !== 'photo' || !!CAM.blob; chip.textContent = text;
+}
+function gpsUi() {
+  const b = $('#camGps'); b.setAttribute('aria-pressed', String(GPS.on)); b.hidden = CAM.mode !== 'photo' || !!CAM.blob;
+  if (!GPS.on) { gpsChip(''); return; }
+  gpsChip(GPS.pos ? '📍 ' + (GPS.addr ? GPS.addr.title.split(',').slice(0, 2).join(',') : GPS.pos.latitude.toFixed(5) + ', ' + GPS.pos.longitude.toFixed(5)) + ' · ±' + Math.round(GPS.pos.accuracy) + ' m' : '📡 Finding your location…');
+}
+const distM = (a, b) => { const R = 6371000, r = Math.PI / 180, dLa = (b.latitude - a.latitude) * r, dLo = (b.longitude - a.longitude) * r; const h = Math.sin(dLa / 2) ** 2 + Math.cos(a.latitude * r) * Math.cos(b.latitude * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+async function gpsAddress(pos) {
+  if (GPS.addrAt && distM(GPS.addrAt, pos) < 40) return;
+  GPS.addrAt = { latitude: pos.latitude, longitude: pos.longitude };
+  try { GPS.addr = await api('/api/geo/reverse?lat=' + pos.latitude + '&lng=' + pos.longitude); } catch { GPS.addr = null; }
+  gpsUi();
+}
+function gpsStart() {
+  if (!GPS.on || GPS.watch != null || !navigator.geolocation) return gpsUi();
+  GPS.watch = navigator.geolocation.watchPosition((p) => { GPS.pos = p.coords; gpsUi(); gpsAddress(p.coords); },
+    (e) => { gpsChip(e.code === 1 ? '⚠️ Allow location access for GPS photos' : '⚠️ Turn on GPS / location'); }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  gpsUi();
+}
+function gpsStop() { if (GPS.watch != null) navigator.geolocation.clearWatch(GPS.watch); GPS.watch = null; }
+$('#camGps').onclick = () => { GPS.on = !GPS.on; store.set('maata_gps_cam', GPS.on ? '1' : '0'); GPS.on ? gpsStart() : (gpsStop(), gpsUi()); toast(GPS.on ? '📍 GPS stamp on: location, date & time will be added to photos' : 'GPS stamp off'); };
+
+async function loadTile(lat, lng, z) {
+  const n = 2 ** z, xf = ((lng + 180) / 360) * n, la = (lat * Math.PI) / 180, yf = ((1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2) * n;
+  const x = Math.floor(xf), y = Math.floor(yf);
+  const r = await fetch('/api/geo/tile?z=' + z + '&x=' + x + '&y=' + y, { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) throw new Error('tile');
+  return { img: await createImageBitmap(await r.blob()), px: (xf - x) * 256, py: (yf - y) * 256 };
+}
+function tzLabel(d) { const o = -d.getTimezoneOffset(), s2 = o >= 0 ? '+' : '-', a = Math.abs(o); return 'GMT ' + s2 + String(Math.floor(a / 60)).padStart(2, '0') + ':' + String(a % 60).padStart(2, '0'); }
+function wrapLines(g, text, maxW, maxLines) {
+  const words = String(text).split(' '), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; let l = lines[maxLines - 1]; while (g.measureText(l + '…').width > maxW && l.length) l = l.slice(0, -1); lines[maxLines - 1] = l + '…'; }
+  return lines;
+}
+async function drawGpsStamp(c, pos, addr, when) {
+  const g = c.getContext('2d'), W = c.width, H = c.height, k = Math.max(0.55, Math.min(W, H * 1.4) / 1000);
+  const pad = Math.round(16 * k), bandH = Math.round(200 * k), x0 = pad, y0 = H - bandH - pad, bw = W - pad * 2;
+  const font = (px, w) => (g.font = (w || 500) + ' ' + Math.round(px * k) + 'px Sora, "Noto Sans Telugu", system-ui, sans-serif');
+  g.save();
+  g.fillStyle = 'rgba(12,16,22,.62)'; g.beginPath(); g.roundRect ? g.roundRect(x0, y0, bw, bandH, 18 * k) : g.rect(x0, y0, bw, bandH); g.fill();
+  // map
+  const ms = bandH - Math.round(24 * k), mx = x0 + Math.round(12 * k), my = y0 + Math.round(12 * k);
+  try {
+    const t = await loadTile(pos.latitude, pos.longitude, 16);
+    g.save(); g.beginPath(); g.roundRect ? g.roundRect(mx, my, ms, ms, 12 * k) : g.rect(mx, my, ms, ms); g.clip();
+    const sc = ms / 256; g.drawImage(t.img, mx, my, ms, ms);
+    const px = mx + t.px * sc, py = my + t.py * sc;
+    g.fillStyle = '#C8413A'; g.beginPath(); g.arc(px, py - 14 * k, 11 * k, Math.PI, 0); g.lineTo(px, py); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(px, py - 14 * k, 4.5 * k, 0, Math.PI * 2); g.fill();
+    g.restore();
+  } catch {
+    g.fillStyle = '#1B6B7F'; g.fillRect(mx, my, ms, ms); g.font = Math.round(ms * 0.5) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('📍', mx + ms / 2, my + ms / 2); g.textAlign = 'left';
+  }
+  // text, centred vertically in the band
+  const tx = mx + ms + Math.round(16 * k), tw = x0 + bw - tx - Math.round(12 * k);
+  const flag = addr && addr.countryCode && addr.countryCode.length === 2 ? ' ' + flagOf(addr.countryCode) : '';
+  const dateStr = when.toLocaleDateString('en-IN', { weekday: 'long' }) + ', ' + when.toLocaleDateString('en-GB') + ' ' + when.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase() + ' ' + tzLabel(when);
+  const rows = [];
+  font(24, 700); for (const l of wrapLines(g, (addr ? addr.title : 'Location') + flag, tw, 1)) rows.push([l, 24, 700, '#fff', 32]);
+  font(17, 400); if (addr && addr.address) for (const l of wrapLines(g, addr.address, tw, 2)) rows.push([l, 17, 400, 'rgba(255,255,255,.92)', 25]);
+  rows.push(['Lat ' + pos.latitude.toFixed(6) + '°  Long ' + pos.longitude.toFixed(6) + '°' + (pos.accuracy ? '  (±' + Math.round(pos.accuracy) + ' m)' : ''), 17, 500, '#fff', 25]);
+  rows.push([dateStr, 17, 500, '#fff', 25]);
+  const total = rows.reduce((a, r) => a + r[4], 0) * k;
+  let ty = y0 + (bandH - total) / 2 + 24 * k;
+  g.textBaseline = 'alphabetic';
+  for (const [t, px, w, col, lh] of rows) { font(px, w); g.fillStyle = col; g.fillText(t, tx, ty); ty += Math.round(lh * k); }
+  // brand tag
+  font(13, 700); const tag = '📷 Maata GPS Camera', tagW = g.measureText(tag).width + 16 * k;
+  g.fillStyle = 'rgba(12,16,22,.62)'; g.beginPath(); g.roundRect ? g.roundRect(x0 + bw - tagW, y0 - Math.round(30 * k), tagW, Math.round(24 * k), 8 * k) : g.rect(x0 + bw - tagW, y0 - Math.round(30 * k), tagW, Math.round(24 * k)); g.fill();
+  g.fillStyle = '#fff'; g.fillText(tag, x0 + bw - tagW + 8 * k, y0 - Math.round(13 * k));
+  g.restore();
+}
+
 // ---------------- go ----------------
 setMode('login');
-if (token) start(); else $('#auth').hidden = false;
+if (token) { if (lockCfg()) showLock(); start(); } else $('#auth').hidden = false;
 </script>
 </body>
 </html>

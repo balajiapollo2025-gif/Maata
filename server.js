@@ -375,9 +375,11 @@ function contactView(meUser, u, extra = {}) {
 app.get('/api/users', auth, (req, res) => {
   const me = req.user.id;
   const convo = {}; // partnerId -> { lastMessage, unread }
+  const cleared = req.user.clearedChats || {}, hiddenL = new Set(req.user.hiddenMsgs || []);
   for (const m of db.messages) {
     if (m.from !== me && m.to !== me) continue;
     const other = m.from === me ? m.to : m.from;
+    if (hiddenL.has(m.id) || m.ts <= (cleared[other] || 0)) continue;
     const c = (convo[other] = convo[other] || { lastMessage: null, unread: 0 });
     c.lastMessage = m;
     if (m.from === other && m.status !== 'read') c.unread++;
@@ -484,8 +486,8 @@ app.post('/api/block/:id', auth, (req, res) => {
 
 app.get('/api/messages/:userId', auth, (req, res) => {
   const me = req.user.id, other = req.params.userId;
-  const hidden = new Set(req.user.hiddenMsgs || []);
-  res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id)).slice(-300));
+  const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
+  res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since).slice(-300));
 });
 
 app.get('/api/ice', auth, (req, res) => {
@@ -663,6 +665,143 @@ function deliverMessage(fromUser, target, fields, exceptSocketId) {
 // A file can be shared by several messages (forwards); delete it only when none is left
 function releaseFile(fileId) { if (!db.messages.some((x) => x.file && x.file.id === fileId)) deleteChatFile(fileId); }
 app.get('/api/starred', auth, (req, res) => res.json(req.user.starred || []));
+
+// ---------- Chat list tools: starred, mark read, delete chats, quick replies, lists, broadcast ----------
+app.get('/api/starred/messages', auth, (req, res) => {
+  const me = req.user.id, ids = new Set(req.user.starred || []), hidden = new Set(req.user.hiddenMsgs || []);
+  const out = [];
+  for (let i = db.messages.length - 1; i >= 0 && out.length < 300; i--) {
+    const m = db.messages[i];
+    if (!ids.has(m.id) || hidden.has(m.id) || m.deleted || (m.from !== me && m.to !== me)) continue;
+    const other = userById(m.from === me ? m.to : m.from);
+    out.push({ message: m, other: other ? contactView(req.user, other) : { id: '', name: 'Deleted user', displayName: 'Deleted user', phone: '' } });
+  }
+  res.json(out);
+});
+function markRead(meUser, fromIds) {
+  const set = new Set(fromIds), bySender = {};
+  for (const m of db.messages) {
+    if (m.to === meUser.id && set.has(m.from) && m.status !== 'read') {
+      m.status = 'read'; m.readAt = now(); if (!m.deliveredAt) m.deliveredAt = m.readAt;
+      (bySender[m.from] = bySender[m.from] || []).push(m.id);
+    }
+  }
+  for (const [from, ids] of Object.entries(bySender)) io.to('user:' + from).emit('msg:status', { ids, status: 'read' });
+  if (Object.keys(bySender).length) save();
+}
+app.post('/api/chats/read', auth, (req, res) => {
+  let ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+  if (req.body?.all) ids = [...new Set(db.messages.filter((m) => m.to === req.user.id && m.status !== 'read').map((m) => m.from))];
+  markRead(req.user, ids.slice(0, 5000));
+  res.json({ ok: true });
+});
+app.post('/api/chats/delete', auth, (req, res) => {
+  const ids = (Array.isArray(req.body?.ids) ? req.body.ids : []).map(String).slice(0, 500);
+  req.user.clearedChats = req.user.clearedChats || {};
+  for (const id of ids) req.user.clearedChats[id] = now();
+  if (req.body?.removeContacts) req.user.contacts = contactsOf(req.user).filter((c) => !ids.includes(c.id));
+  save(); res.json({ ok: true });
+});
+app.get('/api/prefs', auth, (req, res) => res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [] }));
+app.put('/api/prefs', auth, (req, res) => {
+  const b = req.body || {};
+  if (Array.isArray(b.quickReplies)) {
+    req.user.quickReplies = b.quickReplies.slice(0, 50).map((q) => ({ shortcut: String(q?.shortcut || '').replace(/[^\p{L}\p{N}_-]/gu, '').slice(0, 25), text: String(q?.text || '').slice(0, 1000) })).filter((q) => q.shortcut && q.text);
+  }
+  if (Array.isArray(b.lists)) {
+    req.user.lists = b.lists.slice(0, 20).map((l) => ({ id: String(l?.id || newId()).slice(0, 40), name: String(l?.name || '').trim().slice(0, 30), members: (Array.isArray(l?.members) ? l.members : []).map(String).slice(0, 500) })).filter((l) => l.name);
+  }
+  if (Array.isArray(b.favs)) req.user.favs = b.favs.map(String).slice(0, 500);
+  if (Array.isArray(b.stickers)) req.user.stickers = b.stickers.map(String).filter((x) => /^[\w-]{8,64}$/.test(x)).slice(-60);
+  save();
+  res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [] });
+});
+// GIF search through Tenor (set TENOR_KEY, or enable "Tenor API" on the same Google key)
+const TENOR_KEY = process.env.TENOR_KEY || process.env.GOOGLE_TRANSLATE_KEY || '';
+const gifCache = new Map();
+app.get('/api/gifs', auth, async (req, res) => {
+  if (!TENOR_KEY) return res.status(501).json({ error: 'GIFs are not set up yet.' });
+  const q = String(req.query.q || '').trim().slice(0, 50);
+  const key = q.toLowerCase() || '__featured';
+  const c = gifCache.get(key); if (c && now() - c.t < 600000) return res.json(c.list);
+  try {
+    const base = 'https://tenor.googleapis.com/v2/' + (q ? 'search' : 'featured');
+    const u = base + '?' + new URLSearchParams({ key: TENOR_KEY, client_key: 'maata', limit: '30', media_filter: 'gif,tinygif', contentfilter: 'medium', country: 'IN', ...(q ? { q } : {}) });
+    const d = await (await fetch(u, { signal: AbortSignal.timeout(8000) })).json();
+    if (d.error) { console.error('[gif]', d.error.message); return res.status(502).json({ error: 'GIF search is not available right now.' }); }
+    const list = (d.results || []).map((r) => ({ id: r.id, url: r.media_formats?.gif?.url, preview: r.media_formats?.tinygif?.url, w: r.media_formats?.gif?.dims?.[0], h: r.media_formats?.gif?.dims?.[1], title: r.content_description || '' })).filter((x) => x.url && x.preview);
+    gifCache.set(key, { t: now(), list }); if (gifCache.size > 300) gifCache.delete(gifCache.keys().next().value);
+    res.json(list);
+  } catch (e) { console.error('[gif]', e.message); res.status(502).json({ error: 'GIF search is not available right now.' }); }
+});
+
+// ---------- GPS photo stamp: address + map tile (OpenStreetMap, cached, polite rate) ----------
+const OSM_UA = { 'User-Agent': 'MaataApp/1.0 (GPS photo stamp)', 'Accept-Language': 'en' };
+const geoCache = new Map(), tileCache = new Map(), geoHits = new Map();
+let lastNominatim = 0;
+function geoLimit(req, res) {
+  const l = (geoHits.get(req.user.id) || []).filter((t) => now() - t < 60_000); l.push(now()); geoHits.set(req.user.id, l);
+  if (l.length > 40) { res.status(429).json({ error: 'Too many location requests. Wait a minute.' }); return false; }
+  return true;
+}
+app.get('/api/geo/reverse', auth, async (req, res) => {
+  const lat = Number(req.query.lat), lng = Number(req.query.lng);
+  if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.status(400).json({ error: 'Bad location.' });
+  if (!geoLimit(req, res)) return;
+  const key = lat.toFixed(4) + ',' + lng.toFixed(4);
+  if (geoCache.has(key)) return res.json(geoCache.get(key));
+  try {
+    const wait = 1100 - (now() - lastNominatim); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastNominatim = now();
+    const d = await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, { headers: OSM_UA, signal: AbortSignal.timeout(8000) })).json();
+    const a = d.address || {};
+    const place = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.city || a.county || '';
+    const city = a.city || a.town || a.village || a.county || a.state_district || '';
+    const out = {
+      title: [place && place !== city ? place : null, city, a.state, a.country].filter(Boolean).join(', '),
+      address: String(d.display_name || '').split(', ').filter((x) => x !== a.country).join(', '),
+      countryCode: String(a.country_code || '').toUpperCase(),
+    };
+    geoCache.set(key, out); if (geoCache.size > 2000) geoCache.delete(geoCache.keys().next().value);
+    res.json(out);
+  } catch (e) { console.error('[geo]', e.message); res.status(502).json({ error: 'Address not available right now.' }); }
+});
+app.get('/api/geo/tile', auth, async (req, res) => {
+  const z = Math.min(18, Math.max(3, parseInt(req.query.z, 10) || 16)), x = parseInt(req.query.x, 10), y = parseInt(req.query.y, 10), n = 2 ** z;
+  if (!(x >= 0 && x < n && y >= 0 && y < n)) return res.status(400).end();
+  const key = z + '/' + x + '/' + y;
+  let buf = tileCache.get(key);
+  if (!buf) {
+    if (!geoLimit(req, res)) return;
+    try {
+      const r = await fetch('https://tile.openstreetmap.org/' + key + '.png', { headers: OSM_UA, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return res.status(502).end();
+      buf = Buffer.from(await r.arrayBuffer());
+      tileCache.set(key, buf); if (tileCache.size > 300) tileCache.delete(tileCache.keys().next().value);
+    } catch { return res.status(502).end(); }
+  }
+  res.setHeader('Content-Type', 'image/png'); res.setHeader('Cache-Control', 'private, max-age=86400'); res.end(buf);
+});
+
+// Broadcast: one message to many people, sent to each one privately.
+// Only people who saved YOUR number receive it (stops spam), up to 256 per broadcast.
+const bcHits = new Map();
+app.post('/api/broadcast', auth, (req, res) => {
+  const text = String(req.body?.text || '').trim().slice(0, 4000);
+  const tos = [...new Set((Array.isArray(req.body?.to) ? req.body.to : []).map(String))].slice(0, 256);
+  if (!text || !tos.length) return res.status(400).json({ error: 'Write a message and choose people.' });
+  const list = (bcHits.get(req.user.id) || []).filter((t) => now() - t < 3600_000);
+  if (list.length >= 10) return res.status(429).json({ error: 'You can send up to 10 broadcasts an hour.' });
+  list.push(now()); bcHits.set(req.user.id, list);
+  let sent = 0, skipped = 0;
+  for (const to of tos) {
+    const ok = canMessage(req.user, to);
+    if (ok.error || !hasContact(ok.target, req.user.id)) { skipped++; continue; }
+    deliverMessage(req.user, ok.target, { type: 'text', text, broadcast: true }, null); sent++;
+  }
+  audit('customer:' + req.user.phone, 'broadcast', sent + ' people', text.slice(0, 80));
+  res.json({ sent, skipped });
+});
 // Post a chat photo / video / text to my status
 app.post('/api/status/from-message', auth, async (req, res) => {
   const m = db.messages.find((x) => x.id === String(req.body?.id || '') && (x.from === req.user.id || x.to === req.user.id));
@@ -694,7 +833,7 @@ app.post('/api/chat/upload', auth, express.raw({ type: () => true, limit: '16mb'
   const name = String(req.query.name || 'file').replace(/[\\/\r\n"]/g, '_').slice(0, 120);
   const id = newId();
   try { await saveChatFile(id, req.body, mime); } catch (e) { console.error('[chat file]', e.message); return res.status(500).json({ error: 'Could not save the file. Try again.' }); }
-  const file = { id, name, mime, size: req.body.length, ...(req.query.voice === '1' ? { voice: true } : {}), ...(Number(req.query.dur) > 0 ? { duration: Math.round(Number(req.query.dur)) } : {}) };
+  const file = { id, name, mime, size: req.body.length, ...(req.query.voice === '1' ? { voice: true } : {}), ...(req.query.sticker === '1' && type === 'image' ? { sticker: true } : {}), ...(Number(req.query.dur) > 0 ? { duration: Math.round(Number(req.query.dur)) } : {}) };
   const m = deliverMessage(req.user, ok.target, { type, text: String(req.query.caption || '').trim().slice(0, 1000), file }, String(req.query.sid || '') || null);
   res.json({ message: m });
 });
@@ -1068,12 +1207,20 @@ io.on('connection', (socket) => {
     const reply = (x) => typeof ack === 'function' && ack(x);
     const ok = canMessage(socket.user, String(p?.to || ''));
     if (ok.error) return reply({ error: ok.error });
-    const type = ['contact', 'poll', 'event', 'location'].includes(p?.type) ? p.type : 'text';
+    const type = ['contact', 'poll', 'event', 'location', 'gif', 'sticker'].includes(p?.type) ? p.type : 'text';
     const str = (v, n) => String(v ?? '').trim().slice(0, n);
     let fields;
     if (type === 'text') {
       const text = str(p?.text, 4000); if (!text) return reply({ error: 'Message not sent.' });
       fields = { type, text };
+    } else if (type === 'gif') {
+      const g = p?.gif || {}, okUrl = (u) => typeof u === 'string' && /^https:\/\/media\d*\.tenor\.com\/[\w\-./%]+$/.test(u) && u.length < 400;
+      if (!okUrl(g.url) || (g.preview && !okUrl(g.preview))) return reply({ error: 'GIF not sent.' });
+      fields = { type, gif: { url: g.url, preview: g.preview || g.url, w: Math.min(2000, Number(g.w) || 0), h: Math.min(2000, Number(g.h) || 0) } };
+    } else if (type === 'sticker') {
+      const id = String(p?.sticker?.id || '');
+      if (!/^[a-z0-9-]{1,30}$/.test(id)) return reply({ error: 'Sticker not sent.' });
+      fields = { type, sticker: { id } };
     } else if (type === 'contact') {
       const name = str(p?.contact?.name, 60), phone = str(p?.contact?.phone, 20).replace(/[^\d+ ]/g, '');
       if (!name || phone.replace(/\D/g, '').length < 6) return reply({ error: 'Choose a contact with a phone number.' });
@@ -1142,7 +1289,7 @@ io.on('connection', (socket) => {
         if (fileId) releaseFile(fileId);
         emitUpdate(m); done.push(id);
       } else {
-        const h = new Set(socket.user.hiddenMsgs || []); h.add(id); socket.user.hiddenMsgs = [...h].slice(-5000);
+        const h = new Set(socket.user.hiddenMsgs || []); h.add(id); socket.user.hiddenMsgs = [...h].slice(-20000);
         io.to(room(me)).emit('msg:hidden', { id }); done.push(id);
       }
     }
@@ -1166,12 +1313,23 @@ io.on('connection', (socket) => {
         if (m.poll) f.poll = { question: m.poll.question, options: [...m.poll.options], multi: m.poll.multi, votes: {} };
         if (m.event) f.event = { ...m.event, rsvp: {} };
         if (m.location) f.location = { lat: m.location.lat, lng: m.location.lng, acc: m.location.acc, live: false };
+        if (m.gif) f.gif = { ...m.gif };
+        if (m.sticker) f.sticker = { ...m.sticker };
         deliverMessage(socket.user, ok.target, f, null); sent++;
       }
       const note = String(p.note || '').trim().slice(0, 4000);
       if (note) deliverMessage(socket.user, ok.target, { type: 'text', text: note }, null);
     }
     reply(sent ? { sent } : { error: errors[0] || 'Not forwarded.' });
+  });
+
+  socket.on('sticker:send', (p, ack) => {
+    const reply = (x) => typeof ack === 'function' && ack(x);
+    const ok = canMessage(socket.user, String(p?.to || ''));
+    if (ok.error) return reply({ error: ok.error });
+    const src = db.messages.find((x) => x.file && x.file.sticker && x.file.id === String(p?.fileId || '') && (x.from === me || x.to === me));
+    if (!src) return reply({ error: 'Sticker not found.' });
+    reply({ message: deliverMessage(socket.user, ok.target, { type: 'image', text: '', file: { ...src.file } }, socket.id) });
   });
 
   // Poll votes, event replies, live location updates
