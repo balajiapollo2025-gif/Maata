@@ -194,7 +194,7 @@ const PAGES = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PAGES, 'index.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(PAGES, 'admin.html')));
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 3e6 }); // allows short speech clips for live translation
 
 const online = new Map();      // userId -> connected device count
 const activeCalls = new Map(); // callId -> call record (ringing / answered)
@@ -276,6 +276,34 @@ app.post('/api/me/lang', auth, (req, res) => {
 // Text-to-speech fallback: when a phone has no voice for a language (common for Telugu/Hindi on
 // computers), the server makes the audio with Google Cloud Text-to-Speech.
 const TTS_KEY = process.env.GOOGLE_TTS_KEY || process.env.GOOGLE_TRANSLATE_KEY || '';
+// Speech-to-text on the server (Google Cloud Speech-to-Text) works in every browser (Chrome, Firefox,
+// Safari/iPhone) and uses the call's own microphone stream, so there is no microphone conflict on phones.
+const SPEECH_KEY = process.env.GOOGLE_SPEECH_KEY || process.env.GOOGLE_TRANSLATE_KEY || '';
+const STT_LANG = { te: 'te-IN', hi: 'hi-IN', en: 'en-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-Guru-IN', ur: 'ur-IN', or: 'or-IN' };
+async function speechToText(base64, lang) {
+  if (!SPEECH_KEY || !STT_LANG[lang]) return { error: 'not-configured' };
+  try {
+    const r = await fetch('https://speech.googleapis.com/v1/speech:recognize?key=' + encodeURIComponent(SPEECH_KEY), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        config: { encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: STT_LANG[lang], enableAutomaticPunctuation: true, ...(lang !== 'en' ? { alternativeLanguageCodes: ['en-IN'] } : {}) },
+        audio: { content: base64 },
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+    const d = await r.json();
+    if (d.error) { console.error('[stt]', d.error.message); return { error: 'service' }; }
+    const text = (d.results || []).map((x) => x.alternatives?.[0]?.transcript || '').join(' ').trim();
+    return { text };
+  } catch (e) { console.error('[stt]', e.message); return { error: 'service' }; }
+}
+
+app.get('/api/config', auth, (req, res) => res.json({
+  serverSpeech: !!SPEECH_KEY,
+  serverVoice: !!(process.env.GOOGLE_TTS_KEY || process.env.GOOGLE_TRANSLATE_KEY),
+  translate: GOOGLE_TRANSLATE_KEY ? 'google' : 'free',
+}));
+
 const TTS_LANG = { te: 'te-IN', hi: 'hi-IN', en: 'en-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', or: 'or-IN' };
 const ttsCache = new Map();
 const ttsHits = new Map();
@@ -867,19 +895,39 @@ io.on('connection', (socket) => {
   socket.on('call:ice', (p) => { if (valid(p)) io.to(room(p.to)).emit('call:ice', clean(p)); });
   // Live call translation: the speaker's browser turns speech into text, the server translates it
   // into the listener's language, and the listener's browser shows subtitles and speaks it aloud.
+  // Languages always come from each person's own Settings (stored on the server), so a Telugu speaker's
+  // words always reach a Tamil listener in Tamil, whatever phone or browser either of them uses.
+  async function relayCaption(rec, toId, text) {
+    const from = socket.user.lang || 'en';
+    const to = userById(toId)?.lang || 'en';
+    const translated = from === to ? text : await translate(text, from, to);
+    rec.translated = (rec.translated || 0) + 1;
+    const out = { callId: rec.id, text, translated: translated || text, fromLang: from, toLang: to, ok: !!translated || from === to };
+    io.to(room(toId)).emit('call:caption', out);
+    socket.emit('call:caption:self', out);
+  }
   socket.on('call:caption', async (p) => {
     if (!valid(p)) return;
     const rec = recFor(p);
     if (!rec || rec.status !== 'answered') return;
     const text = String(p.text || '').trim().slice(0, 500);
-    if (!text) return;
-    const from = LANGS.includes(p.lang) ? p.lang : socket.user.lang || 'en';
-    const to = userById(p.to)?.lang || 'en';
-    const translated = from === to ? text : await translate(text, from, to);
-    rec.translated = (rec.translated || 0) + 1;
-    const out = { callId: rec.id, text, translated: translated || text, fromLang: from, toLang: to, ok: !!translated };
-    io.to(room(p.to)).emit('call:caption', out);
-    socket.emit('call:caption:self', out);
+    if (text) await relayCaption(rec, p.to, text);
+  });
+  let sttBusy = 0, sttTimes = [];
+  socket.on('call:audio', async (p) => {
+    if (!valid(p) || typeof p.audio !== 'string' || p.audio.length > 1_200_000) return;
+    const rec = recFor(p);
+    if (!rec || rec.status !== 'answered') return;
+    sttTimes = sttTimes.filter((t) => now() - t < 60_000);
+    if (sttBusy >= 2 || sttTimes.length >= 40) return socket.emit('call:stt', { callId: rec.id, status: 'busy' });
+    sttBusy++; sttTimes.push(now());
+    try {
+      const r = await speechToText(p.audio, socket.user.lang || 'en');
+      rec.sttClips = (rec.sttClips || 0) + 1;
+      if (r.error) return socket.emit('call:stt', { callId: rec.id, status: r.error });
+      if (!r.text) return socket.emit('call:stt', { callId: rec.id, status: 'empty' });
+      await relayCaption(rec, p.to, r.text.slice(0, 500));
+    } finally { sttBusy--; }
   });
 
   socket.on('call:end', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'missed'); io.to(room(p.to)).emit('call:ended', clean(p)); });

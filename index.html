@@ -507,6 +507,8 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
         <div class="txt"><b>Translate chat messages</b><small>Show messages in your language</small></div>
         <label class="switch-ui"><input type="checkbox" id="chatTr" aria-label="Translate chat messages"><span></span></label>
       </div>
+      <div class="set-row"><button class="primary" id="trCheckBtn" type="button" style="margin:0">🔍 Check translation setup</button></div>
+      <div id="trCheck" hidden></div>
       <p class="info-note">How it works: you speak in your language → the other person hears <b>a voice in the language they chose</b>. They speak → you hear it in your language. Tap ▶ next to your language to test the voice on this phone. Works best in Google Chrome; use earphones during translated calls.</p>
     </div>
 
@@ -650,6 +652,7 @@ async function start() {
   connectSocket();
   api('/api/announcement').then(showNotice).catch(() => {});
   loadCalls();
+  api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
 }
@@ -672,6 +675,11 @@ function connectSocket() {
     const u = userById(x.id); if (u) { u.lang = x.lang; if (activeId === x.id) { renderChatHead(); renderMessages(); } }
   });
   socket.on('call:caption', onCaption);
+  socket.on('call:stt', (x) => {
+    if (!call || x.callId !== call.id) return;
+    const msg = { empty: '🎙️ Could not hear clearly, please say it again.', busy: '⏳ Please speak a little slower…', service: '⚠️ Speech service problem, please try again.', 'not-configured': '⚠️ Server speech is not set up.' }[x.status];
+    if (msg) $('#subMe').textContent = msg;
+  });
   socket.on('call:log', onCallLog);
   socket.on('call:caption:self', onCaptionSelf);
   socket.on('user:new', (u) => { if (u.id !== me.id && !userById(u.id)) { users.push(u); renderContacts(); } });
@@ -1235,13 +1243,13 @@ function startTranslation() {
   if (!me.lang) { toast('Choose your language in Settings first.'); return; }
   if (!peerLang()) { toast(call.peerName + ' has not chosen a language yet.'); return; }
   if (peerLang() === me.lang) { toast('You both speak ' + langName(me.lang) + '.'); return; }
-  if (!SR) { toast('Live translation needs Google Chrome.'); return; }
+  if (!serverCfg.serverSpeech && !SR) { toast('Live translation on this browser needs server speech (admin setup) or Google Chrome.'); return; }
   tr.on = true; updateTrUi();
   $('#subThemBox').hidden = true; $('#subMe').textContent = 'Speak in ' + langName(me.lang) + '…';
   listen();
 }
 function stopTranslation() {
-  tr.on = false; stopListening();
+  tr.on = false; stopListening(); stopServerListen();
   speakQueue.length = 0; if (curAudio) { curAudio.pause(); curAudio = null; }
   try { speechSynthesis.cancel(); } catch {}
   tr.speaking = false; duck(false);
@@ -1250,6 +1258,7 @@ function stopTranslation() {
 $('#trBtn').onclick = () => { if (tr.on) stopTranslation(); else startTranslation(); };
 
 function listen() {
+  if (serverCfg.serverSpeech) { if (tr.on && call) startServerListen(); return; }
   if (!tr.on || !call || tr.speaking || tr.rec) return;
   const mic = call.local && call.local.getAudioTracks()[0];
   if (mic && !mic.enabled) return; // muted
@@ -1275,6 +1284,7 @@ function listen() {
   try { r.start(); } catch { tr.rec = null; tr.restart = setTimeout(listen, 1000); }
 }
 function stopListening() {
+  if (serverCfg.serverSpeech) { if (vad.speaking) flushSegment(false); return; }
   clearTimeout(tr.restart);
   if (tr.rec) { const r = tr.rec; tr.rec = null; r.onend = null; try { r.abort(); } catch {} }
 }
@@ -1596,6 +1606,92 @@ function onCallLog(c) {
   updateMissedBadge();
   if (isMissed(c) && c.status !== 'declined') notify('Missed ' + (c.kind === 'video' ? 'video' : 'voice') + ' call', nameOf(c.other));
 }
+
+// ---------------- server speech recognition (works in every browser) ----------------
+// Listens to the call's own microphone track, detects when you speak and when you pause,
+// and sends each sentence (16 kHz audio) to the server, which turns it into text and translates it.
+let serverCfg = { serverSpeech: false, serverVoice: false, translate: 'free' };
+const vad = { ctx: null, src: null, proc: null, chunks: [], pre: null, speaking: false, silenceMs: 0, speechMs: 0, rate: 48000, noise: 0.01 };
+function startServerListen() {
+  if (vad.proc || !call || !call.local) return;
+  const track = call.local.getAudioTracks()[0]; if (!track) return;
+  let ac;
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
+  if (ac.state === 'suspended') ac.resume();
+  const src = ac.createMediaStreamSource(new MediaStream([track]));
+  const proc = ac.createScriptProcessor(4096, 1, 1);
+  const mute = ac.createGain(); mute.gain.value = 0;
+  src.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+  Object.assign(vad, { ctx: ac, src, proc, chunks: [], pre: null, speaking: false, silenceMs: 0, speechMs: 0, rate: ac.sampleRate, noise: 0.01 });
+  proc.onaudioprocess = (e) => {
+    if (!tr.on || !call) return;
+    if (tr.speaking || !track.enabled) { if (vad.speaking) flushSegment(false); return; }
+    const d = e.inputBuffer.getChannelData(0);
+    let sum = 0; for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
+    const rms = Math.sqrt(sum / d.length), ms = (d.length / vad.rate) * 1000;
+    if (!vad.speaking) vad.noise = vad.noise * 0.95 + rms * 0.05;
+    const threshold = Math.max(0.012, vad.noise * 2.5);
+    if (rms > threshold) {
+      if (!vad.speaking) { vad.speaking = true; vad.speechMs = 0; vad.chunks = vad.pre ? [vad.pre] : []; $('#subMe').textContent = '🎙️ Listening…'; }
+      vad.silenceMs = 0;
+    } else if (vad.speaking) vad.silenceMs += ms;
+    if (vad.speaking) {
+      vad.chunks.push(new Float32Array(d)); vad.speechMs += ms;
+      if (vad.silenceMs > 900 || vad.speechMs > 12000) flushSegment(true);
+    } else vad.pre = new Float32Array(d);
+  };
+}
+function flushSegment(send) {
+  const chunks = vad.chunks, ms = vad.speechMs;
+  vad.chunks = []; vad.speaking = false; vad.silenceMs = 0; vad.speechMs = 0;
+  if (!send || ms < 600 || !call) return;
+  const pcm = toPcm16k(chunks, vad.rate);
+  socket.emit('call:audio', { to: call.peerId, callId: call.id, audio: toBase64(pcm.buffer) });
+  $('#subMe').textContent = '⏳ Translating…';
+}
+function toPcm16k(chunks, from) {
+  const len = chunks.reduce((a, c) => a + c.length, 0), all = new Float32Array(len);
+  let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  const ratio = from / 16000, outLen = Math.floor(len / ratio), out = new Int16Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const a = Math.floor(i * ratio), b = Math.min(len, Math.floor((i + 1) * ratio));
+    let s = 0, n = 0; for (let j = a; j < b; j++) { s += all[j]; n++; }
+    const v = Math.max(-1, Math.min(1, n ? s / n : 0));
+    out[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+  }
+  return out;
+}
+function toBase64(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function stopServerListen() {
+  if (vad.proc) { vad.proc.onaudioprocess = null; try { vad.src.disconnect(); vad.proc.disconnect(); vad.ctx.close(); } catch {} }
+  Object.assign(vad, { ctx: null, src: null, proc: null, chunks: [], pre: null, speaking: false });
+}
+
+// Settings → Check translation setup
+async function checkTranslation() {
+  const box = $('#trCheck'); box.hidden = false; box.innerHTML = '<p class="info-note">Checking…</p>';
+  try { serverCfg = await api('/api/config'); } catch {}
+  const lines = [];
+  const ok = (good, text) => lines.push((good ? '✅ ' : '⚠️ ') + text);
+  ok(!!me.lang, me.lang ? 'Your language: ' + LANGS[me.lang].native : 'Choose your language above');
+  ok(serverCfg.serverSpeech || !!SR, serverCfg.serverSpeech ? 'Hearing your voice: server (works in every browser)' : SR ? 'Hearing your voice: this browser (Chrome) only' : 'Hearing your voice: not possible in this browser. Admin must add the Google key, or use Chrome.');
+  ok(serverCfg.translate === 'google', serverCfg.translate === 'google' ? 'Translation: Google (best quality)' : 'Translation: free service (daily limit, may stop). Admin should add the Google key.');
+  const localVoice = me.lang && pickVoice(LANGS[me.lang].speech);
+  ok(!!localVoice || serverCfg.serverVoice, localVoice ? 'Voice in ' + langName(me.lang) + ': this phone' : serverCfg.serverVoice ? 'Voice in ' + langName(me.lang) + ': server' : 'No ' + langName(me.lang) + ' voice. Subtitles only.');
+  if (me.lang && me.lang !== 'en') {
+    try {
+      const r = await api('/api/translate', { method: 'POST', body: JSON.stringify({ text: VOICE_SAMPLE[me.lang], from: me.lang, to: 'en' }) });
+      ok(true, 'Test translation works: "' + r.translated + '"');
+    } catch { ok(false, 'Test translation failed right now.'); }
+  }
+  box.innerHTML = '';
+  for (const l of lines) { const p = document.createElement('p'); p.className = 'info-note'; p.style.padding = '4px 16px'; p.textContent = l; box.append(p); }
+}
+$('#trCheckBtn').onclick = checkTranslation;
 
 // ---------------- go ----------------
 setMode('login');
