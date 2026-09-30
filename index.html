@@ -453,6 +453,17 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .bubble:not(.media) .mbtn{top:2px;right:2px;width:24px;height:24px;background:transparent;color:inherit}
 .bubble:not(.media):hover .mbtn{background:rgba(127,127,127,.18)}
 @media (hover:none){.mbtn{opacity:.85}}
+/* ---------- Quick forward button beside media ---------- */
+.fwd-quick{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--muted);border:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.fwd-quick:hover{color:var(--ink);background:var(--peacock-soft)}
+.fwd-quick svg{width:18px;height:18px}
+.bubble.mine .fwd-quick{left:-46px}
+.bubble:not(.mine) .fwd-quick{right:-46px}
+.selecting .fwd-quick{display:none}
+.fwd-foot{display:flex;gap:10px;align-items:stretch;margin:10px 0}
+.fwd-foot .thumb{width:64px;height:64px;border-radius:10px;object-fit:cover;flex:none;background:var(--paper);display:grid;place-items:center;font-size:26px;overflow:hidden}
+.fwd-foot .thumb img{width:100%;height:100%;object-fit:cover}
+.fwd-foot textarea{flex:1;min-height:64px;resize:none}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -2258,6 +2269,12 @@ function buildBubble(m) {
     t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓'; t.title = m.status; meta.append(t);
   }
   b.append(meta);
+  if (!m.uploading && !m.deleted && m.file) {
+    const fq = el('button', 'fwd-quick'); fq.setAttribute('aria-label', 'Forward'); fq.title = 'Forward';
+    fq.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>';
+    fq.onclick = (e) => { e.stopPropagation(); openForward([m.id]); };
+    b.append(fq);
+  }
   if (!m.uploading) {
     const mb = el('button', 'mbtn'); mb.setAttribute('aria-label', 'Message options'); mb.title = 'Options';
     mb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
@@ -2895,6 +2912,12 @@ function openForward(ids) {
       }
       if (!ul.children.length) ul.append(el('li', 'empty-list', 'No matching chats.'));
     };
+    const foot = el('div', 'fwd-foot'), th = el('div', 'thumb');
+    const first = msgs[0];
+    if (first.type === 'image') { const im = el('img'); im.alt = ''; im.src = fileUrl(first.file); th.append(im); }
+    else th.textContent = msgs.length > 1 ? String(msgs.length) : ({ video: '🎥', audio: '🎵', file: '📄', contact: '👤', poll: '📊', event: '📅', location: '📍' }[first.type] || '💬');
+    const note = el('textarea'); note.maxLength = 4000; note.placeholder = 'Add a message…'; note.setAttribute('aria-label', 'Add a message');
+    foot.append(th, note);
     const send = el('button', 'primary', 'Forward');
     const count = () => { send.textContent = pick.size ? 'Forward to ' + pick.size : 'Forward'; };
     q.oninput = draw; draw();
@@ -2903,7 +2926,7 @@ function openForward(ids) {
       send.disabled = true;
       if (pick.has('__status')) { await toStatus(msgs[0], true); pick.delete('__status'); }
       if (pick.size) {
-        socket.timeout(15000).emit('msg:forward', { ids: msgs.map((m) => m.id), to: [...pick] }, (err, res) => {
+        socket.timeout(15000).emit('msg:forward', { ids: msgs.map((m) => m.id), to: [...pick], note: note.value }, (err, res) => {
           send.disabled = false;
           if (err || res?.error) return toast(res?.error || 'Not forwarded.');
           toast('Forwarded ✓'); closeSheet('moreSheet'); exitSelect();
@@ -2911,7 +2934,7 @@ function openForward(ids) {
         });
       } else { send.disabled = false; closeSheet('moreSheet'); exitSelect(); }
     };
-    box.append(ul, send); list.append(box);
+    box.append(ul, foot, send); list.append(box);
   });
 }
 async function toStatus(m, quiet) {

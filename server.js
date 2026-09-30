@@ -1168,6 +1168,8 @@ io.on('connection', (socket) => {
         if (m.location) f.location = { lat: m.location.lat, lng: m.location.lng, acc: m.location.acc, live: false };
         deliverMessage(socket.user, ok.target, f, null); sent++;
       }
+      const note = String(p.note || '').trim().slice(0, 4000);
+      if (note) deliverMessage(socket.user, ok.target, { type: 'text', text: note }, null);
     }
     reply(sent ? { sent } : { error: errors[0] || 'Not forwarded.' });
   });
