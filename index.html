@@ -257,6 +257,44 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 @media (prefers-color-scheme:dark){.recall{color:#7CC4D4}}
 .recall svg{width:20px;height:20px}
 .call-day{font-size:12px;font-weight:600;color:var(--muted);padding:12px 10px 4px;text-transform:uppercase;letter-spacing:.04em}
+/* ---------- Status ---------- */
+.tab .dot{width:8px;height:8px;border-radius:50%;background:var(--leaf)}
+.st-row{display:flex;gap:12px;align-items:center;padding:10px;border-radius:14px;width:100%;text-align:left}
+.st-row:hover{background:var(--paper)}
+.ring{padding:3px;border-radius:50%;background:conic-gradient(var(--leaf),#3CCB7F,var(--turmeric),var(--leaf));flex:none}
+.ring.seen{background:var(--line)}
+.ring.none{background:transparent;padding:3px}
+.ring .avatar{border:2px solid var(--panel)}
+.st-plus{position:relative}
+.st-plus::after{content:"+";position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:var(--leaf);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center;border:2px solid var(--panel)}
+.st-actions{display:flex;gap:8px;padding:4px 10px 8px}
+.st-actions button{flex:1;padding:11px;border-radius:12px;font-weight:600;font-size:14px;background:var(--peacock-soft);color:var(--peacock)}
+@media (prefers-color-scheme:dark){.st-actions button{color:#7CC4D4}}
+.overlay{position:fixed;inset:0;z-index:35;background:#0B0F14;color:#fff;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 0 calc(12px + env(safe-area-inset-bottom,0px))}
+.ov-head{display:flex;align-items:center;gap:10px;padding:8px 14px;position:relative;z-index:2}
+.ov-head .who{flex:1;min-width:0}
+.ov-head .who b{display:block;font-size:15px}
+.ov-head .who small{opacity:.7;font-size:12px}
+.ov-btn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.12)}
+.ov-btn svg{width:22px;height:22px}
+.ov-post{padding:10px 18px;border-radius:999px;background:var(--leaf);color:#fff;font-weight:700}
+.ov-post:disabled{opacity:.6}
+.bars{display:flex;gap:4px;padding:0 12px}
+.bars span{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden}
+.bars span i{display:block;height:100%;width:0;background:#fff}
+.st-stage{flex:1;position:relative;display:grid;place-items:center;overflow:hidden;min-height:0;touch-action:manipulation;user-select:none}
+.st-stage img,.st-stage video{max-width:100%;max-height:100%;object-fit:contain}
+.st-text{width:100%;height:100%;display:grid;place-items:center;padding:30px;text-align:center;font-size:clamp(22px,6vw,34px);font-weight:600;line-height:1.35;white-space:pre-wrap;word-break:break-word}
+.st-caption{text-align:center;padding:12px 18px 4px;font-size:15px;line-height:1.4;white-space:pre-wrap}
+.st-foot{display:flex;justify-content:center;padding:6px}
+.views-btn{padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.14);font-weight:600;font-size:14px;color:#fff}
+.views-list{position:absolute;left:0;right:0;bottom:0;max-height:60%;overflow-y:auto;background:var(--panel);color:var(--ink);border-radius:20px 20px 0 0;padding:14px;z-index:3}
+.views-list h3{margin:0 0 8px;font-size:16px}
+.compose-text{width:100%;height:100%;border:0;outline:0;resize:none;background:transparent;color:#fff;text-align:center;font:inherit;font-size:clamp(22px,6vw,32px);font-weight:600;padding:18vh 24px 24px;line-height:1.35}
+.compose-text::placeholder{color:rgba(255,255,255,.6)}
+.cap-row{display:flex;gap:8px;padding:10px 14px}
+.cap-row input{flex:1;padding:12px 16px;border-radius:999px;border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:16px}
+.cap-row input::placeholder{color:rgba(255,255,255,.6)}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -352,9 +390,18 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     </div>
     <div class="tabs" role="tablist" aria-label="Chats and calls">
       <button class="tab" id="tabChats" role="tab" aria-selected="true">💬 Chats</button>
+      <button class="tab" id="tabStatus" role="tab" aria-selected="false">⭕ Status <span class="dot" id="statusDot" hidden></span></button>
       <button class="tab" id="tabCalls" role="tab" aria-selected="false">📞 Calls <span class="badge" id="missedBadge" hidden></span></button>
     </div>
     <ul class="contacts" id="contacts"></ul>
+    <div id="statusPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
+      <div id="stMine"></div>
+      <div class="st-actions"><button id="stTextBtn">✏️ Text</button><button id="stMediaBtn">📷 Photo / Video</button></div>
+      <div class="call-day" id="stRecentTitle">Recent updates</div><ul class="contacts" id="stRecent" style="overflow:visible;padding:0"></ul>
+      <div class="call-day" id="stSeenTitle">Viewed updates</div><ul class="contacts" id="stSeen" style="overflow:visible;padding:0"></ul>
+      <p class="info-note">🔒 Only contacts who saved your number, and whom you saved, can see your status. It disappears after 24 hours.</p>
+      <input type="file" id="stFile" accept="image/*,video/*" hidden>
+    </div>
     <div id="callsPane" hidden style="flex:1;overflow-y:auto;min-height:0">
       <div class="calls-head"><span id="callsCount"></span><button id="clearCalls">Clear history</button></div>
       <ul class="contacts" id="callList" style="overflow:visible"></ul>
@@ -438,6 +485,33 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
     </button>
   </div>
+</section>
+
+<!-- ============ STATUS COMPOSER ============ -->
+<section class="overlay" id="stCompose" hidden role="dialog" aria-modal="true" aria-label="New status">
+  <div class="ov-head">
+    <button class="ov-btn" id="stComposeClose" aria-label="Cancel"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div class="who"><b id="stComposeTitle">Text status</b><small>Visible for 24 hours</small></div>
+    <button class="ov-btn" id="stBgBtn" aria-label="Change background colour">🎨</button>
+    <button class="ov-post" id="stPost">Post</button>
+  </div>
+  <div class="st-stage" id="stComposeStage"></div>
+  <div class="cap-row" id="stCapRow" hidden><input id="stCaption" maxlength="300" placeholder="Add a caption…"></div>
+</section>
+
+<!-- ============ STATUS VIEWER ============ -->
+<section class="overlay" id="stViewer" hidden role="dialog" aria-modal="true" aria-label="Status">
+  <div class="bars" id="stBars"></div>
+  <div class="ov-head">
+    <div id="stVAvatar"></div>
+    <div class="who"><b id="stVName"></b><small id="stVTime"></small></div>
+    <button class="ov-btn" id="stVDelete" aria-label="Delete this status" hidden><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+    <button class="ov-btn" id="stVClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="st-stage" id="stStage"></div>
+  <div class="st-caption" id="stVCaption"></div>
+  <div class="st-foot" id="stVFoot" hidden><button class="views-btn" id="stViewsBtn">👁 0 views</button></div>
+  <div class="views-list" id="stViews" hidden></div>
 </section>
 
 <!-- ============ ADD CONTACT ============ -->
@@ -652,6 +726,7 @@ async function start() {
   connectSocket();
   api('/api/announcement').then(showNotice).catch(() => {});
   loadCalls();
+  loadStatus();
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
@@ -681,6 +756,8 @@ function connectSocket() {
     if (msg) $('#subMe').textContent = msg;
   });
   socket.on('call:log', onCallLog);
+  socket.on('status:new', () => { clearTimeout(statusTimer); statusTimer = setTimeout(loadStatus, 800); });
+  socket.on('status:view', (x) => { const st = statusData.mine.find((m) => m.id === x.id); if (st) { st.viewCount = x.count; if (!$('#stViewer').hidden && V.groups[V.gi]?.mine && V.groups[V.gi].statuses[V.si]?.id === x.id) $('#stViewsBtn').textContent = '👁 ' + x.count + ' view' + (x.count === 1 ? '' : 's'); } });
   socket.on('call:caption:self', onCaptionSelf);
   socket.on('user:new', (u) => { if (u.id !== me.id && !userById(u.id)) { users.push(u); renderContacts(); } });
   socket.on('msg:new', onMessage);
@@ -1552,13 +1629,17 @@ function setTab(t) {
   tab = t;
   $('#tabChats').setAttribute('aria-selected', String(t === 'chats'));
   $('#tabCalls').setAttribute('aria-selected', String(t === 'calls'));
+  $('#tabStatus').setAttribute('aria-selected', String(t === 'status'));
   $('#contacts').hidden = t !== 'chats';
   $('#callsPane').hidden = t !== 'calls';
+  $('#statusPane').hidden = t !== 'status';
+  if (t === 'status') { $('#statusDot').hidden = true; renderStatus(); loadStatus(); }
   if (t === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); if (!callsLoaded) loadCalls(); }
   updateMissedBadge();
 }
 $('#tabChats').onclick = () => setTab('chats');
 $('#tabCalls').onclick = () => setTab('calls');
+$('#tabStatus').onclick = () => setTab('status');
 function renderCalls() {
   const q = $('#search').value.trim().toLowerCase();
   const list = $('#callList'); list.innerHTML = '';
@@ -1692,6 +1773,221 @@ async function checkTranslation() {
   for (const l of lines) { const p = document.createElement('p'); p.className = 'info-note'; p.style.padding = '4px 16px'; p.textContent = l; box.append(p); }
 }
 $('#trCheckBtn').onclick = checkTranslation;
+
+// ---------------- status ----------------
+let statusData = { mine: [], users: [] }, statusTimer = null;
+const ST_BG = ['#0F4C5C', '#7A4E9E', '#C8413A', '#2E8B57', '#B5651D', '#1F6FB2', '#1C2230', '#AD1457'];
+const mediaSrc = (st) => st.mediaUrl + '?t=' + encodeURIComponent(token);
+function ago2(ts) { const m = Math.floor((Date.now() - ts) / 60000); if (m < 1) return 'Just now'; if (m < 60) return m + ' min ago'; const h = Math.floor(m / 60); return h + ' hour' + (h > 1 ? 's' : '') + ' ago'; }
+async function loadStatus() {
+  try { statusData = await api('/api/status'); } catch { return; }
+  $('#statusDot').hidden = !statusData.users.some((g) => !g.allViewed) || tab === 'status';
+  if (tab === 'status') renderStatus();
+}
+function ringAvatar(u, cls) { const r = document.createElement('span'); r.className = 'ring ' + (cls || ''); r.append(avatar(u)); return r; }
+function renderStatus() {
+  const mineBox = $('#stMine'); mineBox.innerHTML = '';
+  const mb = document.createElement('button'); mb.className = 'st-row';
+  const has = statusData.mine.length;
+  const av = ringAvatar(me, has ? '' : 'none'); if (!has) av.classList.add('st-plus');
+  const t = document.createElement('div'); t.className = 'c-body';
+  t.innerHTML = '<div class="c-name">My status</div><div class="c-last"></div>';
+  t.querySelector('.c-last').textContent = has ? has + ' update' + (has > 1 ? 's' : '') + ' · ' + ago2(statusData.mine[has - 1].createdAt) + ' · tap to see views' : 'Share a photo, video or text';
+  mb.append(av, t);
+  mb.onclick = () => (has ? openViewer([{ user: me, statuses: statusData.mine, mine: true }], 0) : openTextStatus());
+  mineBox.append(mb);
+  const recent = statusData.users.filter((g) => !g.allViewed), seen = statusData.users.filter((g) => g.allViewed);
+  for (const [list, groups, title] of [[$('#stRecent'), recent, $('#stRecentTitle')], [$('#stSeen'), seen, $('#stSeenTitle')]]) {
+    list.innerHTML = ''; title.hidden = !groups.length;
+    groups.forEach((g) => {
+      const li = document.createElement('li'); const b = document.createElement('button'); b.className = 'st-row';
+      const body = document.createElement('div'); body.className = 'c-body';
+      body.innerHTML = '<div class="c-name"></div><div class="c-last"></div>';
+      body.querySelector('.c-name').textContent = nameOf(g.user);
+      body.querySelector('.c-last').textContent = ago2(g.latest) + (g.statuses.length > 1 ? ' · ' + g.statuses.length + ' updates' : '');
+      b.append(ringAvatar(g.user, g.allViewed ? 'seen' : ''), body);
+      b.onclick = () => openViewer(groups, groups.indexOf(g));
+      li.append(b); list.append(li);
+    });
+  }
+  if (!statusData.users.length) { $('#stRecentTitle').hidden = false; $('#stRecentTitle').textContent = 'No updates from contacts yet'; }
+  else $('#stRecentTitle').textContent = 'Recent updates';
+}
+
+// ----- composer -----
+const C = { mode: null, bg: 0, blob: null, url: null };
+function openCompose(mode) {
+  C.mode = mode; $('#stCompose').hidden = false;
+  $('#stComposeTitle').textContent = mode === 'text' ? 'Text status' : mode === 'image' ? 'Photo status' : 'Video status';
+  $('#stBgBtn').hidden = mode !== 'text'; $('#stCapRow').hidden = mode === 'text';
+  $('#stPost').disabled = false; $('#stPost').textContent = 'Post';
+}
+function openTextStatus() {
+  openCompose('text');
+  const stage = $('#stComposeStage'); stage.innerHTML = ''; stage.style.background = ST_BG[C.bg];
+  const ta = document.createElement('textarea'); ta.className = 'compose-text'; ta.id = 'stTextInput'; ta.maxLength = 700; ta.placeholder = 'Type a status';
+  stage.append(ta); setTimeout(() => ta.focus(), 50);
+}
+$('#stTextBtn').onclick = openTextStatus;
+$('#stMediaBtn').onclick = () => { $('#stFile').value = ''; $('#stFile').click(); };
+$('#stBgBtn').onclick = () => { C.bg = (C.bg + 1) % ST_BG.length; $('#stComposeStage').style.background = ST_BG[C.bg]; };
+function closeCompose() { $('#stCompose').hidden = true; if (C.url) URL.revokeObjectURL(C.url); Object.assign(C, { mode: null, blob: null, url: null }); $('#stComposeStage').innerHTML = ''; $('#stComposeStage').style.background = ''; $('#stCaption').value = ''; }
+$('#stComposeClose').onclick = closeCompose;
+
+function compressImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob((b) => (b ? res(b) : rej(new Error('compress'))), 'image/jpeg', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); };
+    img.src = url;
+  });
+}
+function videoDuration(file) {
+  return new Promise((res) => { const v = document.createElement('video'); v.preload = 'metadata'; const u = URL.createObjectURL(file); v.onloadedmetadata = () => { URL.revokeObjectURL(u); res(v.duration || 0); }; v.onerror = () => { URL.revokeObjectURL(u); res(0); }; v.src = u; });
+}
+$('#stFile').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const stage = $('#stComposeStage');
+  if (f.type.startsWith('image/')) {
+    let blob; try { blob = await compressImage(f); } catch { return toast('Could not open that photo.'); }
+    openCompose('image'); C.blob = blob; C.url = URL.createObjectURL(blob);
+    stage.innerHTML = ''; const img = document.createElement('img'); img.src = C.url; img.alt = 'Photo preview'; stage.append(img);
+  } else if (f.type.startsWith('video/')) {
+    if (f.size > 16 * 1024 * 1024) return toast('Video is too big. Choose a video under 16 MB (about 30 seconds).');
+    const d = await videoDuration(f);
+    if (d > 61) return toast('Video is ' + Math.round(d) + ' seconds. Please choose a video up to 60 seconds.');
+    openCompose('video'); C.blob = f; C.url = URL.createObjectURL(f);
+    stage.innerHTML = ''; const v = document.createElement('video'); v.src = C.url; v.controls = true; v.playsInline = true; v.autoplay = true; v.muted = true; stage.append(v);
+  } else toast('Please choose a photo or a video.');
+  setTimeout(() => $('#stCaption').focus(), 50);
+};
+$('#stPost').onclick = async () => {
+  const btn = $('#stPost');
+  if (C.mode === 'text') {
+    const text = ($('#stTextInput') || {}).value || '';
+    if (!text.trim()) return toast('Type something first.');
+    btn.disabled = true;
+    try { await api('/api/status/text', { method: 'POST', body: JSON.stringify({ text, bg: ST_BG[C.bg] }) }); closeCompose(); toast('Status posted ✓'); loadStatus(); }
+    catch (err) { toast(err.message); btn.disabled = false; }
+    return;
+  }
+  if (!C.blob) return;
+  btn.disabled = true;
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/status/media?caption=' + encodeURIComponent($('#stCaption').value.trim()));
+  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+  xhr.setRequestHeader('Content-Type', C.blob.type || (C.mode === 'image' ? 'image/jpeg' : 'video/mp4'));
+  xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) btn.textContent = Math.round((ev.loaded / ev.total) * 100) + '%'; };
+  xhr.onload = () => {
+    if (xhr.status >= 200 && xhr.status < 300) { closeCompose(); toast('Status posted ✓'); loadStatus(); return; }
+    let msg = 'Upload failed. Try a smaller file.'; try { msg = JSON.parse(xhr.responseText).error || msg; } catch {}
+    toast(msg); btn.disabled = false; btn.textContent = 'Post';
+  };
+  xhr.onerror = () => { toast('Upload failed. Check your internet.'); btn.disabled = false; btn.textContent = 'Post'; };
+  xhr.send(C.blob);
+};
+
+// ----- viewer -----
+const V = { groups: [], gi: 0, si: 0, raf: 0, start: 0, dur: 6000, elapsed: 0, paused: false, video: null, downAt: 0 };
+function openViewer(groups, gi) {
+  V.groups = groups; V.gi = gi;
+  const g = groups[gi]; V.si = g.mine ? 0 : Math.max(0, g.statuses.findIndex((x) => !x.viewed));
+  $('#stViewer').hidden = false; showStatusItem();
+}
+function closeViewer() {
+  cancelAnimationFrame(V.raf); if (V.video) { V.video.pause(); V.video = null; }
+  $('#stViewer').hidden = true; $('#stStage').innerHTML = ''; $('#stViews').hidden = true; loadStatus();
+}
+function showStatusItem() {
+  cancelAnimationFrame(V.raf); if (V.video) { V.video.pause(); V.video = null; }
+  const g = V.groups[V.gi], st = g.statuses[V.si];
+  if (!st) return closeViewer();
+  const bars = $('#stBars'); bars.innerHTML = '';
+  g.statuses.forEach((x, i) => { const s2 = document.createElement('span'); const f = document.createElement('i'); f.style.width = i < V.si ? '100%' : '0'; s2.append(f); bars.append(s2); });
+  const avBox = $('#stVAvatar'); avBox.innerHTML = ''; avBox.append(avatar(g.user, 'sm'));
+  $('#stVName').textContent = g.mine ? 'My status' : nameOf(g.user);
+  $('#stVTime').textContent = ago2(st.createdAt);
+  $('#stVDelete').hidden = !g.mine; $('#stVFoot').hidden = !g.mine; $('#stViews').hidden = true;
+  if (g.mine) $('#stViewsBtn').textContent = '👁 ' + (st.viewCount || 0) + ' view' + (st.viewCount === 1 ? '' : 's');
+  $('#stVCaption').textContent = st.caption || '';
+  const stage = $('#stStage'); stage.innerHTML = ''; stage.style.background = '';
+  V.elapsed = 0; V.paused = false; V.dur = 6000;
+  if (st.type === 'text') {
+    const d = document.createElement('div'); d.className = 'st-text'; d.style.background = st.bg; d.textContent = st.text; stage.append(d);
+    V.dur = Math.min(12000, 4000 + st.text.length * 60);
+  } else if (st.type === 'image') {
+    const img = document.createElement('img'); img.alt = st.caption || 'Status photo'; img.src = mediaSrc(st); stage.append(img);
+  } else {
+    const v = document.createElement('video'); v.src = mediaSrc(st); v.playsInline = true; v.autoplay = true; v.preload = 'auto';
+    v.onended = () => nextStatus(); v.onerror = () => { toast('Could not play this video.'); };
+    stage.append(v); V.video = v; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+  }
+  if (!g.mine && !st.viewed) { st.viewed = true; api('/api/status/' + st.id + '/view', { method: 'POST' }).catch(() => {}); }
+  V.start = performance.now(); tickStatus();
+}
+function tickStatus() {
+  V.raf = requestAnimationFrame(tickStatus);
+  const bar = $('#stBars').children[V.si]?.firstChild; if (!bar) return;
+  let p;
+  if (V.video) { p = V.video.duration ? V.video.currentTime / V.video.duration : 0; }
+  else { if (!V.paused) V.elapsed += performance.now() - V.start; V.start = performance.now(); p = V.elapsed / V.dur; if (p >= 1) { bar.style.width = '100%'; return nextStatus(); } }
+  bar.style.width = Math.min(100, p * 100) + '%';
+}
+function nextStatus() {
+  cancelAnimationFrame(V.raf);
+  const g = V.groups[V.gi];
+  if (V.si < g.statuses.length - 1) V.si++;
+  else if (V.gi < V.groups.length - 1) { V.gi++; V.si = 0; }
+  else return closeViewer();
+  showStatusItem();
+}
+function prevStatus() {
+  if (V.si > 0) V.si--; else if (V.gi > 0) { V.gi--; V.si = 0; }
+  showStatusItem();
+}
+const stage2 = $('#stStage');
+stage2.addEventListener('pointerdown', () => { V.downAt = Date.now(); V.paused = true; if (V.video) V.video.pause(); });
+stage2.addEventListener('pointerup', (e) => {
+  const held = Date.now() - V.downAt; V.paused = false; V.start = performance.now();
+  if (V.video) V.video.play().catch(() => {});
+  if (held < 250) { const r = stage2.getBoundingClientRect(); if (e.clientX - r.left < r.width / 3) prevStatus(); else nextStatus(); }
+});
+stage2.addEventListener('pointercancel', () => { V.paused = false; if (V.video) V.video.play().catch(() => {}); });
+$('#stVClose').onclick = closeViewer;
+document.addEventListener('keydown', (e) => {
+  if ($('#stViewer').hidden) return;
+  if (e.key === 'Escape') closeViewer(); else if (e.key === 'ArrowRight') nextStatus(); else if (e.key === 'ArrowLeft') prevStatus();
+});
+$('#stVDelete').onclick = async () => {
+  const g = V.groups[V.gi], st = g.statuses[V.si];
+  V.paused = true;
+  if (!confirm('Delete this status update?')) { V.paused = false; V.start = performance.now(); return; }
+  try {
+    await api('/api/status/' + st.id, { method: 'DELETE' });
+    g.statuses.splice(V.si, 1); toast('Status deleted.');
+    if (!g.statuses.length) return closeViewer();
+    V.si = Math.min(V.si, g.statuses.length - 1); showStatusItem();
+  } catch (err) { toast(err.message); }
+};
+$('#stViewsBtn').onclick = async () => {
+  const g = V.groups[V.gi], st = g.statuses[V.si];
+  V.paused = true; if (V.video) V.video.pause();
+  const box = $('#stViews'); box.hidden = false; box.innerHTML = '<h3>Viewed by</h3><p class="info-note" style="padding:0">Loading…</p>';
+  try {
+    const list = await api('/api/status/' + st.id + '/views');
+    box.innerHTML = '<h3>Viewed by ' + list.length + '</h3>';
+    if (!list.length) { const p2 = document.createElement('p'); p2.className = 'info-note'; p2.style.padding = '0'; p2.textContent = 'No views yet.'; box.append(p2); }
+    for (const v of list) { const row = document.createElement('div'); row.className = 'set-row'; const t2 = document.createElement('div'); t2.className = 'txt'; t2.innerHTML = '<b></b><small></small>'; t2.querySelector('b').textContent = nameOf(v.user); t2.querySelector('small').textContent = ago2(v.at); row.append(avatar(v.user, 'sm'), t2); box.append(row); }
+    const close = document.createElement('button'); close.className = 'primary'; close.style.marginTop = '10px'; close.textContent = 'Close';
+    close.onclick = () => { box.hidden = true; V.paused = false; V.start = performance.now(); if (V.video) V.video.play().catch(() => {}); };
+    box.append(close);
+  } catch (err) { box.hidden = true; toast(err.message); }
+};
 
 // ---------------- go ----------------
 setMode('login');

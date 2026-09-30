@@ -25,15 +25,17 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // ---------- Database ----------
 // With MONGODB_URI set, data is kept permanently in MongoDB (survives restarts & redeploys).
 // Without it, data goes to data/db.json (fine for testing only).
-const { MongoClient } = require('mongodb');
+const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
 for (const k of COLLS) db[k] = [];
 let mongo = null;
+let bucket = null;
+const MEDIA_DIR = path.join(DATA_DIR, 'media');
 const snap = {}; // collection -> Map(id -> last saved JSON), so only changed records are written
 
 async function loadDb() {
@@ -41,6 +43,7 @@ async function loadDb() {
     const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
     await client.connect();
     mongo = client.db(process.env.MONGODB_DB || 'maata');
+    bucket = new GridFSBucket(mongo, { bucketName: 'statusMedia' }); // photos & videos for statuses
     for (const c of COLLS) {
       const docs = await mongo.collection(c).find({}).toArray();
       db[c] = docs.map(({ _id, ...rest }) => ({ id: _id, ...rest })).sort((a, b) => (a[SORT_BY[c]] || 0) - (b[SORT_BY[c]] || 0));
@@ -504,6 +507,128 @@ app.post('/api/report', auth, rateLimit, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Status (text, photo, video - disappears after 24 hours) ----------
+// Only mutual contacts (you saved them AND they saved you) can see each other's status.
+const STATUS_TTL = 24 * 3600 * 1000;
+async function saveMedia(id, buf, mime) {
+  if (bucket) {
+    await new Promise((res, rej) => { const up = bucket.openUploadStreamWithId(id, id, { contentType: mime }); up.on('error', rej).on('finish', res); up.end(buf); });
+  } else { fs.mkdirSync(MEDIA_DIR, { recursive: true }); fs.writeFileSync(path.join(MEDIA_DIR, id), buf); }
+}
+async function deleteMedia(id) { try { if (bucket) await bucket.delete(id); else fs.unlinkSync(path.join(MEDIA_DIR, id)); } catch { /* already gone */ } }
+function mediaStream(id, start, end) {
+  return bucket ? bucket.openDownloadStream(id, { start, end: end + 1 }) : fs.createReadStream(path.join(MEDIA_DIR, id), { start, end });
+}
+const isMutual = (a, b) => hasContact(a, b.id) && hasContact(b, a.id);
+function statusVisible(viewer, st) {
+  if (st.userId === viewer.id) return true;
+  const owner = userById(st.userId);
+  return !!owner && owner.status !== 'blocked' && isMutual(viewer, owner) && !blockedOf(owner).includes(viewer.id) && !blockedOf(viewer).includes(owner.id);
+}
+function statusOut(viewer, st) {
+  const mine = st.userId === viewer.id;
+  return {
+    id: st.id, userId: st.userId, type: st.type, text: st.text || '', bg: st.bg || null, caption: st.caption || '', mime: st.mime || null,
+    createdAt: st.createdAt, expiresAt: st.expiresAt,
+    viewed: mine || (st.views || []).some((v) => v.userId === viewer.id),
+    ...(mine ? { viewCount: (st.views || []).length } : {}),
+    mediaUrl: st.type === 'text' ? null : '/api/status/media/' + st.id,
+  };
+}
+function notifyStatus(u) { for (const w of watchersOf(u.id)) if (hasContact(u, w)) io.to('user:' + w).emit('status:new', { userId: u.id }); }
+const tooManyStatuses = (u) => db.statuses.filter((x) => x.userId === u.id && x.createdAt > now() - STATUS_TTL).length >= 30;
+
+app.get('/api/status', auth, (req, res) => {
+  const mine = [], others = {};
+  for (const st of db.statuses) {
+    if (st.expiresAt <= now()) continue;
+    if (st.userId === req.user.id) mine.push(statusOut(req.user, st));
+    else if (statusVisible(req.user, st)) (others[st.userId] = others[st.userId] || []).push(statusOut(req.user, st));
+  }
+  const users = Object.entries(others).map(([uid, list]) => ({
+    user: contactView(req.user, userById(uid), { lastMessage: null, unread: 0 }),
+    statuses: list, allViewed: list.every((x) => x.viewed), latest: list[list.length - 1].createdAt,
+  })).sort((a, b) => (a.allViewed - b.allViewed) || (b.latest - a.latest));
+  res.json({ mine, users });
+});
+
+app.post('/api/status/text', auth, (req, res) => {
+  const text = String(req.body?.text || '').trim().slice(0, 700);
+  if (!text) return res.status(400).json({ error: 'Write something first.' });
+  if (tooManyStatuses(req.user)) return res.status(429).json({ error: 'You can post up to 30 status updates a day.' });
+  const bg = /^#[0-9a-fA-F]{6}$/.test(req.body?.bg || '') ? req.body.bg : '#0F4C5C';
+  const st = { id: newId(), userId: req.user.id, type: 'text', text, bg, createdAt: now(), expiresAt: now() + STATUS_TTL, views: [] };
+  db.statuses.push(st); save(); notifyStatus(req.user);
+  res.json(statusOut(req.user, st));
+});
+
+app.post('/api/status/media', auth, express.raw({ type: ['image/*', 'video/*'], limit: '16mb' }), async (req, res) => {
+  const mime = String(req.headers['content-type'] || '').split(';')[0].trim();
+  const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : null;
+  if (!type || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a photo or video.' });
+  if (tooManyStatuses(req.user)) return res.status(429).json({ error: 'You can post up to 30 status updates a day.' });
+  const id = newId();
+  try { await saveMedia(id, req.body, mime); } catch (e) { console.error('[media]', e.message); return res.status(500).json({ error: 'Could not save the file. Try a smaller one.' }); }
+  const st = { id, userId: req.user.id, type, caption: String(req.query.caption || '').trim().slice(0, 300), mime, size: req.body.length, createdAt: now(), expiresAt: now() + STATUS_TTL, views: [] };
+  db.statuses.push(st); save(); notifyStatus(req.user);
+  res.json(statusOut(req.user, st));
+});
+
+// <img>/<video> cannot send headers, so the login token comes in ?t=
+app.get('/api/status/media/:id', (req, res) => {
+  let viewer = null;
+  try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* invalid */ }
+  if (!viewer) return res.status(401).end();
+  const st = db.statuses.find((x) => x.id === req.params.id && x.type !== 'text');
+  if (!st || st.expiresAt <= now() || !statusVisible(viewer, st)) return res.status(404).end();
+  const size = st.size;
+  let start = 0, end = size - 1, code = 200;
+  const m = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+  if (m) {
+    if (m[1]) { start = parseInt(m[1], 10); end = m[2] ? Math.min(parseInt(m[2], 10), size - 1) : size - 1; }
+    else if (m[2]) { start = Math.max(0, size - parseInt(m[2], 10)); }
+    if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); }
+    code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+  }
+  res.status(code);
+  res.setHeader('Content-Type', st.mime); res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const stream = mediaStream(st.id, start, end);
+  stream.on('error', () => res.destroy());
+  stream.pipe(res);
+});
+
+app.post('/api/status/:id/view', auth, (req, res) => {
+  const st = db.statuses.find((x) => x.id === req.params.id);
+  if (!st || st.expiresAt <= now() || !statusVisible(req.user, st)) return res.status(404).json({ error: 'Not found.' });
+  st.views = st.views || [];
+  if (st.userId !== req.user.id && !st.views.some((v) => v.userId === req.user.id)) {
+    st.views.push({ userId: req.user.id, at: now() }); save();
+    io.to('user:' + st.userId).emit('status:view', { id: st.id, count: st.views.length });
+  }
+  res.json({ ok: true });
+});
+app.get('/api/status/:id/views', auth, (req, res) => {
+  const st = db.statuses.find((x) => x.id === req.params.id && x.userId === req.user.id);
+  if (!st) return res.status(404).json({ error: 'Not found.' });
+  res.json((st.views || []).slice().reverse().map((v) => { const u = userById(v.userId); return { at: v.at, user: u ? contactView(req.user, u) : { id: v.userId, name: 'Deleted user', displayName: 'Deleted user' } }; }));
+});
+app.delete('/api/status/:id', auth, async (req, res) => {
+  const st = db.statuses.find((x) => x.id === req.params.id && x.userId === req.user.id);
+  if (!st) return res.status(404).json({ error: 'Not found.' });
+  db.statuses = db.statuses.filter((x) => x.id !== st.id); save();
+  if (st.type !== 'text') await deleteMedia(st.id);
+  res.json({ ok: true });
+});
+function cleanStatuses() {
+  const t = now(), old = db.statuses.filter((x) => x.expiresAt <= t);
+  if (!old.length) return;
+  db.statuses = db.statuses.filter((x) => x.expiresAt > t);
+  for (const x of old) if (x.type !== 'text') deleteMedia(x.id);
+  save();
+}
+setInterval(cleanStatuses, 10 * 60 * 1000);
+
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -583,6 +708,7 @@ app.get('/admin/api/stats', adminAuth, (req, res) => {
       calls: db.calls.length,
       openReports: db.reports.filter((r) => r.status === 'open').length,
       translatedCalls: db.calls.filter((c) => c.translated).length,
+      activeStatuses: db.statuses.filter((x) => x.expiresAt > now()).length,
       translationsSinceRestart: trCount,
     },
     today: {
@@ -690,6 +816,8 @@ app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
   db.users = db.users.filter((x) => x.id !== u.id);
   for (const x of db.users) if (x.contacts) x.contacts = x.contacts.filter((c) => c.id !== u.id);
   db.messages = db.messages.filter((m) => m.from !== u.id && m.to !== u.id);
+  for (const st of db.statuses.filter((x) => x.userId === u.id)) if (st.type !== 'text') deleteMedia(st.id);
+  db.statuses = db.statuses.filter((x) => x.userId !== u.id);
   audit(req.admin, 'delete', u.name + ' (' + u.phone + ')');
   save();
   for (const w of removedWatchers) io.to('user:' + w).emit('user:removed', { id: u.id });
@@ -945,6 +1073,7 @@ io.on('connection', (socket) => {
 });
 
 loadDb()
+  .then(() => { cleanStatuses(); })
   .then(() => server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`)))
   .catch((e) => {
     console.error('[db] Could not connect to MongoDB. Check MONGODB_URI, the database password, and Network Access (allow 0.0.0.0/0).');
