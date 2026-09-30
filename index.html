@@ -369,14 +369,15 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 @keyframes flash{0%,40%{box-shadow:0 0 0 4px var(--turmeric)}100%{box-shadow:0 0 0 0 transparent}}
 .bubble.selected{outline:3px solid var(--leaf);outline-offset:2px}
 .selecting .bubble{cursor:pointer}
-.msg-menu{position:fixed;z-index:40;width:250px;max-width:calc(100vw - 16px)}
+.msg-menu{position:fixed;z-index:40;width:270px;max-width:calc(100vw - 16px);box-sizing:border-box}
+.react-bar button{min-width:0}
 .react-bar{display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 8px;box-shadow:0 6px 24px rgba(0,0,0,.18);margin-bottom:8px;justify-content:space-between}
 .react-bar button{font-size:24px;width:34px;height:36px;border-radius:50%;display:grid;place-items:center;transition:transform .1s}
 .react-bar button:hover{transform:scale(1.2)}
 .react-bar button[aria-pressed="true"]{background:var(--peacock-soft)}
 .react-bar .more{font-size:20px;color:var(--muted)}
-.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px;margin-bottom:8px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
-.emoji-grid button{font-size:22px;height:34px;border-radius:8px}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:8px;margin-bottom:8px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.emoji-grid button{font-size:20px;height:34px;min-width:0;padding:0;border-radius:8px;display:grid;place-items:center}
 .emoji-grid button:hover{background:var(--peacock-soft)}
 .menu-list{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 32px rgba(0,0,0,.2);padding:6px;max-height:60vh;overflow-y:auto}
 .menu-list button{display:flex;align-items:center;gap:14px;width:100%;padding:10px 12px;border-radius:10px;text-align:left;font-size:15px;color:var(--ink)}
@@ -403,6 +404,48 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .fwd-list li label{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
 .fwd-list input[type=checkbox]{width:20px;height:20px;accent-color:var(--leaf)}
 .info-rows .set-row b{min-width:90px}
+/* ---------- In-app photo & video viewer ---------- */
+#moreSheet{z-index:45}
+.mv{position:fixed;inset:0;z-index:38;background:var(--panel);color:var(--ink);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.mv-head{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.mv-head .who{flex:1;min-width:0}
+.mv-head .who b{display:block;font-size:15px}
+.mv-head .who small{color:var(--muted);font-size:13px}
+.mv-tools{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto}
+.mv-tools button{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--ink);flex:none}
+.mv-tools button:hover{background:var(--peacock-soft)}
+.mv-tools button:disabled{opacity:.3}
+.mv-tools button[aria-pressed="true"]{color:var(--turmeric)}
+.mv-tools button[aria-pressed="true"] svg{fill:currentColor}
+.mv-tools svg{width:22px;height:22px}
+.mv-stage{flex:1;position:relative;overflow:hidden;display:grid;place-items:center;background:var(--paper);min-height:0;touch-action:none}
+.mv-stage img{max-width:92%;max-height:92%;object-fit:contain;transform-origin:center;transition:transform .12s ease;user-select:none;-webkit-user-drag:none;cursor:zoom-in}
+.mv-stage img.zoomed{cursor:grab;transition:none}
+.mv-stage video{max-width:92%;max-height:92%;background:#000;border-radius:6px}
+.mv-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(28,34,48,.7);color:#fff;display:grid;place-items:center;z-index:2}
+.mv-nav:disabled{opacity:.25}
+.mv-nav.prev{left:16px}.mv-nav.next{right:16px}
+.mv-nav svg{width:22px;height:22px}
+.mv-cap{text-align:center;padding:8px 16px;font-size:15px;white-space:pre-wrap;background:var(--paper)}
+.mv-cap:empty{display:none}
+.mv-strip{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;border-top:1px solid var(--line);background:var(--panel)}
+.mv-strip button{flex:none;width:72px;height:72px;border-radius:8px;overflow:hidden;position:relative;border:3px solid transparent;padding:0;background:#0001}
+.mv-strip button[aria-current="true"]{border-color:var(--leaf)}
+.mv-strip img,.mv-strip video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.mv-strip .vb{position:absolute;left:4px;bottom:3px;font-size:11px;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:0 4px}
+.mv-pop{position:absolute;right:16px;top:64px;z-index:5}
+.mv-pop .menu-list{min-width:230px}
+.vidwrap{position:relative;cursor:pointer}
+.vidwrap video{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;background:#000}
+.vidwrap .play{position:absolute;inset:0;display:grid;place-items:center}
+.vidwrap .play span{width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:22px}
+@media (max-width:700px){
+  .mv-head{flex-wrap:wrap;padding:8px 10px}
+  .mv-tools{width:100%;justify-content:space-between}
+  .mv-tools button{width:38px;height:38px}
+  .mv-nav{width:38px;height:38px}.mv-nav.prev{left:6px}.mv-nav.next{right:6px}
+  .mv-strip button{width:56px;height:56px}
+}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -604,6 +647,33 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
     </button>
   </div>
+</section>
+
+<!-- ============ PHOTO / VIDEO VIEWER ============ -->
+<section class="mv" id="mediaView" hidden role="dialog" aria-modal="true" aria-label="Photo and video viewer">
+  <div class="mv-head">
+    <div id="mvAvatar"></div>
+    <div class="who"><b id="mvName"></b><small id="mvTime"></small></div>
+    <div class="mv-tools">
+      <button id="mvZoomOut" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/></svg></button>
+      <button id="mvZoomIn" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/></svg></button>
+      <button id="mvGoto" title="Go to message" aria-label="Go to message"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg></button>
+      <button id="mvReply" title="Reply" aria-label="Reply"><svg viewBox="0 0 24 24"><path d="M9 17l-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+      <button id="mvStar" title="Star" aria-label="Star" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
+      <button id="mvPin" title="Pin" aria-label="Pin" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M5 17h14l-2-4V5h1V3H6v2h1v8z"/></svg></button>
+      <button id="mvReact" title="React" aria-label="React"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+      <button id="mvFwd" title="Forward" aria-label="Forward"><svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg></button>
+      <button id="mvSave" title="Download" aria-label="Download"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></button>
+      <button id="mvMore" title="More" aria-label="More options"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
+      <button id="mvClose" title="Close" aria-label="Close viewer"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+  </div>
+  <div class="mv-stage" id="mvStage">
+    <button class="mv-nav prev" id="mvPrev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="mv-nav next" id="mvNext" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+  </div>
+  <div class="mv-cap" id="mvCap"></div>
+  <div class="mv-strip" id="mvStrip" aria-label="All photos and videos in this chat"></div>
 </section>
 
 <!-- ============ ATTACH SHEET ============ -->
@@ -982,7 +1052,7 @@ function renderContacts() {
 async function openChat(id) {
   if (selectMode && activeId !== id) exitSelect();
   if (activeId !== id) { cancelReply(); pinIndex = 0; }
-  closeMsgMenu();
+  closeMsgMenu(); if (MV.id) closeMediaView();
   activeId = id;
   $('#app').classList.add('in-chat');
   $('#chatEmpty').hidden = true; $('#chatHead').hidden = false; $('#messages').hidden = false; $('#composer').hidden = false;
@@ -1015,6 +1085,7 @@ function renderMessages() {
   }
   if (atBottom || box.dataset.first !== activeId) { box.scrollTop = box.scrollHeight; box.dataset.first = activeId; }
   renderPins(); if (selectMode) updateSelect();
+  if (MV.id && !$('#mediaView').hidden) renderMediaView();
 }
 function markRead() {
   const u = userById(activeId);
@@ -2207,12 +2278,16 @@ function renderRich(b, m, mine) {
   if (m.type === 'image') {
     b.classList.add('media');
     const img = el('img', 'pic'); img.loading = 'lazy'; img.alt = m.text || 'Photo'; img.src = fileUrl(f);
-    img.onclick = () => window.open(fileUrl(f), '_blank');
+    img.onclick = (e) => { e.stopPropagation(); openMediaView(m.id); };
     b.append(img); if (m.text) b.append(el('div', 'cap', m.text));
   } else if (m.type === 'video') {
     b.classList.add('media');
-    const v = el('video', 'vid'); v.controls = true; v.preload = 'metadata'; v.playsInline = true; v.src = fileUrl(f);
-    b.append(v); if (m.text) b.append(el('div', 'cap', m.text));
+    const w = el('div', 'vidwrap'); w.setAttribute('role', 'button'); w.tabIndex = 0; w.setAttribute('aria-label', 'Play video');
+    const v = el('video'); v.preload = 'metadata'; v.muted = true; v.playsInline = true; v.src = fileUrl(f) + '#t=0.1';
+    const play = el('div', 'play'); play.append(el('span', null, '▶'));
+    w.append(v, play); w.onclick = (e) => { e.stopPropagation(); openMediaView(m.id); };
+    w.onkeydown = (e) => { if (e.key === 'Enter') openMediaView(m.id); };
+    b.append(w); if (m.text) b.append(el('div', 'cap', m.text));
   } else if (m.type === 'audio') {
     b.append(el('div', null, f.voice ? '🎤 Voice message' + (f.duration ? ' · ' + fmtDur(f.duration) : '') : '🎵 ' + f.name));
     const a = el('audio'); a.controls = true; a.preload = 'metadata'; a.src = fileUrl(f); b.append(a);
@@ -2682,7 +2757,8 @@ function openMsgMenu(m, bubble) {
     more.onclick = () => {
       const g = el('div', 'emoji-grid');
       for (const e of MORE_EMOJI) { const b = el('button', null, e); b.onclick = () => { socket.emit('msg:react', { id: m.id, emoji: e }); closeMsgMenu(); }; g.append(b); }
-      bar.replaceWith(g);
+      bar.replaceWith(g); place();
+      g.querySelector('button').focus();
     };
     bar.append(more); menu.append(bar);
   }
@@ -2705,10 +2781,16 @@ function openMsgMenu(m, bubble) {
   menu.append(list);
   document.body.append(shade, menu); menuEls = [shade, menu];
   // place next to the message (desktop); CSS turns it into a bottom sheet on phones
-  const r = bubble.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
-  let left = mine ? r.right - mw : r.left; left = Math.max(8, Math.min(left, innerWidth - mw - 8));
-  let top = r.bottom + 6; if (top + mh > innerHeight - 8) top = Math.max(8, r.top - mh - 6);
-  menu.style.left = left + 'px'; menu.style.top = top + 'px';
+  // keep the whole menu inside the screen, also after the emoji list opens
+  function place() {
+    if (innerWidth <= 600) return; // phones: bottom sheet (CSS)
+    const r = bubble.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let left = mine ? r.right - mw : r.left; left = Math.max(8, Math.min(left, innerWidth - mw - 8));
+    let top = r.bottom + 6; if (top + mh > innerHeight - 8) top = r.top - mh - 6;
+    top = Math.max(8, Math.min(top, innerHeight - mh - 8));
+    menu.style.left = left + 'px'; menu.style.top = top + 'px';
+  }
+  place();
   (menu.querySelector('.react-bar button') || menu.querySelector('.menu-list button')).focus();
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMsgMenu(); });
@@ -2719,7 +2801,7 @@ window.addEventListener('resize', closeMsgMenu);
   const box = $('#messages'); let pressTimer = 0, longPressed = false;
   const target = (e) => {
     const b = e.target.closest('.bubble'); if (!b || !b.dataset.mid) return null;
-    if (!selectMode && e.target.closest('button,a,audio,video,iframe,input,.quote,.react-pill')) return null;
+    if (!selectMode && e.target.closest('button,a,audio,video,iframe,input,.quote,.react-pill,img.pic,.vidwrap')) return null;
     return b;
   };
   box.addEventListener('click', (e) => {
@@ -2871,6 +2953,137 @@ function renderPins() {
   bar.onclick = () => { scrollToMsg(p.id); pinIndex++; renderPins(); };
 }
 $('#pinBar').onkeydown = (e) => { if (e.key === 'Enter') $('#pinBar').click(); };
+
+// ================= in-app photo & video viewer =================
+const MV = { id: null, scale: 1, x: 0, y: 0, drag: null, pop: null };
+const mediaList = () => curList().filter((m) => !m.deleted && !m.uploading && (m.type === 'image' || m.type === 'video'));
+function openMediaView(id) {
+  closeMsgMenu(); MV.id = id; $('#mediaView').hidden = false; renderMediaView(true);
+}
+function closeMediaView() {
+  mvClosePop(); const v = $('#mvStage video'); if (v) v.pause();
+  $('#mediaView').hidden = true; MV.id = null; $('#mvStrip').innerHTML = '';
+}
+function mvCurrent() { return mediaList().find((m) => m.id === MV.id); }
+function renderMediaView(rebuildStrip) {
+  const list = mediaList(), m = list.find((x) => x.id === MV.id);
+  if (!m) return closeMediaView();
+  const i = list.indexOf(m), mine = m.from === me.id;
+  const who = mine ? me : userById(m.from) || { id: m.from, name: 'Contact' };
+  const av = $('#mvAvatar'); av.innerHTML = ''; av.append(avatar(who, 'sm'));
+  $('#mvName').textContent = mine ? 'You' : nameOf(who);
+  $('#mvTime').textContent = new Date(m.ts).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  $('#mvStar').setAttribute('aria-pressed', String(starred.has(m.id))); $('#mvStar').title = starred.has(m.id) ? 'Unstar' : 'Star';
+  $('#mvPin').setAttribute('aria-pressed', String(!!m.pinned)); $('#mvPin').title = m.pinned ? 'Unpin' : 'Pin';
+  const isImg = m.type === 'image';
+  $('#mvZoomIn').disabled = !isImg; $('#mvZoomOut').disabled = !isImg || MV.scale <= 1;
+  $('#mvPrev').disabled = i <= 0; $('#mvNext').disabled = i >= list.length - 1;
+  $('#mvCap').textContent = m.text || '';
+  const stage = $('#mvStage'), cur = stage.querySelector('img,video');
+  if (!cur || cur.dataset.mid !== m.id) {
+    if (cur) { if (cur.tagName === 'VIDEO') cur.pause(); cur.remove(); }
+    MV.scale = 1; MV.x = 0; MV.y = 0;
+    const node = isImg ? el('img') : el('video');
+    node.dataset.mid = m.id; node.src = fileUrl(m.file);
+    if (isImg) { node.alt = m.text || 'Photo'; node.draggable = false; }
+    else { node.controls = true; node.autoplay = true; node.playsInline = true; }
+    stage.prepend(node); applyZoom();
+  }
+  if (rebuildStrip || $('#mvStrip').children.length !== list.length) {
+    const strip = $('#mvStrip'); strip.innerHTML = '';
+    for (const x of list) {
+      const b = el('button'); b.dataset.mid = x.id; b.setAttribute('aria-label', (x.type === 'image' ? 'Photo' : 'Video') + ' ' + fmtTime(x.ts));
+      if (x.type === 'image') { const im = el('img'); im.loading = 'lazy'; im.alt = ''; im.src = fileUrl(x.file); b.append(im); }
+      else { const v = el('video'); v.muted = true; v.preload = 'metadata'; v.src = fileUrl(x.file) + '#t=0.1'; b.append(v, el('span', 'vb', '▶ ' + (x.file.duration ? fmtDur(x.file.duration) : 'Video'))); }
+      b.onclick = () => { MV.id = x.id; renderMediaView(); };
+      strip.append(b);
+    }
+  }
+  [...$('#mvStrip').children].forEach((b) => { const on = b.dataset.mid === m.id; b.setAttribute('aria-current', String(on)); if (on) b.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+}
+function mvStep(d) { const list = mediaList(), i = list.findIndex((x) => x.id === MV.id); const n = list[i + d]; if (n) { MV.id = n.id; mvClosePop(); renderMediaView(); } }
+function applyZoom() {
+  const img = $('#mvStage img'); if (!img) return;
+  if (MV.scale <= 1) { MV.scale = 1; MV.x = 0; MV.y = 0; }
+  img.style.transform = 'translate(' + MV.x + 'px,' + MV.y + 'px) scale(' + MV.scale + ')';
+  img.classList.toggle('zoomed', MV.scale > 1);
+  $('#mvZoomOut').disabled = MV.scale <= 1;
+}
+function zoomBy(f) { MV.scale = Math.max(1, Math.min(5, MV.scale * f)); applyZoom(); }
+
+$('#mvClose').onclick = closeMediaView;
+$('#mvPrev').onclick = () => mvStep(-1);
+$('#mvNext').onclick = () => mvStep(1);
+$('#mvZoomIn').onclick = () => zoomBy(1.5);
+$('#mvZoomOut').onclick = () => zoomBy(1 / 1.5);
+$('#mvGoto').onclick = () => { const id = MV.id; closeMediaView(); scrollToMsg(id); };
+$('#mvReply').onclick = () => { const m = mvCurrent(); closeMediaView(); if (m) startReply(m); };
+$('#mvStar').onclick = () => { const m = mvCurrent(); if (m) socket.emit('msg:star', { ids: [m.id], star: !starred.has(m.id) }); };
+$('#mvPin').onclick = () => { const m = mvCurrent(); if (m) { socket.emit('msg:pin', { id: m.id, pin: !m.pinned }); toast(m.pinned ? 'Unpinned' : 'Pinned for both of you'); } };
+$('#mvFwd').onclick = () => { const m = mvCurrent(); if (m) openForward([m.id]); };
+$('#mvSave').onclick = () => { const m = mvCurrent(); if (m) saveAs(m); };
+
+function mvClosePop() { if (MV.pop) { MV.pop.remove(); MV.pop = null; } }
+function mvPop(build) {
+  mvClosePop(); const p = el('div', 'mv-pop'); build(p); $('#mediaView').append(p); MV.pop = p;
+  const f = p.querySelector('button'); if (f) f.focus();
+}
+$('#mvReact').onclick = () => {
+  const m = mvCurrent(); if (!m) return; if (MV.pop) return mvClosePop();
+  mvPop((p) => {
+    const bar = el('div', 'react-bar'); const myR = (m.reactions || {})[me.id];
+    for (const e of REACTS) { const b = el('button', null, e); b.setAttribute('aria-pressed', String(myR === e)); b.onclick = () => { socket.emit('msg:react', { id: m.id, emoji: e }); mvClosePop(); toast('Reacted ' + e); }; bar.append(b); }
+    const more = el('button', 'more', '＋'); more.setAttribute('aria-label', 'More reactions');
+    more.onclick = () => { const g = el('div', 'emoji-grid'); g.style.width = '300px'; for (const e of MORE_EMOJI) { const b = el('button', null, e); b.onclick = () => { socket.emit('msg:react', { id: m.id, emoji: e }); mvClosePop(); toast('Reacted ' + e); }; g.append(b); } bar.replaceWith(g); };
+    bar.append(more); p.append(bar);
+  });
+};
+$('#mvMore').onclick = () => {
+  const m = mvCurrent(); if (!m) return; if (MV.pop) return mvClosePop();
+  mvPop((p) => {
+    const list = el('div', 'menu-list');
+    const item = (icon, label, fn, warn) => { const b = el('button'); if (warn) b.className = 'warn'; b.innerHTML = ICON[icon]; b.append(el('span', null, label)); b.onclick = () => { mvClosePop(); fn(); }; list.append(b); };
+    if (m.from === me.id) item('info', 'Message info', () => msgInfo(m));
+    if (m.type === 'image') item('copy', 'Copy image', () => copyImage(m));
+    item('share', 'Share', () => shareMsg(m));
+    item('open', 'Open with', () => openWith(m));
+    item('status', 'Add to my status', () => toStatus(m));
+    item('select', 'Show in chat', () => { const id = m.id; closeMediaView(); scrollToMsg(id); });
+    item('del', 'Delete', () => askDelete([m.id]), true);
+    p.append(list);
+  });
+};
+$('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.closest('.mv-pop') && !e.target.closest('#mvReact,#mvMore')) mvClosePop(); });
+
+// zoom with wheel, double-click, pinch; drag to move a zoomed photo; swipe to change
+(function wireViewer() {
+  const stage = $('#mvStage'); const pts = new Map(); let pinch0 = 0, scale0 = 1, swipeX = null;
+  stage.addEventListener('wheel', (e) => { if (!$('#mvStage img')) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
+  stage.addEventListener('dblclick', (e) => { if (e.target.tagName !== 'IMG') return; MV.scale = MV.scale > 1 ? 1 : 2.5; applyZoom(); });
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.tagName !== 'IMG') return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); e.target.setPointerCapture(e.pointerId);
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); scale0 = MV.scale; }
+    else if (MV.scale > 1) MV.drag = { x: e.clientX - MV.x, y: e.clientY - MV.y };
+    else swipeX = e.clientX;
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 && pinch0) { const [a, b] = [...pts.values()]; MV.scale = Math.max(1, Math.min(5, scale0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch0)); applyZoom(); }
+    else if (MV.drag) { MV.x = e.clientX - MV.drag.x; MV.y = e.clientY - MV.drag.y; applyZoom(); }
+  });
+  const up = (e) => {
+    if (swipeX != null && pts.size === 1 && MV.scale <= 1) { const dx = e.clientX - swipeX; if (Math.abs(dx) > 60) mvStep(dx < 0 ? 1 : -1); }
+    pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; if (!pts.size) { MV.drag = null; swipeX = null; }
+  };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  document.addEventListener('keydown', (e) => {
+    if ($('#mediaView').hidden || !$('#moreSheet').hidden) return;
+    if (e.key === 'Escape') { MV.pop ? mvClosePop() : closeMediaView(); }
+    else if (e.key === 'ArrowRight') mvStep(1); else if (e.key === 'ArrowLeft') mvStep(-1);
+    else if (e.key === '+' || e.key === '=') zoomBy(1.5); else if (e.key === '-') zoomBy(1 / 1.5);
+  });
+})();
 
 // ---------------- go ----------------
 setMode('login');
