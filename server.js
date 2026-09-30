@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -171,7 +171,7 @@ async function translate(text, from, to) {
   return out;
 }
 const userById = (id) => db.users.find((u) => u.id === id);
-const nameOf = (id) => userById(id)?.name || 'Deleted user';
+const nameOf = (id) => (typeof id === 'string' && id.startsWith('g:') ? '👥 ' + (db.groups.find((g) => g.id === id.slice(2))?.name || 'Group') : userById(id)?.name || 'Deleted user');
 const sign = (u) => jwt.sign({ sub: u.id, tv: u.tokenVersion || 0 }, JWT_SECRET, { expiresIn: '30d' });
 function findUserByToken(token) {
   const p = jwt.verify(token, JWT_SECRET);
@@ -228,6 +228,7 @@ let liveTimer = null;
 function liveNow() {
   let inCall = 0, ringing = 0;
   for (const c of activeCalls.values()) c.status === 'answered' ? inCall++ : ringing++;
+  for (const c of gcalls.values()) inCall += c.parts.size;
   return { online: online.size, inCall, ringing, ts: now() };
 }
 function pushLive() {
@@ -391,12 +392,17 @@ app.get('/api/users', auth, (req, res) => {
     if (!u || u.id === me || u.status === 'blocked') continue;
     list.push(contactView(req.user, u, convo[id] || { lastMessage: null, unread: 0 }));
   }
-  res.json(list);
+  res.json([...list, ...groupsFor(req.user)]);
 });
 
 // ---------- Call history (each customer sees only their own calls) ----------
 function hasCall(a, b) { return db.calls.some((c) => (c.from === a && c.to === b) || (c.from === b && c.to === a)); }
 function callView(meUser, c) {
+  if (c.group) {
+    const g = groupById(c.group), joined = (c.participants || []).includes(meUser.id);
+    return { id: c.id, kind: c.kind, status: joined ? c.status : 'missed', direction: c.from === meUser.id ? 'out' : 'in', startedAt: c.startedAt, duration: joined ? c.duration || 0 : 0, group: true, people: (c.participants || []).length,
+      other: g ? { id: 'g:' + g.id, isGroup: true, name: g.name, displayName: g.name, phone: '', photo: !!g.photo, photoV: g.photoV || 0 } : { id: 'g:' + c.group, name: 'Group', displayName: 'Group', phone: '', deleted: true } };
+  }
   const outgoing = c.from === meUser.id;
   const otherId = outgoing ? c.to : c.from;
   const u = userById(otherId);
@@ -411,7 +417,7 @@ app.get('/api/calls', auth, (req, res) => {
   const out = [];
   for (let i = db.calls.length - 1; i >= 0 && out.length < 200; i--) {
     const c = db.calls[i];
-    if ((c.from === me || c.to === me) && c.endedAt && c.startedAt > since) out.push(callView(req.user, c));
+    if ((c.from === me || c.to === me || (c.group && gMember(groupById(c.group), me))) && c.endedAt && c.startedAt > since) out.push(callView(req.user, c));
   }
   res.json(out);
 });
@@ -486,6 +492,12 @@ app.post('/api/block/:id', auth, (req, res) => {
 
 app.get('/api/messages/:userId', auth, (req, res) => {
   const me = req.user.id, other = req.params.userId;
+  const gid = gidOf(other);
+  if (gid) {
+    if (!gMember(groupById(gid), me)) return res.status(404).json({ error: 'Group not found.' });
+    const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
+    return res.json(db.messages.filter((m) => m.group === gid && !hidden.has(m.id) && m.ts > since).slice(-300));
+  }
   const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
   res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since).slice(-300));
 });
@@ -647,6 +659,13 @@ const chatFileStream = (id, start, end) => (chatBucket ? chatBucket.openDownload
 
 // Checks both people and the blocks; returns an error text or null
 function canMessage(fromUser, to) {
+  const gid = gidOf(to);
+  if (gid) {
+    const g = groupById(gid);
+    if (!gMember(g, fromUser.id)) return { error: 'You are not a member of this group.' };
+    if (g.settings.onlyAdminsMessage && !gAdmin(g, fromUser.id)) return { error: 'Only admins can send messages in this group.' };
+    return { target: { id: 'g:' + gid, name: g.name, isGroup: true }, group: g };
+  }
   const target = userById(to);
   if (!target || to === fromUser.id || target.status === 'blocked') return { error: 'Message not sent.' };
   if (blockedOf(fromUser).includes(to)) return { error: 'You blocked this person. Unblock them to send messages.' };
@@ -654,6 +673,15 @@ function canMessage(fromUser, to) {
   return { target };
 }
 function deliverMessage(fromUser, target, fields, exceptSocketId) {
+  if (target.isGroup) {
+    const g = groupById(target.id.slice(2));
+    const anyOn = g.members.some((x) => x.id !== fromUser.id && isOnline(x.id));
+    const m = { id: newId(), from: fromUser.id, to: target.id, group: g.id, ts: now(), status: anyOn ? 'delivered' : 'sent', readBy: {}, type: 'text', text: '', ...fields };
+    db.messages.push(m); save();
+    (exceptSocketId ? io.to('grp:' + g.id).except(exceptSocketId) : io.to('grp:' + g.id)).emit('msg:new', m);
+    if (m.type !== 'system') feed('message', `${fromUser.name} → group ${g.name}: ${m.type === 'text' ? 'message' : m.type}`);
+    return m;
+  }
   const online2 = isOnline(target.id);
   const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: online2 ? 'delivered' : 'sent', ...(online2 ? { deliveredAt: now() } : {}), type: 'text', text: '', ...fields };
   db.messages.push(m); save();
@@ -702,7 +730,7 @@ app.post('/api/chats/delete', auth, (req, res) => {
   if (req.body?.removeContacts) req.user.contacts = contactsOf(req.user).filter((c) => !ids.includes(c.id));
   save(); res.json({ ok: true });
 });
-app.get('/api/prefs', auth, (req, res) => res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [] }));
+app.get('/api/prefs', auth, (req, res) => res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [], muted: req.user.muted || [] }));
 app.put('/api/prefs', auth, (req, res) => {
   const b = req.body || {};
   if (Array.isArray(b.quickReplies)) {
@@ -712,9 +740,10 @@ app.put('/api/prefs', auth, (req, res) => {
     req.user.lists = b.lists.slice(0, 20).map((l) => ({ id: String(l?.id || newId()).slice(0, 40), name: String(l?.name || '').trim().slice(0, 30), members: (Array.isArray(l?.members) ? l.members : []).map(String).slice(0, 500) })).filter((l) => l.name);
   }
   if (Array.isArray(b.favs)) req.user.favs = b.favs.map(String).slice(0, 500);
+  if (Array.isArray(b.muted)) req.user.muted = b.muted.map(String).slice(0, 500);
   if (Array.isArray(b.stickers)) req.user.stickers = b.stickers.map(String).filter((x) => /^[\w-]{8,64}$/.test(x)).slice(-60);
   save();
-  res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [] });
+  res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [], muted: req.user.muted || [] });
 });
 // GIF search through Tenor (set TENOR_KEY, or enable "Tenor API" on the same Google key)
 const TENOR_KEY = process.env.TENOR_KEY || process.env.GOOGLE_TRANSLATE_KEY || '';
@@ -820,7 +849,7 @@ app.post('/api/status/from-message', auth, async (req, res) => {
   db.statuses.push(st); save(); notifyStatus(req.user);
   res.json({ ok: true });
 });
-function emitUpdate(m) { for (const id of [m.from, m.to]) io.to('user:' + id).emit('msg:update', m); }
+function emitUpdate(m) { if (m.group) return io.to('grp:' + m.group).emit('msg:update', m); for (const id of [m.from, m.to]) io.to('user:' + id).emit('msg:update', m); }
 
 app.post('/api/chat/upload', auth, express.raw({ type: () => true, limit: '16mb' }), async (req, res) => {
   const ok = canMessage(req.user, String(req.query.to || ''));
@@ -843,7 +872,7 @@ app.get('/api/chat/file/:id', (req, res) => {
   let viewer = null;
   try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* invalid */ }
   if (!viewer) return res.status(401).end();
-  const m = db.messages.find((x) => x.file && x.file.id === req.params.id && (x.from === viewer.id || x.to === viewer.id));
+  const m = db.messages.find((x) => x.file && x.file.id === req.params.id && (x.from === viewer.id || x.to === viewer.id || (x.group && gMember(groupById(x.group), viewer.id))));
   if (!m) return res.status(404).end();
   const size = m.file.size;
   let start = 0, end = size - 1, code = 200;
@@ -863,6 +892,147 @@ app.get('/api/chat/file/:id', (req, res) => {
   const st = chatFileStream(m.file.id, start, end);
   st.on('error', () => res.destroy());
   st.pipe(res);
+});
+
+// ---------- Groups: messages, members, admins, invite links, group photo ----------
+const GROUP_MAX = 1024;          // members per group
+const GCALL_MAX = 8;             // people in one group call (each phone sends video to every other)
+const gidOf = (to) => (typeof to === 'string' && to.startsWith('g:') ? to.slice(2) : null);
+const groupById = (id) => db.groups.find((g) => g.id === id);
+const gMember = (g, uid) => !!g && g.members.some((x) => x.id === uid);
+const gAdmin = (g, uid) => !!g && g.members.some((x) => x.id === uid && x.role === 'admin');
+const gcalls = new Map(); // groupId -> live group call
+function groupView(viewer, g, extra = {}) {
+  const saved = new Map(contactsOf(viewer).map((c) => [c.id, c.name]));
+  const me2 = g.members.find((x) => x.id === viewer.id);
+  const c = gcalls.get(g.id);
+  return {
+    id: 'g:' + g.id, isGroup: true, name: g.name, displayName: g.name, phone: '', description: g.description || '',
+    photo: !!g.photo, photoV: g.photoV || 0, memberCount: g.members.length, myRole: me2 ? me2.role : null,
+    members: g.members.map((x) => { const u = userById(x.id); return { id: x.id, name: u ? saved.get(x.id) || u.name : 'Deleted user', phone: u ? u.phone : '', role: x.role, lang: u ? u.lang || null : null }; }),
+    settings: g.settings, createdBy: g.createdBy, createdAt: g.createdAt, inContacts: true, online: false,
+    ...(me2 && me2.role === 'admin' ? { invite: g.invite } : {}),
+    activeCall: c ? { id: c.id, kind: c.kind, count: c.parts.size } : null,
+    lastMessage: null, unread: 0, ...extra,
+  };
+}
+function groupsFor(viewer) {
+  const mine = db.groups.filter((g) => gMember(g, viewer.id));
+  if (!mine.length) return [];
+  const by = {}, hidden = new Set(viewer.hiddenMsgs || []), cleared = viewer.clearedChats || {};
+  for (const g of mine) by['g:' + g.id] = { lastMessage: null, unread: 0 };
+  for (const m of db.messages) {
+    const b = m.group && by['g:' + m.group]; if (!b || hidden.has(m.id) || m.ts <= (cleared['g:' + m.group] || 0)) continue;
+    b.lastMessage = m; if (m.from !== viewer.id && m.type !== 'system' && !(m.readBy || {})[viewer.id]) b.unread++;
+  }
+  return mine.map((g) => groupView(viewer, g, by['g:' + g.id]));
+}
+const joinGroupRoom = (uid, gid) => io.in('user:' + uid).socketsJoin('grp:' + gid);
+const leaveGroupRoom = (uid, gid) => io.in('user:' + uid).socketsLeave('grp:' + gid);
+function groupChanged(g, extraIds = []) { io.to('grp:' + g.id).emit('group:update', { id: 'g:' + g.id }); for (const id of extraIds) io.to('user:' + id).emit('group:update', { id: 'g:' + g.id }); }
+function sysMsg(g, actor, text) { return deliverMessage(actor, { id: 'g:' + g.id, name: g.name, isGroup: true }, { type: 'system', text }, null); }
+function groupFor(req, res, needAdmin) {
+  const g = groupById(req.params.id);
+  if (!g || !gMember(g, req.user.id)) { res.status(404).json({ error: 'Group not found.' }); return null; }
+  if (needAdmin && !gAdmin(g, req.user.id)) { res.status(403).json({ error: 'Only group admins can do this.' }); return null; }
+  return g;
+}
+const inviteCode = () => crypto.randomBytes(9).toString('base64url');
+function canAddTo(adder, uid) { const u = userById(uid); return u && u.status !== 'blocked' && uid !== adder.id && !blockedOf(u).includes(adder.id); }
+
+app.post('/api/groups', auth, (req, res) => {
+  const name = String(req.body?.name || '').trim().slice(0, 60);
+  if (!name) return res.status(400).json({ error: 'Give the group a name.' });
+  const ids = [...new Set((Array.isArray(req.body?.members) ? req.body.members : []).map(String))].filter((id) => canAddTo(req.user, id)).slice(0, GROUP_MAX - 1);
+  if (!ids.length) return res.status(400).json({ error: 'Add at least one member.' });
+  const g = { id: newId(), name, description: String(req.body?.description || '').trim().slice(0, 500), createdBy: req.user.id, createdAt: now(),
+    members: [{ id: req.user.id, role: 'admin', joinedAt: now() }, ...ids.map((id) => ({ id, role: 'member', joinedAt: now(), addedBy: req.user.id }))],
+    settings: { onlyAdminsMessage: false, onlyAdminsEdit: false }, invite: inviteCode() };
+  db.groups.push(g); save();
+  for (const x of g.members) joinGroupRoom(x.id, g.id);
+  sysMsg(g, req.user, req.user.name + ' created the group "' + name + '"');
+  groupChanged(g);
+  res.json(groupView(req.user, g));
+});
+app.get('/api/groups/:id', auth, (req, res) => { const g = groupFor(req, res); if (g) res.json(groupView(req.user, g)); });
+app.put('/api/groups/:id', auth, (req, res) => {
+  const g = groupFor(req, res); if (!g) return;
+  const admin = gAdmin(g, req.user.id), b = req.body || {};
+  if ((b.name !== undefined || b.description !== undefined) && g.settings.onlyAdminsEdit && !admin) return res.status(403).json({ error: 'Only admins can edit group info.' });
+  if (b.name !== undefined) { const n = String(b.name).trim().slice(0, 60); if (n && n !== g.name) { g.name = n; sysMsg(g, req.user, req.user.name + ' changed the group name to "' + n + '"'); } }
+  if (b.description !== undefined) { g.description = String(b.description).trim().slice(0, 500); sysMsg(g, req.user, req.user.name + ' changed the group description'); }
+  if (b.settings && admin) {
+    for (const k of ['onlyAdminsMessage', 'onlyAdminsEdit']) if (typeof b.settings[k] === 'boolean' && g.settings[k] !== b.settings[k]) {
+      g.settings[k] = b.settings[k];
+      sysMsg(g, req.user, req.user.name + (k === 'onlyAdminsMessage' ? (b.settings[k] ? ' allowed only admins to send messages' : ' allowed all members to send messages') : (b.settings[k] ? ' allowed only admins to edit group info' : ' allowed all members to edit group info')));
+    }
+  }
+  save(); groupChanged(g); res.json(groupView(req.user, g));
+});
+app.post('/api/groups/:id/members', auth, (req, res) => {
+  const g = groupFor(req, res, true); if (!g) return;
+  const ids = [...new Set((Array.isArray(req.body?.ids) ? req.body.ids : []).map(String))].filter((id) => canAddTo(req.user, id) && !gMember(g, id));
+  if (g.members.length + ids.length > GROUP_MAX) return res.status(400).json({ error: 'A group can have up to ' + GROUP_MAX + ' members.' });
+  for (const id of ids) { g.members.push({ id, role: 'member', joinedAt: now(), addedBy: req.user.id }); joinGroupRoom(id, g.id); }
+  if (ids.length) sysMsg(g, req.user, req.user.name + ' added ' + ids.map((id) => userById(id).name).join(', '));
+  save(); groupChanged(g); res.json(groupView(req.user, g));
+});
+app.delete('/api/groups/:id/members/:uid', auth, (req, res) => {
+  const g = groupFor(req, res, true); if (!g) return;
+  const uid = req.params.uid; if (!gMember(g, uid) || uid === req.user.id) return res.status(400).json({ error: 'Not a member.' });
+  g.members = g.members.filter((x) => x.id !== uid); leaveGroupRoom(uid, g.id);
+  sysMsg(g, req.user, req.user.name + ' removed ' + (userById(uid)?.name || 'a member'));
+  save(); groupChanged(g, [uid]); res.json(groupView(req.user, g));
+});
+app.post('/api/groups/:id/admin', auth, (req, res) => {
+  const g = groupFor(req, res, true); if (!g) return;
+  const x = g.members.find((y) => y.id === String(req.body?.uid)); if (!x) return res.status(400).json({ error: 'Not a member.' });
+  x.role = req.body?.admin ? 'admin' : 'member';
+  if (!g.members.some((y) => y.role === 'admin')) { x.role = 'admin'; return res.status(400).json({ error: 'A group needs at least one admin.' }); }
+  sysMsg(g, req.user, (userById(x.id)?.name || 'A member') + (x.role === 'admin' ? ' is now an admin' : ' is no longer an admin'));
+  save(); groupChanged(g); res.json(groupView(req.user, g));
+});
+app.post('/api/groups/:id/leave', auth, (req, res) => {
+  const g = groupFor(req, res); if (!g) return;
+  sysMsg(g, req.user, req.user.name + ' left');
+  g.members = g.members.filter((x) => x.id !== req.user.id); leaveGroupRoom(req.user.id, g.id);
+  if (g.members.length && !g.members.some((x) => x.role === 'admin')) g.members.sort((a, b) => a.joinedAt - b.joinedAt)[0].role = 'admin';
+  if (!g.members.length) db.groups = db.groups.filter((x) => x.id !== g.id);
+  save(); groupChanged(g, [req.user.id]); res.json({ ok: true });
+});
+app.post('/api/groups/:id/invite', auth, (req, res) => { const g = groupFor(req, res, true); if (!g) return; g.invite = inviteCode(); save(); res.json(groupView(req.user, g)); });
+app.post('/api/groups/join', auth, (req, res) => {
+  const code = String(req.body?.code || ''); const g = code.length > 8 && db.groups.find((x) => x.invite === code);
+  if (!g) return res.status(404).json({ error: 'This invite link is not valid any more.' });
+  if (!gMember(g, req.user.id)) {
+    if (g.members.length >= GROUP_MAX) return res.status(400).json({ error: 'This group is full.' });
+    g.members.push({ id: req.user.id, role: 'member', joinedAt: now(), via: 'link' }); joinGroupRoom(req.user.id, g.id);
+    sysMsg(g, req.user, req.user.name + ' joined using the invite link'); save(); groupChanged(g);
+  }
+  res.json(groupView(req.user, g));
+});
+app.get('/api/groups/preview/:code', auth, (req, res) => {
+  const g = db.groups.find((x) => x.invite === req.params.code);
+  if (!g) return res.status(404).json({ error: 'This invite link is not valid any more.' });
+  res.json({ name: g.name, memberCount: g.members.length, description: g.description || '', member: gMember(g, req.user.id) });
+});
+app.post('/api/groups/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
+  const g = groupFor(req, res); if (!g) return;
+  if (g.settings.onlyAdminsEdit && !gAdmin(g, req.user.id)) return res.status(403).json({ error: 'Only admins can change the group photo.' });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a photo.' });
+  const old = g.photo, id = newId();
+  try { await saveChatFile(id, req.body, String(req.headers['content-type']).split(';')[0]); } catch { return res.status(500).json({ error: 'Could not save the photo.' }); }
+  Object.assign(g, { photo: id, photoSize: req.body.length, photoMime: String(req.headers['content-type']).split(';')[0], photoV: now() });
+  if (old) deleteChatFile(old);
+  sysMsg(g, req.user, req.user.name + ' changed the group photo'); save(); groupChanged(g);
+  res.json(groupView(req.user, g));
+});
+app.get('/api/groups/:id/photo', (req, res) => {
+  let viewer = null; try { viewer = findUserByToken(String(req.query.t || '')); } catch { /* bad token */ }
+  const g = groupById(req.params.id);
+  if (!viewer || !g || !g.photo || !gMember(g, viewer.id)) return res.status(404).end();
+  res.setHeader('Content-Type', g.photoMime); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(g.photo, 0, g.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
 });
 
 // ---------- Admin API ----------
@@ -1050,6 +1220,8 @@ app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
   kick(u.id, 'This account was deleted.');
   const removedWatchers = watchersOf(u.id);
   db.users = db.users.filter((x) => x.id !== u.id);
+  for (const g of db.groups) g.members = g.members.filter((x) => x.id !== u.id);
+  db.groups = db.groups.filter((g) => g.members.length);
   for (const x of db.users) if (x.contacts) x.contacts = x.contacts.filter((c) => c.id !== u.id);
   for (const m of db.messages) if (m.file && (m.from === u.id || m.to === u.id)) deleteChatFile(m.file.id);
   db.messages = db.messages.filter((m) => m.from !== u.id && m.to !== u.id);
@@ -1188,6 +1360,7 @@ io.on('connection', (socket) => {
   const me = socket.user.id;
   const room = (id) => 'user:' + id;
   socket.join(room(me));
+  for (const g of db.groups) if (gMember(g, me)) socket.join('grp:' + g.id);
 
   const wasOnline = isOnline(me);
   online.set(me, (online.get(me) || 0) + 1);
@@ -1243,7 +1416,7 @@ io.on('connection', (socket) => {
     }
     if (p?.replyTo) {
       const q = db.messages.find((x) => x.id === String(p.replyTo));
-      if (q && ((q.from === me && q.to === ok.target.id) || (q.from === ok.target.id && q.to === me))) {
+      if (q && (ok.group ? q.group === ok.group.id : ((q.from === me && q.to === ok.target.id) || (q.from === ok.target.id && q.to === me)))) {
         fields.replyTo = { id: q.id, from: q.from, type: q.type || 'text', text: String(q.deleted ? '' : q.text || q.file?.name || q.contact?.name || q.poll?.question || q.event?.title || '').slice(0, 120) };
       }
     }
@@ -1282,7 +1455,7 @@ io.on('connection', (socket) => {
     for (const id of ids) {
       const m = myMsg(id); if (!m) continue;
       if (p.everyone) {
-        if (m.from !== me || m.deleted || now() - m.ts > 48 * 3600 * 1000) continue;
+        if ((m.from !== me && !(m.group && gAdmin(groupById(m.group), me))) || m.deleted || now() - m.ts > 48 * 3600 * 1000) continue;
         const fileId = m.file && m.file.id;
         for (const k of ['text', 'file', 'contact', 'poll', 'event', 'location', 'reactions', 'replyTo', 'forwarded']) delete m[k];
         Object.assign(m, { type: 'deleted', deleted: true, pinned: false, text: '' });
@@ -1333,7 +1506,7 @@ io.on('connection', (socket) => {
   });
 
   // Poll votes, event replies, live location updates
-  const myMsg = (id) => { const m = db.messages.find((x) => x.id === String(id || '')); return m && (m.from === me || m.to === me) ? m : null; };
+  const myMsg = (id) => { const m = db.messages.find((x) => x.id === String(id || '')); return m && (m.from === me || m.to === me || (m.group && gMember(groupById(m.group), me))) ? m : null; };
   socket.on('poll:vote', (p) => {
     const m = myMsg(p?.id); if (!m || m.type !== 'poll') return;
     let picks = (Array.isArray(p.options) ? p.options : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < m.poll.options.length);
@@ -1363,6 +1536,21 @@ io.on('connection', (socket) => {
 
   socket.on('msg:read', (p) => {
     const from = String(p?.from || '');
+    const gid = gidOf(from);
+    if (gid) {
+      const g = groupById(gid); if (!gMember(g, me)) return;
+      const bySender = {};
+      for (const m of db.messages) {
+        if (m.group !== gid || m.from === me || m.type === 'system') continue;
+        m.readBy = m.readBy || {};
+        if (m.readBy[me]) continue;
+        m.readBy[me] = now();
+        if (m.status !== 'read' && g.members.every((x) => x.id === m.from || m.readBy[x.id])) { m.status = 'read'; m.readAt = now(); (bySender[m.from] = bySender[m.from] || []).push(m.id); }
+      }
+      save();
+      for (const [s2, ids] of Object.entries(bySender)) io.to(room(s2)).emit('msg:status', { ids, status: 'read' });
+      return;
+    }
     const ids = [];
     for (const m of db.messages) if (m.from === from && m.to === me && m.status !== 'read') { m.status = 'read'; m.readAt = now(); if (!m.deliveredAt) m.deliveredAt = m.readAt; ids.push(m.id); }
     if (ids.length) { save(); io.to(room(from)).emit('msg:status', { ids, status: 'read' }); }
@@ -1439,6 +1627,58 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:end', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'missed'); io.to(room(p.to)).emit('call:ended', clean(p)); });
+
+  // ----- group calls (everyone connects to everyone; up to GCALL_MAX people) -----
+  function gcallState(c) { io.to('grp:' + c.gid).emit('gcall:state', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, participants: [...c.parts.keys()] }); }
+  function gcallJoin(c) {
+    const peers = [...c.parts.keys()].filter((x) => x !== me);
+    c.parts.set(me, now()); c.ever.add(me); socket.join('gc:' + c.id); socket.gcall = c.id;
+    socket.emit('gcall:joined', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, peers });
+    gcallState(c); pushLive();
+  }
+  function gcallLeave(callId) {
+    const c = [...gcalls.values()].find((x) => x.id === callId); if (!c || !c.parts.has(me)) return;
+    c.parts.delete(me); socket.leave('gc:' + c.id); socket.gcall = null;
+    io.to('gc:' + c.id).emit('gcall:peer-left', { callId: c.id, id: me });
+    if (!c.parts.size) {
+      gcalls.delete(c.gid);
+      const rec = { id: c.id, from: c.by, to: 'g:' + c.gid, group: c.gid, kind: c.kind, startedAt: c.startedAt, endedAt: now(), participants: [...c.ever] };
+      if (c.ever.size > 1) Object.assign(rec, { status: 'completed', answeredAt: c.startedAt, duration: Math.round((now() - c.startedAt) / 1000) }); else Object.assign(rec, { status: 'missed', duration: 0 });
+      db.calls.push(rec); save();
+      const g = groupById(c.gid);
+      if (g) for (const x of g.members) { const u = userById(x.id); if (u) io.to('user:' + x.id).emit('call:log', callView(u, rec)); }
+      io.to('grp:' + c.gid).emit('gcall:state', { gid: 'g:' + c.gid, callId: c.id, participants: [] });
+      feed('call', 'Group ' + c.kind + ' call in ' + (g ? g.name : 'a group') + ': ' + c.ever.size + ' people');
+    } else gcallState(c);
+    pushLive();
+  }
+  socket.on('gcall:start', (p) => {
+    const g = groupById(gidOf(String(p?.gid || ''))); if (!gMember(g, me)) return;
+    if (socket.gcall) gcallLeave(socket.gcall);
+    let c = gcalls.get(g.id);
+    if (!c) {
+      c = { id: newId(), gid: g.id, kind: p.kind === 'video' ? 'video' : 'voice', startedAt: now(), by: me, parts: new Map(), ever: new Set() };
+      gcalls.set(g.id, c);
+      socket.to('grp:' + g.id).emit('gcall:ring', { gid: 'g:' + g.id, callId: c.id, kind: c.kind, from: me, fromName: socket.user.name, groupName: g.name });
+    }
+    if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id });
+    gcallJoin(c);
+  });
+  socket.on('gcall:join', (p) => {
+    const g = groupById(gidOf(String(p?.gid || ''))); const c = g && gcalls.get(g.id);
+    if (!c || !gMember(g, me)) return socket.emit('gcall:ended', { callId: p?.callId });
+    if (c.parts.has(me)) return;
+    if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id });
+    if (socket.gcall) gcallLeave(socket.gcall);
+    gcallJoin(c);
+  });
+  socket.on('gcall:signal', (p) => {
+    const c = [...gcalls.values()].find((x) => x.id === p?.callId);
+    if (!c || !c.parts.has(me) || !c.parts.has(String(p.to))) return;
+    io.to('user:' + p.to).emit('gcall:signal', { callId: c.id, from: me, data: p.data });
+  });
+  socket.on('gcall:leave', (p) => gcallLeave(String(p?.callId || '')));
+  socket.on('disconnect', () => { if (socket.gcall) gcallLeave(socket.gcall); });
 
   socket.on('disconnect', () => {
     const n = (online.get(me) || 1) - 1;

@@ -546,6 +546,39 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .gps-btn{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:13px}
 .gps-btn[aria-pressed="true"]{background:var(--leaf)}
 .gps-chip{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 24px);background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:5px 12px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ---------- Groups & group calls ---------- */
+.avatar.gimg{background-size:cover!important;background-position:center;color:transparent}
+.gsender{font-size:12.5px;font-weight:700;margin-bottom:2px}
+.sysmsg{align-self:center;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:12.5px;border-radius:10px;padding:4px 12px;margin:6px 0;max-width:85%;text-align:center}
+.gcall-join{padding:0 14px;height:40px;border-radius:999px;background:var(--leaf);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+.gi-head{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px 6px;text-align:center}
+.gi-head .avatar{width:96px;height:96px;font-size:32px}
+.gi-head h3{margin:0;font-size:20px}
+.gi-head small{color:var(--muted)}
+.role-tag{font-size:11px;font-weight:700;color:var(--leaf);border:1px solid var(--leaf);border-radius:6px;padding:0 6px;margin-left:6px}
+.mem-row{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.mem-row .txt{flex:1;min-width:0}
+.mem-row .txt b{display:block}
+.mem-row .txt small{color:var(--muted)}
+.gc{position:fixed;inset:0;z-index:31;background:#0B1419;color:#fff;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(14px + env(safe-area-inset-bottom,0px))}
+.gc-head{display:flex;align-items:center;gap:10px;padding:4px 6px 10px}
+.gc-head .who{flex:1;min-width:0}
+.gc-head b{display:block;font-size:17px}
+.gc-head small{opacity:.75}
+.gc-grid{flex:1;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));grid-auto-rows:minmax(150px,1fr);min-height:0;overflow-y:auto}
+.gc-tile{position:relative;background:#1C2A31;border-radius:14px;overflow:hidden;display:grid;place-items:center}
+.gc-tile video{width:100%;height:100%;object-fit:cover}
+.gc-tile.me video{transform:scaleX(-1)}
+.gc-tile .avatar{width:84px;height:84px;font-size:28px;position:absolute}
+.gc-tile.has-video .avatar{display:none}
+.gc-tile .nm{position:absolute;left:10px;bottom:8px;background:rgba(0,0,0,.55);border-radius:8px;padding:2px 8px;font-size:13px}
+.gc-tile.connecting .nm::after{content:" · connecting…";opacity:.7}
+.gc-bar{display:flex;justify-content:center;gap:16px;padding-top:12px}
+.gring{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:32;width:min(420px,calc(100vw - 20px));background:var(--peacock);color:#fff;border-radius:18px;padding:14px;box-shadow:0 12px 32px rgba(0,0,0,.3);display:flex;gap:12px;align-items:center}
+.gring .who{flex:1;min-width:0}
+.gring .who b{display:block}
+.gring button{padding:10px 14px;border-radius:999px;font-weight:700;color:#fff}
+.gring .no{background:var(--chili)}.gring .yes{background:var(--leaf)}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -998,7 +1031,9 @@ function avatar(user, size = '', withDot = false) {
   el.className = 'avatar ' + size;
   let h = 0; for (const c of user.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   el.style.background = palette[h % palette.length];
-  el.textContent = user.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  el.textContent = String(user.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  if (user.isGroup && user.photo) { el.classList.add('gimg'); el.style.backgroundImage = 'url("' + groupPhotoUrl(user) + '")'; }
+  else if (user.isGroup && !user.photo) el.textContent = '👥';
   if (withDot && user.online) { const d = document.createElement('span'); d.className = 'dot'; el.appendChild(d); }
   return el;
 }
@@ -1058,6 +1093,7 @@ async function start() {
   loadCalls();
   loadStatus();
   loadPrefs();
+  setTimeout(handleJoinLink, 800);
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -1066,6 +1102,7 @@ async function start() {
 
 function connectSocket() {
   socket = io({ auth: { token } });
+  socket_ready_hooks.forEach((f) => f());
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
   socket.on('announcement', showNotice);
@@ -1156,7 +1193,8 @@ function renderContacts() {
     const time = document.createElement('span'); time.className = 'c-time'; time.textContent = u.lastMessage ? fmtTime(u.lastMessage.ts) : '';
     top.append(name, time);
     const last = document.createElement('div'); last.className = 'c-last';
-    last.textContent = u.lastMessage ? (u.lastMessage.from === me.id ? 'You: ' : '') + previewText(u.lastMessage) : (u.online ? 'Online' : u.phone);
+    last.textContent = u.lastMessage ? (u.lastMessage.type === 'system' ? u.lastMessage.text : (u.lastMessage.from === me.id ? 'You: ' : u.isGroup ? memberName(u, u.lastMessage.from) + ': ' : '') + previewText(u.lastMessage)) : (u.isGroup ? u.memberCount + ' members' : u.online ? 'Online' : u.phone);
+    if (u.isGroup && muted(u.id)) name.append(el('span', 'fav-star', '🔕'));
     body.append(top, last);
     b.append(avatar(u, '', true), body);
     if (u.unread) { const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = u.unread; b.append(bd); }
@@ -1192,6 +1230,13 @@ function renderChatHead() {
   const a = $('#chatAvatar'); a.innerHTML = ''; a.append(avatar(u, 'sm'));
   $('#chatName').textContent = nameOf(u);
   $('#strangerBar').hidden = !!u.inContacts || !!u.blocked;
+  let jb = $('#gJoinBtn'); if (jb) jb.remove();
+  if (u.isGroup) {
+    const s0 = $('#chatStatus'); s0.classList.remove('on');
+    s0.textContent = u.members.map((x) => (x.id === me.id ? 'You' : x.name)).slice(0, 12).join(', ') + (u.memberCount > 12 ? ' +' + (u.memberCount - 12) : '');
+    if (u.activeCall && !GC.id) { jb = el('button', 'gcall-join'); jb.id = 'gJoinBtn'; jb.textContent = (u.activeCall.kind === 'video' ? '🎥' : '📞') + ' Join call · ' + u.activeCall.count; jb.onclick = () => joinGroupCall(u.id, u.activeCall.id, u.activeCall.kind); $('#voiceBtn').before(jb); }
+    return;
+  }
   const s = $('#chatStatus'); s.textContent = (u.online ? 'Online' : u.phone) + (u.lang && LANGS[u.lang] ? ' · ' + LANGS[u.lang].native : ''); s.classList.toggle('on', !!u.online);
 }
 function renderMessages() {
@@ -1215,16 +1260,18 @@ function markRead() {
 document.addEventListener('visibilitychange', () => { if (activeId) markRead(); });
 
 async function onMessage(m) {
-  const other = m.from === me.id ? m.to : m.from;
-  if (!userById(other)) {
+  const other = m.group ? 'g:' + m.group : m.from === me.id ? m.to : m.from;
+  if (m.group && !userById(other)) { await reloadUsers(); }
+  else if (!userById(other)) {
     try { const nu = await api('/api/users/' + other); if (!userById(other)) users.push(nu); } catch { return; }
   }
   if (messagesCache[other] && !messagesCache[other].some((x) => x.id === m.id)) messagesCache[other].push(m);
   const u = userById(other);
-  if (u) { u.lastMessage = m; if (m.from !== me.id) u.unread = (u.unread || 0) + 1; }
+  if (u) { u.lastMessage = m; if (m.from !== me.id && m.type !== 'system') u.unread = (u.unread || 0) + 1; }
   renderContacts();
   if (other === activeId) { renderMessages(); markRead(); }
-  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? nameOf(u) : 'New message', previewText(m));
+  if (m.type === 'system' || muted(other)) return;
+  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? nameOf(u) : 'New message', (m.group ? memberName(u, m.from) + ': ' : '') + previewText(m));
   if (m.from !== me.id) messageSound();
 }
 function notify(title, body) {
@@ -1513,7 +1560,8 @@ function onConnected() {
 }
 
 async function startCall(kind) {
-  if (call) return toast('You are already on a call.');
+  if (isGroupId(activeId)) return startGroupCall(activeId, kind);
+  if (call || GC.id) return toast('You are already on a call.');
   const u = userById(activeId); if (!u) return;
   // The server decides if the other person is reachable (online status is only shown for saved contacts).
   call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: nameOf(u), peerLang: u.lang, kind, role: 'caller', state: 'calling', pendingIce: [] };
@@ -1532,7 +1580,7 @@ $('#voiceBtn').onclick = () => startCall('voice');
 $('#videoBtn').onclick = () => startCall('video');
 
 function onIncoming(p) {
-  if (call) { socket.emit('call:busy', { to: p.from, callId: p.callId }); return; }
+  if (call || GC.id) { socket.emit('call:busy', { to: p.from, callId: p.callId }); return; }
   const saved = userById(p.from);
   call = { id: p.callId, peerId: p.from, peerName: saved ? nameOf(saved) : p.fromName + ' (not saved)', peerLang: p.lang, kind: p.kind, role: 'callee', state: 'incoming', offer: p.sdp, pendingIce: [] };
   const u = userById(p.from) || { id: p.from, name: p.fromName };
@@ -1920,6 +1968,7 @@ async function setBlocked(u, blocked) {
 }
 $('#moreBtn').onclick = () => {
   const u = userById(activeId); if (!u) return;
+  if (u.isGroup) return openGroupInfo(u.id);
   $('#moreTitle').textContent = nameOf(u);
   const list = $('#moreList'); list.innerHTML = '';
   const add = (label, fn, warn) => { const b = document.createElement('button'); b.className = 'sheet-btn' + (warn ? ' warn' : ''); b.textContent = label; b.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(b); };
@@ -2354,10 +2403,12 @@ function buildBubble(m) {
   const key = JSON.stringify([m.status, m.poll && m.poll.votes, m.event && m.event.rsvp, m.location, !!m.uploading, trMsg.get(m.id), settings.chatTranslate, m.reactions, m.pinned, m.deleted, starred.has(m.id)]);
   const c = bubbleCache.get(m.id);
   if (c && c.key === key) return c.el;
+  if (m.type === 'system') { const sm = el('div', 'sysmsg', m.text); bubbleCache.set(m.id, { key, el: sm }); return sm; }
   const b = document.createElement('div'); b.className = 'bubble' + (mine ? ' mine' : ''); b.dataset.mid = m.id;
   if (m.deleted) {
     b.append(el('span', 'deleted-msg', mine ? '🚫 You deleted this message' : '🚫 This message was deleted'));
   } else {
+  if (m.group && !mine && m.type !== 'sticker' && !(m.file && m.file.sticker)) { const gs = el('div', 'gsender', memberName(userById('g:' + m.group), m.from)); let h = 0; for (const c of m.from) h = (h * 31 + c.charCodeAt(0)) >>> 0; gs.style.color = palette[h % palette.length]; b.append(gs); }
   if (m.forwarded) b.append(el('div', 'fwd-tag', '↪ Forwarded'));
   if (m.replyTo) b.append(quoteNode(m.replyTo));
   if (isText(m)) {
@@ -2655,7 +2706,7 @@ function shareContactView() {
     };
     box.append(b);
   }
-  const saved = users.filter((u) => u.inContacts && u.id !== activeId);
+  const saved = users.filter((u) => !u.isGroup && u.inContacts && u.id !== activeId);
   if (saved.length) {
     box.append(el('div', 'or-line', 'my Maata contacts'));
     const ul = el('ul', 'pick-list');
@@ -3013,6 +3064,12 @@ function msgInfo(m) {
     list.classList.add('info-rows');
     const row = (label, val) => { const r = el('div', 'set-row'); r.append(el('b', null, label), el('span', null, val)); list.append(r); };
     row('✓ Sent', fmt(m.ts));
+    if (m.group) {
+      const g = userById('g:' + m.group), rb = m.readBy || {};
+      const readers = Object.entries(rb).sort((a, b) => a[1] - b[1]);
+      row('👁 Read by ' + readers.length + (g ? ' of ' + (g.memberCount - 1) : ''), readers.length ? readers.map(([id, t]) => memberName(g, id) + ' (' + fmt(t) + ')').join(', ') : 'Nobody yet');
+      return;
+    }
     row('✓✓ Delivered', m.deliveredAt ? fmt(m.deliveredAt) : m.status === 'sent' ? 'Not yet' : 'Yes');
     row('👁 Read', m.readAt ? fmt(m.readAt) : m.status === 'read' ? 'Yes' : 'Not yet');
     const rs = Object.entries(m.reactions || {});
@@ -3261,6 +3318,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  group: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M22 21a6 6 0 0 0-4-5.6"/></svg>',
   broadcast: '<svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>',
   quick: '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>',
@@ -3281,6 +3339,7 @@ function openMainMenu(btn) {
   const menu = el('div', 'main-menu'); menu.setAttribute('role', 'menu');
   const list = el('div', 'menu-list');
   const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = MI[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
+  item('group', 'New group', openNewGroup);
   item('broadcast', 'Business broadcast', openBroadcast);
   item('quick', 'Quick replies', openQuickReplies);
   item('star', 'Starred messages', openStarred);
@@ -3463,7 +3522,7 @@ function openBroadcast() {
     const allRow = el('div', 'row2'); allRow.style.cssText = 'display:flex;gap:8px;margin:8px 0';
     const selAll = el('button', 'linkbtn', 'Select all'); const clr = el('button', 'linkbtn', 'Clear'); allRow.append(selAll, clr); box.append(allRow);
     const ul = el('ul', 'fwd-list'); box.append(ul);
-    const people = () => users.filter((u) => !u.blocked && u.inContacts).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
+    const people = () => users.filter((u) => !u.isGroup && !u.blocked && u.inContacts).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
     const send = el('button', 'primary', 'Send broadcast');
     const count = () => { send.textContent = pick.size ? 'Send to ' + pick.size : 'Send broadcast'; };
     const draw = () => {
@@ -3834,6 +3893,306 @@ async function drawGpsStamp(c, pos, addr, when) {
   g.fillStyle = '#fff'; g.fillText(tag, x0 + bw - tagW + 8 * k, y0 - Math.round(13 * k));
   g.restore();
 }
+
+const socket_ready_hooks = [];
+
+// ================= groups =================
+const isGroupId = (id) => typeof id === 'string' && id.startsWith('g:');
+const groupPhotoUrl = (g) => '/api/groups/' + g.id.slice(2) + '/photo?t=' + encodeURIComponent(token) + '&v=' + (g.photoV || 0);
+function memberName(g, uid) { if (uid === me.id) return 'You'; const x = g && g.members ? g.members.find((y) => y.id === uid) : null; return x ? x.name : (userById(uid) ? nameOf(userById(uid)) : 'Member'); }
+const muted = (id) => (prefs.muted || []).includes(id);
+async function reloadUsers() { try { users = await api('/api/users'); } catch { return; } renderContacts(); if (activeId) { if (!userById(activeId)) closeActiveChat(); else { renderChatHead(); renderMessages(); } } }
+function closeActiveChat() { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; $('#pinBar').hidden = true; }
+
+// ----- new group: pick members → name & photo -----
+function openNewGroup() {
+  const pick = new Set();
+  sheet('👥 New group', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Add members from your contacts. You can add as many people as you like (up to 1,024), and more later.'));
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q);
+    const sel = el('div', 'row2'); sel.style.cssText = 'display:flex;gap:8px;margin:8px 0;align-items:center';
+    const all = el('button', 'linkbtn', 'Select all'), cnt = el('span', 'muted', ''); cnt.style.marginLeft = 'auto'; sel.append(all, cnt); box.append(sel);
+    const ul = el('ul', 'fwd-list'); box.append(ul);
+    const people = () => users.filter((u) => !u.isGroup && u.inContacts && !u.blocked).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
+    const next = el('button', 'primary', 'Next →');
+    const count = () => { cnt.textContent = pick.size + ' selected'; next.disabled = !pick.size; };
+    const draw = () => {
+      ul.innerHTML = ''; const ps = people();
+      if (!ps.length) ul.append(el('li', 'empty-list', 'Save contacts first, then add them to a group.'));
+      for (const u of ps) { const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id); cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); count(); }; const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li); }
+    };
+    all.onclick = () => { people().forEach((u) => pick.add(u.id)); draw(); count(); };
+    q.oninput = draw; draw(); count();
+    next.onclick = () => groupDetailsStep([...pick]);
+    box.append(next); list.append(box); q.focus();
+  });
+}
+function groupDetailsStep(ids) {
+  let photo = null;
+  sheet('👥 New group · ' + ids.length + ' member' + (ids.length > 1 ? 's' : ''), (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const ph = el('button', 'avatar'); ph.type = 'button'; ph.style.cssText = 'width:88px;height:88px;margin:4px auto 12px;display:grid;background:var(--peacock-soft);color:var(--peacock);font-size:30px'; ph.textContent = '📷'; ph.setAttribute('aria-label', 'Add group photo');
+    const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true;
+    ph.onclick = () => fi.click();
+    fi.onchange = async () => { const f = fi.files[0]; if (!f) return; try { photo = await compressImage(f); ph.style.background = 'center/cover url(' + URL.createObjectURL(photo) + ')'; ph.textContent = ''; } catch { toast('Could not open that photo.'); } };
+    const n = el('label'); n.append(el('span', null, 'Group name')); const ni = el('input'); ni.maxLength = 60; ni.placeholder = 'e.g. Kavitha Telecom Team'; n.append(ni);
+    const d = el('label'); d.append(el('span', null, 'Description (optional)')); const di = el('textarea'); di.maxLength = 500; d.append(di);
+    const go = el('button', 'primary', 'Create group');
+    go.onclick = async () => {
+      if (!ni.value.trim()) return toast('Give the group a name.');
+      go.disabled = true;
+      try {
+        let g = await api('/api/groups', { method: 'POST', body: JSON.stringify({ name: ni.value, description: di.value, members: ids }) });
+        if (photo) g = await uploadGroupPhoto(g.id, photo).catch(() => g);
+        closeSheet('moreSheet'); upsertUser(g); setTab('chats'); renderContacts(); openChat(g.id); toast('Group created ✓');
+      } catch (e) { toast(e.message); go.disabled = false; }
+    };
+    box.append(ph, fi, n, d, go); list.append(box); ni.focus();
+  });
+}
+function uploadGroupPhoto(gid, blob) {
+  return fetch('/api/groups/' + gid.slice(2) + '/photo', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': blob.type || 'image/jpeg' }, body: blob })
+    .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error || 'Photo not saved.'); return d; });
+}
+
+// ----- group info -----
+async function openGroupInfo(gid) {
+  let g; try { g = await api('/api/groups/' + gid.slice(2)); } catch (e) { return toast(e.message); }
+  upsertUser(g);
+  const admin = g.myRole === 'admin', canEdit = admin || !g.settings.onlyAdminsEdit;
+  sheet('Group info', (list) => {
+    const head = el('div', 'gi-head'); head.append(avatar(g));
+    if (canEdit) {
+      const cp = el('button', 'linkbtn', '📷 Change photo'); const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true;
+      cp.onclick = () => fi.click(); fi.onchange = async () => { const f = fi.files[0]; if (!f) return; try { const ng = await uploadGroupPhoto(g.id, await compressImage(f)); upsertUser(ng); toast('Group photo updated'); openGroupInfo(g.id); } catch (e) { toast(e.message); } };
+      head.append(cp, fi);
+    }
+    head.append(el('h3', null, g.name), el('small', null, 'Group · ' + g.memberCount + ' members'));
+    if (g.description) head.append(el('p', 'info-note', g.description));
+    list.append(head);
+    const act = el('div', 'row2'); act.style.cssText = 'display:flex;gap:8px;justify-content:center;padding:6px 12px 12px';
+    const vc = el('button', 'primary', '📞 Voice call'), vv = el('button', 'primary', '🎥 Video call');
+    vc.style.width = vv.style.width = 'auto'; vc.onclick = () => { closeSheet('moreSheet'); startGroupCall(g.id, 'voice'); }; vv.onclick = () => { closeSheet('moreSheet'); startGroupCall(g.id, 'video'); };
+    act.append(vc, vv); list.append(act);
+    const grp = el('div', 'set-group'); grp.style.margin = '0 12px';
+    const row = (label, fn, warn) => { const b = el('button', 'sheet-btn' + (warn ? ' warn' : ''), label); b.onclick = fn; grp.append(b); };
+    if (canEdit) row('✏️  Edit name & description', () => editGroupText(g));
+    row(muted(g.id) ? '🔔  Unmute notifications' : '🔕  Mute notifications', async () => { await savePrefs({ muted: muted(g.id) ? prefs.muted.filter((x) => x !== g.id) : [...(prefs.muted || []), g.id] }); toast(muted(g.id) ? 'Muted 🔕' : 'Unmuted 🔔'); openGroupInfo(g.id); });
+    row(prefs.favs.includes(g.id) ? '☆  Remove from favourites' : '⭐  Add to favourites', async () => { await savePrefs({ favs: prefs.favs.includes(g.id) ? prefs.favs.filter((f) => f !== g.id) : [...prefs.favs, g.id] }); openGroupInfo(g.id); });
+    row('⭐  Starred messages', openStarred);
+    if (admin) {
+      row('🔗  Invite link', () => groupInvite(g));
+      const sw = (label, key) => {
+        const r = el('div', 'set-row'); const t = el('div', 'txt'); t.append(el('b', null, label)); const l = el('label', 'switch-ui'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!g.settings[key]; cb.setAttribute('aria-label', label);
+        cb.onchange = async () => { try { upsertUser(await api('/api/groups/' + g.id.slice(2), { method: 'PUT', body: JSON.stringify({ settings: { [key]: cb.checked } }) })); toast('Saved'); } catch (e) { toast(e.message); cb.checked = !cb.checked; } };
+        l.append(cb, el('span')); r.append(t, l); grp.append(r);
+      };
+      sw('Only admins can send messages', 'onlyAdminsMessage'); sw('Only admins can edit group info', 'onlyAdminsEdit');
+    }
+    list.append(grp);
+    const mh = el('div', 'set-title', g.memberCount + ' members'); mh.style.margin = '16px 16px 6px'; list.append(mh);
+    const mg = el('div', 'set-group'); mg.style.margin = '0 12px';
+    if (admin) { const add = el('button', 'mem-row'); add.append(el('span', 'avatar sm', '＋'), el('b', null, 'Add members')); add.querySelector('.avatar').style.background = 'var(--leaf)'; add.onclick = () => addGroupMembers(g); mg.append(add); }
+    const members = [...g.members].sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : (a.role === 'admin') === (b.role === 'admin') ? a.name.localeCompare(b.name) : a.role === 'admin' ? -1 : 1));
+    for (const x of members) {
+      const r = el('button', 'mem-row'); const t = el('div', 'txt'); const b = el('b', null, x.id === me.id ? 'You' : x.name); if (x.role === 'admin') b.append(el('span', 'role-tag', 'Admin'));
+      t.append(b, el('small', null, x.phone + (x.lang && LANGS[x.lang] ? ' · ' + LANGS[x.lang].native : ''))); r.append(avatar({ id: x.id, name: x.name }, 'sm'), t);
+      if (x.id !== me.id) r.onclick = () => memberActions(g, x, admin);
+      mg.append(r);
+    }
+    list.append(mg);
+    const leave = el('button', 'danger-btn', '↩ Exit group'); leave.style.margin = '14px 12px'; leave.style.width = 'calc(100% - 24px)';
+    leave.onclick = async () => { if (!confirm('Exit "' + g.name + '"?')) return; try { await api('/api/groups/' + g.id.slice(2) + '/leave', { method: 'POST' }); closeSheet('moreSheet'); users = users.filter((u) => u.id !== g.id); closeActiveChat(); renderContacts(); toast('You left the group'); } catch (e) { toast(e.message); } };
+    list.append(leave);
+  });
+}
+function memberActions(g, x, admin) {
+  sheet(x.name, (list) => {
+    const b = (label, fn, warn) => { const e = el('button', 'sheet-btn' + (warn ? ' warn' : ''), label); e.onclick = fn; list.append(e); };
+    const u = userById(x.id);
+    b('💬  Message ' + x.name, async () => { closeSheet('moreSheet'); if (!u) { try { upsertUser(await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone: x.phone, name: x.name }) })); } catch (e) { return toast(e.message); } } openChat(x.id); });
+    if (!u || !u.inContacts) b('➕  Save contact', async () => { try { upsertUser(await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone: x.phone, name: x.name }) })); toast('Saved'); closeSheet('moreSheet'); } catch (e) { toast(e.message); } });
+    if (admin) {
+      b(x.role === 'admin' ? '⬇️  Dismiss as admin' : '⭐  Make group admin', async () => { try { upsertUser(await api('/api/groups/' + g.id.slice(2) + '/admin', { method: 'POST', body: JSON.stringify({ uid: x.id, admin: x.role !== 'admin' }) })); openGroupInfo(g.id); } catch (e) { toast(e.message); } });
+      b('🚫  Remove from group', async () => { if (!confirm('Remove ' + x.name + ' from the group?')) return; try { upsertUser(await api('/api/groups/' + g.id.slice(2) + '/members/' + x.id, { method: 'DELETE' })); openGroupInfo(g.id); } catch (e) { toast(e.message); } }, true);
+    }
+  });
+}
+function addGroupMembers(g) {
+  const pick = new Set(), inside = new Set(g.members.map((x) => x.id));
+  sheet('Add members', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search contacts'; box.append(q);
+    const ul = el('ul', 'fwd-list'); box.append(ul);
+    const go = el('button', 'primary', 'Add');
+    const draw = () => {
+      ul.innerHTML = ''; const t = q.value.trim().toLowerCase();
+      const ps = users.filter((u) => !u.isGroup && u.inContacts && !u.blocked && !inside.has(u.id)).filter((u) => !t || nameOf(u).toLowerCase().includes(t) || u.phone.includes(t));
+      if (!ps.length) ul.append(el('li', 'empty-list', 'All your contacts are already in this group. Share the invite link to add others.'));
+      for (const u of ps) { const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id); cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); go.textContent = pick.size ? 'Add ' + pick.size : 'Add'; }; const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li); }
+    };
+    q.oninput = draw; draw();
+    go.onclick = async () => { if (!pick.size) return toast('Choose people to add.'); try { upsertUser(await api('/api/groups/' + g.id.slice(2) + '/members', { method: 'POST', body: JSON.stringify({ ids: [...pick] }) })); toast('Added ✓'); openGroupInfo(g.id); } catch (e) { toast(e.message); } };
+    box.append(go); list.append(box);
+  });
+}
+function editGroupText(g) {
+  sheet('Edit group', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const n = el('label'); n.append(el('span', null, 'Group name')); const ni = el('input'); ni.maxLength = 60; ni.value = g.name; n.append(ni);
+    const d = el('label'); d.append(el('span', null, 'Description')); const di = el('textarea'); di.maxLength = 500; di.value = g.description || ''; d.append(di);
+    const go = el('button', 'primary', 'Save');
+    go.onclick = async () => { try { upsertUser(await api('/api/groups/' + g.id.slice(2), { method: 'PUT', body: JSON.stringify({ name: ni.value, description: di.value }) })); toast('Saved'); openGroupInfo(g.id); } catch (e) { toast(e.message); } };
+    box.append(n, d, go); list.append(box);
+  });
+}
+function groupInvite(g) {
+  const link = location.origin + '/#join=' + g.invite;
+  sheet('🔗 Invite link', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Anyone with Maata who opens this link can join "' + g.name + '". Share it only with people you trust.'));
+    const i = el('input'); i.readOnly = true; i.value = link; box.append(i);
+    const r = el('div', 'row2'); r.style.cssText = 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap';
+    const cp = el('button', 'primary', '⧉ Copy link'); cp.style.flex = '1'; cp.onclick = () => copyText(link);
+    const wa = el('a', 'primary', 'Share on WhatsApp'); wa.style.cssText = 'flex:1;text-align:center;text-decoration:none;background:#25D366;display:block'; wa.href = 'https://wa.me/?text=' + encodeURIComponent('Join my Maata group "' + g.name + '": ' + link); wa.target = '_blank'; wa.rel = 'noopener';
+    r.append(cp, wa); box.append(r);
+    const reset = el('button', 'danger-btn', 'Reset link (old link stops working)');
+    reset.onclick = async () => { if (!confirm('Reset the invite link?')) return; try { const ng = await api('/api/groups/' + g.id.slice(2) + '/invite', { method: 'POST' }); upsertUser(ng); groupInvite(ng); } catch (e) { toast(e.message); } };
+    box.append(reset); list.append(box);
+  });
+}
+async function handleJoinLink() {
+  const m = /#join=([\w-]+)/.exec(location.hash); if (!m) return;
+  history.replaceState(null, '', location.pathname);
+  try {
+    const p = await api('/api/groups/preview/' + m[1]);
+    if (p.member) { toast('You are already in "' + p.name + '"'); }
+    else if (!confirm('Join the group "' + p.name + '" (' + p.memberCount + ' members)?')) return;
+    const g = await api('/api/groups/join', { method: 'POST', body: JSON.stringify({ code: m[1] }) });
+    upsertUser(g); renderContacts(); openChat(g.id);
+  } catch (e) { toast(e.message); }
+}
+
+// ================= group calls (up to 8 people) =================
+const GC = { id: null, gid: null, kind: null, local: null, peers: new Map(), t0: 0, timer: 0, ring: null, facing: 'user' };
+async function startGroupCall(gid, kind) {
+  if (call || GC.id) return toast('You are already on a call.');
+  const g = userById(gid);
+  if (g && g.activeCall) return joinGroupCall(gid, g.activeCall.id, g.activeCall.kind);
+  if (!(await gcMedia(kind))) return;
+  GC.kind = kind; GC.gid = gid; gcShow('Calling ' + (g ? g.name : 'group') + '…');
+  socket.emit('gcall:start', { gid, kind });
+}
+async function joinGroupCall(gid, callId, kind) {
+  if (call || GC.id) return toast('You are already on a call.');
+  gcStopRing();
+  if (!(await gcMedia(kind))) return;
+  GC.kind = kind; GC.gid = gid; gcShow('Joining…');
+  socket.emit('gcall:join', { gid, callId });
+}
+async function gcMedia(kind) {
+  try { GC.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false }); return true; }
+  catch { toast('Allow microphone' + (kind === 'video' ? ' and camera' : '') + ' to join the call.'); return false; }
+}
+function gcShow(status) {
+  let v = $('#gcView');
+  if (!v) {
+    v = el('section', 'gc'); v.id = 'gcView'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-label', 'Group call');
+    const head = el('div', 'gc-head'); const who = el('div', 'who'); who.append(el('b', null, ''), el('small', null, '')); head.append(who);
+    const grid = el('div', 'gc-grid'); grid.id = 'gcGrid';
+    const bar = el('div', 'gc-bar');
+    const mk = (id, label, svg, cls) => { const b = el('button', 'round ' + (cls || '')); b.id = id; b.setAttribute('aria-label', label); b.innerHTML = svg; bar.append(b); return b; };
+    const mic = mk('gcMute', 'Mute', '<svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>');
+    const cam = mk('gcCam', 'Camera off', '<svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>');
+    const add = mk('gcAdd', 'Add people', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>');
+    const end = mk('gcEnd', 'Leave call', '<svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>', 'end');
+    mic.onclick = () => { const t = GC.local && GC.local.getAudioTracks()[0]; if (!t) return; t.enabled = !t.enabled; mic.setAttribute('aria-pressed', String(!t.enabled)); };
+    cam.onclick = () => { const t = GC.local && GC.local.getVideoTracks()[0]; if (!t) return toast('This is a voice call.'); t.enabled = !t.enabled; cam.setAttribute('aria-pressed', String(!t.enabled)); };
+    add.onclick = () => { const g = userById(GC.gid); if (g) { g.myRole === 'admin' ? addGroupMembers(g) : toast('Members can join from the group chat. Only admins can add new members.'); } };
+    end.onclick = gcLeave;
+    v.append(head, grid, bar); document.body.append(v);
+  }
+  const g = userById(GC.gid);
+  v.querySelector('.gc-head b').textContent = (g ? g.name : 'Group') + ' · ' + (GC.kind === 'video' ? 'Video call' : 'Voice call');
+  v.querySelector('.gc-head small').textContent = status;
+  $('#gcCam').hidden = GC.kind !== 'video';
+  gcTile(me.id, GC.local, true);
+}
+function gcTile(uid, stream, mine) {
+  const grid = $('#gcGrid'); if (!grid) return;
+  let t = grid.querySelector('[data-uid="' + uid + '"]');
+  if (!t) {
+    t = el('div', 'gc-tile' + (mine ? ' me' : ' connecting')); t.dataset.uid = uid;
+    const g = userById(GC.gid);
+    const v = el('video'); v.autoplay = true; v.playsInline = true; if (mine) v.muted = true;
+    t.append(v, avatar({ id: uid, name: mine ? me.name : memberName(g, uid) }), el('span', 'nm', mine ? 'You' : memberName(g, uid)));
+    grid.append(t);
+  }
+  if (stream) { const v = t.querySelector('video'); if (v.srcObject !== stream) { v.srcObject = stream; v.play().catch(() => {}); } t.classList.toggle('has-video', stream.getVideoTracks().length > 0); }
+  return t;
+}
+function gcPeer(uid, initiator) {
+  if (GC.peers.has(uid)) return GC.peers.get(uid);
+  const pc = new RTCPeerConnection({ iceServers });
+  const peer = { pc, pending: [] }; GC.peers.set(uid, peer);
+  GC.local.getTracks().forEach((t) => pc.addTrack(t, GC.local));
+  pc.onicecandidate = (e) => { if (e.candidate) socket.emit('gcall:signal', { callId: GC.id, to: uid, data: { candidate: e.candidate } }); };
+  pc.ontrack = (e) => { const t = gcTile(uid, e.streams[0]); t.classList.remove('connecting'); };
+  pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') gcTile(uid).classList.remove('connecting'); if (pc.connectionState === 'failed') gcDrop(uid); };
+  gcTile(uid, null);
+  if (initiator) (async () => { const o = await pc.createOffer(); await pc.setLocalDescription(o); socket.emit('gcall:signal', { callId: GC.id, to: uid, data: { sdp: pc.localDescription } }); })();
+  return peer;
+}
+function gcDrop(uid) { const p = GC.peers.get(uid); if (p) { p.pc.close(); GC.peers.delete(uid); } const t = $('#gcGrid') && $('#gcGrid').querySelector('[data-uid="' + uid + '"]'); if (t) t.remove(); gcCount(); }
+function gcCount() { const v = $('#gcView'); if (!v || !GC.id) return; v.querySelector('.gc-head small').textContent = (GC.peers.size + 1) + ' in call · ' + fmtDur((Date.now() - GC.t0) / 1000); }
+function gcLeave() {
+  if (GC.id) socket.emit('gcall:leave', { callId: GC.id });
+  for (const uid of [...GC.peers.keys()]) gcDrop(uid);
+  if (GC.local) GC.local.getTracks().forEach((t) => t.stop());
+  clearInterval(GC.timer); const v = $('#gcView'); if (v) v.remove();
+  Object.assign(GC, { id: null, gid: null, kind: null, local: null, t0: 0 });
+}
+function gcStopRing() { stopRing(); if (GC.ring) { clearTimeout(GC.ring.t); GC.ring.el.remove(); GC.ring = null; } }
+socket_ready_hooks.push(() => {
+  socket.on('gcall:joined', (p) => {
+    if (GC.gid !== p.gid) return socket.emit('gcall:leave', { callId: p.callId });
+    GC.id = p.callId; GC.kind = p.kind; GC.t0 = Date.now(); gcShow(p.peers.length ? 'Connecting…' : 'Ringing the group…');
+    clearInterval(GC.timer); GC.timer = setInterval(gcCount, 1000);
+    for (const uid of p.peers) gcPeer(uid, true);
+  });
+  socket.on('gcall:signal', async (p) => {
+    if (p.callId !== GC.id || !GC.local) return;
+    const peer = gcPeer(p.from, false), pc = peer.pc, d = p.data || {};
+    try {
+      if (d.sdp) {
+        await pc.setRemoteDescription(d.sdp);
+        if (d.sdp.type === 'offer') { const a = await pc.createAnswer(); await pc.setLocalDescription(a); socket.emit('gcall:signal', { callId: GC.id, to: p.from, data: { sdp: pc.localDescription } }); }
+        for (const c of peer.pending.splice(0)) await pc.addIceCandidate(c).catch(() => {});
+      } else if (d.candidate) { if (pc.remoteDescription) await pc.addIceCandidate(d.candidate).catch(() => {}); else peer.pending.push(d.candidate); }
+    } catch {}
+  });
+  socket.on('gcall:peer-left', (p) => { if (p.callId === GC.id) gcDrop(p.id); });
+  socket.on('gcall:full', () => { toast('This call is full (8 people).'); gcLeave(); });
+  socket.on('gcall:ended', () => { toast('This call has ended.'); gcLeave(); });
+  socket.on('gcall:state', (s2) => {
+    const g = userById(s2.gid); if (g) { g.activeCall = s2.participants.length ? { id: s2.callId, kind: s2.kind, count: s2.participants.length } : null; if (activeId === s2.gid) renderChatHead(); }
+    if (GC.ring && GC.ring.callId === s2.callId && !s2.participants.length) gcStopRing();
+  });
+  socket.on('gcall:ring', (p) => {
+    if (call || GC.id || muted(p.gid)) { const g = userById(p.gid); if (g) g.activeCall = { id: p.callId, kind: p.kind, count: 1 }; return; }
+    gcStopRing();
+    const r = el('div', 'gring'); r.setAttribute('role', 'alertdialog');
+    const g = userById(p.gid); r.append(avatar(g || { id: p.gid, name: p.groupName }));
+    const who = el('div', 'who'); who.append(el('b', null, p.groupName), el('small', null, p.fromName + ' started a group ' + (p.kind === 'video' ? 'video' : 'voice') + ' call')); r.append(who);
+    const no = el('button', 'no', 'Decline'), yes = el('button', 'yes', 'Join');
+    no.onclick = gcStopRing; yes.onclick = () => joinGroupCall(p.gid, p.callId, p.kind);
+    r.append(no, yes); document.body.append(r);
+    GC.ring = { el: r, callId: p.callId, t: setTimeout(gcStopRing, 40000) };
+    ring('incoming', p.kind); notify(p.groupName, p.fromName + ' started a group call');
+  });
+  socket.on('group:update', () => reloadUsers());
+});
 
 // ---------------- go ----------------
 setMode('login');
