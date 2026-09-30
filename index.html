@@ -295,6 +295,63 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .cap-row{display:flex;gap:8px;padding:10px 14px}
 .cap-row input{flex:1;padding:12px 16px;border-radius:999px;border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:16px}
 .cap-row input::placeholder{color:rgba(255,255,255,.6)}
+/* ---------- Attachments ---------- */
+.cbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--muted);flex:none}
+.cbtn:hover{background:var(--peacock-soft);color:var(--ink)}
+.attach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;padding:8px 0 4px}
+.att{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink)}
+.att i{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-style:normal;color:#fff}
+.bubble.media{padding:4px;max-width:min(78%,340px)}
+.bubble.media .meta{padding:0 8px 4px}
+.bubble img.pic,.bubble video.vid{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;background:#0002;cursor:pointer}
+.bubble .cap{padding:6px 8px 0;white-space:pre-wrap}
+.filecard{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;background:#0000000d;text-decoration:none;color:inherit;min-width:220px}
+.bubble.mine .filecard{background:#ffffff1f}
+.filecard .fi{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:var(--turmeric);color:#1C2230;flex:none}
+.filecard .fn{flex:1;min-width:0}
+.filecard .fn b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filecard .fn small{opacity:.75;font-size:12px}
+.bubble audio{width:240px;max-width:100%;display:block;margin:2px 0}
+.card-x{min-width:230px}
+.card-x h4{margin:0 0 6px;font-size:15px}
+.card-x .row2{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.card-x .row2 button,.card-x .row2 a{flex:1;min-width:80px;padding:8px;border-radius:10px;font-weight:600;font-size:13px;text-align:center;text-decoration:none;background:#0000000f;color:inherit}
+.bubble.mine .card-x .row2 button,.bubble.mine .card-x .row2 a{background:#ffffff26}
+.card-x .row2 button[aria-pressed="true"]{background:var(--turmeric);color:#1C2230}
+.popt{display:block;width:100%;text-align:left;margin:6px 0;padding:8px 10px;border-radius:10px;background:#0000000d;position:relative;overflow:hidden;color:inherit;font-size:14px}
+.bubble.mine .popt{background:#ffffff1a}
+.popt .fill{position:absolute;inset:0 auto 0 0;background:#2E8B5733}
+.popt span{position:relative;display:flex;justify-content:space-between;gap:8px}
+.popt[aria-pressed="true"]{outline:2px solid var(--leaf)}
+.evdate{display:flex;gap:10px;align-items:center}
+.evdate .cal{width:48px;border-radius:10px;overflow:hidden;text-align:center;background:#fff;color:#1C2230;flex:none}
+.evdate .cal b{display:block;background:var(--chili);color:#fff;font-size:11px;padding:2px 0}
+.evdate .cal span{display:block;font-size:20px;font-weight:700;padding:2px 0}
+.mapbox{width:260px;max-width:100%;height:150px;border:0;border-radius:12px;display:block;background:#0001;margin:6px 0}
+.live-tag{display:inline-block;background:var(--chili);color:#fff;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;margin-right:6px}
+.formcol label{display:block;margin-bottom:10px}
+.formcol label span{display:block;font-size:13px;font-weight:500;margin-bottom:5px}
+.formcol input,.formcol textarea,.formcol select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);font:inherit;font-size:16px;color:var(--ink)}
+.formcol textarea{min-height:70px;resize:vertical}
+.opt-row{display:flex;gap:6px;margin-bottom:8px}
+.opt-row button{width:40px;border-radius:10px;background:var(--paper);border:1px solid var(--line);color:var(--chili)}
+.linkbtn{color:var(--peacock);font-weight:600;padding:6px 0}
+@media (prefers-color-scheme:dark){.linkbtn{color:#7CC4D4}}
+.pick-list{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.pick-list li button{display:flex;gap:10px;align-items:center;width:100%;padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+.rec{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0}
+.rec .dotr{width:18px;height:18px;border-radius:50%;background:var(--chili);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.rec .time{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.cam-stage{flex:1;position:relative;display:grid;place-items:center;overflow:hidden;min-height:0;background:#000}
+.cam-stage video,.cam-stage img{max-width:100%;max-height:100%;object-fit:contain}
+.cam-bar{display:flex;align-items:center;justify-content:space-around;padding:16px}
+.shutter{width:72px;height:72px;border-radius:50%;border:5px solid #fff;background:transparent}
+.shutter.rec-on{background:var(--chili)}
+.cam-modes{display:flex;justify-content:center;gap:18px;font-weight:600;font-size:14px}
+.cam-modes button{color:#fff;opacity:.6;padding:6px 10px}
+.cam-modes button[aria-pressed="true"]{opacity:1;border-bottom:2px solid var(--turmeric)}
+.rec-time{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--chili);color:#fff;border-radius:999px;padding:3px 12px;font-weight:700;font-size:14px}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -431,7 +488,9 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     </div>
     <div class="messages" id="messages" hidden></div>
     <form class="composer" id="composer" hidden>
+      <button type="button" class="cbtn" id="attachBtn" aria-label="Attach" title="Attach"><svg viewBox="0 0 24 24"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button>
       <textarea id="msgInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
+      <button type="button" class="cbtn" id="camBtnChat" aria-label="Camera: photo or video" title="Camera"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <button class="send" aria-label="Send message"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
     </form>
   </main>
@@ -484,6 +543,33 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <button class="round accept" id="acceptBtn" aria-label="Accept call">
       <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
     </button>
+  </div>
+</section>
+
+<!-- ============ ATTACH SHEET ============ -->
+<div class="settings-bg" id="attachSheet" hidden>
+  <section class="settings" role="dialog" aria-modal="true" aria-labelledby="attTitle">
+    <div class="settings-head"><h2 id="attTitle">Send</h2><button class="icon-btn" id="attClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div id="attBody"></div>
+  </section>
+</div>
+<input type="file" id="fDoc" hidden multiple>
+<input type="file" id="fMedia" accept="image/*,video/*" multiple hidden>
+<input type="file" id="fAudio" accept="audio/*" hidden>
+
+<!-- ============ CAMERA ============ -->
+<section class="overlay" id="camView" hidden role="dialog" aria-modal="true" aria-label="Camera">
+  <div class="ov-head">
+    <button class="ov-btn" id="camClose" aria-label="Close camera"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div class="who"><b>Camera</b><small>Photo, or video up to 60 seconds</small></div>
+    <button class="ov-btn" id="camFlip" aria-label="Switch camera"><svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg></button>
+    <button class="ov-post" id="camSend" hidden>Send</button>
+  </div>
+  <div class="cam-stage" id="camStage"><video id="camLive" playsinline muted autoplay></video></div>
+  <div class="cap-row" id="camCapRow" hidden><input id="camCaption" maxlength="1000" placeholder="Add a caption…"></div>
+  <div id="camControls">
+    <div class="cam-modes"><button id="camModePhoto" aria-pressed="true">PHOTO</button><button id="camModeVideo" aria-pressed="false">VIDEO</button></div>
+    <div class="cam-bar"><span style="width:44px"></span><button class="shutter" id="camShutter" aria-label="Take photo"></button><span style="width:44px"></span></div>
   </div>
 </section>
 
@@ -756,6 +842,7 @@ function connectSocket() {
     if (msg) $('#subMe').textContent = msg;
   });
   socket.on('call:log', onCallLog);
+  socket.on('msg:update', refreshBubble);
   socket.on('status:new', () => { clearTimeout(statusTimer); statusTimer = setTimeout(loadStatus, 800); });
   socket.on('status:view', (x) => { const st = statusData.mine.find((m) => m.id === x.id); if (st) { st.viewCount = x.count; if (!$('#stViewer').hidden && V.groups[V.gi]?.mine && V.groups[V.gi].statuses[V.si]?.id === x.id) $('#stViewsBtn').textContent = '👁 ' + x.count + ' view' + (x.count === 1 ? '' : 's'); } });
   socket.on('call:caption:self', onCaptionSelf);
@@ -819,7 +906,7 @@ function renderContacts() {
     const time = document.createElement('span'); time.className = 'c-time'; time.textContent = u.lastMessage ? fmtTime(u.lastMessage.ts) : '';
     top.append(name, time);
     const last = document.createElement('div'); last.className = 'c-last';
-    last.textContent = u.lastMessage ? (u.lastMessage.from === me.id ? 'You: ' : '') + u.lastMessage.text : (u.online ? 'Online' : u.phone);
+    last.textContent = u.lastMessage ? (u.lastMessage.from === me.id ? 'You: ' : '') + previewText(u.lastMessage) : (u.online ? 'Online' : u.phone);
     body.append(top, last);
     b.append(avatar(u, '', true), body);
     if (u.unread) { const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = u.unread; b.append(bd); }
@@ -858,25 +945,7 @@ function renderMessages() {
   for (const m of messagesCache[activeId] || []) {
     const day = fmtDay(m.ts);
     if (day !== lastDay) { const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.append(d); lastDay = day; }
-    const b = document.createElement('div'); b.className = 'bubble' + (m.from === me.id ? ' mine' : '');
-    const sender = m.from === me.id ? me : userById(m.from);
-    const needTr = m.from !== me.id && settings.chatTranslate && me.lang && sender && sender.lang && sender.lang !== me.lang;
-    const trText = needTr ? trMsg.get(m.id) : null;
-    if (trText) {
-      b.append(document.createTextNode(trText));
-      const o = document.createElement('span'); o.className = 'tr-orig'; o.textContent = '🌐 ' + (LANGS[sender.lang]?.name || '') + ': ' + m.text; b.append(o);
-    } else {
-      b.append(document.createTextNode(m.text));
-      if (needTr) queueTranslate(m, sender.lang);
-    }
-    const meta = document.createElement('div'); meta.className = 'meta';
-    meta.append(document.createTextNode(fmtTime(m.ts)));
-    if (m.from === me.id) {
-      const t = document.createElement('span'); t.className = 'tick' + (m.status === 'read' ? ' read' : '');
-      t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓';
-      t.title = m.status; meta.append(t);
-    }
-    b.append(meta); box.append(b);
+    box.append(buildBubble(m));
   }
   if (atBottom || box.dataset.first !== activeId) { box.scrollTop = box.scrollHeight; box.dataset.first = activeId; }
 }
@@ -896,7 +965,7 @@ async function onMessage(m) {
   if (u) { u.lastMessage = m; if (m.from !== me.id) u.unread = (u.unread || 0) + 1; }
   renderContacts();
   if (other === activeId) { renderMessages(); markRead(); }
-  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? nameOf(u) : 'New message', m.text);
+  if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? nameOf(u) : 'New message', previewText(m));
   if (m.from !== me.id) messageSound();
 }
 function notify(title, body) {
@@ -1208,7 +1277,7 @@ function onIncoming(p) {
   const a = $('#inAvatar'); a.innerHTML = ''; a.append(avatar(u));
   $('#inName').textContent = call.peerName;
   $('#inKind').textContent = p.kind === 'video' ? 'Maata video call' : 'Maata voice call';
-  $('#incoming').hidden = false; closeSettings(); ring('incoming', p.kind);
+  $('#incoming').hidden = false; closeSettings(); if (!$('#camView').hidden) closeCamera(); stopRecorder(true); ring('incoming', p.kind);
   notify('Incoming ' + (p.kind === 'video' ? 'video' : 'voice') + ' call', call.peerName + ' is calling you');
   call.timeout = setTimeout(() => { if (call && call.state === 'incoming') { socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall('Missed call from ' + call.peerName); } }, 45000);
 }
@@ -1463,6 +1532,7 @@ function duck(on) { const v = $('#remoteVideo'); if (v) v.volume = on && setting
 const trMsg = new Map(), trPending = new Set();
 let trQueueTimer = null;
 function queueTranslate(m, from) {
+  if (!isText(m)) return;
   if (trMsg.has(m.id) || trPending.has(m.id)) return;
   trPending.add(m.id);
   api('/api/translate', { method: 'POST', body: JSON.stringify({ text: m.text, from, to: me.lang }) })
@@ -1987,6 +2057,454 @@ $('#stViewsBtn').onclick = async () => {
     close.onclick = () => { box.hidden = true; V.paused = false; V.start = performance.now(); if (V.video) V.video.play().catch(() => {}); };
     box.append(close);
   } catch (err) { box.hidden = true; toast(err.message); }
+};
+
+// ================= chat attachments & rich messages =================
+const fileUrl = (f, dl) => '/api/chat/file/' + f.id + '?t=' + encodeURIComponent(token) + (dl ? '&dl=1' : '');
+const isText = (m) => !m.type || m.type === 'text';
+function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function previewText(m) {
+  switch (m.type) {
+    case 'image': return '📷 Photo' + (m.text ? ': ' + m.text : '');
+    case 'video': return '🎥 Video' + (m.text ? ': ' + m.text : '');
+    case 'audio': return m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio';
+    case 'file': return '📄 ' + (m.file ? m.file.name : 'Document');
+    case 'contact': return '👤 ' + m.contact.name;
+    case 'poll': return '📊 Poll: ' + m.poll.question;
+    case 'event': return '📅 ' + m.event.title;
+    case 'location': return m.location.live ? '📍 Live location' : '📍 Location';
+    default: return m.text || '';
+  }
+}
+const fileIcon = (mime, name) => /pdf/.test(mime) ? '📕' : /sheet|excel|csv/.test(mime + name) ? '📊' : /word|document/.test(mime) ? '📘' : /presentation|powerpoint/.test(mime) ? '📙' : /zip|rar|7z/.test(mime + name) ? '🗜️' : '📄';
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+// Bubbles are cached by content so maps and videos do not reload on every update
+const bubbleCache = new Map();
+function buildBubble(m) {
+  const mine = m.from === me.id;
+  const key = JSON.stringify([m.status, m.poll && m.poll.votes, m.event && m.event.rsvp, m.location, !!m.uploading, trMsg.get(m.id), settings.chatTranslate]);
+  const c = bubbleCache.get(m.id);
+  if (c && c.key === key) return c.el;
+  const b = document.createElement('div'); b.className = 'bubble' + (mine ? ' mine' : ''); b.dataset.mid = m.id;
+  if (isText(m)) {
+    const sender = mine ? me : userById(m.from);
+    const needTr = !mine && settings.chatTranslate && me.lang && sender && sender.lang && sender.lang !== me.lang;
+    const trText = needTr ? trMsg.get(m.id) : null;
+    if (trText) {
+      b.append(document.createTextNode(trText));
+      const o = document.createElement('span'); o.className = 'tr-orig'; o.textContent = '🌐 ' + (LANGS[sender.lang]?.name || '') + ': ' + m.text; b.append(o);
+    } else { b.append(document.createTextNode(m.text)); if (needTr) queueTranslate(m, sender.lang); }
+  } else renderRich(b, m, mine);
+  const meta = document.createElement('div'); meta.className = 'meta';
+  meta.append(document.createTextNode(fmtTime(m.ts)));
+  if (mine) {
+    const t = document.createElement('span'); t.className = 'tick' + (m.status === 'read' ? ' read' : '');
+    t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓'; t.title = m.status; meta.append(t);
+  }
+  b.append(meta);
+  bubbleCache.set(m.id, { key, el: b });
+  return b;
+}
+function mapFrame(lat, lng, cls) {
+  const d = 0.004, fr = el('iframe', cls || 'mapbox'); fr.loading = 'lazy'; fr.title = 'Map';
+  fr.src = 'https://www.openstreetmap.org/export/embed.html?bbox=' + (lng - d) + '%2C' + (lat - d) + '%2C' + (lng + d) + '%2C' + (lat + d) + '&layer=mapnik&marker=' + lat + '%2C' + lng;
+  return fr;
+}
+function renderRich(b, m, mine) {
+  if (m.uploading) {
+    const card = el('div', 'filecard'); card.append(el('div', 'fi', m.type === 'image' ? '📷' : m.type === 'video' ? '🎥' : m.type === 'audio' ? '🎵' : '📄'));
+    const fn = el('div', 'fn'); fn.append(el('b', null, m.file.name)); fn.append(el('small', null, 'Uploading ' + (m.progress || 0) + '% · ' + fmtSize(m.file.size)));
+    card.append(fn); b.append(card); return;
+  }
+  const f = m.file;
+  if (m.type === 'image') {
+    b.classList.add('media');
+    const img = el('img', 'pic'); img.loading = 'lazy'; img.alt = m.text || 'Photo'; img.src = fileUrl(f);
+    img.onclick = () => window.open(fileUrl(f), '_blank');
+    b.append(img); if (m.text) b.append(el('div', 'cap', m.text));
+  } else if (m.type === 'video') {
+    b.classList.add('media');
+    const v = el('video', 'vid'); v.controls = true; v.preload = 'metadata'; v.playsInline = true; v.src = fileUrl(f);
+    b.append(v); if (m.text) b.append(el('div', 'cap', m.text));
+  } else if (m.type === 'audio') {
+    b.append(el('div', null, f.voice ? '🎤 Voice message' + (f.duration ? ' · ' + fmtDur(f.duration) : '') : '🎵 ' + f.name));
+    const a = el('audio'); a.controls = true; a.preload = 'metadata'; a.src = fileUrl(f); b.append(a);
+  } else if (m.type === 'file') {
+    const a = el('a', 'filecard'); a.href = fileUrl(f, true); a.target = '_blank'; a.rel = 'noopener';
+    a.append(el('div', 'fi', fileIcon(f.mime, f.name)));
+    const fn = el('div', 'fn'); fn.append(el('b', null, f.name)); fn.append(el('small', null, fmtSize(f.size) + ' · tap to download')); a.append(fn);
+    b.append(a); if (m.text) b.append(el('div', 'cap', m.text));
+  } else if (m.type === 'contact') {
+    const box = el('div', 'card-x'), top = el('div', 'evdate');
+    top.append(avatar({ id: m.contact.phone, name: m.contact.name }, 'sm'));
+    const t = el('div'); t.append(el('b', null, m.contact.name)); t.append(el('div', null, m.contact.phone)); top.append(t); box.append(top);
+    const row = el('div', 'row2');
+    const tel = el('a', null, '📞 Phone'); tel.href = 'tel:' + m.contact.phone.replace(/\s/g, ''); row.append(tel);
+    if (!mine) { const add = el('button', null, '➕ Save'); add.onclick = () => addFromCard(m.contact); row.append(add); }
+    box.append(row); b.append(box);
+  } else if (m.type === 'poll') {
+    const P = m.poll, box = el('div', 'card-x'); box.append(el('h4', null, '📊 ' + P.question));
+    const votes = P.votes || {}, voters = Object.keys(votes).length, mineV = votes[me.id] || [];
+    const counts = P.options.map((_, i) => Object.values(votes).filter((v) => v.includes(i)).length);
+    P.options.forEach((o, i) => {
+      const btn = el('button', 'popt'); btn.setAttribute('aria-pressed', String(mineV.includes(i)));
+      const fill = el('i', 'fill'); fill.style.width = (voters ? (counts[i] / voters) * 100 : 0) + '%'; btn.append(fill);
+      const sp = el('span'); sp.append(el('b', null, (mineV.includes(i) ? '✔ ' : '') + o)); sp.append(el('small', null, String(counts[i]))); btn.append(sp);
+      btn.onclick = () => {
+        const next = P.multi ? (mineV.includes(i) ? mineV.filter((x) => x !== i) : [...mineV, i]) : (mineV.includes(i) ? [] : [i]);
+        socket.emit('poll:vote', { id: m.id, options: next });
+      };
+      box.append(btn);
+    });
+    box.append(el('small', null, voters + ' vote' + (voters === 1 ? '' : 's') + (P.multi ? ' · choose one or more' : ' · choose one')));
+    b.append(box);
+  } else if (m.type === 'event') {
+    const E = m.event, box = el('div', 'card-x'), d = new Date(E.date + 'T' + (E.time || '00:00'));
+    const top = el('div', 'evdate'), cal = el('div', 'cal');
+    cal.append(el('b', null, d.toLocaleString('en-IN', { month: 'short' }).toUpperCase())); cal.append(el('span', null, String(d.getDate()))); top.append(cal);
+    const t = el('div'); t.append(el('h4', null, E.title));
+    t.append(el('div', null, d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }) + (E.time ? ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '')));
+    if (E.place) t.append(el('div', null, '📍 ' + E.place));
+    top.append(t); box.append(top);
+    if (E.note) box.append(el('div', 'cap', E.note));
+    const rs = E.rsvp || {}, my = rs[me.id], row = el('div', 'row2');
+    for (const [k, label] of [['yes', '✅ Going'], ['maybe', '🤔 Maybe'], ['no', '❌ No']]) {
+      const n = Object.values(rs).filter((x) => x === k).length;
+      const btn = el('button', null, label + (n ? ' ' + n : '')); btn.setAttribute('aria-pressed', String(my === k));
+      btn.onclick = () => socket.emit('event:rsvp', { id: m.id, answer: my === k ? null : k }); row.append(btn);
+    }
+    box.append(row);
+    const row2 = el('div', 'row2'); const ics = el('button', null, '🗓️ Add to calendar'); ics.onclick = () => downloadIcs(E); row2.append(ics); box.append(row2);
+    b.append(box);
+  } else if (m.type === 'location') {
+    const L = m.location, box = el('div', 'card-x');
+    const live = L.live, ended = live && (L.ended || Date.now() > L.until);
+    const head = el('div');
+    if (live && !ended) head.append(el('span', 'live-tag', 'LIVE'));
+    head.append(document.createTextNode(live ? (ended ? '📍 Live location ended' : '📍 Live location · updated ' + ago2(L.updatedAt).toLowerCase()) : '📍 Location'));
+    box.append(head, mapFrame(L.lat, L.lng));
+    const row = el('div', 'row2');
+    const open = el('a', null, '🗺️ Open in Maps'); open.href = 'https://www.google.com/maps?q=' + L.lat + ',' + L.lng; open.target = '_blank'; open.rel = 'noopener'; row.append(open);
+    if (mine && live && !ended) { const stop = el('button', null, '⏹ Stop sharing'); stop.onclick = () => stopLive(m.id); row.append(stop); }
+    box.append(row);
+    if (live && !ended) box.append(el('small', null, 'Until ' + new Date(L.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })));
+    b.append(box);
+  }
+}
+function downloadIcs(E) {
+  const d = (E.date + 'T' + (E.time || '09:00')).replace(/[-:]/g, '') + '00';
+  const esc2 = (x) => String(x || '').replace(/[,;\\]/g, (c) => '\\' + c).replace(/\n/g, '\\n');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Maata//EN', 'BEGIN:VEVENT', 'UID:' + Date.now() + '@maata', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z', 'DTSTART:' + d, 'SUMMARY:' + esc2(E.title), 'LOCATION:' + esc2(E.place), 'DESCRIPTION:' + esc2(E.note), 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' })); a.download = (E.title.replace(/[^\w ]/g, '').slice(0, 40) || 'event') + '.ics'; a.click();
+}
+async function addFromCard(c) {
+  try { const nu = await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone: c.phone, name: c.name }) }); upsertUser(nu); renderContacts(); toast(c.name + ' saved to your Maata contacts.'); }
+  catch (e) { toast(e.message); }
+}
+function refreshBubble(m) {
+  const list = messagesCache[m.from === me.id ? m.to : m.from]; if (!list) return;
+  const i = list.findIndex((x) => x.id === m.id); if (i > -1) list[i] = m;
+  if (activeId && (m.from === activeId || m.to === activeId)) renderMessages();
+}
+setInterval(() => { // keep "updated x min ago" / live ended fresh
+  if (!activeId) return;
+  const list = messagesCache[activeId] || [];
+  if (list.some((m) => m.type === 'location' && m.location.live)) { for (const m of list) if (m.type === 'location' && m.location.live) bubbleCache.delete(m.id); renderMessages(); }
+}, 60000);
+
+// ----- sending -----
+function sendRich(payload, cb) {
+  const to = activeId; if (!to) return;
+  socket.timeout(10000).emit('msg:send', { to, ...payload }, (err, res) => {
+    if (err || res?.error) return toast(res?.error || 'Not sent. Check your internet.');
+    (messagesCache[to] = messagesCache[to] || []).push(res.message);
+    const u = userById(to); if (u) u.lastMessage = res.message;
+    renderContacts(); if (activeId === to) renderMessages();
+    if (cb) cb(res.message);
+  });
+}
+function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0 }) {
+  const to = activeId; if (!to) return;
+  if (blob.size > 16 * 1024 * 1024) return toast(name + ' is bigger than 16 MB.');
+  const temp = { id: 'up' + Date.now() + Math.floor(Math.random() * 1e6), from: me.id, to, ts: Date.now(), status: 'pending', type: kind, uploading: true, progress: 0, file: { name, size: blob.size } };
+  (messagesCache[to] = messagesCache[to] || []).push(temp); if (activeId === to) renderMessages();
+  const q = new URLSearchParams({ to, kind, name, caption, mime: blob.type || 'application/octet-stream', sid: socket.id || '' });
+  if (voice) q.set('voice', '1'); if (dur) q.set('dur', String(Math.round(dur)));
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/chat/upload?' + q);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.upload.onprogress = (e) => {
+    if (!e.lengthComputable) return; temp.progress = Math.round((e.loaded / e.total) * 100);
+    const small = document.querySelector('[data-mid="' + temp.id + '"] .fn small'); if (small) small.textContent = 'Uploading ' + temp.progress + '% · ' + fmtSize(blob.size);
+  };
+  const done = (msg) => {
+    const list = messagesCache[to]; const i = list.indexOf(temp);
+    if (msg) { if (i > -1) list[i] = msg; else list.push(msg); const u = userById(to); if (u) u.lastMessage = msg; renderContacts(); }
+    else if (i > -1) list.splice(i, 1);
+    bubbleCache.delete(temp.id);
+    if (activeId === to) renderMessages();
+  };
+  xhr.onload = () => {
+    let r = {}; try { r = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status >= 200 && xhr.status < 300 && r.message) done(r.message); else { toast(r.error || 'Upload failed. Try again.'); done(null); }
+  };
+  xhr.onerror = () => { toast('Upload failed. Check your internet.'); done(null); };
+  xhr.send(blob);
+}
+async function sendPickedFiles(files, forceKind) {
+  for (const f of files) {
+    const kind = forceKind || (f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : f.type.startsWith('audio/') ? 'audio' : 'file');
+    let blob = f, name = f.name;
+    if (kind === 'image' && !/gif/.test(f.type)) { try { blob = await compressImage(f); name = name.replace(/\.\w+$/, '') + '.jpg'; } catch { blob = f; } }
+    uploadFile(blob, { kind, name });
+  }
+}
+$('#fDoc').onchange = (e) => { sendPickedFiles([...e.target.files], 'file'); e.target.value = ''; };
+$('#fMedia').onchange = (e) => { sendPickedFiles([...e.target.files]); e.target.value = ''; };
+$('#fAudio').onchange = (e) => { sendPickedFiles([...e.target.files], 'audio'); e.target.value = ''; };
+
+// ----- attach sheet -----
+const ATT = [
+  ['doc', '📄', 'Document', '#7A4E9E'], ['media', '🖼️', 'Photos & videos', '#1F6FB2'], ['camera', '📷', 'Camera', '#C8413A'], ['audio', '🎧', 'Audio', '#B5651D'],
+  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'],
+];
+function openAttach() {
+  if (!activeId) return;
+  const u = userById(activeId); if (u && u.blocked) return toast('Unblock ' + nameOf(u) + ' to send messages.');
+  $('#attTitle').textContent = 'Send to ' + nameOf(u);
+  const body = $('#attBody'); body.innerHTML = '';
+  const grid = el('div', 'attach-grid');
+  for (const [id, icon, label, color] of ATT) {
+    const b = el('button', 'att'); const i = el('i', null, icon); i.style.background = color; b.append(i, el('span', null, label));
+    b.onclick = () => attachAction(id); grid.append(b);
+  }
+  body.append(grid); openSheet('attachSheet');
+}
+$('#attachBtn').onclick = openAttach;
+$('#attClose').onclick = () => { stopRecorder(true); closeSheet('attachSheet'); };
+$('#attachSheet').addEventListener('click', (e) => { if (e.target.id === 'attachSheet') stopRecorder(true); });
+function attachView(title, node) { $('#attTitle').textContent = title; const body = $('#attBody'); body.innerHTML = ''; body.append(node); }
+function attachAction(id) {
+  if (id === 'doc') { closeSheet('attachSheet'); $('#fDoc').click(); }
+  else if (id === 'media') { closeSheet('attachSheet'); $('#fMedia').click(); }
+  else if (id === 'camera') { closeSheet('attachSheet'); openCamera(); }
+  else if (id === 'audio') audioView();
+  else if (id === 'contact') shareContactView();
+  else if (id === 'poll') pollView();
+  else if (id === 'event') eventView();
+  else if (id === 'location') locationView();
+}
+
+// ----- audio: voice message or audio file -----
+const R = { rec: null, stream: null, chunks: [], t0: 0, timer: 0 };
+function audioView() {
+  const box = el('div', 'formcol');
+  const rec = el('button', 'primary', '🎙️ Record a voice message'); rec.onclick = () => startRecorder(box);
+  const pick = el('button', 'primary', '🎵 Choose an audio file'); pick.style.cssText = 'margin-top:10px;background:var(--peacock-soft);color:var(--ink)';
+  pick.onclick = () => { closeSheet('attachSheet'); $('#fAudio').click(); };
+  box.append(rec, pick); attachView('Audio', box);
+}
+async function startRecorder(box) {
+  if (call) return toast('You are on a call.');
+  try { R.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch { return toast('Allow microphone access to record.'); }
+  const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', ''].find((t) => !t || (window.MediaRecorder && MediaRecorder.isTypeSupported(t)));
+  try { R.rec = new MediaRecorder(R.stream, mime ? { mimeType: mime } : undefined); } catch { stopRecorder(true); return toast('Recording is not supported in this browser.'); }
+  R.chunks = []; R.rec.ondataavailable = (e) => e.data.size && R.chunks.push(e.data); R.rec.start(250); R.t0 = Date.now();
+  box.innerHTML = '';
+  const w = el('div', 'rec'); w.append(el('div', 'dotr')); const time = el('div', 'time', '0:00'); w.append(time);
+  const send = el('button', 'primary', '➤ Send voice message'); const cancel = el('button', 'linkbtn', 'Cancel');
+  send.onclick = () => stopRecorder(false); cancel.onclick = () => { stopRecorder(true); closeSheet('attachSheet'); };
+  w.append(send, cancel); box.append(w);
+  R.timer = setInterval(() => { const s2 = Math.floor((Date.now() - R.t0) / 1000); time.textContent = Math.floor(s2 / 60) + ':' + String(s2 % 60).padStart(2, '0'); if (s2 >= 300) stopRecorder(false); }, 250);
+}
+function stopRecorder(cancel) {
+  clearInterval(R.timer);
+  if (!R.rec) { if (R.stream) R.stream.getTracks().forEach((t) => t.stop()); R.stream = null; return; }
+  const rec = R.rec, dur = (Date.now() - R.t0) / 1000; R.rec = null;
+  rec.onstop = () => {
+    if (R.stream) R.stream.getTracks().forEach((t) => t.stop()); R.stream = null;
+    if (cancel || dur < 1) return;
+    const type = (rec.mimeType || 'audio/webm').split(';')[0];
+    uploadFile(new Blob(R.chunks, { type }), { kind: 'audio', name: 'Voice message.' + (type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm'), voice: true, dur });
+    closeSheet('attachSheet');
+  };
+  try { rec.stop(); } catch {}
+}
+
+// ----- contact -----
+function shareContactView() {
+  const box = el('div', 'formcol');
+  if ('contacts' in navigator && 'ContactsManager' in window) {
+    const b = el('button', 'primary', '📱 Choose from phone contacts');
+    b.onclick = async () => {
+      try { const [c] = await navigator.contacts.select(['name', 'tel'], { multiple: false }); if (c && c.tel && c.tel[0]) { sendRich({ type: 'contact', contact: { name: (c.name && c.name[0]) || c.tel[0], phone: c.tel[0] } }); closeSheet('attachSheet'); } } catch {}
+    };
+    box.append(b);
+  }
+  const saved = users.filter((u) => u.inContacts && u.id !== activeId);
+  if (saved.length) {
+    box.append(el('div', 'or-line', 'my Maata contacts'));
+    const ul = el('ul', 'pick-list');
+    for (const u of saved) { const li = el('li'), b = el('button'); b.append(avatar(u, 'sm'), el('span', null, nameOf(u) + ' · ' + u.phone)); b.onclick = () => { sendRich({ type: 'contact', contact: { name: nameOf(u), phone: u.phone } }); closeSheet('attachSheet'); }; li.append(b); ul.append(li); }
+    box.append(ul);
+  }
+  box.append(el('div', 'or-line', 'or type it'));
+  const n = el('label'); n.append(el('span', null, 'Name')); const ni = el('input'); ni.maxLength = 60; n.append(ni);
+  const p2 = el('label'); p2.append(el('span', null, 'Phone number')); const pi = el('input'); pi.type = 'tel'; pi.inputMode = 'tel'; p2.append(pi);
+  const go = el('button', 'primary', 'Send contact');
+  go.onclick = () => { if (!ni.value.trim() || pi.value.replace(/\D/g, '').length < 6) return toast('Enter a name and phone number.'); sendRich({ type: 'contact', contact: { name: ni.value, phone: pi.value } }); closeSheet('attachSheet'); };
+  box.append(n, p2, go); attachView('Share contact', box);
+}
+
+// ----- poll -----
+function pollView() {
+  const box = el('div', 'formcol');
+  const q = el('label'); q.append(el('span', null, 'Question')); const qi = el('input'); qi.maxLength = 200; qi.placeholder = 'e.g. Which day suits you for the meeting?'; q.append(qi); box.append(q);
+  const ol = el('span', null, 'Options'); ol.style.cssText = 'display:block;font-size:13px;font-weight:500;margin-bottom:5px'; box.append(ol);
+  const opts = el('div'); box.append(opts);
+  const addOpt = () => {
+    if (opts.children.length >= 12) return toast('Up to 12 options.');
+    const row = el('div', 'opt-row'); const i = el('input'); i.maxLength = 100; i.placeholder = 'Option ' + (opts.children.length + 1);
+    const del = el('button', null, '✕'); del.type = 'button'; del.setAttribute('aria-label', 'Remove option'); del.onclick = () => { if (opts.children.length > 2) row.remove(); };
+    row.append(i, del); opts.append(row);
+  };
+  addOpt(); addOpt();
+  const more = el('button', 'linkbtn', '＋ Add option'); more.onclick = addOpt; box.append(more);
+  const multiRow = el('div', 'set-row'); multiRow.style.padding = '10px 0';
+  const t = el('div', 'txt'); t.append(el('b', null, 'Allow multiple answers')); multiRow.append(t);
+  const sw = el('label', 'switch-ui'); const cb = el('input'); cb.type = 'checkbox'; cb.setAttribute('aria-label', 'Allow multiple answers'); sw.append(cb, el('span')); multiRow.append(sw); box.append(multiRow);
+  const go = el('button', 'primary', 'Send poll');
+  go.onclick = () => {
+    const options = [...opts.querySelectorAll('input')].map((i) => i.value.trim()).filter(Boolean);
+    if (!qi.value.trim() || options.length < 2) return toast('Add a question and at least 2 options.');
+    sendRich({ type: 'poll', poll: { question: qi.value, options, multi: cb.checked } }); closeSheet('attachSheet');
+  };
+  box.append(go); attachView('Create poll', box); qi.focus();
+}
+
+// ----- event -----
+function eventView() {
+  const box = el('div', 'formcol');
+  const mk = (label, type, attrs = {}) => { const l = el('label'); l.append(el('span', null, label)); const i = el(type === 'textarea' ? 'textarea' : 'input'); if (type !== 'textarea') i.type = type; Object.assign(i, attrs); l.append(i); box.append(l); return i; };
+  const title = mk('Event name', 'text', { maxLength: 120, placeholder: 'e.g. Shop opening' });
+  const today = new Date(), iso = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const date = mk('Date', 'date', { value: iso, min: iso });
+  const time = mk('Time', 'time', { value: '10:00' });
+  const place = mk('Place (optional)', 'text', { maxLength: 200, placeholder: 'Address or meeting link' });
+  const note = mk('Details (optional)', 'textarea', { maxLength: 500 });
+  const go = el('button', 'primary', 'Send event');
+  go.onclick = () => { if (!title.value.trim() || !date.value) return toast('Add an event name and date.'); sendRich({ type: 'event', event: { title: title.value, date: date.value, time: time.value, place: place.value, note: note.value } }); closeSheet('attachSheet'); };
+  box.append(go); attachView('Create event', box); title.focus();
+}
+
+// ----- location: current or live -----
+const liveMine = new Map(); // message id -> geolocation watch id
+function getPosition() {
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error('Location is not supported on this device.'));
+    navigator.geolocation.getCurrentPosition((p) => res(p.coords), (e) => rej(new Error(e.code === 1 ? 'Allow location access to share your location.' : 'Could not find your location. Turn on GPS and try again.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+  });
+}
+async function locationView() {
+  const box = el('div', 'formcol'); box.append(el('p', 'info-note', '📡 Finding your location…')); attachView('Location', box);
+  let pos; try { pos = await getPosition(); } catch (e) { box.innerHTML = ''; box.append(el('p', 'info-note', '⚠️ ' + e.message)); return; }
+  box.innerHTML = '';
+  const fr = mapFrame(pos.latitude, pos.longitude); fr.style.cssText = 'width:100%;height:200px'; fr.loading = 'eager';
+  box.append(fr, el('p', 'info-note', 'Accurate to about ' + Math.round(pos.accuracy) + ' m'));
+  const cur = el('button', 'primary', '📍 Send your current location');
+  cur.onclick = () => { sendRich({ type: 'location', location: { lat: pos.latitude, lng: pos.longitude, acc: pos.accuracy } }); closeSheet('attachSheet'); };
+  box.append(cur, el('div', 'or-line', 'or share live location'));
+  const l = el('label'); l.append(el('span', null, 'Share live location for'));
+  const sel = el('select'); for (const [v, t] of [[15, '15 minutes'], [60, '1 hour'], [480, '8 hours']]) sel.add(new Option(t, v)); l.append(sel); box.append(l);
+  const live = el('button', 'primary', '📡 Share live location'); live.style.background = 'var(--leaf)';
+  live.onclick = () => startLive(pos, Number(sel.value));
+  box.append(live, el('p', 'info-note', 'Live location keeps updating while Maata stays open on this phone. You can stop sharing anytime.'));
+}
+function startLive(pos, minutes) {
+  sendRich({ type: 'location', location: { lat: pos.latitude, lng: pos.longitude, acc: pos.accuracy, live: true, minutes } }, (m) => {
+    let last = 0;
+    const wid = navigator.geolocation.watchPosition((p) => {
+      if (Date.now() > m.location.until) return stopLive(m.id);
+      if (Date.now() - last < 8000) return; last = Date.now();
+      socket.emit('live:update', { id: m.id, lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy });
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+    liveMine.set(m.id, wid);
+    setTimeout(() => stopLive(m.id), minutes * 60000 + 1000);
+    toast('Sharing live location for ' + (minutes < 60 ? minutes + ' minutes' : minutes / 60 + ' hour' + (minutes > 60 ? 's' : '')));
+  });
+  closeSheet('attachSheet');
+}
+function stopLive(id) {
+  if (liveMine.has(id)) { navigator.geolocation.clearWatch(liveMine.get(id)); liveMine.delete(id); }
+  socket.emit('live:stop', { id });
+}
+
+// ----- in-app camera: photo & video -----
+const CAM = { stream: null, facing: 'environment', mode: 'photo', rec: null, chunks: [], t0: 0, timer: 0, blob: null, url: null, kind: null };
+async function openCamera() {
+  if (!activeId) return;
+  if (call) return toast('You are on a call.');
+  $('#camView').hidden = false; camReset(); await camStart();
+}
+async function camStart() {
+  camStopStream();
+  try { CAM.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: CAM.facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: CAM.mode === 'video' }); }
+  catch { toast('Camera not available. Choose from your gallery instead.'); closeCamera(); $('#fMedia').click(); return; }
+  const v = $('#camLive'); v.srcObject = CAM.stream; v.style.transform = CAM.facing === 'user' ? 'scaleX(-1)' : 'none';
+}
+function camStopStream() { if (CAM.stream) CAM.stream.getTracks().forEach((t) => t.stop()); CAM.stream = null; }
+function camReset() {
+  if (CAM.url) URL.revokeObjectURL(CAM.url); Object.assign(CAM, { blob: null, url: null, kind: null });
+  [...$('#camStage').children].forEach((c) => { if (c.id !== 'camLive') c.remove(); });
+  $('#camLive').hidden = false; $('#camControls').hidden = false; $('#camCapRow').hidden = true; $('#camSend').hidden = true; $('#camFlip').hidden = false;
+  $('#camCaption').value = ''; $('#camShutter').classList.remove('rec-on');
+  $('#camModePhoto').setAttribute('aria-pressed', String(CAM.mode === 'photo')); $('#camModeVideo').setAttribute('aria-pressed', String(CAM.mode === 'video'));
+  $('#camShutter').setAttribute('aria-label', CAM.mode === 'photo' ? 'Take photo' : 'Start recording');
+}
+function closeCamera() { camStopRec(true); camStopStream(); camReset(); $('#camView').hidden = true; }
+$('#camBtnChat').onclick = openCamera;
+$('#camClose').onclick = () => (CAM.blob ? (camReset(), camStart()) : closeCamera());
+$('#camFlip').onclick = () => { if (CAM.rec) return; CAM.facing = CAM.facing === 'user' ? 'environment' : 'user'; camStart(); };
+$('#camModePhoto').onclick = () => { if (CAM.rec) return; CAM.mode = 'photo'; camReset(); camStart(); };
+$('#camModeVideo').onclick = () => { if (CAM.rec) return; CAM.mode = 'video'; camReset(); camStart(); };
+function camPreview(blob, kind) {
+  CAM.blob = blob; CAM.kind = kind; CAM.url = URL.createObjectURL(blob);
+  camStopStream(); $('#camLive').hidden = true; $('#camControls').hidden = true; $('#camFlip').hidden = true;
+  const node = kind === 'image' ? el('img') : el('video'); node.src = CAM.url;
+  if (kind === 'video') { node.controls = true; node.playsInline = true; node.autoplay = true; } else node.alt = 'Photo preview';
+  $('#camStage').append(node); $('#camCapRow').hidden = false; $('#camSend').hidden = false;
+}
+$('#camShutter').onclick = () => {
+  const v = $('#camLive'); if (!CAM.stream) return;
+  if (CAM.mode === 'photo') {
+    const c = document.createElement('canvas'), k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
+    c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+    const g = c.getContext('2d'); if (CAM.facing === 'user') { g.translate(c.width, 0); g.scale(-1, 1); }
+    g.drawImage(v, 0, 0, c.width, c.height);
+    c.toBlob((b) => b && camPreview(b, 'image'), 'image/jpeg', 0.85);
+  } else if (!CAM.rec) {
+    const mime = ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm', ''].find((t) => !t || MediaRecorder.isTypeSupported(t));
+    try { CAM.rec = new MediaRecorder(CAM.stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 1500000 }); } catch { return toast('Video recording is not supported in this browser.'); }
+    CAM.chunks = []; CAM.rec.ondataavailable = (e) => e.data.size && CAM.chunks.push(e.data);
+    CAM.rec.start(500); CAM.t0 = Date.now(); $('#camShutter').classList.add('rec-on'); $('#camShutter').setAttribute('aria-label', 'Stop recording');
+    const tag = el('div', 'rec-time', '0:00'); tag.id = 'camRecTime'; $('#camStage').append(tag);
+    CAM.timer = setInterval(() => { const s2 = Math.floor((Date.now() - CAM.t0) / 1000); tag.textContent = '0:' + String(s2).padStart(2, '0'); if (s2 >= 60) camStopRec(false); }, 250);
+  } else camStopRec(false);
+};
+function camStopRec(cancel) {
+  clearInterval(CAM.timer); const tag = $('#camRecTime'); if (tag) tag.remove();
+  if (!CAM.rec) return; const rec = CAM.rec; CAM.rec = null;
+  rec.onstop = () => { if (cancel) return; const type = (rec.mimeType || 'video/webm').split(';')[0]; camPreview(new Blob(CAM.chunks, { type }), 'video'); };
+  try { rec.stop(); } catch {}
+}
+$('#camSend').onclick = () => {
+  if (!CAM.blob) return;
+  const ext = CAM.kind === 'image' ? 'jpg' : (CAM.blob.type.includes('mp4') ? 'mp4' : 'webm');
+  uploadFile(CAM.blob, { kind: CAM.kind, name: (CAM.kind === 'image' ? 'Photo-' : 'Video-') + Date.now() + '.' + ext, caption: $('#camCaption').value.trim() });
+  CAM.blob = null; closeCamera();
 };
 
 // ---------------- go ----------------

@@ -35,7 +35,9 @@ let db = {};
 for (const k of COLLS) db[k] = [];
 let mongo = null;
 let bucket = null;
+let chatBucket = null;
 const MEDIA_DIR = path.join(DATA_DIR, 'media');
+const CHAT_DIR = path.join(DATA_DIR, 'chat');
 const snap = {}; // collection -> Map(id -> last saved JSON), so only changed records are written
 
 async function loadDb() {
@@ -44,6 +46,7 @@ async function loadDb() {
     await client.connect();
     mongo = client.db(process.env.MONGODB_DB || 'maata');
     bucket = new GridFSBucket(mongo, { bucketName: 'statusMedia' }); // photos & videos for statuses
+    chatBucket = new GridFSBucket(mongo, { bucketName: 'chatMedia' }); // files sent in chats
     for (const c of COLLS) {
       const docs = await mongo.collection(c).find({}).toArray();
       db[c] = docs.map(({ _id, ...rest }) => ({ id: _id, ...rest })).sort((a, b) => (a[SORT_BY[c]] || 0) - (b[SORT_BY[c]] || 0));
@@ -629,6 +632,77 @@ function cleanStatuses() {
 }
 setInterval(cleanStatuses, 10 * 60 * 1000);
 
+// ---------- Chat attachments & rich messages ----------
+// Message types: text, image, video, audio, file (documents), contact, poll, event, location (current or live).
+const MAX_FILE = 16 * 1024 * 1024;
+async function saveChatFile(id, buf, mime) {
+  if (chatBucket) await new Promise((res, rej) => { const up = chatBucket.openUploadStreamWithId(id, id, { contentType: mime }); up.on('error', rej).on('finish', res); up.end(buf); });
+  else { fs.mkdirSync(CHAT_DIR, { recursive: true }); fs.writeFileSync(path.join(CHAT_DIR, id), buf); }
+}
+async function deleteChatFile(id) { try { if (chatBucket) await chatBucket.delete(id); else fs.unlinkSync(path.join(CHAT_DIR, id)); } catch { /* gone */ } }
+const chatFileStream = (id, start, end) => (chatBucket ? chatBucket.openDownloadStream(id, { start, end: end + 1 }) : fs.createReadStream(path.join(CHAT_DIR, id), { start, end }));
+
+// Checks both people and the blocks; returns an error text or null
+function canMessage(fromUser, to) {
+  const target = userById(to);
+  if (!target || to === fromUser.id || target.status === 'blocked') return { error: 'Message not sent.' };
+  if (blockedOf(fromUser).includes(to)) return { error: 'You blocked this person. Unblock them to send messages.' };
+  if (blockedOf(target).includes(fromUser.id)) return { error: 'Message not delivered.' };
+  return { target };
+}
+function deliverMessage(fromUser, target, fields, exceptSocketId) {
+  const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: isOnline(target.id) ? 'delivered' : 'sent', type: 'text', text: '', ...fields };
+  db.messages.push(m); save();
+  io.to('user:' + target.id).emit('msg:new', m);
+  (exceptSocketId ? io.to('user:' + fromUser.id).except(exceptSocketId) : io.to('user:' + fromUser.id)).emit('msg:new', m);
+  feed('message', `${fromUser.name} → ${target.name}: ${m.type === 'text' ? 'message' : m.type}`);
+  return m;
+}
+function emitUpdate(m) { for (const id of [m.from, m.to]) io.to('user:' + id).emit('msg:update', m); }
+
+app.post('/api/chat/upload', auth, express.raw({ type: () => true, limit: '16mb' }), async (req, res) => {
+  const ok = canMessage(req.user, String(req.query.to || ''));
+  if (ok.error) return res.status(400).json({ error: ok.error });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a file first.' });
+  if (req.body.length > MAX_FILE) return res.status(413).json({ error: 'File is too big. The limit is 16 MB.' });
+  const mime = String(req.query.mime || req.headers['content-type'] || 'application/octet-stream').split(';')[0].trim().slice(0, 100);
+  let type = String(req.query.kind || '');
+  if (!['image', 'video', 'audio', 'file'].includes(type)) type = 'file';
+  const name = String(req.query.name || 'file').replace(/[\\/\r\n"]/g, '_').slice(0, 120);
+  const id = newId();
+  try { await saveChatFile(id, req.body, mime); } catch (e) { console.error('[chat file]', e.message); return res.status(500).json({ error: 'Could not save the file. Try again.' }); }
+  const file = { id, name, mime, size: req.body.length, ...(req.query.voice === '1' ? { voice: true } : {}), ...(Number(req.query.dur) > 0 ? { duration: Math.round(Number(req.query.dur)) } : {}) };
+  const m = deliverMessage(req.user, ok.target, { type, text: String(req.query.caption || '').trim().slice(0, 1000), file }, String(req.query.sid || '') || null);
+  res.json({ message: m });
+});
+
+// Files open only for the two people in that chat. <img>/<video> send the login token as ?t=
+app.get('/api/chat/file/:id', (req, res) => {
+  let viewer = null;
+  try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* invalid */ }
+  if (!viewer) return res.status(401).end();
+  const m = db.messages.find((x) => x.file && x.file.id === req.params.id);
+  if (!m || (m.from !== viewer.id && m.to !== viewer.id)) return res.status(404).end();
+  const size = m.file.size;
+  let start = 0, end = size - 1, code = 200;
+  const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+  if (r) {
+    if (r[1]) { start = parseInt(r[1], 10); end = r[2] ? Math.min(parseInt(r[2], 10), size - 1) : size - 1; }
+    else if (r[2]) start = Math.max(0, size - parseInt(r[2], 10));
+    if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); }
+    code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+  }
+  res.status(code);
+  res.setHeader('Content-Type', m.file.mime); res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=604800');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  const inline = /^(image|video|audio)\//.test(m.file.mime) || m.file.mime === 'application/pdf';
+  res.setHeader('Content-Disposition', (req.query.dl === '1' || !inline ? 'attachment' : 'inline') + '; filename="' + encodeURIComponent(m.file.name) + '"');
+  const st = chatFileStream(m.file.id, start, end);
+  st.on('error', () => res.destroy());
+  st.pipe(res);
+});
+
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -815,6 +889,7 @@ app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
   const removedWatchers = watchersOf(u.id);
   db.users = db.users.filter((x) => x.id !== u.id);
   for (const x of db.users) if (x.contacts) x.contacts = x.contacts.filter((c) => c.id !== u.id);
+  for (const m of db.messages) if (m.file && (m.from === u.id || m.to === u.id)) deleteChatFile(m.file.id);
   db.messages = db.messages.filter((m) => m.from !== u.id && m.to !== u.id);
   for (const st of db.statuses.filter((x) => x.userId === u.id)) if (st.type !== 'text') deleteMedia(st.id);
   db.statuses = db.statuses.filter((x) => x.userId !== u.id);
@@ -967,18 +1042,66 @@ io.on('connection', (socket) => {
   }
 
   socket.on('msg:send', (p, ack) => {
-    const text = String(p?.text || '').trim().slice(0, 4000);
-    const to = String(p?.to || '');
-    const target = userById(to);
-    if (!text || to === me || !target || target.status === 'blocked') return typeof ack === 'function' && ack({ error: 'Message not sent.' });
-    if (blockedOf(socket.user).includes(to)) return typeof ack === 'function' && ack({ error: 'You blocked this person. Unblock them to send messages.' });
-    if (blockedOf(target).includes(me)) return typeof ack === 'function' && ack({ error: 'Message not delivered.' });
-    const m = { id: newId(), from: me, to, text, ts: now(), status: isOnline(to) ? 'delivered' : 'sent' };
-    db.messages.push(m); save();
-    io.to(room(to)).emit('msg:new', m);
-    socket.to(room(me)).emit('msg:new', m);
-    feed('message', `${socket.user.name} → ${target.name}: message`);
-    if (typeof ack === 'function') ack({ message: m });
+    const reply = (x) => typeof ack === 'function' && ack(x);
+    const ok = canMessage(socket.user, String(p?.to || ''));
+    if (ok.error) return reply({ error: ok.error });
+    const type = ['contact', 'poll', 'event', 'location'].includes(p?.type) ? p.type : 'text';
+    const str = (v, n) => String(v ?? '').trim().slice(0, n);
+    let fields;
+    if (type === 'text') {
+      const text = str(p?.text, 4000); if (!text) return reply({ error: 'Message not sent.' });
+      fields = { type, text };
+    } else if (type === 'contact') {
+      const name = str(p?.contact?.name, 60), phone = str(p?.contact?.phone, 20).replace(/[^\d+ ]/g, '');
+      if (!name || phone.replace(/\D/g, '').length < 6) return reply({ error: 'Choose a contact with a phone number.' });
+      fields = { type, contact: { name, phone } };
+    } else if (type === 'poll') {
+      const question = str(p?.poll?.question, 200);
+      const options = (Array.isArray(p?.poll?.options) ? p.poll.options : []).map((o) => str(o, 100)).filter(Boolean).slice(0, 12);
+      if (!question || options.length < 2) return reply({ error: 'A poll needs a question and at least 2 options.' });
+      fields = { type, poll: { question, options, multi: !!p.poll.multi, votes: {} } };
+    } else if (type === 'event') {
+      const title = str(p?.event?.title, 120), date = str(p?.event?.date, 10), time = str(p?.event?.time, 5);
+      if (!title || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return reply({ error: 'An event needs a name and a date.' });
+      fields = { type, event: { title, date, time: /^\d{2}:\d{2}$/.test(time) ? time : '', place: str(p.event.place, 200), note: str(p.event.note, 500), rsvp: {} } };
+    } else {
+      const lat = Number(p?.location?.lat), lng = Number(p?.location?.lng);
+      if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return reply({ error: 'Could not read your location.' });
+      const live = !!p.location.live;
+      const mins = [15, 60, 480].includes(Number(p.location.minutes)) ? Number(p.location.minutes) : 15;
+      fields = { type, location: { lat, lng, acc: Math.round(Number(p.location.acc) || 0), live, ...(live ? { until: now() + mins * 60000, updatedAt: now(), ended: false } : {}) } };
+    }
+    const m = deliverMessage(socket.user, ok.target, fields, socket.id);
+    reply({ message: m });
+  });
+
+  // Poll votes, event replies, live location updates
+  const myMsg = (id) => { const m = db.messages.find((x) => x.id === String(id || '')); return m && (m.from === me || m.to === me) ? m : null; };
+  socket.on('poll:vote', (p) => {
+    const m = myMsg(p?.id); if (!m || m.type !== 'poll') return;
+    let picks = (Array.isArray(p.options) ? p.options : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < m.poll.options.length);
+    picks = [...new Set(picks)]; if (!m.poll.multi) picks = picks.slice(0, 1);
+    if (picks.length) m.poll.votes[me] = picks; else delete m.poll.votes[me];
+    save(); emitUpdate(m);
+  });
+  socket.on('event:rsvp', (p) => {
+    const m = myMsg(p?.id); if (!m || m.type !== 'event') return;
+    if (['yes', 'maybe', 'no'].includes(p.answer)) m.event.rsvp[me] = p.answer; else delete m.event.rsvp[me];
+    save(); emitUpdate(m);
+  });
+  let liveSave = 0;
+  socket.on('live:update', (p) => {
+    const m = myMsg(p?.id); if (!m || m.type !== 'location' || m.from !== me || !m.location.live || m.location.ended) return;
+    if (now() > m.location.until) { m.location.ended = true; save(); return emitUpdate(m); }
+    const lat = Number(p.lat), lng = Number(p.lng);
+    if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return;
+    Object.assign(m.location, { lat, lng, acc: Math.round(Number(p.acc) || 0), updatedAt: now() });
+    if (now() - liveSave > 30000) { liveSave = now(); save(); }
+    emitUpdate(m);
+  });
+  socket.on('live:stop', (p) => {
+    const m = myMsg(p?.id); if (!m || m.type !== 'location' || m.from !== me || !m.location.live) return;
+    m.location.ended = true; save(); emitUpdate(m);
   });
 
   socket.on('msg:read', (p) => {
