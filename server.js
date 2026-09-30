@@ -476,6 +476,20 @@ app.post('/api/contacts/match', auth, (req, res) => {
   res.json({ checked: pairs.length, found: added.length, users: added });
 });
 
+// Look up one mobile number: is this person on Maata? (limited per user, so nobody can scan numbers)
+const lookupUse = new Map();
+app.get('/api/lookup', auth, (req, res) => {
+  const want = last10(req.query.phone);
+  if (want.length < 10) return res.status(400).json({ error: 'Enter a full 10-digit mobile number.' });
+  const t = now(), l = (lookupUse.get(req.user.id) || []).filter((x) => t - x < 24 * 3600_000);
+  if (l.filter((x) => t - x < 3600_000).length >= 40 || l.length >= 200) return res.status(429).json({ error: 'Too many number searches. Try again later.' });
+  l.push(t); lookupUse.set(req.user.id, l);
+  const u = db.users.find((x) => last10(x.phone) === want && x.status !== 'blocked');
+  if (!u || blockedOf(u).includes(req.user.id)) return res.json({ found: false });
+  if (u.id === req.user.id) return res.json({ found: false, self: true });
+  res.json({ found: true, user: contactView(req.user, u, { lastMessage: null, unread: 0 }) });
+});
+
 app.delete('/api/contacts/:id', auth, (req, res) => {
   req.user.contacts = contactsOf(req.user).filter((c) => c.id !== req.params.id);
   save(); res.json({ ok: true });

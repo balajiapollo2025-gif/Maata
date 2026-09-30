@@ -579,6 +579,14 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .gring .who b{display:block}
 .gring button{padding:10px 14px;border-radius:999px;font-weight:700;color:#fff}
 .gring .no{background:var(--chili)}.gring .yes{background:var(--leaf)}
+/* ---------- Contacts tab ---------- */
+.tabs .tab{padding:9px 4px;font-size:13px}
+.pc-actions{display:flex;gap:8px;padding:4px 10px 6px;flex-wrap:wrap}
+.pc-actions button{flex:1;min-width:120px;padding:10px;border-radius:12px;font-weight:600;font-size:13px;background:var(--peacock-soft);color:var(--peacock)}
+@media (prefers-color-scheme:dark){.pc-actions button{color:#7CC4D4}}
+#pcList .contact{cursor:default}
+#pcList .recall{margin-left:4px;font-size:17px}
+.lookup .invite{margin:0 8px 8px}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -670,13 +678,14 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <div class="notice" id="langNotice" hidden><span aria-hidden="true">🌐</span><p>Choose your language to use live call translation.</p><button id="langNoticeBtn" style="font-size:14px;font-weight:600;opacity:1;text-decoration:underline">Choose</button></div>
     <div class="notice" id="notice" hidden role="status"><span aria-hidden="true">📢</span><p id="noticeText"></p><button id="noticeClose" aria-label="Dismiss announcement">×</button></div>
     <div class="add-row">
-      <input class="search" id="search" type="search" placeholder="Search my contacts" aria-label="Search contacts">
+      <input class="search" id="search" type="search" placeholder="Search name or mobile number" aria-label="Search contacts">
       <button class="add-btn" id="addContactBtn" aria-label="Add contact"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>Add</button>
     </div>
     <div class="tabs" role="tablist" aria-label="Chats and calls">
       <button class="tab" id="tabChats" role="tab" aria-selected="true">💬 Chats</button>
       <button class="tab" id="tabStatus" role="tab" aria-selected="false">⭕ Status <span class="dot" id="statusDot" hidden></span></button>
       <button class="tab" id="tabCalls" role="tab" aria-selected="false">📞 Calls <span class="badge" id="missedBadge" hidden></span></button>
+      <button class="tab" id="tabContacts" role="tab" aria-selected="false">📒 Contacts</button>
     </div>
     <div class="chips-row" id="chatFilters" role="toolbar" aria-label="Chat filters"></div>
     <div class="chat-sel-bar" id="chatSelBar" hidden>
@@ -695,6 +704,13 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <div class="call-day" id="stSeenTitle">Viewed updates</div><ul class="contacts" id="stSeen" style="overflow:visible;padding:0"></ul>
       <p class="info-note">🔒 Only contacts who saved your number, and whom you saved, can see your status. It disappears after 24 hours.</p>
       <input type="file" id="stFile" accept="image/*,video/*" hidden>
+    </div>
+    <div id="contactsPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
+      <div class="pc-actions"><button id="pcSync">📱 Sync phone contacts</button><button id="pcImport">📥 Import contacts file</button></div>
+      <div class="calls-head"><span id="pcCount"></span><button id="pcClear">Clear list</button></div>
+      <ul class="contacts" id="pcList" style="overflow:visible;padding:0"></ul>
+      <p class="info-note">🔒 Your phone contacts stay on this device. Maata only checks which numbers are registered. Import file: export contacts from your phone or Google Contacts as .vcf or .csv.</p>
+      <input type="file" id="pcFile" accept=".vcf,.csv,text/vcard,text/csv" hidden>
     </div>
     <div id="callsPane" hidden style="flex:1;overflow-y:auto;min-height:0">
       <div class="calls-head"><span id="callsCount"></span><button id="clearCalls">Clear history</button></div>
@@ -1164,7 +1180,7 @@ async function reportUser(u) {
 }
 
 // ---------------- contacts ----------------
-$('#search').oninput = () => (tab === 'calls' ? renderCalls() : renderContacts());
+$('#search').oninput = () => (tab === 'calls' ? renderCalls() : tab === 'contacts' ? renderPhoneContacts() : renderContacts());
 function renderContacts() {
   renderChips();
   const q = $('#search').value.trim().toLowerCase();
@@ -1173,6 +1189,7 @@ function renderContacts() {
     .filter((u) => !q || nameOf(u).toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.phone.includes(q))
     .filter((u) => filterOk(u))
     .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
+  if (!shown.length && numberQuery()) { renderLookup(list); return; }
   if (!shown.length) {
     if (users.length) { list.innerHTML = '<li class="empty-list">' + (chatFilter === 'unread' ? 'No unread chats 🎉' : chatFilter === 'favs' ? 'No favourites yet. Select a chat and tap ☆.' : chatFilter !== 'all' ? 'No chats in this list yet.' : 'No saved contact matches that search.') + '</li>'; return; }
     const li = document.createElement('li');
@@ -2016,6 +2033,7 @@ function setTab(t) {
   $('#contacts').hidden = t !== 'chats';
   $('#callsPane').hidden = t !== 'calls';
   $('#statusPane').hidden = t !== 'status';
+  $('#tabContacts').setAttribute('aria-selected', String(t === 'contacts')); $('#contactsPane').hidden = t !== 'contacts'; if (t === 'contacts') renderPhoneContacts();
   $('#chatFilters').hidden = t !== 'chats'; if (t !== 'chats' && chatSel) endChatSelect();
   if (t === 'status') { $('#statusDot').hidden = true; renderStatus(); loadStatus(); }
   if (t === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); if (!callsLoaded) loadCalls(); }
@@ -2024,6 +2042,7 @@ function setTab(t) {
 $('#tabChats').onclick = () => setTab('chats');
 $('#tabCalls').onclick = () => setTab('calls');
 $('#tabStatus').onclick = () => setTab('status');
+$('#tabContacts').onclick = () => setTab('contacts');
 function renderCalls() {
   const q = $('#search').value.trim().toLowerCase();
   const list = $('#callList'); list.innerHTML = '';
@@ -4193,6 +4212,153 @@ socket_ready_hooks.push(() => {
   });
   socket.on('group:update', () => reloadUsers());
 });
+
+// ================= phone contacts & number search =================
+const PC_KEY = 'maata_phone_contacts';
+const l10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+let phoneBook = []; try { phoneBook = JSON.parse(store.get(PC_KEY) || '[]'); } catch { phoneBook = []; }
+function savePhoneBook() { store.set(PC_KEY, JSON.stringify(phoneBook.slice(0, 5000))); }
+function mergePhoneBook(list) {
+  const map = new Map(phoneBook.map((c) => [c.n, c]));
+  for (const c of list) for (const ph of c.phones || []) { const n = l10(ph); if (n.length === 10 && !map.has(n)) map.set(n, { name: String(c.name || '').trim() || ph, phone: ph, n }); }
+  phoneBook = [...map.values()].sort((a, b) => a.name.localeCompare(b.name)); savePhoneBook();
+}
+async function matchPhoneBook(list) {
+  const chunks = []; for (let i = 0; i < list.length; i += 450) chunks.push(list.slice(i, i + 450));
+  let found = 0;
+  for (const ch of chunks) {
+    try { const r = await api('/api/contacts/match', { method: 'POST', body: JSON.stringify({ contacts: ch.map((c) => ({ name: c.name, phones: c.phones })) }) }); r.users.forEach(upsertUser); found += r.found; }
+    catch (e) { toast(e.message); break; }
+  }
+  renderContacts(); return found;
+}
+async function importContacts(list, source) {
+  list = list.filter((c) => c.phones && c.phones.length);
+  if (!list.length) return toast('No phone numbers found in ' + source + '.');
+  mergePhoneBook(list); renderPhoneContacts();
+  toast('Checking ' + list.length + ' contacts…');
+  const found = await matchPhoneBook(list);
+  renderPhoneContacts(); toast(found + ' of your contacts are on Maata ✓');
+}
+async function syncFromPhone() {
+  if (!('contacts' in navigator && 'ContactsManager' in window)) return toast('Phone contacts can be picked in Chrome on Android. On a computer, use "Import contacts file".');
+  try { const picked = await navigator.contacts.select(['name', 'tel'], { multiple: true }); importContacts(picked.map((c) => ({ name: (c.name && c.name[0]) || '', phones: c.tel || [] })), 'your selection'); } catch {}
+}
+function parseVcf(text) {
+  const out = []; let cur = null;
+  const lines = text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/);
+  for (const line of lines) {
+    if (/^BEGIN:VCARD/i.test(line)) cur = { name: '', phones: [] };
+    else if (/^END:VCARD/i.test(line)) { if (cur) out.push(cur); cur = null; }
+    else if (cur && /^FN[;:]/i.test(line)) cur.name = line.slice(line.indexOf(':') + 1).trim();
+    else if (cur && !cur.name && /^N[;:]/i.test(line)) cur.name = line.slice(line.indexOf(':') + 1).split(';').filter(Boolean).reverse().join(' ').trim();
+    else if (cur && /^(item\d+\.)?TEL[;:]/i.test(line)) cur.phones.push(line.slice(line.indexOf(':') + 1).trim());
+  }
+  return out;
+}
+function parseCsv(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true; else if (ch === ',') { row.push(cell); cell = ''; } else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  if (rows.length < 2) return [];
+  const h = rows[0].map((x) => x.toLowerCase());
+  const nameCols = ['name', 'display name', 'full name'].map((k) => h.indexOf(k)).filter((i) => i > -1);
+  const first = h.findIndex((x) => x === 'first name' || x === 'given name'), last = h.findIndex((x) => x === 'last name' || x === 'family name');
+  const phoneCols = h.map((x, i) => (/phone|mobile|tel/.test(x) && !/type|label/.test(x) ? i : -1)).filter((i) => i > -1);
+  return rows.slice(1).map((r) => ({
+    name: (nameCols.length ? r[nameCols[0]] : [r[first], r[last]].filter(Boolean).join(' ')) || '',
+    phones: phoneCols.flatMap((i) => String(r[i] || '').split(':::').map((x) => x.trim())).filter(Boolean),
+  }));
+}
+$('#pcFile').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const text = await f.text();
+  const list = /BEGIN:VCARD/i.test(text) ? parseVcf(text) : parseCsv(text);
+  importContacts(list, f.name);
+};
+
+// ----- number search (works in Chats and Contacts) -----
+let lookupTimer = 0;
+const lookupCache = new Map();
+function numberQuery() { const q = $('#search').value.trim(); const d = q.replace(/\D/g, ''); return /^[\d+\s()-]+$/.test(q) && d.length >= 10 ? d.slice(-10) : null; }
+function renderLookup(container) {
+  const n = numberQuery(); if (!n) return;
+  if (users.some((u) => !u.isGroup && l10(u.phone) === n && u.inContacts)) return;
+  const li = el('li'); li.className = 'lookup'; container.prepend(li);
+  const show = (r) => {
+    li.innerHTML = '';
+    if (r === 'loading') { li.append(el('div', 'empty-list', '🔍 Searching Maata for ' + n + '…')); return; }
+    if (r && r.error) { li.append(el('div', 'empty-list', r.error)); return; }
+    if (r && r.found) {
+      const u = r.user, row = el('div', 'contact');
+      const body = el('div', 'c-body'); body.append(el('div', 'c-name', u.name), el('div', 'c-last', '✅ On Maata · ' + u.phone));
+      const chat = el('button', 'recall'); chat.innerHTML = '💬'; chat.setAttribute('aria-label', 'Message ' + u.name); chat.onclick = () => { upsertUser(u); $('#search').value = ''; setTab('chats'); openChat(u.id); };
+      const save = el('button', 'recall'); save.innerHTML = '➕'; save.setAttribute('aria-label', 'Save ' + u.name);
+      save.onclick = async () => { try { upsertUser(await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone: u.phone, name: u.name }) })); toast(u.name + ' saved'); renderContacts(); renderPhoneContacts(); } catch (e) { toast(e.message); } };
+      row.append(avatar(u), body, chat); if (!u.inContacts) row.append(save); li.append(row);
+    } else {
+      const box = el('div'); box.style.padding = '0 8px'; box.append(el('div', 'empty-list', r && r.self ? 'That is your own number.' : n + ' is not on Maata yet.'));
+      if (!(r && r.self)) box.append(inviteCard(n)); li.append(box);
+    }
+  };
+  if (lookupCache.has(n)) return show(lookupCache.get(n));
+  show('loading');
+  clearTimeout(lookupTimer);
+  lookupTimer = setTimeout(async () => {
+    let r; try { r = await api('/api/lookup?phone=' + n); } catch (e) { r = { error: e.message }; }
+    if (!r.error) lookupCache.set(n, r);
+    if (numberQuery() === n) (tab === 'contacts' ? renderPhoneContacts() : renderContacts());
+  }, 450);
+}
+
+// ----- Contacts tab -----
+function renderPhoneContacts() {
+  if (tab !== 'contacts') return;
+  const q = $('#search').value.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+  const onMaataByNum = new Map(users.filter((u) => !u.isGroup && !u.blocked).map((u) => [l10(u.phone), u]));
+  const match = (name, phone) => !q || name.toLowerCase().includes(q) || (qd.length >= 3 && l10(phone).includes(qd));
+  const on = [], off = [], seen = new Set();
+  for (const c of phoneBook) {
+    const u = onMaataByNum.get(c.n);
+    if (u) { if (!seen.has(u.id) && match(c.name, c.phone)) { on.push({ u, label: c.name }); } seen.add(u.id); }
+    else if (match(c.name, c.phone)) off.push(c);
+  }
+  for (const u of users) if (!u.isGroup && u.inContacts && !u.blocked && !seen.has(u.id) && match(nameOf(u), u.phone)) on.push({ u, label: nameOf(u) });
+  on.sort((a, b) => a.label.localeCompare(b.label));
+  $('#pcCount').textContent = phoneBook.length ? phoneBook.length + ' phone contacts · ' + on.length + ' on Maata' : '';
+  const list = $('#pcList'); list.innerHTML = '';
+  if (!phoneBook.length && !on.length) list.append(el('li', 'empty-list', 'Sync or import your phone contacts to see who is on Maata.'));
+  if (on.length) {
+    list.append(el('li', 'call-day', '✅ On Maata (' + on.length + ')'));
+    for (const { u, label } of on) {
+      const li = el('li'), row = el('div', 'contact');
+      const body = el('div', 'c-body'); body.append(el('div', 'c-name', label), el('div', 'c-last', u.phone + (u.name && u.name !== label ? ' · ' + u.name : '')));
+      const chat = el('button', 'recall'); chat.innerHTML = '💬'; chat.setAttribute('aria-label', 'Message ' + label); chat.onclick = () => { upsertUser(u); setTab('chats'); openChat(u.id); };
+      const call2 = el('button', 'recall'); call2.innerHTML = '📞'; call2.setAttribute('aria-label', 'Call ' + label); call2.onclick = () => { upsertUser(u); activeId = u.id; startCall('voice'); };
+      row.append(avatar(u, '', true), body, chat, call2); li.append(row); list.append(li);
+    }
+  }
+  if (off.length) {
+    list.append(el('li', 'call-day', '📨 Invite to Maata (' + off.length + ')'));
+    for (const c of off.slice(0, 500)) {
+      const li = el('li'), row = el('div', 'contact');
+      const body = el('div', 'c-body'); body.append(el('div', 'c-name', c.name), el('div', 'c-last', c.phone));
+      const inv = el('a', 'recall'); inv.textContent = '📨'; inv.title = 'Invite'; inv.setAttribute('aria-label', 'Invite ' + c.name);
+      inv.href = 'https://wa.me/' + (c.n.length === 10 ? '91' + c.n : c.n) + '?text=' + encodeURIComponent('Hi ' + c.name + '! Let\u2019s talk free on Maata: voice & video calls and chat. Join here: ' + location.origin);
+      inv.target = '_blank'; inv.rel = 'noopener'; inv.style.textDecoration = 'none';
+      row.append(avatar({ id: c.n, name: c.name }), body, inv); li.append(row); list.append(li);
+    }
+    if (off.length > 500) list.append(el('li', 'empty-list', 'Search to find the other ' + (off.length - 500) + ' contacts.'));
+  }
+  renderLookup(list);
+}
+$('#pcSync').onclick = syncFromPhone;
+$('#pcImport').onclick = () => $('#pcFile').click();
+$('#pcClear').onclick = () => { if (!confirm('Remove the phone contacts list from this device? Your Maata contacts stay.')) return; phoneBook = []; savePhoneBook(); renderPhoneContacts(); };
 
 // ---------------- go ----------------
 setMode('login');
