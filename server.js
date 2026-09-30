@@ -484,7 +484,8 @@ app.post('/api/block/:id', auth, (req, res) => {
 
 app.get('/api/messages/:userId', auth, (req, res) => {
   const me = req.user.id, other = req.params.userId;
-  res.json(db.messages.filter((m) => (m.from === me && m.to === other) || (m.from === other && m.to === me)).slice(-300));
+  const hidden = new Set(req.user.hiddenMsgs || []);
+  res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id)).slice(-300));
 });
 
 app.get('/api/ice', auth, (req, res) => {
@@ -651,13 +652,35 @@ function canMessage(fromUser, to) {
   return { target };
 }
 function deliverMessage(fromUser, target, fields, exceptSocketId) {
-  const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: isOnline(target.id) ? 'delivered' : 'sent', type: 'text', text: '', ...fields };
+  const online2 = isOnline(target.id);
+  const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: online2 ? 'delivered' : 'sent', ...(online2 ? { deliveredAt: now() } : {}), type: 'text', text: '', ...fields };
   db.messages.push(m); save();
   io.to('user:' + target.id).emit('msg:new', m);
   (exceptSocketId ? io.to('user:' + fromUser.id).except(exceptSocketId) : io.to('user:' + fromUser.id)).emit('msg:new', m);
   feed('message', `${fromUser.name} → ${target.name}: ${m.type === 'text' ? 'message' : m.type}`);
   return m;
 }
+// A file can be shared by several messages (forwards); delete it only when none is left
+function releaseFile(fileId) { if (!db.messages.some((x) => x.file && x.file.id === fileId)) deleteChatFile(fileId); }
+app.get('/api/starred', auth, (req, res) => res.json(req.user.starred || []));
+// Post a chat photo / video / text to my status
+app.post('/api/status/from-message', auth, async (req, res) => {
+  const m = db.messages.find((x) => x.id === String(req.body?.id || '') && (x.from === req.user.id || x.to === req.user.id));
+  if (!m || !['text', 'image', 'video'].includes(m.type || 'text')) return res.status(400).json({ error: 'Only text, photos and videos can go to status.' });
+  if (tooManyStatuses(req.user)) return res.status(429).json({ error: 'You can post up to 30 status updates a day.' });
+  const base = { id: newId(), userId: req.user.id, createdAt: now(), expiresAt: now() + STATUS_TTL, views: [] };
+  let st;
+  if (!m.type || m.type === 'text') st = { ...base, type: 'text', text: String(m.text || '').slice(0, 700), bg: '#0F4C5C' };
+  else {
+    try {
+      const chunks = []; await new Promise((ok, bad) => { const r = chatFileStream(m.file.id, 0, m.file.size - 1); r.on('data', (c) => chunks.push(c)); r.on('end', ok); r.on('error', bad); });
+      await saveMedia(base.id, Buffer.concat(chunks), m.file.mime);
+    } catch { return res.status(500).json({ error: 'Could not copy this file to status.' }); }
+    st = { ...base, type: m.type, caption: String(m.text || '').slice(0, 300), mime: m.file.mime, size: m.file.size };
+  }
+  db.statuses.push(st); save(); notifyStatus(req.user);
+  res.json({ ok: true });
+});
 function emitUpdate(m) { for (const id of [m.from, m.to]) io.to('user:' + id).emit('msg:update', m); }
 
 app.post('/api/chat/upload', auth, express.raw({ type: () => true, limit: '16mb' }), async (req, res) => {
@@ -681,8 +704,8 @@ app.get('/api/chat/file/:id', (req, res) => {
   let viewer = null;
   try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* invalid */ }
   if (!viewer) return res.status(401).end();
-  const m = db.messages.find((x) => x.file && x.file.id === req.params.id);
-  if (!m || (m.from !== viewer.id && m.to !== viewer.id)) return res.status(404).end();
+  const m = db.messages.find((x) => x.file && x.file.id === req.params.id && (x.from === viewer.id || x.to === viewer.id));
+  if (!m) return res.status(404).end();
   const size = m.file.size;
   let start = 0, end = size - 1, code = 200;
   const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
@@ -1034,7 +1057,7 @@ io.on('connection', (socket) => {
 
   const bySender = {};
   for (const m of db.messages) {
-    if (m.to === me && m.status === 'sent') { m.status = 'delivered'; (bySender[m.from] = bySender[m.from] || []).push(m.id); }
+    if (m.to === me && m.status === 'sent') { m.status = 'delivered'; m.deliveredAt = now(); (bySender[m.from] = bySender[m.from] || []).push(m.id); }
   }
   if (Object.keys(bySender).length) {
     save();
@@ -1071,8 +1094,82 @@ io.on('connection', (socket) => {
       const mins = [15, 60, 480].includes(Number(p.location.minutes)) ? Number(p.location.minutes) : 15;
       fields = { type, location: { lat, lng, acc: Math.round(Number(p.location.acc) || 0), live, ...(live ? { until: now() + mins * 60000, updatedAt: now(), ended: false } : {}) } };
     }
+    if (p?.replyTo) {
+      const q = db.messages.find((x) => x.id === String(p.replyTo));
+      if (q && ((q.from === me && q.to === ok.target.id) || (q.from === ok.target.id && q.to === me))) {
+        fields.replyTo = { id: q.id, from: q.from, type: q.type || 'text', text: String(q.deleted ? '' : q.text || q.file?.name || q.contact?.name || q.poll?.question || q.event?.title || '').slice(0, 120) };
+      }
+    }
     const m = deliverMessage(socket.user, ok.target, fields, socket.id);
     reply({ message: m });
+  });
+
+  // ----- message actions: react, pin, star, delete, forward -----
+  socket.on('msg:react', (p) => {
+    const m = myMsg(p?.id); if (!m || m.deleted) return;
+    const emoji = String(p.emoji || '').slice(0, 16);
+    m.reactions = m.reactions || {};
+    if (emoji && m.reactions[me] !== emoji) m.reactions[me] = emoji; else delete m.reactions[me];
+    save(); emitUpdate(m);
+  });
+  socket.on('msg:pin', (p) => {
+    const m = myMsg(p?.id); if (!m || m.deleted) return;
+    if (p.pin) {
+      const other = m.from === me ? m.to : m.from;
+      const pins = db.messages.filter((x) => x.pinned && ((x.from === me && x.to === other) || (x.from === other && x.to === me)));
+      if (pins.length >= 3) { const oldest = pins.sort((a, b) => a.pinnedAt - b.pinnedAt)[0]; oldest.pinned = false; emitUpdate(oldest); }
+      Object.assign(m, { pinned: true, pinnedAt: now(), pinnedBy: me });
+    } else { m.pinned = false; }
+    save(); emitUpdate(m);
+  });
+  socket.on('msg:star', (p) => {
+    const ids = (Array.isArray(p?.ids) ? p.ids : []).map(String).filter((id) => myMsg(id));
+    const set = new Set(socket.user.starred || []);
+    for (const id of ids) (p.star ? set.add(id) : set.delete(id));
+    socket.user.starred = [...set].slice(-1000); save();
+    io.to(room(me)).emit('star:update', { ids, star: !!p.star });
+  });
+  socket.on('msg:delete', (p, ack) => {
+    const ids = (Array.isArray(p?.ids) ? p.ids : []).map(String).slice(0, 100);
+    const done = [];
+    for (const id of ids) {
+      const m = myMsg(id); if (!m) continue;
+      if (p.everyone) {
+        if (m.from !== me || m.deleted || now() - m.ts > 48 * 3600 * 1000) continue;
+        const fileId = m.file && m.file.id;
+        for (const k of ['text', 'file', 'contact', 'poll', 'event', 'location', 'reactions', 'replyTo', 'forwarded']) delete m[k];
+        Object.assign(m, { type: 'deleted', deleted: true, pinned: false, text: '' });
+        if (fileId) releaseFile(fileId);
+        emitUpdate(m); done.push(id);
+      } else {
+        const h = new Set(socket.user.hiddenMsgs || []); h.add(id); socket.user.hiddenMsgs = [...h].slice(-5000);
+        io.to(room(me)).emit('msg:hidden', { id }); done.push(id);
+      }
+    }
+    save();
+    if (typeof ack === 'function') ack({ done });
+  });
+  socket.on('msg:forward', (p, ack) => {
+    const reply = (x) => typeof ack === 'function' && ack(x);
+    const ids = (Array.isArray(p?.ids) ? p.ids : []).map(String).slice(0, 30);
+    const tos = [...new Set((Array.isArray(p?.to) ? p.to : []).map(String))].slice(0, 5);
+    const src = ids.map(myMsg).filter((m) => m && !m.deleted);
+    if (!src.length || !tos.length) return reply({ error: 'Choose a message and a chat.' });
+    let sent = 0; const errors = [];
+    for (const to of tos) {
+      const ok = canMessage(socket.user, to);
+      if (ok.error) { errors.push(ok.error); continue; }
+      for (const m of src) {
+        const f = { type: m.type || 'text', text: m.text || '', forwarded: true };
+        if (m.file) f.file = { ...m.file };
+        if (m.contact) f.contact = { ...m.contact };
+        if (m.poll) f.poll = { question: m.poll.question, options: [...m.poll.options], multi: m.poll.multi, votes: {} };
+        if (m.event) f.event = { ...m.event, rsvp: {} };
+        if (m.location) f.location = { lat: m.location.lat, lng: m.location.lng, acc: m.location.acc, live: false };
+        deliverMessage(socket.user, ok.target, f, null); sent++;
+      }
+    }
+    reply(sent ? { sent } : { error: errors[0] || 'Not forwarded.' });
   });
 
   // Poll votes, event replies, live location updates
@@ -1107,7 +1204,7 @@ io.on('connection', (socket) => {
   socket.on('msg:read', (p) => {
     const from = String(p?.from || '');
     const ids = [];
-    for (const m of db.messages) if (m.from === from && m.to === me && m.status !== 'read') { m.status = 'read'; ids.push(m.id); }
+    for (const m of db.messages) if (m.from === from && m.to === me && m.status !== 'read') { m.status = 'read'; m.readAt = now(); if (!m.deliveredAt) m.deliveredAt = m.readAt; ids.push(m.id); }
     if (ids.length) { save(); io.to(room(from)).emit('msg:status', { ids, status: 'read' }); }
   });
 
