@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1049,6 +1049,121 @@ app.get('/api/groups/:id/photo', (req, res) => {
   const st = chatFileStream(g.photo, 0, g.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
 });
 
+// ---------- AI (Google Gemini, free tier) ----------
+// Set GEMINI_API_KEY (free from aistudio.google.com). Optional GEMINI_MODEL.
+const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'].filter(Boolean))];
+let geminiModelOk = null, aiCount = 0;
+async function gemini(system, contents, { json = false, maxTokens = 600, temperature = 0.7 } = {}) {
+  if (!GEMINI_KEY) return { error: 'not-configured' };
+  const models = geminiModelOk ? [geminiModelOk] : GEMINI_MODELS;
+  for (const model of models) {
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+        body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents,
+          generationConfig: { temperature, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) } }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (r.status === 404) continue; // model name not available, try the next one
+      const d = await r.json();
+      if (r.status === 429) return { error: 'limit' };
+      if (d.error) { console.error('[ai]', d.error.message); return { error: 'service' }; }
+      const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
+      if (!text) return { error: d.promptFeedback?.blockReason ? 'blocked' : 'empty' };
+      geminiModelOk = model; aiCount++;
+      return { text };
+    } catch (e) { console.error('[ai]', e.message); return { error: 'service' }; }
+  }
+  return { error: 'service' };
+}
+const AI_ERR = { 'not-configured': 'Maata AI is not switched on yet. The admin needs to add GEMINI_API_KEY.', limit: 'Maata AI is busy (free limit reached). Please try again later.', service: 'Maata AI is not available right now. Try again.', blocked: 'Maata AI cannot answer that.', empty: 'Maata AI had no answer. Try asking differently.', quota: 'You have used your Maata AI requests for today. Try again tomorrow.' };
+const aiUse = new Map();
+function aiQuota(u, n = 1) {
+  const day = dayKey(now()), q = aiUse.get(u.id);
+  const used = q && q.day === day ? q.n : 0;
+  if (used + n > 60) return false;
+  aiUse.set(u.id, { day, n: used + n }); return true;
+}
+const LANG_HINT = 'Reply in the same language and script the person used. If they write Telugu in English letters (like "ela unnav"), reply the same way. Keep replies short and friendly, suitable for a phone chat. Use plain text, no markdown symbols like ** or #.';
+const plain = (t) => String(t || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/^#+\s*/gm, '').replace(/^\s*[-*]\s+/gm, '• ').trim();
+app.get('/api/ai/status', auth, (req, res) => res.json({ enabled: !!GEMINI_KEY }));
+
+// 1) Maata AI chat (history is private to each customer)
+app.get('/api/ai/history', auth, (req, res) => res.json(db.aichats.filter((m) => m.userId === req.user.id).slice(-100)));
+app.delete('/api/ai/history', auth, (req, res) => { db.aichats = db.aichats.filter((m) => m.userId !== req.user.id); save(); res.json({ ok: true }); });
+app.post('/api/ai/chat', auth, async (req, res) => {
+  const text = String(req.body?.text || '').trim().slice(0, 2000);
+  if (!text) return res.status(400).json({ error: 'Type a question.' });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const mine = { id: newId(), userId: req.user.id, role: 'user', text, ts: now() };
+  const past = db.aichats.filter((m) => m.userId === req.user.id).slice(-12);
+  const r = await gemini('You are Maata AI, a helpful assistant inside the Maata chat app, made in India. The person chatting with you is ' + req.user.name + '. ' + LANG_HINT + ' Never claim to be a human. For medical, legal or money decisions, give general information and suggest asking an expert.',
+    [...past.map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.text }] })), { role: 'user', parts: [{ text }] }]);
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] });
+  const ai = { id: newId(), userId: req.user.id, role: 'ai', text: plain(r.text).slice(0, 4000), ts: now() };
+  db.aichats.push(mine, ai);
+  const all = db.aichats.filter((m) => m.userId === req.user.id);
+  if (all.length > 200) { const drop = new Set(all.slice(0, all.length - 200).map((m) => m.id)); db.aichats = db.aichats.filter((m) => !drop.has(m.id)); }
+  save(); res.json({ user: mine, ai });
+});
+
+// 2) Writing help & smart replies (only what the person chooses to send)
+const WRITE_TASKS = {
+  polite: 'Rewrite this message to be polite and respectful.', short: 'Make this message shorter and clearer.', fix: 'Fix spelling and grammar. Keep the meaning and language.',
+  friendly: 'Rewrite this message in a warm, friendly tone.', formal: 'Rewrite this message in a formal, professional tone for a business.',
+  te: 'Translate this message to Telugu script.', en: 'Translate this message to simple English.', hi: 'Translate this message to Hindi (Devanagari).',
+  write: 'Write a short chat message for this request.',
+};
+app.post('/api/ai/write', auth, async (req, res) => {
+  const text = String(req.body?.text || '').trim().slice(0, 2000), task = WRITE_TASKS[req.body?.task] ? req.body.task : 'write';
+  if (!text) return res.status(400).json({ error: 'Type something first.' });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const r = await gemini('You help people write chat messages in the Maata app. ' + WRITE_TASKS[task] + ' ' + (['te', 'en', 'hi'].includes(task) ? '' : LANG_HINT) + ' Return ONLY the final message text, nothing else.', [{ role: 'user', parts: [{ text }] }], { temperature: 0.5 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] });
+  res.json({ text: plain(r.text).replace(/^"|"$/g, '').slice(0, 4000) });
+});
+app.post('/api/ai/replies', auth, async (req, res) => {
+  const msgs = (Array.isArray(req.body?.messages) ? req.body.messages : []).slice(-6).map((m) => ({ who: m.mine ? 'Me' : 'Them', text: String(m.text || '').slice(0, 500) })).filter((m) => m.text);
+  if (!msgs.length) return res.status(400).json({ error: 'No messages to reply to.' });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const r = await gemini('Suggest exactly 3 different short replies (max 12 words each) that "Me" could send next in this chat. ' + LANG_HINT + ' Return a JSON array of 3 strings only.',
+    [{ role: 'user', parts: [{ text: msgs.map((m) => m.who + ': ' + m.text).join('\n') }] }], { json: true, temperature: 0.8, maxTokens: 200 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] });
+  let list = []; try { list = JSON.parse(r.text); } catch { list = r.text.split('\n'); }
+  res.json({ replies: list.map((x) => plain(String(x)).replace(/^\d+[.)]\s*/, '')).filter(Boolean).slice(0, 3) });
+});
+
+// 3) Shop auto-reply: answers customers from the owner's business details
+app.get('/api/ai/autoreply', auth, (req, res) => res.json(req.user.autoReply || { on: false, info: '', mode: 'offline', from: '21:00', to: '09:00' }));
+app.put('/api/ai/autoreply', auth, (req, res) => {
+  const b = req.body || {}, hhmm = (x, d) => (/^\d{2}:\d{2}$/.test(x || '') ? x : d);
+  req.user.autoReply = { on: !!b.on, info: String(b.info || '').slice(0, 3000), mode: ['offline', 'always', 'hours'].includes(b.mode) ? b.mode : 'offline', from: hhmm(b.from, '21:00'), to: hhmm(b.to, '09:00') };
+  save(); res.json(req.user.autoReply);
+});
+const arHits = new Map();
+function inQuietHours(ar) {
+  const d = new Date(now() + TZ * 60000), cur = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const [fh, fm] = ar.from.split(':').map(Number), [th, tm] = ar.to.split(':').map(Number), f = fh * 60 + fm, t = th * 60 + tm;
+  return f <= t ? cur >= f && cur < t : cur >= f || cur < t;
+}
+async function maybeAutoReply(customer, owner, m) {
+  const ar = owner.autoReply;
+  if (!ar || !ar.on || !GEMINI_KEY || m.type !== 'text' || m.ai || customer.id === owner.id) return;
+  if (ar.mode === 'offline' && isOnline(owner.id)) return;
+  if (ar.mode === 'hours' && !inQuietHours(ar)) return;
+  const key = owner.id + '|' + customer.id, t = now();
+  const hits = (arHits.get(key) || []).filter((x) => t - x < 3600_000);
+  const ownerHits = (arHits.get(owner.id) || []).filter((x) => t - x < 3600_000);
+  if (hits.length >= 6 || ownerHits.length >= 40 || (hits.length && t - hits[hits.length - 1] < 20_000)) return;
+  hits.push(t); ownerHits.push(t); arHits.set(key, hits); arHits.set(owner.id, ownerHits);
+  const recent = db.messages.filter((x) => !x.group && ((x.from === customer.id && x.to === owner.id) || (x.from === owner.id && x.to === customer.id)) && x.type === 'text').slice(-6);
+  const r = await gemini('You are the automatic assistant replying on behalf of "' + owner.name + '" in the Maata chat app, because they are not available right now. Business details written by the owner:\n"""' + (ar.info || 'No details given.') + '"""\nAnswer the customer using ONLY these details. If the answer is not in the details (or about exact stock, discounts or bookings), say politely that ' + owner.name + ' will reply soon. Never invent prices or promises. ' + LANG_HINT + ' Maximum 3 sentences.',
+    [{ role: 'user', parts: [{ text: recent.map((x) => (x.from === owner.id ? owner.name : 'Customer') + ': ' + x.text).join('\n') }] }], { temperature: 0.4, maxTokens: 250 });
+  if (r.error || !canMessage(owner, customer.id).target) return;
+  deliverMessage(owner, customer, { type: 'text', text: plain(r.text).slice(0, 1500), ai: true }, null);
+}
+
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -1129,6 +1244,7 @@ app.get('/admin/api/stats', adminAuth, (req, res) => {
       openReports: db.reports.filter((r) => r.status === 'open').length,
       translatedCalls: db.calls.filter((c) => c.translated).length,
       activeStatuses: db.statuses.filter((x) => x.expiresAt > now()).length,
+      aiAnswersSinceRestart: aiCount,
       translationsSinceRestart: trCount,
     },
     today: {
@@ -1436,6 +1552,7 @@ io.on('connection', (socket) => {
     }
     const m = deliverMessage(socket.user, ok.target, fields, socket.id);
     reply({ message: m });
+    if (!ok.group) maybeAutoReply(socket.user, ok.target, m).catch(() => {});
   });
 
   // ----- message actions: react, pin, star, delete, forward -----

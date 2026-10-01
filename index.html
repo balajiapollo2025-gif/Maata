@@ -587,6 +587,22 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 #pcList .contact{cursor:default}
 #pcList .recall{margin-left:4px;font-size:17px}
 .lookup .invite{margin:0 8px 8px}
+.lock .fp-btn{display:flex;align-items:center;gap:10px;padding:12px 22px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font-weight:700;font-size:16px}
+.lock .fp-btn span{font-size:26px}
+/* ---------- Maata AI ---------- */
+.ai-suggest{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;background:var(--paper);scrollbar-width:none}
+.ai-suggest::-webkit-scrollbar{display:none}
+.chip-ai{flex:none;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:14px;color:var(--ink)}
+.chip-ai:first-child{border-color:#B9A3E3;color:#5B3FA6}
+@media (prefers-color-scheme:dark){.chip-ai:first-child{color:#C9B6FF}}
+.chip-ai.x{color:var(--muted)}
+.ai-tasks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.ai-tasks button{padding:8px 14px;border-radius:999px;background:var(--peacock-soft);color:var(--ink);font-weight:600;font-size:14px}
+.ai-out{margin-top:6px}
+.ai-result{white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;line-height:1.5}
+.ai-tag{font-size:11.5px;font-weight:700;opacity:.8;margin-bottom:3px}
+.avatar.aiav{background:linear-gradient(135deg,#7A4E9E,#1F6FB2)!important}
+@media (max-width:480px){.composer{gap:2px;padding:8px 6px}.composer .cbtn{width:34px;height:40px}.composer textarea{padding:10px 12px}.send{width:44px;height:44px}}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -667,9 +683,6 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <header class="side-head">
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand">Maata</div></div>
       <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
-      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-      </button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
       </button>
@@ -752,6 +765,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <form class="composer" id="composer" hidden>
       <button type="button" class="cbtn" id="attachBtn" aria-label="Attach" title="Attach"><svg viewBox="0 0 24 24"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button>
       <button type="button" class="cbtn" id="emojiBtn" aria-label="Emojis, GIFs and stickers" title="Emojis, GIFs, Stickers" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+      <button type="button" class="cbtn" id="aiBtn" aria-label="Write with AI" title="Write with AI">✨</button>
       <textarea id="msgInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
       <button type="button" class="cbtn" id="camBtnChat" aria-label="Camera: photo or video" title="Camera"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <button class="send" id="sendBtn" aria-label="Send message" hidden><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
@@ -1048,7 +1062,8 @@ function avatar(user, size = '', withDot = false) {
   let h = 0; for (const c of user.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   el.style.background = palette[h % palette.length];
   el.textContent = String(user.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
-  if (user.isGroup && user.photo) { el.classList.add('gimg'); el.style.backgroundImage = 'url("' + groupPhotoUrl(user) + '")'; }
+  if (user.isAI) { el.textContent = '🦜'; el.classList.add('aiav'); }
+  else if (user.isGroup && user.photo) { el.classList.add('gimg'); el.style.backgroundImage = 'url("' + groupPhotoUrl(user) + '")'; }
   else if (user.isGroup && !user.photo) el.textContent = '👥';
   if (withDot && user.online) { const d = document.createElement('span'); d.className = 'dot'; el.appendChild(d); }
   return el;
@@ -1109,6 +1124,7 @@ async function start() {
   loadCalls();
   loadStatus();
   loadPrefs();
+  aiInit();
   setTimeout(handleJoinLink, 800);
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
@@ -1187,8 +1203,8 @@ function renderContacts() {
   const list = $('#contacts'); list.innerHTML = '';
   const shown = users
     .filter((u) => !q || nameOf(u).toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.phone.includes(q))
-    .filter((u) => filterOk(u))
-    .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
+    .filter((u) => filterOk(u) || (u.isAI && chatFilter === 'all'))
+    .sort((a, b) => (b.isAI ? 1 : 0) - (a.isAI ? 1 : 0) || (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
   if (!shown.length && numberQuery()) { renderLookup(list); return; }
   if (!shown.length) {
     if (users.length) { list.innerHTML = '<li class="empty-list">' + (chatFilter === 'unread' ? 'No unread chats 🎉' : chatFilter === 'favs' ? 'No favourites yet. Select a chat and tap ☆.' : chatFilter !== 'all' ? 'No chats in this list yet.' : 'No saved contact matches that search.') + '</li>'; return; }
@@ -1210,7 +1226,7 @@ function renderContacts() {
     const time = document.createElement('span'); time.className = 'c-time'; time.textContent = u.lastMessage ? fmtTime(u.lastMessage.ts) : '';
     top.append(name, time);
     const last = document.createElement('div'); last.className = 'c-last';
-    last.textContent = u.lastMessage ? (u.lastMessage.type === 'system' ? u.lastMessage.text : (u.lastMessage.from === me.id ? 'You: ' : u.isGroup ? memberName(u, u.lastMessage.from) + ': ' : '') + previewText(u.lastMessage)) : (u.isGroup ? u.memberCount + ' members' : u.online ? 'Online' : u.phone);
+    last.textContent = u.isAI ? (u.lastMessage ? u.lastMessage.text.slice(0, 80) : 'Ask me anything · Telugu, English, Hindi') : u.lastMessage ? (u.lastMessage.type === 'system' ? u.lastMessage.text : (u.lastMessage.from === me.id ? 'You: ' : u.isGroup ? memberName(u, u.lastMessage.from) + ': ' : '') + previewText(u.lastMessage)) : (u.isGroup ? u.memberCount + ' members' : u.online ? 'Online' : u.phone);
     if (u.isGroup && muted(u.id)) name.append(el('span', 'fav-star', '🔕'));
     body.append(top, last);
     b.append(avatar(u, '', true), body);
@@ -1233,6 +1249,7 @@ async function openChat(id) {
   $('#app').classList.add('in-chat');
   $('#chatEmpty').hidden = true; $('#chatHead').hidden = false; $('#messages').hidden = false; $('#composer').hidden = false;
   renderChatHead(); renderContacts();
+  if (id === AI_ID && !messagesCache[id]) await loadAiChat();
   if (!messagesCache[id]) {
     $('#messages').innerHTML = '';
     try { messagesCache[id] = await api('/api/messages/' + id); } catch (e) { toast(e.message); messagesCache[id] = []; }
@@ -1248,6 +1265,9 @@ function renderChatHead() {
   $('#chatName').textContent = nameOf(u);
   $('#strangerBar').hidden = !!u.inContacts || !!u.blocked;
   let jb = $('#gJoinBtn'); if (jb) jb.remove();
+  $('#voiceBtn').hidden = $('#videoBtn').hidden = !!u.isAI;
+  for (const id of ['#attachBtn', '#camBtnChat']) $(id).hidden = !!u.isAI;
+  if (u.isAI) { const s0 = $('#chatStatus'); s0.classList.remove('on'); s0.textContent = aiEnabled ? 'AI assistant · powered by Google Gemini' : 'Not switched on yet'; return; }
   if (u.isGroup) {
     const s0 = $('#chatStatus'); s0.classList.remove('on');
     s0.textContent = u.members.map((x) => (x.id === me.id ? 'You' : x.name)).slice(0, 12).join(', ') + (u.memberCount > 12 ? ' +' + (u.memberCount - 12) : '');
@@ -1269,6 +1289,7 @@ function renderMessages() {
   if (atBottom || box.dataset.first !== activeId) { box.scrollTop = box.scrollHeight; box.dataset.first = activeId; }
   renderPins(); if (selectMode) updateSelect();
   if (MV.id && !$('#mediaView').hidden) renderMediaView();
+  renderAiSuggest();
 }
 function markRead() {
   const u = userById(activeId);
@@ -1304,6 +1325,7 @@ $('#composer').onsubmit = (e) => {
   e.preventDefault();
   if (VR.rec) return stopVoice(false);
   const text = input.value.trim(); if (!text || !activeId) return;
+  if (activeId === AI_ID) { input.value = ''; input.style.height = 'auto'; syncMicSend(); return aiSend(text); }
   toggleEmojiPanel(false); setTimeout(syncMicSend, 0);
   const to = activeId;
   const temp = { id: 'tmp' + Date.now(), from: me.id, to, text, ts: Date.now(), status: 'pending' };
@@ -1506,7 +1528,7 @@ $('#vibrateOn').onchange = (e) => { settings.vibrate = e.target.checked; saveSet
 $('#msgSound').onchange = (e) => { settings.msgSound = e.target.checked; saveSettings(); messageSound(); };
 function openSettings() { if (call) return toast('Settings are available after the call.'); renderSettings(); $('#settingsSheet').hidden = false; $('#settingsClose').focus(); }
 function closeSettings() { stopRing(); $('#settingsSheet').hidden = true; }
-$('#settingsBtn').onclick = openSettings;
+// Settings opens from the ⋮ menu
 $('#settingsClose').onclick = closeSettings;
 $('#settingsSheet').onclick = (e) => { if (e.target.id === 'settingsSheet') closeSettings(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#settingsSheet').hidden) closeSettings(); });
@@ -1986,6 +2008,7 @@ async function setBlocked(u, blocked) {
 $('#moreBtn').onclick = () => {
   const u = userById(activeId); if (!u) return;
   if (u.isGroup) return openGroupInfo(u.id);
+  if (u.isAI) return aiChatMenu();
   $('#moreTitle').textContent = nameOf(u);
   const list = $('#moreList'); list.innerHTML = '';
   const add = (label, fn, warn) => { const b = document.createElement('button'); b.className = 'sheet-btn' + (warn ? ' warn' : ''); b.textContent = label; b.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(b); };
@@ -2428,6 +2451,7 @@ function buildBubble(m) {
     b.append(el('span', 'deleted-msg', mine ? '🚫 You deleted this message' : '🚫 This message was deleted'));
   } else {
   if (m.group && !mine && m.type !== 'sticker' && !(m.file && m.file.sticker)) { const gs = el('div', 'gsender', memberName(userById('g:' + m.group), m.from)); let h = 0; for (const c of m.from) h = (h * 31 + c.charCodeAt(0)) >>> 0; gs.style.color = palette[h % palette.length]; b.append(gs); }
+  if (m.ai) b.append(el('div', 'ai-tag', '🤖 Auto-reply'));
   if (m.forwarded) b.append(el('div', 'fwd-tag', '↪ Forwarded'));
   if (m.replyTo) b.append(quoteNode(m.replyTo));
   if (isText(m)) {
@@ -2725,7 +2749,7 @@ function shareContactView() {
     };
     box.append(b);
   }
-  const saved = users.filter((u) => !u.isGroup && u.inContacts && u.id !== activeId);
+  const saved = users.filter((u) => !u.isGroup && !u.isAI && u.inContacts && u.id !== activeId);
   if (saved.length) {
     box.append(el('div', 'or-line', 'my Maata contacts'));
     const ul = el('ul', 'pick-list');
@@ -2982,6 +3006,7 @@ function closeMsgMenu() { if (menuEls) { menuEls.forEach((e) => e.remove()); men
 function openMsgMenu(m, bubble) {
   closeMsgMenu();
   if (m.uploading || String(m.id).startsWith('up')) return;
+  if (activeId === AI_ID) { sheet('Message', (list) => { const b1 = el('button', 'sheet-btn', '⧉  Copy'); b1.onclick = () => { closeSheet('moreSheet'); copyText(m.text); }; const b2 = el('button', 'sheet-btn', '⇪  Share'); b2.onclick = () => { closeSheet('moreSheet'); shareMsg(m); }; const b3 = el('button', 'sheet-btn', '↪  Send to a chat'); b3.onclick = () => { closeSheet('moreSheet'); aiForward(m.text); }; list.append(b1, b2, b3); }); return; }
   const mine = m.from === me.id, dead = m.deleted;
   const shade = el('div', 'menu-shade'); shade.onclick = closeMsgMenu;
   const menu = el('div', 'msg-menu'); menu.setAttribute('role', 'menu');
@@ -3114,7 +3139,7 @@ function openForward(ids) {
         cb.onchange = () => { cb.checked ? pick.add('__status') : pick.delete('__status'); count(); };
         lab.append(cb, el('span', null, '⭕ My status'), el('small', 'muted', ' My contacts')); li.append(lab); ul.append(li);
       }
-      const people = users.filter((u) => !u.blocked && (u.inContacts || u.lastMessage)).filter((u) => !t || nameOf(u).toLowerCase().includes(t) || u.phone.includes(t))
+      const people = users.filter((u) => !u.isAI && !u.blocked && (u.inContacts || u.lastMessage)).filter((u) => !t || nameOf(u).toLowerCase().includes(t) || u.phone.includes(t))
         .sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0));
       for (const u of people) {
         const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id);
@@ -3337,6 +3362,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  ai: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01M9 16h6"/></svg>',
   group: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M22 21a6 6 0 0 0-4-5.6"/></svg>',
   broadcast: '<svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>',
   quick: '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>',
@@ -3361,6 +3387,7 @@ function openMainMenu(btn) {
   item('group', 'New group', openNewGroup);
   item('broadcast', 'Business broadcast', openBroadcast);
   item('quick', 'Quick replies', openQuickReplies);
+  item('ai', 'AI auto-reply', openAutoReply);
   item('star', 'Starred messages', openStarred);
   item('select', 'Select chats', () => { setTab('chats'); startChatSelect(); });
   item('lists', 'Lists', openLists);
@@ -3507,7 +3534,7 @@ function editList(l, preselect) {
     const box = el('div', 'formcol'); box.style.padding = '12px';
     const n = el('label'); n.append(el('span', null, 'List name')); const ni = el('input'); ni.maxLength = 30; ni.placeholder = 'e.g. Customers'; ni.value = l ? l.name : ''; n.append(ni); box.append(n);
     const ul = el('ul', 'fwd-list');
-    for (const u of users.filter((x) => x.inContacts || x.lastMessage)) {
+    for (const u of users.filter((x) => !x.isAI && (x.inContacts || x.lastMessage))) {
       const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = members.has(u.id);
       cb.onchange = () => (cb.checked ? members.add(u.id) : members.delete(u.id));
       const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li);
@@ -3541,7 +3568,7 @@ function openBroadcast() {
     const allRow = el('div', 'row2'); allRow.style.cssText = 'display:flex;gap:8px;margin:8px 0';
     const selAll = el('button', 'linkbtn', 'Select all'); const clr = el('button', 'linkbtn', 'Clear'); allRow.append(selAll, clr); box.append(allRow);
     const ul = el('ul', 'fwd-list'); box.append(ul);
-    const people = () => users.filter((u) => !u.isGroup && !u.blocked && u.inContacts).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
+    const people = () => users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && u.inContacts).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
     const send = el('button', 'primary', 'Send broadcast');
     const count = () => { send.textContent = pick.size ? 'Send to ' + pick.size : 'Send broadcast'; };
     const draw = () => {
@@ -3588,10 +3615,16 @@ function openLockSettings() {
       if (!/^\d{4,6}$/.test(p1.value)) return toast('PIN must be 4 to 6 digits.');
       if (p1.value !== p2.value) return toast('The two PINs do not match.');
       const salt = Math.random().toString(36).slice(2);
-      store.set(LOCK_KEY, JSON.stringify({ salt, hash: await sha(salt + p1.value), minutes: Number(sel.value) }));
+      const prevBio = (lockCfg() || {}).bio;
+      store.set(LOCK_KEY, JSON.stringify({ salt, hash: await sha(salt + p1.value), minutes: Number(sel.value), ...(prevBio ? { bio: prevBio } : {}) }));
+      if (!cfg && !prevBio && (await bioAvailable()) && confirm('Also unlock Maata with your fingerprint?')) {
+        try { const c2 = lockCfg(); c2.bio = await bioRegister(); store.set(LOCK_KEY, JSON.stringify(c2)); toast('App lock on 🔒 with fingerprint 👆'); closeSheet('moreSheet'); return; }
+        catch { toast('Fingerprint not set up. PIN lock is on.'); }
+      }
       closeSheet('moreSheet'); toast('App lock is on 🔒');
     };
     box.append(a, b, t, save2);
+    if (cfg) { const ph = el('div'); box.append(ph); bioSettingRow(ph); }
     if (cfg) { const off = el('button', 'danger-btn', 'Turn off app lock'); off.onclick = () => { store.del(LOCK_KEY); closeSheet('moreSheet'); toast('App lock turned off'); }; box.append(off); }
     list.append(box);
   });
@@ -3616,6 +3649,12 @@ function showLock() {
     pad.append(b);
   }
   L.append(pad);
+  if (cfg.bio) {
+    const fp = el('button', 'fp-btn'); fp.innerHTML = '<span aria-hidden="true">👆</span> Unlock with fingerprint'; fp.setAttribute('aria-label', 'Unlock with fingerprint');
+    const tryBio = async () => { err.textContent = ''; try { if (await bioCheck(cfg.bio)) { L.remove(); return; } } catch {} err.textContent = 'Fingerprint not recognised. Use your PIN.'; };
+    fp.onclick = tryBio; L.append(fp);
+    setTimeout(tryBio, 350);
+  }
   const forgot = el('button', 'linkbtn', 'Forgot PIN? Log out'); forgot.onclick = () => { if (confirm('Log out? You can log in again with your mobile number and password.')) { store.del(LOCK_KEY); logout(); } };
   L.append(forgot);
   L.addEventListener('keydown', (e) => { if (/^\d$/.test(e.key) && pin.length < 6) { pin += e.key; draw(); tryPin(); } else if (e.key === 'Backspace') { pin = pin.slice(0, -1); draw(); } });
@@ -3782,7 +3821,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && EP.el) t
 
 // ================= voice message button (right side) =================
 const VR = { rec: null, stream: null, chunks: [], t0: 0, paid: 0, pausedAt: 0, timer: 0, ctx: null, raf: 0, bar: null };
-function syncMicSend() { const has = !!$('#msgInput').value.trim(); $('#sendBtn').hidden = !has; $('#micBtn').hidden = has; }
+function syncMicSend() { const has = !!$('#msgInput').value.trim() || activeId === AI_ID; $('#sendBtn').hidden = !has; $('#micBtn').hidden = has; }
 $('#msgInput').addEventListener('input', syncMicSend);
 async function startVoice() {
   if (call) return toast('You are on a call.');
@@ -3830,6 +3869,7 @@ function stopVoice(cancel) {
   try { rec.stop(); } catch { finish(); }
 }
 $('#micBtn').onclick = startVoice;
+$('#aiBtn').onclick = openAiWriter;
 
 // ================= GPS photo stamp (map + address + lat/long + date & time) =================
 const GPS = { on: store.get('maata_gps_cam') === '1', watch: null, pos: null, addr: null, addrAt: null, busy: false };
@@ -3920,7 +3960,7 @@ const isGroupId = (id) => typeof id === 'string' && id.startsWith('g:');
 const groupPhotoUrl = (g) => '/api/groups/' + g.id.slice(2) + '/photo?t=' + encodeURIComponent(token) + '&v=' + (g.photoV || 0);
 function memberName(g, uid) { if (uid === me.id) return 'You'; const x = g && g.members ? g.members.find((y) => y.id === uid) : null; return x ? x.name : (userById(uid) ? nameOf(userById(uid)) : 'Member'); }
 const muted = (id) => (prefs.muted || []).includes(id);
-async function reloadUsers() { try { users = await api('/api/users'); } catch { return; } renderContacts(); if (activeId) { if (!userById(activeId)) closeActiveChat(); else { renderChatHead(); renderMessages(); } } }
+async function reloadUsers() { try { users = await api('/api/users'); } catch { return; } ensureAiContact(); renderContacts(); if (activeId) { if (!userById(activeId)) closeActiveChat(); else { renderChatHead(); renderMessages(); } } }
 function closeActiveChat() { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; $('#pinBar').hidden = true; }
 
 // ----- new group: pick members → name & photo -----
@@ -3933,7 +3973,7 @@ function openNewGroup() {
     const sel = el('div', 'row2'); sel.style.cssText = 'display:flex;gap:8px;margin:8px 0;align-items:center';
     const all = el('button', 'linkbtn', 'Select all'), cnt = el('span', 'muted', ''); cnt.style.marginLeft = 'auto'; sel.append(all, cnt); box.append(sel);
     const ul = el('ul', 'fwd-list'); box.append(ul);
-    const people = () => users.filter((u) => !u.isGroup && u.inContacts && !u.blocked).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
+    const people = () => users.filter((u) => !u.isGroup && !u.isAI && u.inContacts && !u.blocked).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
     const next = el('button', 'primary', 'Next →');
     const count = () => { cnt.textContent = pick.size + ' selected'; next.disabled = !pick.size; };
     const draw = () => {
@@ -4047,7 +4087,7 @@ function addGroupMembers(g) {
     const go = el('button', 'primary', 'Add');
     const draw = () => {
       ul.innerHTML = ''; const t = q.value.trim().toLowerCase();
-      const ps = users.filter((u) => !u.isGroup && u.inContacts && !u.blocked && !inside.has(u.id)).filter((u) => !t || nameOf(u).toLowerCase().includes(t) || u.phone.includes(t));
+      const ps = users.filter((u) => !u.isGroup && !u.isAI && u.inContacts && !u.blocked && !inside.has(u.id)).filter((u) => !t || nameOf(u).toLowerCase().includes(t) || u.phone.includes(t));
       if (!ps.length) ul.append(el('li', 'empty-list', 'All your contacts are already in this group. Share the invite link to add others.'));
       for (const u of ps) { const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id); cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); go.textContent = pick.size ? 'Add ' + pick.size : 'Add'; }; const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li); }
     };
@@ -4287,7 +4327,7 @@ const lookupCache = new Map();
 function numberQuery() { const q = $('#search').value.trim(); const d = q.replace(/\D/g, ''); return /^[\d+\s()-]+$/.test(q) && d.length >= 10 ? d.slice(-10) : null; }
 function renderLookup(container) {
   const n = numberQuery(); if (!n) return;
-  if (users.some((u) => !u.isGroup && l10(u.phone) === n && u.inContacts)) return;
+  if (users.some((u) => !u.isGroup && !u.isAI && l10(u.phone) === n && u.inContacts)) return;
   const li = el('li'); li.className = 'lookup'; container.prepend(li);
   const show = (r) => {
     li.innerHTML = '';
@@ -4319,7 +4359,7 @@ function renderLookup(container) {
 function renderPhoneContacts() {
   if (tab !== 'contacts') return;
   const q = $('#search').value.trim().toLowerCase(), qd = q.replace(/\D/g, '');
-  const onMaataByNum = new Map(users.filter((u) => !u.isGroup && !u.blocked).map((u) => [l10(u.phone), u]));
+  const onMaataByNum = new Map(users.filter((u) => !u.isGroup && !u.isAI && !u.blocked).map((u) => [l10(u.phone), u]));
   const match = (name, phone) => !q || name.toLowerCase().includes(q) || (qd.length >= 3 && l10(phone).includes(qd));
   const on = [], off = [], seen = new Set();
   for (const c of phoneBook) {
@@ -4327,7 +4367,7 @@ function renderPhoneContacts() {
     if (u) { if (!seen.has(u.id) && match(c.name, c.phone)) { on.push({ u, label: c.name }); } seen.add(u.id); }
     else if (match(c.name, c.phone)) off.push(c);
   }
-  for (const u of users) if (!u.isGroup && u.inContacts && !u.blocked && !seen.has(u.id) && match(nameOf(u), u.phone)) on.push({ u, label: nameOf(u) });
+  for (const u of users) if (!u.isGroup && !u.isAI && u.inContacts && !u.blocked && !seen.has(u.id) && match(nameOf(u), u.phone)) on.push({ u, label: nameOf(u) });
   on.sort((a, b) => a.label.localeCompare(b.label));
   $('#pcCount').textContent = phoneBook.length ? phoneBook.length + ' phone contacts · ' + on.length + ' on Maata' : '';
   const list = $('#pcList'); list.innerHTML = '';
@@ -4360,6 +4400,171 @@ $('#pcSync').onclick = syncFromPhone;
 $('#pcImport').onclick = () => $('#pcFile').click();
 $('#pcClear').onclick = () => { if (!confirm('Remove the phone contacts list from this device? Your Maata contacts stay.')) return; phoneBook = []; savePhoneBook(); renderPhoneContacts(); };
 
+// ================= fingerprint / face unlock (phone's own sensor, via WebAuthn) =================
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (s2) => Uint8Array.from(atob(s2.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s2.length + 3) % 4)), (c) => c.charCodeAt(0));
+async function bioAvailable() {
+  try { return !!(window.PublicKeyCredential && window.isSecureContext && (await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())); } catch { return false; }
+}
+async function bioRegister() {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)),
+    rp: { name: 'Maata', id: location.hostname },
+    user: { id: new TextEncoder().encode(String(me.id).slice(0, 64)), name: me.phone, displayName: me.name },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+    timeout: 60000, attestation: 'none',
+  } });
+  return b64u(cred.rawId);
+}
+async function bioCheck(credId) {
+  const a = await navigator.credentials.get({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rpId: location.hostname, timeout: 60000,
+    allowCredentials: [{ type: 'public-key', id: unb64u(credId), transports: ['internal'] }], userVerification: 'required',
+  } });
+  return !!a && b64u(a.rawId) === credId;
+}
+async function bioSettingRow(box) {
+  if (!(await bioAvailable())) { box.append(el('p', 'info-note', '👆 Fingerprint unlock is not available on this device/browser. On Android use Chrome with a fingerprint set up in phone Settings.')); return; }
+  const cfg = lockCfg(); if (!cfg) return;
+  const r = el('div', 'set-row'); r.style.padding = '12px 0';
+  const t = el('div', 'txt'); t.append(el('b', null, '👆 Unlock with fingerprint'), el('small', null, 'Use your phone fingerprint or face to open Maata. PIN still works as a backup.'));
+  const l = el('label', 'switch-ui'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!cfg.bio; cb.setAttribute('aria-label', 'Unlock with fingerprint');
+  cb.onchange = async () => {
+    const c2 = lockCfg(); if (!c2) return;
+    if (cb.checked) {
+      try { c2.bio = await bioRegister(); store.set(LOCK_KEY, JSON.stringify(c2)); toast('Fingerprint unlock is on 👆'); }
+      catch { cb.checked = false; toast('Fingerprint was not set up. Try again and touch the sensor.'); }
+    } else { delete c2.bio; store.set(LOCK_KEY, JSON.stringify(c2)); toast('Fingerprint unlock turned off'); }
+  };
+  l.append(cb, el('span')); r.append(t, l); box.append(r);
+}
+
+// ================= Maata AI (Gemini) =================
+const AI_ID = 'ai';
+const AI_USER = { id: AI_ID, isAI: true, name: 'Maata AI', displayName: 'Maata AI', phone: '', inContacts: true, online: false, lastMessage: null, unread: 0 };
+let aiEnabled = false;
+function ensureAiContact() { if (!users.some((u) => u.id === AI_ID)) users.unshift({ ...AI_USER }); }
+async function aiInit() { try { aiEnabled = (await api('/api/ai/status')).enabled; } catch {} ensureAiContact(); renderContacts(); }
+const aiMsg = (m) => ({ id: m.id, from: m.role === 'ai' ? AI_ID : me.id, to: m.role === 'ai' ? me.id : AI_ID, ts: m.ts, type: 'text', text: m.text, status: 'read' });
+async function loadAiChat() {
+  let h = []; try { h = await api('/api/ai/history'); } catch {}
+  messagesCache[AI_ID] = h.map(aiMsg);
+  if (!messagesCache[AI_ID].length) messagesCache[AI_ID].push({ id: 'ai-hello', from: AI_ID, to: me.id, ts: Date.now(), type: 'text', status: 'read',
+    text: 'నమస్కారం ' + me.name + '! 🦜 నేను Maata AI. ఏదైనా అడగండి: ప్రశ్నలు, మెసేజ్ రాయించడం, అనువాదం, ఐడియాలు.\nNamaskaram! Ask me anything in Telugu, English or Hindi.' });
+}
+async function aiSend(text) {
+  const list = messagesCache[AI_ID] = messagesCache[AI_ID] || [];
+  const temp = { id: 'tmp' + Date.now(), from: me.id, to: AI_ID, ts: Date.now(), type: 'text', text, status: 'pending' };
+  const typing = { id: 'ai-typing', from: AI_ID, to: me.id, ts: Date.now(), type: 'text', text: '🦜 typing…', status: 'read' };
+  list.push(temp, typing); bubbleCache.delete('ai-typing'); renderMessages();
+  try {
+    const r = await api('/api/ai/chat', { method: 'POST', body: JSON.stringify({ text }) });
+    list.splice(list.indexOf(temp), 1, aiMsg(r.user)); list.splice(list.indexOf(typing), 1, aiMsg(r.ai));
+    const u = userById(AI_ID); if (u) u.lastMessage = aiMsg(r.ai);
+  } catch (e) { list.splice(list.indexOf(typing), 1); temp.status = 'sent'; toast(e.message); }
+  renderContacts(); if (activeId === AI_ID) renderMessages();
+}
+function aiChatMenu() {
+  sheet('🦜 Maata AI', (list) => {
+    list.append(el('p', 'info-note', 'Maata AI is powered by Google Gemini. Your questions here are sent to Google to get answers — do not share passwords, OTPs or bank details. Answers can be wrong; check important facts.'));
+    const b = el('button', 'sheet-btn warn', '🗑️  Clear AI chat');
+    b.onclick = async () => { if (!confirm('Clear your Maata AI chat?')) return; await api('/api/ai/history', { method: 'DELETE' }).catch(() => {}); closeSheet('moreSheet'); await loadAiChat(); bubbleCache.clear(); renderMessages(); };
+    list.append(b);
+  });
+}
+
+// ----- ✨ writing help -----
+function openAiWriter() {
+  if (!aiEnabled) return toast('Maata AI is not switched on yet.');
+  const cur = $('#msgInput').value.trim();
+  sheet('✨ Write with AI', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const l = el('label'); l.append(el('span', null, cur ? 'Your message' : 'What should I write? (e.g. "Diwali offer message for my mobile shop")')); const ta = el('textarea'); ta.value = cur; ta.maxLength = 2000; l.append(ta); box.append(l);
+    const out = el('div'); out.className = 'ai-out'; out.hidden = true;
+    const grid = el('div', 'ai-tasks');
+    const tasks = cur ? [['polite', '🙏 Polite'], ['short', '✂️ Shorter'], ['fix', '✅ Fix spelling'], ['friendly', '😊 Friendly'], ['formal', '💼 Formal'], ['te', 'తెలుగు'], ['en', 'English'], ['hi', 'हिन्दी']] : [['write', '✨ Write it'], ['te', 'తెలుగు'], ['en', 'English'], ['hi', 'हिन्दी']];
+    for (const [task, label] of tasks) {
+      const b = el('button', null, label); b.type = 'button';
+      b.onclick = async () => {
+        if (!ta.value.trim()) return toast('Type something first.');
+        grid.querySelectorAll('button').forEach((x) => (x.disabled = true)); out.hidden = false; out.textContent = '✨ Writing…';
+        try {
+          const r = await api('/api/ai/write', { method: 'POST', body: JSON.stringify({ text: ta.value, task }) });
+          out.innerHTML = ''; out.append(el('div', 'ai-result', r.text));
+          const use = el('button', 'primary', 'Use this message'); use.onclick = () => { $('#msgInput').value = r.text; $('#msgInput').dispatchEvent(new Event('input')); closeSheet('moreSheet'); $('#msgInput').focus(); };
+          out.append(use);
+        } catch (e) { out.textContent = e.message; }
+        grid.querySelectorAll('button').forEach((x) => (x.disabled = false));
+      };
+      grid.append(b);
+    }
+    box.append(grid, out); list.append(box); ta.focus();
+  });
+}
+
+// ----- smart reply suggestions (only when you tap ✨ Suggest) -----
+function renderAiSuggest() {
+  let bar = $('#aiSuggest');
+  if (!bar) { bar = el('div', 'ai-suggest'); bar.id = 'aiSuggest'; $('#composer').before(bar); }
+  const list = messagesCache[activeId] || [];
+  const last = [...list].reverse().find((m) => m.type !== 'system');
+  const show = aiEnabled && activeId && activeId !== AI_ID && last && last.from !== me.id && isText(last) && !last.deleted && !$('#composer').hidden;
+  bar.hidden = !show; if (!show) return;
+  if (bar.dataset.for === last.id) return;
+  bar.dataset.for = last.id; bar.innerHTML = '';
+  const ask = el('button', 'chip-ai', '✨ Suggest replies');
+  ask.onclick = async () => {
+    ask.disabled = true; ask.textContent = '✨ Thinking…';
+    const ctx = list.filter((m) => isText(m) && !m.deleted).slice(-6).map((m) => ({ mine: m.from === me.id, text: m.text }));
+    try {
+      const r = await api('/api/ai/replies', { method: 'POST', body: JSON.stringify({ messages: ctx }) });
+      bar.innerHTML = '';
+      for (const t of r.replies) { const c = el('button', 'chip-ai', t); c.onclick = () => { $('#msgInput').value = t; $('#msgInput').dispatchEvent(new Event('input')); $('#msgInput').focus(); bar.hidden = true; }; bar.append(c); }
+      const x = el('button', 'chip-ai x', '✕'); x.setAttribute('aria-label', 'Hide suggestions'); x.onclick = () => (bar.hidden = true); bar.append(x);
+    } catch (e) { toast(e.message); ask.disabled = false; ask.textContent = '✨ Suggest replies'; }
+  };
+  bar.append(ask);
+}
+
+// ----- 🤖 shop auto-reply settings -----
+async function openAutoReply() {
+  let ar; try { ar = await api('/api/ai/autoreply'); } catch (e) { return toast(e.message); }
+  sheet('🤖 AI auto-reply', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'When you cannot reply, Maata AI answers your customers using the shop details you write below. Replies show "🤖 Auto-reply" so customers know. Customer messages are sent to Google Gemini to make the answer.'));
+    if (!aiEnabled) box.append(el('p', 'info-note', '⚠️ Maata AI is not switched on yet (admin must add GEMINI_API_KEY).'));
+    const r1 = el('div', 'set-row'); r1.style.padding = '8px 0'; const t1 = el('div', 'txt'); t1.append(el('b', null, 'Turn on auto-reply'));
+    const sw = el('label', 'switch-ui'); const on = el('input'); on.type = 'checkbox'; on.checked = ar.on; on.setAttribute('aria-label', 'Turn on auto-reply'); sw.append(on, el('span')); r1.append(t1, sw); box.append(r1);
+    const l = el('label'); l.append(el('span', null, 'Your shop details')); const info = el('textarea'); info.maxLength = 3000; info.style.minHeight = '150px';
+    info.placeholder = 'Kavitha Telecom, Shop No. 34, Adhithya Complex, Mount Road, Chennai.\nTimings: 10 AM – 9 PM, Sunday closed.\nWe sell: mobile accessories, chargers (from ₹299), earphones (from ₹199), tempered glass (₹149), data cables.\nPhone: 89390 00833. Home delivery within 5 km.';
+    info.value = ar.info; l.append(info); box.append(l);
+    const ml = el('label'); ml.append(el('span', null, 'Reply when'));
+    const mode = el('select'); for (const [v, t] of [['offline', 'I am offline (Maata closed)'], ['hours', 'Outside my working hours'], ['always', 'Always']]) mode.add(new Option(t, v)); mode.value = ar.mode; ml.append(mode); box.append(ml);
+    const hrs = el('div'); hrs.style.cssText = 'display:flex;gap:8px';
+    const fl = el('label'); fl.style.flex = '1'; fl.append(el('span', null, 'Closed from')); const from = el('input'); from.type = 'time'; from.value = ar.from; fl.append(from);
+    const tl = el('label'); tl.style.flex = '1'; tl.append(el('span', null, 'Opens at')); const to = el('input'); to.type = 'time'; to.value = ar.to; tl.append(to);
+    hrs.append(fl, tl); box.append(hrs);
+    const syncHrs = () => (hrs.hidden = mode.value !== 'hours'); mode.onchange = syncHrs; syncHrs();
+    const save2 = el('button', 'primary', 'Save');
+    save2.onclick = async () => {
+      if (on.checked && info.value.trim().length < 20) return toast('Write your shop details so AI can answer correctly.');
+      try { await api('/api/ai/autoreply', { method: 'PUT', body: JSON.stringify({ on: on.checked, info: info.value, mode: mode.value, from: from.value, to: to.value }) }); closeSheet('moreSheet'); toast(on.checked ? 'AI auto-reply is on 🤖' : 'AI auto-reply is off'); }
+      catch (e) { toast(e.message); }
+    };
+    box.append(save2); list.append(box);
+  });
+}
+
+function aiForward(text) {
+  sheet('Send to', (list) => {
+    for (const u of users.filter((x) => !x.isAI && !x.blocked && (x.inContacts || x.lastMessage))) {
+      const b = el('button', 'mem-row'); b.append(avatar(u, 'sm'), el('b', null, nameOf(u)));
+      b.onclick = () => { closeSheet('moreSheet'); openChat(u.id).then(() => { $('#msgInput').value = text; $('#msgInput').dispatchEvent(new Event('input')); $('#msgInput').focus(); }); };
+      list.append(b);
+    }
+  });
+}
 // ---------------- go ----------------
 setMode('login');
 if (token) { if (lockCfg()) showLock(); start(); } else $('#auth').hidden = false;
