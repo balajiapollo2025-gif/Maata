@@ -611,6 +611,16 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .lang-opt[aria-checked="true"] .radio::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--leaf)}
 .lang-opt .txt b{display:block;font-size:18px;font-weight:600}
 .lang-opt .txt small{color:var(--muted);font-size:14px}
+/* ---------- edit, disappearing, view once, search ---------- */
+.meta .edited{font-style:italic;opacity:.85}
+.vo-card{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#0000000f;color:inherit;font-weight:600;min-width:180px}
+.bubble.mine .vo-card{background:#ffffff1f}
+.vo-card .vo-ic{width:30px;height:30px;border-radius:50%;border:2px solid currentColor;display:grid;place-items:center;font-size:15px}
+.vo-card.done{opacity:.6;font-weight:400}
+.chat-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.chat-search input{flex:1;padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper);font:inherit;font-size:15px;color:var(--ink)}
+.bubble.hit{box-shadow:0 0 0 2px var(--turmeric)}
+.dis-ic{margin-left:6px}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -720,7 +730,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <ul class="contacts" id="contacts"></ul>
     <div id="statusPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
       <div id="stMine"></div>
-      <div class="st-actions"><button id="stTextBtn">✏️ <span data-t="text">Text</span></button><button id="stMediaBtn">📷 <span data-t="photoVideo">Photo / Video</span></button></div>
+      <div class="st-actions"><button id="stPrivacyBtn" aria-label="Status privacy" title="Status privacy" style="flex:none;width:46px">🔒</button><button id="stTextBtn">✏️ <span data-t="text">Text</span></button><button id="stMediaBtn">📷 <span data-t="photoVideo">Photo / Video</span></button></div>
       <div class="call-day" id="stRecentTitle">Recent updates</div><ul class="contacts" id="stRecent" style="overflow:visible;padding:0"></ul>
       <div class="call-day" id="stSeenTitle">Viewed updates</div><ul class="contacts" id="stSeen" style="overflow:visible;padding:0"></ul>
       <p class="info-note">🔒 Only contacts who saved your number, and whom you saved, can see your status. It disappears after 24 hours.</p>
@@ -751,6 +761,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <button class="call-btn" id="videoBtn" aria-label="Video call" title="Video call">
         <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
       </button>
+      <button class="call-btn flag-btn" id="chatSearchBtn" aria-label="Search in chat" title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
       <button class="call-btn flag-btn" id="moreBtn" aria-label="More options" title="More options">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
       </button>
@@ -806,6 +817,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <button class="round video-only" id="camBtn" aria-pressed="false" aria-label="Turn camera off">
       <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
     </button>
+    <button class="round video-only" id="shareBtn" aria-label="Share screen" aria-pressed="false" hidden><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M12 7v6M9 10l3-3 3 3"/></svg></button>
     <button class="round video-only" id="flipBtn" aria-label="Switch camera">
       <svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg>
     </button>
@@ -881,7 +893,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <button class="ov-post" id="camSend" hidden>Send</button>
   </div>
   <div class="cam-stage" id="camStage"><video id="camLive" playsinline muted autoplay></video></div>
-  <div class="cap-row" id="camCapRow" hidden><input id="camCaption" maxlength="1000" placeholder="Add a caption…"></div>
+  <div class="cap-row" id="camCapRow" hidden><input id="camCaption" maxlength="1000" placeholder="Add a caption…"><button class="ov-btn" id="camOnce" aria-pressed="false" aria-label="View once" title="View once" style="font-weight:700">①</button></div>
   <div id="camControls">
     <div class="cam-modes"><button id="camModePhoto" aria-pressed="true">PHOTO</button><button id="camModeVideo" aria-pressed="false">VIDEO</button></div>
     <div class="cam-bar"><span style="width:44px"></span><button class="shutter" id="camShutter" aria-label="Take photo"></button><span style="width:44px"></span></div>
@@ -1030,6 +1042,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <div class="set-title">Account</div>
     <div class="set-group">
       <div class="set-row" id="setAccount"></div>
+      <button class="sheet-btn" id="setTwoStep">🔐 Two-step verification</button>
     </div>
     <button class="danger-btn" id="setLogout">Log out</button>
     <input type="file" id="toneFile" accept="audio/*" hidden>
@@ -1102,9 +1115,15 @@ $('#authForm').onsubmit = async (e) => {
   e.preventDefault();
   const btn = $('#authSubmit'); btn.disabled = true; $('#authError').textContent = '';
   try {
-    const body = { phone: $('#phone').value, password: $('#password').value };
-    if (mode === 'register') body.name = $('#name').value;
-    const r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
+    let r;
+    if (pinTicket) { r = await api('/api/login/pin', { method: 'POST', body: JSON.stringify({ ticket: pinTicket, pin: $('#loginPin').value }) }); }
+    else {
+      const body = { phone: $('#phone').value, password: $('#password').value };
+      if (mode === 'register') body.name = $('#name').value;
+      r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
+      if (r.needPin) { showPinStep(r); return; }
+    }
+    pinTicket = null;
     token = r.token; store.set('maata_token', token);
     await start();
   } catch (err) { $('#authError').textContent = err.message; }
@@ -1167,6 +1186,7 @@ function connectSocket() {
   });
   socket.on('call:log', onCallLog);
   socket.on('msg:update', refreshBubble);
+  socket.on('msg:expired', ({ ids }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => !ids.includes(m.id)); if (activeId) renderMessages(); });
   socket.on('msg:hidden', ({ id }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => m.id !== id); if (activeId) renderMessages(); });
   socket.on('star:update', ({ ids, star }) => { ids.forEach((i) => (star ? starred.add(i) : starred.delete(i))); if (activeId) renderMessages(); });
   socket.on('status:new', () => { clearTimeout(statusTimer); statusTimer = setTimeout(loadStatus, 800); });
@@ -1216,7 +1236,7 @@ function renderContacts() {
     .sort((a, b) => (b.isAI ? 1 : 0) - (a.isAI ? 1 : 0) || (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
   if (!shown.length && numberQuery()) { renderLookup(list); return; }
   if (!shown.length) {
-    if (users.length) { list.innerHTML = '<li class="empty-list">' + (chatFilter === 'unread' ? 'No unread chats 🎉' : chatFilter === 'favs' ? 'No favourites yet. Select a chat and tap ☆.' : chatFilter !== 'all' ? 'No chats in this list yet.' : 'No saved contact matches that search.') + '</li>'; return; }
+    if (users.length) { list.innerHTML = '<li class="empty-list">' + (chatFilter === 'unread' ? 'No unread chats 🎉' : chatFilter === 'favs' ? 'No favourites yet. Select a chat and tap ☆.' : chatFilter !== 'all' ? 'No chats in this list yet.' : 'No saved contact matches that search.') + '</li>'; if (tab === 'chats') renderMessageSearch(list); return; }
     const li = document.createElement('li');
     li.innerHTML = '<div class="empty-card"><b>No contacts yet</b>Add friends and family by their mobile number, or pick them from your phone contacts. Only people you add will show here.<button class="primary" type="button">＋ Add contact</button></div>';
     li.querySelector('button').onclick = openAdd;
@@ -1246,13 +1266,15 @@ function renderContacts() {
     b.oncontextmenu = (e) => { e.preventDefault(); chatSel ? toggleChatSel(u.id) : startChatSelect(u.id); };
     li.append(b); list.append(li);
   }
+  if (tab === 'chats') renderMessageSearch(list);
 }
 
 // ---------------- chat ----------------
 async function openChat(id) {
   if (selectMode && activeId !== id) exitSelect();
   if (activeId !== id) { cancelReply(); pinIndex = 0; }
-  closeMsgMenu(); if (MV.id) closeMediaView();
+  closeMsgMenu(); if (MV.id) closeMediaView(); closeChatSearch(); if (editing) cancelEdit();
+  loadChatSettings(id);
   if (typeof VR !== 'undefined' && VR.rec) stopVoice(true); if (EP.el) toggleEmojiPanel(false);
   activeId = id;
   $('#app').classList.add('in-chat');
@@ -1274,6 +1296,8 @@ function renderChatHead() {
   $('#chatName').textContent = nameOf(u);
   $('#strangerBar').hidden = !!u.inContacts || !!u.blocked;
   let jb = $('#gJoinBtn'); if (jb) jb.remove();
+  $('#chatSearchBtn').hidden = !!u.isAI;
+  { const n0 = $('#chatName'); const old = n0.querySelector('.dis-ic'); if (old) old.remove(); if ((chatSettings[u.id] || {}).disappearing) n0.append(el('span', 'dis-ic', '⏱')); }
   $('#voiceBtn').hidden = $('#videoBtn').hidden = !!u.isAI;
   for (const id of ['#attachBtn', '#camBtnChat']) $(id).hidden = !!u.isAI;
   if (u.isAI) { const s0 = $('#chatStatus'); s0.classList.remove('on'); s0.textContent = aiEnabled ? 'AI assistant · powered by Google Gemini' : 'Not switched on yet'; return; }
@@ -1317,6 +1341,7 @@ async function onMessage(m) {
   if (u) { u.lastMessage = m; if (m.from !== me.id && m.type !== 'system') u.unread = (u.unread || 0) + 1; }
   renderContacts();
   if (other === activeId) { renderMessages(); markRead(); }
+  if (m.type === 'system' && /disappearing messages/i.test(m.text || '')) loadChatSettings(other);
   if (m.type === 'system' || muted(other)) return;
   if (m.from !== me.id && (document.hidden || other !== activeId)) notify(u ? nameOf(u) : 'New message', (m.group ? memberName(u, m.from) + ': ' : '') + previewText(m));
   if (m.from !== me.id) messageSound();
@@ -1335,6 +1360,7 @@ $('#composer').onsubmit = (e) => {
   if (VR.rec) return stopVoice(false);
   const text = input.value.trim(); if (!text || !activeId) return;
   if (activeId === AI_ID) { input.value = ''; input.style.height = 'auto'; syncMicSend(); return aiSend(text); }
+  if (editing) { input.value = ''; input.style.height = 'auto'; syncMicSend(); return sendEdit(text); }
   toggleEmojiPanel(false); setTimeout(syncMicSend, 0);
   const to = activeId;
   const temp = { id: 'tmp' + Date.now(), from: me.id, to, text, ts: Date.now(), status: 'pending' };
@@ -1550,6 +1576,7 @@ loadCustomTones();
 const callEl = $('#callScreen');
 function showCallScreen(status) {
   callEl.hidden = false;
+  $('#shareBtn').hidden = !canShareScreen || call.kind !== 'video';
   callEl.classList.toggle('video', call.kind === 'video');
   callEl.classList.remove('live');
   const u = userById(call.peerId) || { id: call.peerId, name: call.peerName };
@@ -1672,6 +1699,7 @@ async function onRemoteIce(p) {
 
 function endCall(reason, notifyPeer = false) {
   if (!call) return;
+  stopScreenShare(true);
   if (notifyPeer) socket.emit('call:end', { to: call.peerId, callId: call.id });
   stopTranslation();
   stopRing(); clearTimeout(call.timeout); clearInterval(call.ticker);
@@ -2029,6 +2057,8 @@ $('#moreBtn').onclick = () => {
   info.append(avatar(u), t); list.append(info);
   if (u.inContacts) { add('✏️  Rename contact', () => saveContact(u)); add('➖  Remove from contacts', () => removeContact(u)); }
   else add('➕  Save to contacts', () => saveContact(u));
+  add('⏱️  Disappearing messages', () => openDisappearing(u.id));
+  add('🔍  Search in chat', openChatSearch);
   if (u.blocked) add('✅  Unblock', () => setBlocked(u, false)); else add('🚫  Block', () => setBlocked(u, true), true);
   add(prefs.favs.includes(u.id) ? '☆  Remove from favourites' : '⭐  Add to favourites', () => savePrefs({ favs: prefs.favs.includes(u.id) ? prefs.favs.filter((f) => f !== u.id) : [...prefs.favs, u.id] }));
   add('📋  Add to list', () => pickListFor([u.id]));
@@ -2454,7 +2484,7 @@ function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.
 const bubbleCache = new Map();
 function buildBubble(m) {
   const mine = m.from === me.id;
-  const key = JSON.stringify([m.status, m.poll && m.poll.votes, m.event && m.event.rsvp, m.location, !!m.uploading, trMsg.get(m.id), settings.chatTranslate, m.reactions, m.pinned, m.deleted, starred.has(m.id)]);
+  const key = JSON.stringify([m.status, m.poll && m.poll.votes, m.event && m.event.rsvp, m.location, !!m.uploading, trMsg.get(m.id), settings.chatTranslate, m.reactions, m.pinned, m.deleted, starred.has(m.id), m.text, m.editedAt, m.openedBy]);
   const c = bubbleCache.get(m.id);
   if (c && c.key === key) return c.el;
   if (m.type === 'system') { const sm = el('div', 'sysmsg', m.text); bubbleCache.set(m.id, { key, el: sm }); return sm; }
@@ -2477,6 +2507,8 @@ function buildBubble(m) {
   } else renderRich(b, m, mine);
   }
   const meta = document.createElement('div'); meta.className = 'meta';
+  if (m.expiresAt) meta.append(el('span', 'mk', '⏱'));
+  if (m.editedAt && !m.deleted) meta.append(el('span', 'edited', 'Edited'));
   if (m.pinned) meta.append(el('span', 'mk', '📌'));
   if (starred.has(m.id)) meta.append(el('span', 'mk', '⭐'));
   meta.append(document.createTextNode(fmtTime(m.ts)));
@@ -2485,7 +2517,7 @@ function buildBubble(m) {
     t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓'; t.title = m.status; meta.append(t);
   }
   b.append(meta);
-  if (!m.uploading && !m.deleted && m.file) {
+  if (!m.uploading && !m.deleted && m.file && !m.viewOnce) {
     const fq = el('button', 'fwd-quick'); fq.setAttribute('aria-label', 'Forward'); fq.title = 'Forward';
     fq.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>';
     fq.onclick = (e) => { e.stopPropagation(); openForward([m.id]); };
@@ -2527,6 +2559,7 @@ function renderRich(b, m, mine) {
     if (m.gif.w && m.gif.h) im.style.aspectRatio = m.gif.w + '/' + m.gif.h;
     box.append(im, el('span', 'gtag', 'GIF')); b.append(box); return;
   }
+  if (m.viewOnce) return renderViewOnce(b, m, mine);
   if (m.type === 'image' && f && f.sticker) { b.classList.add('stk'); const im = el('img', 'stkimg'); im.alt = 'Sticker'; im.loading = 'lazy'; im.src = fileUrl(f); b.append(im); return; }
   if (m.type === 'image') {
     b.classList.add('media');
@@ -2639,13 +2672,14 @@ function sendRich(payload, cb) {
     if (cb) cb(res.message);
   });
 }
-function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0, sticker = false, onDone = null }) {
+function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0, sticker = false, onDone = null, once = false }) {
   const to = activeId; if (!to) return;
   if (blob.size > 16 * 1024 * 1024) return toast(name + ' is bigger than 16 MB.');
   const temp = { id: 'up' + Date.now() + Math.floor(Math.random() * 1e6), from: me.id, to, ts: Date.now(), status: 'pending', type: kind, uploading: true, progress: 0, file: { name, size: blob.size } };
   (messagesCache[to] = messagesCache[to] || []).push(temp); if (activeId === to) renderMessages();
   const q = new URLSearchParams({ to, kind, name, caption, mime: blob.type || 'application/octet-stream', sid: socket.id || '' });
   if (sticker) q.set('sticker', '1');
+  if (once) q.set('once', '1');
   if (voice) q.set('voice', '1'); if (dur) q.set('dur', String(Math.round(dur)));
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/chat/upload?' + q);
@@ -2684,7 +2718,7 @@ $('#fAudio').onchange = (e) => { sendPickedFiles([...e.target.files], 'audio'); 
 // ----- attach sheet -----
 const ATT = [
   ['doc', '📄', 'Document', '#7A4E9E'], ['media', '🖼️', 'Photos & videos', '#1F6FB2'], ['camera', '📷', 'Camera', '#C8413A'], ['audio', '🎧', 'Audio', '#B5651D'],
-  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'],
+  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'], ['once', '①', 'View once', '#4A5568'],
 ];
 function openAttach() {
   if (!activeId) return;
@@ -2711,6 +2745,7 @@ function attachAction(id) {
   else if (id === 'poll') pollView();
   else if (id === 'event') eventView();
   else if (id === 'location') locationView();
+  else if (id === 'once') { closeSheet('attachSheet'); const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*,video/*'; fi.hidden = true; document.body.append(fi); fi.onchange = async () => { const f = fi.files[0]; fi.remove(); if (!f) return; let blob = f, kind = f.type.startsWith('video/') ? 'video' : 'image'; if (kind === 'image') { try { blob = await compressImage(f); } catch {} } uploadFile(blob, { kind, name: (kind === 'image' ? 'Photo.jpg' : f.name), once: true }); }; fi.click(); }
   else if (id === 'gps') { closeSheet('attachSheet'); openCamera({ gps: true }); }
 }
 
@@ -2936,7 +2971,9 @@ function camStopRec(cancel) {
 $('#camSend').onclick = () => {
   if (!CAM.blob) return;
   const ext = CAM.kind === 'image' ? 'jpg' : (CAM.blob.type.includes('mp4') ? 'mp4' : 'webm');
-  uploadFile(CAM.blob, { kind: CAM.kind, name: (CAM.kind === 'image' ? 'Photo-' : 'Video-') + Date.now() + '.' + ext, caption: $('#camCaption').value.trim() });
+  const once = $('#camOnce').getAttribute('aria-pressed') === 'true';
+  uploadFile(CAM.blob, { kind: CAM.kind, name: (CAM.kind === 'image' ? 'Photo-' : 'Video-') + Date.now() + '.' + ext, caption: $('#camCaption').value.trim(), once });
+  $('#camOnce').setAttribute('aria-pressed', 'false');
   CAM.blob = null; closeCamera();
 };
 
@@ -2944,6 +2981,7 @@ $('#camSend').onclick = () => {
 const REACTS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const MORE_EMOJI = ['👍', '❤️', '😂', '😮', '😢', '🙏', '😍', '🔥', '🎉', '👏', '😊', '😁', '🤔', '😅', '😡', '😭', '🥰', '😎', '🙌', '💯', '✅', '❌', '👌', '🤝', '💐', '🎂', '🙂', '😴', '🤣', '😇', '👀', '⭐'];
 const ICON = {
+  edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
   info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
   reply: '<svg viewBox="0 0 24 24"><path d="M9 17l-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
@@ -3039,7 +3077,9 @@ function openMsgMenu(m, bubble) {
   const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = ICON[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
   if (!dead && (m.type === 'image' || m.type === 'video')) item('open', m.type === 'image' ? 'View photo' : 'Play video', () => openMediaView(m.id));
   if (mine && !dead) item('info', 'Message info', () => msgInfo(m));
+  if (m.viewOnce) { if (!dead) item('reply', 'Reply', () => startReply(m)); list.append(el('hr')); item('del', 'Delete', () => askDelete([m.id]), true); menu.append(list); document.body.append(shade, menu); menuEls = [shade, menu]; place(); return; }
   if (!dead) item('reply', 'Reply', () => startReply(m));
+  if (canEdit(m)) item('edit', 'Edit', () => startEdit(m));
   if (!dead && (copyableText(m) || m.type === 'image')) item('copy', 'Copy', () => (m.type === 'image' ? copyImage(m) : copyText(copyableText(m))));
   if (!dead) item('forward', 'Forward', () => openForward([m.id]));
   if (!dead && ['text', 'image', 'video'].includes(m.type || 'text')) item('status', 'Add to my status', () => toStatus(m));
@@ -3242,7 +3282,7 @@ $('#pinBar').onkeydown = (e) => { if (e.key === 'Enter') $('#pinBar').click(); }
 
 // ================= in-app photo & video viewer =================
 const MV = { id: null, scale: 1, x: 0, y: 0, drag: null, pop: null };
-const mediaList = () => curList().filter((m) => !m.deleted && !m.uploading && ((m.type === 'image' && !(m.file && m.file.sticker)) || m.type === 'video'));
+const mediaList = () => curList().filter((m) => !m.deleted && !m.uploading && !m.viewOnce && ((m.type === 'image' && !(m.file && m.file.sticker)) || m.type === 'video'));
 function openMediaView(id) {
   closeMsgMenu(); MV.id = id; $('#mediaView').hidden = false; renderMediaView(true);
 }
@@ -4054,6 +4094,7 @@ async function openGroupInfo(gid) {
     row(muted(g.id) ? '🔔  Unmute notifications' : '🔕  Mute notifications', async () => { await savePrefs({ muted: muted(g.id) ? prefs.muted.filter((x) => x !== g.id) : [...(prefs.muted || []), g.id] }); toast(muted(g.id) ? 'Muted 🔕' : 'Unmuted 🔔'); openGroupInfo(g.id); });
     row(prefs.favs.includes(g.id) ? '☆  Remove from favourites' : '⭐  Add to favourites', async () => { await savePrefs({ favs: prefs.favs.includes(g.id) ? prefs.favs.filter((f) => f !== g.id) : [...prefs.favs, g.id] }); openGroupInfo(g.id); });
     row('⭐  Starred messages', openStarred);
+    if (canEdit) row('⏱️  Disappearing messages', () => openDisappearing(g.id));
     if (admin) {
       row('🔗  Invite link', () => groupInvite(g));
       const sw = (label, key) => {
@@ -4607,6 +4648,207 @@ function openAppLanguage() {
   });
 }
 
+// ================= batch: edit, disappearing, view once, search, screen share, two-step, status privacy =================
+// ----- ✏️ edit -----
+let editing = null;
+const canEdit = (m) => m.from === me.id && !m.deleted && isText(m) && !m.ai && !String(m.id).startsWith('tmp') && Date.now() - m.ts < 15 * 60000 && activeId !== AI_ID;
+function startEdit(m) {
+  cancelReply(); editing = m;
+  let bar = $('#replyBar'); if (!bar) { bar = el('div', 'reply-bar'); bar.id = 'replyBar'; $('#composer').before(bar); }
+  bar.innerHTML = ''; bar.hidden = false;
+  const q = el('div', 'quote'); q.append(el('b', null, '✏️ Edit message'), el('span', null, m.text)); bar.append(q);
+  const x = el('button', 'icon-btn'); x.setAttribute('aria-label', 'Cancel editing'); x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>'; x.onclick = cancelEdit; bar.append(x);
+  const inp = $('#msgInput'); inp.value = m.text; inp.dispatchEvent(new Event('input')); inp.focus();
+}
+function cancelEdit() { editing = null; const bar = $('#replyBar'); if (bar) bar.hidden = true; $('#msgInput').value = ''; $('#msgInput').dispatchEvent(new Event('input')); }
+function sendEdit(text) {
+  const m = editing; editing = null; const bar = $('#replyBar'); if (bar) bar.hidden = true;
+  socket.timeout(10000).emit('msg:edit', { id: m.id, text }, (err, res) => { if (err || res?.error) return toast(res?.error || 'Not edited.'); refreshBubble(res.message); });
+}
+
+// ----- ⏱️ disappearing messages -----
+const DIS_OPTS = [[86400, '24 hours'], [604800, '7 days'], [7776000, '90 days'], [0, 'Off']];
+const chatSettings = {};
+async function loadChatSettings(id) { if (id === AI_ID) return; try { chatSettings[id] = await api('/api/chats/' + encodeURIComponent(id) + '/settings'); } catch { chatSettings[id] = { disappearing: 0 }; } if (activeId === id) renderChatHead(); }
+function openDisappearing(id) {
+  const cur = (chatSettings[id] || {}).disappearing || 0;
+  sheet('⏱️ Disappearing messages', (list) => {
+    list.append(el('p', 'info-note', 'New messages in this chat will disappear for everyone after the time you choose. Messages sent before this stay.'));
+    for (const [secs, label] of DIS_OPTS) {
+      const b = el('button', 'lang-opt'); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(secs === cur));
+      const t2 = el('span', 'txt'); t2.append(el('b', null, label)); b.append(el('span', 'radio'), t2);
+      b.onclick = async () => { try { await api('/api/chats/' + encodeURIComponent(id) + '/disappearing', { method: 'POST', body: JSON.stringify({ seconds: secs }) }); chatSettings[id] = { disappearing: secs }; closeSheet('moreSheet'); renderChatHead(); toast(secs ? '⏱️ Disappearing messages: ' + label : 'Disappearing messages off'); } catch (e) { toast(e.message); } };
+      list.append(b);
+    }
+  });
+}
+
+// ----- ① view once -----
+function openViewOnce(m) {
+  const ov = el('section', 'mv'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'View once');
+  const head = el('div', 'mv-head'); const who = el('div', 'who'); who.append(el('b', null, '① View once'), el('small', null, 'This disappears after you close it')); head.append(who);
+  const x = el('button', 'icon-btn'); x.setAttribute('aria-label', 'Close'); x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>'; head.append(x);
+  const stage = el('div', 'mv-stage'); stage.style.background = '#000';
+  const node = m.type === 'image' ? el('img') : el('video'); node.src = fileUrl(m.file);
+  if (m.type === 'video') { node.controls = true; node.autoplay = true; node.playsInline = true; node.setAttribute('controlsList', 'nodownload'); }
+  node.oncontextmenu = (e) => e.preventDefault(); node.draggable = false;
+  node.onerror = () => { toast('This view once message was already opened.'); done(); };
+  stage.append(node); ov.append(head, stage); document.body.append(ov);
+  const done = () => { ov.remove(); socket.emit('msg:opened', { id: m.id }); m.openedBy = { ...(m.openedBy || {}), [me.id]: Date.now() }; bubbleCache.delete(m.id); renderMessages(); document.removeEventListener('keydown', esc3); };
+  const esc3 = (e) => { if (e.key === 'Escape') done(); };
+  x.onclick = done; document.addEventListener('keydown', esc3);
+}
+function renderViewOnce(b, m, mine) {
+  const opened = mine || (m.openedBy || {})[me.id];
+  const card = el('button', 'vo-card' + (opened ? ' done' : ''));
+  card.append(el('span', 'vo-ic', '①'), el('span', null, (m.type === 'image' ? 'Photo' : 'Video') + (mine ? (Object.keys(m.openedBy || {}).length ? ' · Opened' : ' · view once') : opened ? ' · Opened' : ' · Tap to view')));
+  card.onclick = (e) => { e.stopPropagation(); if (!opened) openViewOnce(m); else if (mine) toast('You cannot open view once messages you sent.'); };
+  b.append(card);
+}
+
+// ----- 🔍 search inside this chat -----
+const CS = { hits: [], i: -1 };
+function openChatSearch() {
+  let bar = $('#chatSearchBar');
+  if (!bar) {
+    bar = el('div', 'chat-search'); bar.id = 'chatSearchBar';
+    const inp = el('input'); inp.type = 'search'; inp.placeholder = 'Search in this chat'; inp.id = 'chatSearchInput';
+    const cnt = el('span', 'muted'); cnt.id = 'chatSearchCount';
+    const up = el('button', 'icon-btn'); up.setAttribute('aria-label', 'Previous match'); up.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>';
+    const dn = el('button', 'icon-btn'); dn.setAttribute('aria-label', 'Next match'); dn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+    const x = el('button', 'icon-btn'); x.setAttribute('aria-label', 'Close search'); x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    bar.append(inp, cnt, up, dn, x); $('#chatHead').after(bar);
+    inp.oninput = () => runChatSearch(inp.value);
+    inp.onkeydown = (e) => { if (e.key === 'Enter') stepSearch(e.shiftKey ? -1 : 1); if (e.key === 'Escape') closeChatSearch(); };
+    up.onclick = () => stepSearch(-1); dn.onclick = () => stepSearch(1); x.onclick = closeChatSearch;
+  }
+  bar.hidden = false; $('#chatSearchInput').focus();
+}
+function closeChatSearch() { const bar = $('#chatSearchBar'); if (bar) bar.hidden = true; CS.hits = []; document.querySelectorAll('#messages .bubble.hit').forEach((b) => b.classList.remove('hit')); }
+function runChatSearch(q) {
+  q = q.trim().toLowerCase(); document.querySelectorAll('#messages .bubble.hit').forEach((b) => b.classList.remove('hit'));
+  CS.hits = q.length < 2 ? [] : curList().filter((m) => !m.deleted && !m.viewOnce && m.type !== 'system' && (copyableText(m) + ' ' + (m.file ? m.file.name : '')).toLowerCase().includes(q)).map((m) => m.id);
+  CS.hits.forEach((id) => { const b = document.querySelector('#messages [data-mid="' + CSS.escape(id) + '"]'); if (b) b.classList.add('hit'); });
+  CS.i = CS.hits.length; stepSearch(-1);
+}
+function stepSearch(d) {
+  const n = CS.hits.length; $('#chatSearchCount').textContent = n ? '' : ($('#chatSearchInput').value.trim().length >= 2 ? 'No results' : '');
+  if (!n) return; CS.i = (CS.i + d + n) % n; $('#chatSearchCount').textContent = (CS.i + 1) + ' / ' + n; scrollToMsg(CS.hits[CS.i]);
+}
+
+// ----- 🔍 search messages in all chats (from the main search box) -----
+let msgSearchTimer = 0, msgSearchQ = '';
+function renderMessageSearch(list) {
+  const q = $('#search').value.trim(); if (q.length < 2 || numberQuery()) return;
+  const sec = el('li'); sec.className = 'msg-search'; list.append(sec);
+  const draw = (items) => {
+    sec.innerHTML = ''; if (!items) { sec.append(el('div', 'empty-list', '🔍 Searching messages…')); return; }
+    if (!items.length) return;
+    sec.append(el('div', 'call-day', 'Messages'));
+    for (const { chat, message: m } of items) {
+      const u = userById(chat); const b = el('button', 'contact');
+      const body = el('div', 'c-body'); const top = el('div', 'c-top');
+      top.append(el('span', 'c-name', u ? nameOf(u) : 'Chat'), el('span', 'c-time', fmtDay(m.ts) === 'Today' ? fmtTime(m.ts) : fmtDay(m.ts)));
+      body.append(top, el('div', 'c-last', (m.from === me.id ? 'You: ' : '') + (isText(m) ? m.text : previewText(m))));
+      b.append(avatar(u || { id: chat, name: '?' }), body);
+      b.onclick = async () => { if (!u) return; await openChat(chat); setTimeout(() => scrollToMsg(m.id), 300); };
+      sec.append(b);
+    }
+  };
+  if (msgSearchQ === q && renderMessageSearch.last) return draw(renderMessageSearch.last);
+  draw(null); clearTimeout(msgSearchTimer);
+  msgSearchTimer = setTimeout(async () => { let r = []; try { r = await api('/api/search?q=' + encodeURIComponent(q)); } catch {} msgSearchQ = q; renderMessageSearch.last = r; if ($('#search').value.trim() === q) renderContacts(); }, 400);
+}
+
+// ----- 🖥️ screen share in video calls -----
+const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+let screenTrack = null;
+async function toggleScreenShare() {
+  if (!call || !call.pc) return;
+  const sender = call.pc.getSenders().find((s2) => s2.track && s2.track.kind === 'video') || call.pc.getSenders().find((s2) => !s2.track);
+  if (!sender) return toast('Screen sharing works in video calls.');
+  if (screenTrack) return stopScreenShare();
+  try {
+    const ds = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    screenTrack = ds.getVideoTracks()[0]; await sender.replaceTrack(screenTrack);
+    $('#localVideo').srcObject = ds; $('#localVideo').style.transform = 'none';
+    $('#shareBtn').setAttribute('aria-pressed', 'true'); toast('Sharing your screen');
+    screenTrack.onended = stopScreenShare;
+  } catch { toast('Screen sharing was cancelled.'); }
+}
+async function stopScreenShare(ending) {
+  if (!screenTrack) return; const t2 = screenTrack; screenTrack = null; t2.onended = null; t2.stop();
+  const c = call;
+  if (!ending && c && c.pc && c.local) {
+    const cam = c.local.getVideoTracks()[0]; const sender = c.pc.getSenders().find((s2) => s2.track === t2 || (s2.track && s2.track.kind === 'video'));
+    if (sender && cam) await sender.replaceTrack(cam).catch(() => {});
+    if (call === c) { $('#localVideo').srcObject = c.local; $('#localVideo').style.transform = 'scaleX(-1)'; }
+  }
+  const b = $('#shareBtn'); if (b) b.setAttribute('aria-pressed', 'false');
+}
+
+// ----- 🔐 two-step verification -----
+async function openTwoStep() {
+  let st = { on: false }; try { st = await api('/api/twostep'); } catch {}
+  sheet('🔐 Two-step verification', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', st.on ? 'Two-step verification is ON. Maata asks for your 6-digit PIN when you log in on a new phone or browser.' : 'Add a 6-digit PIN that Maata asks for when anyone logs in to your account. Even if someone knows your password, they cannot log in without this PIN.'));
+    const mk = (label, type, attrs) => { const l = el('label'); l.append(el('span', null, label)); const i = el('input'); i.type = type; Object.assign(i, attrs || {}); l.append(i); box.append(l); return i; };
+    const pw = mk('Your current password', 'password', { autocomplete: 'current-password' });
+    const p1 = mk(st.on ? 'New 6-digit PIN' : '6-digit PIN', 'password', { inputMode: 'numeric', maxLength: 6 });
+    const p2 = mk('Enter PIN again', 'password', { inputMode: 'numeric', maxLength: 6 });
+    const hint = mk('PIN hint (optional, shown when logging in)', 'text', { maxLength: 60, value: st.hint || '' });
+    const go = el('button', 'primary', st.on ? 'Change PIN' : 'Turn on');
+    go.onclick = async () => {
+      if (!/^\d{6}$/.test(p1.value)) return toast('The PIN must be 6 digits.'); if (p1.value !== p2.value) return toast('The two PINs do not match.');
+      try { await api('/api/twostep', { method: 'POST', body: JSON.stringify({ password: pw.value, pin: p1.value, hint: hint.value }) }); closeSheet('moreSheet'); toast('🔐 Two-step verification is on'); } catch (e) { toast(e.message); }
+    };
+    box.append(go);
+    if (st.on) { const off = el('button', 'danger-btn', 'Turn off'); off.onclick = async () => { try { await api('/api/twostep', { method: 'POST', body: JSON.stringify({ password: pw.value, off: true }) }); closeSheet('moreSheet'); toast('Two-step verification turned off'); } catch (e) { toast(e.message); } }; box.append(off); }
+    list.append(box);
+  });
+}
+let pinTicket = null;
+function showPinStep(r) {
+  pinTicket = r.ticket;
+  $('#nameField').hidden = true; $('#phone').closest('label').hidden = true; $('#password').closest('label').hidden = true;
+  let f = $('#pinField');
+  if (!f) { f = el('label', 'field'); f.id = 'pinField'; f.append(el('span', null, '🔐 Two-step verification PIN')); const i = el('input'); i.id = 'loginPin'; i.type = 'password'; i.inputMode = 'numeric'; i.maxLength = 6; i.autocomplete = 'one-time-code'; f.append(i); $('#authError').before(f); }
+  f.hidden = false; $('#authError').textContent = r.hint ? 'Hint: ' + r.hint : '';
+  $('#authSubmit').textContent = 'Verify PIN'; $('#loginPin').value = ''; $('#loginPin').focus();
+}
+
+// ----- 👁️ status privacy -----
+async function openStatusPrivacy() {
+  let pv = { mode: 'contacts', list: [] }; try { pv = await api('/api/status/privacy'); } catch {}
+  const pick = new Set(pv.list);
+  sheet('👁️ Status privacy', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Who can see my status updates. Changes apply to updates you share from now on, and to current ones.'));
+    const modes = [['contacts', 'My contacts', 'People you saved who also saved you'], ['except', 'My contacts except…', 'Hide from people you choose'], ['only', 'Only share with…', 'Only the people you choose']];
+    const ul = el('ul', 'fwd-list');
+    const drawPeople = () => {
+      ul.innerHTML = ''; ul.hidden = pv.mode === 'contacts';
+      for (const u of users.filter((x) => !x.isGroup && !x.isAI && x.inContacts)) { const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id); cb.onchange = () => (cb.checked ? pick.add(u.id) : pick.delete(u.id)); const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li); }
+    };
+    for (const [m2, label, sub] of modes) {
+      const b = el('button', 'lang-opt'); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(pv.mode === m2));
+      const t2 = el('span', 'txt'); t2.append(el('b', null, label), el('small', null, sub)); b.append(el('span', 'radio'), t2);
+      b.onclick = () => { pv.mode = m2; box.querySelectorAll('.lang-opt').forEach((x) => x.setAttribute('aria-checked', 'false')); b.setAttribute('aria-checked', 'true'); drawPeople(); };
+      box.append(b);
+    }
+    drawPeople();
+    const go = el('button', 'primary', 'Save'); go.style.marginTop = '10px';
+    go.onclick = async () => { try { await api('/api/status/privacy', { method: 'PUT', body: JSON.stringify({ mode: pv.mode, list: [...pick] }) }); closeSheet('moreSheet'); toast('Status privacy saved'); } catch (e) { toast(e.message); } };
+    box.append(ul, go); list.append(box);
+  });
+}
+
+$('#chatSearchBtn').onclick = openChatSearch;
+$('#shareBtn').onclick = toggleScreenShare;
+$('#camOnce').onclick = () => { const on = $('#camOnce').getAttribute('aria-pressed') !== 'true'; $('#camOnce').setAttribute('aria-pressed', String(on)); toast(on ? '① View once: they can open it one time' : 'View once off'); };
+$('#stPrivacyBtn').onclick = openStatusPrivacy;
+$('#setTwoStep').onclick = () => { closeSettings(); openTwoStep(); };
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

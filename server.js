@@ -265,6 +265,7 @@ app.post('/api/login', rateLimit, async (req, res) => {
   const u = db.users.find((x) => x.phone === phone);
   if (!u || !(await bcrypt.compare(password, u.passHash))) return res.status(401).json({ error: 'Wrong mobile number or password.' });
   if (u.status === 'blocked') return res.status(403).json({ error: 'This account is blocked. Contact Maata support.' });
+  if (u.twoStep) { const ticket = crypto.randomBytes(18).toString('base64url'); pinTickets.set(ticket, { uid: u.id, t: now(), tries: 0 }); return res.json({ needPin: true, ticket, hint: u.twoStep.hint || '' }); }
   recordLogin(u, req, 'login');
   save();
   res.json({ token: sign(u), user: publicUser(u) });
@@ -510,10 +511,10 @@ app.get('/api/messages/:userId', auth, (req, res) => {
   if (gid) {
     if (!gMember(groupById(gid), me)) return res.status(404).json({ error: 'Group not found.' });
     const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
-    return res.json(db.messages.filter((m) => m.group === gid && !hidden.has(m.id) && m.ts > since).slice(-300));
+    return res.json(db.messages.filter((m) => m.group === gid && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
   }
   const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
-  res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since).slice(-300));
+  res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
 });
 
 app.get('/api/ice', auth, (req, res) => {
@@ -555,7 +556,11 @@ const isMutual = (a, b) => hasContact(a, b.id) && hasContact(b, a.id);
 function statusVisible(viewer, st) {
   if (st.userId === viewer.id) return true;
   const owner = userById(st.userId);
-  return !!owner && owner.status !== 'blocked' && isMutual(viewer, owner) && !blockedOf(owner).includes(viewer.id) && !blockedOf(viewer).includes(owner.id);
+  if (!owner || owner.status === 'blocked' || blockedOf(owner).includes(viewer.id) || blockedOf(viewer).includes(owner.id)) return false;
+  const pv = owner.statusPrivacy || { mode: 'contacts', list: [] };
+  if (pv.mode === 'only') return pv.list.includes(viewer.id) && hasContact(owner, viewer.id);
+  if (pv.mode === 'except' && pv.list.includes(viewer.id)) return false;
+  return isMutual(viewer, owner);
 }
 function statusOut(viewer, st) {
   const mine = st.userId === viewer.id;
@@ -690,14 +695,16 @@ function deliverMessage(fromUser, target, fields, exceptSocketId) {
   if (target.isGroup) {
     const g = groupById(target.id.slice(2));
     const anyOn = g.members.some((x) => x.id !== fromUser.id && isOnline(x.id));
-    const m = { id: newId(), from: fromUser.id, to: target.id, group: g.id, ts: now(), status: anyOn ? 'delivered' : 'sent', readBy: {}, type: 'text', text: '', ...fields };
+    const ttl = fields.type === 'system' ? 0 : g.disappearing || 0;
+    const m = { id: newId(), from: fromUser.id, to: target.id, group: g.id, ts: now(), status: anyOn ? 'delivered' : 'sent', readBy: {}, type: 'text', text: '', ...(ttl ? { expiresAt: now() + ttl * 1000 } : {}), ...fields };
     db.messages.push(m); save();
     (exceptSocketId ? io.to('grp:' + g.id).except(exceptSocketId) : io.to('grp:' + g.id)).emit('msg:new', m);
     if (m.type !== 'system') feed('message', `${fromUser.name} → group ${g.name}: ${m.type === 'text' ? 'message' : m.type}`);
     return m;
   }
   const online2 = isOnline(target.id);
-  const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: online2 ? 'delivered' : 'sent', ...(online2 ? { deliveredAt: now() } : {}), type: 'text', text: '', ...fields };
+  const ttl = fields.type === 'system' ? 0 : (fromUser.disappearing || {})[target.id] || 0;
+  const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: online2 ? 'delivered' : 'sent', ...(online2 ? { deliveredAt: now() } : {}), ...(ttl ? { expiresAt: now() + ttl * 1000 } : {}), type: 'text', text: '', ...fields };
   db.messages.push(m); save();
   io.to('user:' + target.id).emit('msg:new', m);
   (exceptSocketId ? io.to('user:' + fromUser.id).except(exceptSocketId) : io.to('user:' + fromUser.id)).emit('msg:new', m);
@@ -876,8 +883,9 @@ app.post('/api/chat/upload', auth, express.raw({ type: () => true, limit: '16mb'
   const name = String(req.query.name || 'file').replace(/[\\/\r\n"]/g, '_').slice(0, 120);
   const id = newId();
   try { await saveChatFile(id, req.body, mime); } catch (e) { console.error('[chat file]', e.message); return res.status(500).json({ error: 'Could not save the file. Try again.' }); }
+  const viewOnce = req.query.once === '1' && (type === 'image' || type === 'video');
   const file = { id, name, mime, size: req.body.length, ...(req.query.voice === '1' ? { voice: true } : {}), ...(req.query.sticker === '1' && type === 'image' ? { sticker: true } : {}), ...(Number(req.query.dur) > 0 ? { duration: Math.round(Number(req.query.dur)) } : {}) };
-  const m = deliverMessage(req.user, ok.target, { type, text: String(req.query.caption || '').trim().slice(0, 1000), file }, String(req.query.sid || '') || null);
+  const m = deliverMessage(req.user, ok.target, { type, text: viewOnce ? '' : String(req.query.caption || '').trim().slice(0, 1000), file, ...(viewOnce ? { viewOnce: true, openedBy: {} } : {}) }, String(req.query.sid || '') || null);
   res.json({ message: m });
 });
 
@@ -888,6 +896,7 @@ app.get('/api/chat/file/:id', (req, res) => {
   if (!viewer) return res.status(401).end();
   const m = db.messages.find((x) => x.file && x.file.id === req.params.id && (x.from === viewer.id || x.to === viewer.id || (x.group && gMember(groupById(x.group), viewer.id))));
   if (!m) return res.status(404).end();
+  if (m.viewOnce && (m.from === viewer.id || (m.openedBy || {})[viewer.id])) return res.status(410).end(); // view once: opened already (or sender)
   const size = m.file.size;
   let start = 0, end = size - 1, code = 200;
   const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
@@ -1226,6 +1235,91 @@ app.post('/api/i18n', async (req, res) => {
   }
   const map = {}; for (const s2 of want) if (s2 in doc.map) map[s2] = doc.map[s2];
   res.json({ map, missing: want.filter((x) => !(x in doc.map)).length });
+});
+
+// ---------- Batch: edit, disappearing, view once, search, two-step, status privacy ----------
+const DISAPPEAR = [0, 86400, 604800, 7776000];
+const disappearLabel = (s) => ({ 86400: '24 hours', 604800: '7 days', 7776000: '90 days' }[s] || 'off');
+function chatTtl(fromUser, targetId) {
+  const gid = gidOf(targetId);
+  if (gid) return (groupById(gid) || {}).disappearing || 0;
+  return (fromUser.disappearing || {})[targetId] || 0;
+}
+app.post('/api/chats/:id/disappearing', auth, (req, res) => {
+  const secs = Number(req.body?.seconds) || 0; if (!DISAPPEAR.includes(secs)) return res.status(400).json({ error: 'Choose 24 hours, 7 days, 90 days or off.' });
+  const id = req.params.id, gid = gidOf(id);
+  if (gid) {
+    const g = groupById(gid); if (!gMember(g, req.user.id)) return res.status(404).json({ error: 'Group not found.' });
+    if (g.settings.onlyAdminsEdit && !gAdmin(g, req.user.id)) return res.status(403).json({ error: 'Only admins can change this.' });
+    g.disappearing = secs; save(); groupChanged(g);
+    sysMsg(g, req.user, req.user.name + (secs ? ' turned on disappearing messages. New messages will disappear after ' + disappearLabel(secs) + '.' : ' turned off disappearing messages.'));
+    return res.json({ seconds: secs });
+  }
+  const other = userById(id); if (!other || !canMessage(req.user, id).target) return res.status(404).json({ error: 'Chat not found.' });
+  (req.user.disappearing = req.user.disappearing || {})[id] = secs; (other.disappearing = other.disappearing || {})[req.user.id] = secs; save();
+  deliverMessage(req.user, other, { type: 'system', text: req.user.name + (secs ? ' turned on disappearing messages. New messages will disappear after ' + disappearLabel(secs) + '.' : ' turned off disappearing messages.') }, null);
+  res.json({ seconds: secs });
+});
+app.get('/api/chats/:id/settings', auth, (req, res) => {
+  const gid = gidOf(req.params.id);
+  res.json({ disappearing: gid ? (groupById(gid) || {}).disappearing || 0 : (req.user.disappearing || {})[req.params.id] || 0 });
+});
+function cleanExpiredMessages() {
+  const t = now(), gone = db.messages.filter((m) => m.expiresAt && m.expiresAt <= t);
+  if (!gone.length) return;
+  const ids = new Set(gone.map((m) => m.id));
+  db.messages = db.messages.filter((m) => !ids.has(m.id));
+  for (const m of gone) {
+    if (m.file) releaseFile(m.file.id);
+    if (m.group) io.to('grp:' + m.group).emit('msg:expired', { ids: [m.id] });
+    else for (const u of [m.from, m.to]) io.to('user:' + u).emit('msg:expired', { ids: [m.id] });
+  }
+  save();
+}
+setInterval(cleanExpiredMessages, 60 * 1000);
+
+// Search my messages across all chats (text, captions, file names)
+app.get('/api/search', auth, (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase(); if (q.length < 2) return res.json([]);
+  const me = req.user.id, hidden = new Set(req.user.hiddenMsgs || []), cleared = req.user.clearedChats || {}, out = [];
+  for (let i = db.messages.length - 1; i >= 0 && out.length < 60; i--) {
+    const m = db.messages[i];
+    if (m.deleted || m.type === 'system' || hidden.has(m.id) || (m.expiresAt && m.expiresAt <= now())) continue;
+    const chat = m.group ? 'g:' + m.group : m.from === me ? m.to : m.to === me ? m.from : null;
+    if (!chat || (m.group && !gMember(groupById(m.group), me)) || m.ts <= (cleared[chat] || 0)) continue;
+    const hay = [m.text, m.file && !m.viewOnce ? m.file.name : '', m.contact && m.contact.name, m.poll && m.poll.question, m.event && m.event.title].filter(Boolean).join(' ').toLowerCase();
+    if (hay.includes(q)) out.push({ chat, message: m });
+  }
+  res.json(out);
+});
+
+// Two-step verification: a 6-digit PIN asked at every new login
+const pinTickets = new Map();
+app.post('/api/twostep', auth, async (req, res) => {
+  const b = req.body || {};
+  if (!(await bcrypt.compare(String(b.password || ''), req.user.passHash))) return res.status(401).json({ error: 'Your current password is wrong.' });
+  if (b.off) { delete req.user.twoStep; save(); return res.json({ on: false }); }
+  if (!/^\d{6}$/.test(String(b.pin || ''))) return res.status(400).json({ error: 'The PIN must be 6 digits.' });
+  req.user.twoStep = { hash: await bcrypt.hash(String(b.pin), 10), hint: String(b.hint || '').slice(0, 60), at: now() }; save();
+  res.json({ on: true });
+});
+app.get('/api/twostep', auth, (req, res) => res.json({ on: !!req.user.twoStep, hint: req.user.twoStep ? req.user.twoStep.hint : '' }));
+app.post('/api/login/pin', rateLimit, async (req, res) => {
+  const tk = pinTickets.get(String(req.body?.ticket || ''));
+  if (!tk || now() - tk.t > 10 * 60000) return res.status(401).json({ error: 'Please log in again.' });
+  const u = userById(tk.uid); if (!u || !u.twoStep) return res.status(401).json({ error: 'Please log in again.' });
+  if (++tk.tries > 5) { pinTickets.delete(req.body.ticket); return res.status(429).json({ error: 'Too many wrong PINs. Log in again later.' }); }
+  if (!(await bcrypt.compare(String(req.body?.pin || ''), u.twoStep.hash))) return res.status(401).json({ error: 'Wrong PIN. ' + (5 - tk.tries) + ' tries left.' });
+  pinTickets.delete(req.body.ticket); recordLogin(u, req, 'login'); save();
+  res.json({ token: sign(u), user: publicUser(u) });
+});
+
+// Status privacy: my contacts / my contacts except… / only share with…
+app.get('/api/status/privacy', auth, (req, res) => res.json(req.user.statusPrivacy || { mode: 'contacts', list: [] }));
+app.put('/api/status/privacy', auth, (req, res) => {
+  const mode = ['contacts', 'except', 'only'].includes(req.body?.mode) ? req.body.mode : 'contacts';
+  req.user.statusPrivacy = { mode, list: (Array.isArray(req.body?.list) ? req.body.list : []).map(String).slice(0, 1000) }; save();
+  res.json(req.user.statusPrivacy);
 });
 
 // ---------- Admin API ----------
@@ -1620,6 +1714,20 @@ io.on('connection', (socket) => {
   });
 
   // ----- message actions: react, pin, star, delete, forward -----
+  socket.on('msg:edit', (p, ack) => {
+    const reply = (x) => typeof ack === 'function' && ack(x);
+    const m = myMsg(p?.id);
+    if (!m || m.from !== me || m.deleted || (m.type || 'text') !== 'text' || m.ai) return reply({ error: 'This message cannot be edited.' });
+    if (now() - m.ts > 15 * 60000) return reply({ error: 'Messages can be edited for 15 minutes after sending.' });
+    const text = String(p.text || '').trim().slice(0, 4000); if (!text) return reply({ error: 'Message cannot be empty.' });
+    if (text !== m.text) { m.text = text; m.editedAt = now(); save(); emitUpdate(m); }
+    reply({ message: m });
+  });
+  socket.on('msg:opened', (p) => {
+    const m = myMsg(p?.id); if (!m || !m.viewOnce || m.from === me) return;
+    m.openedBy = m.openedBy || {}; if (m.openedBy[me]) return;
+    m.openedBy[me] = now(); save(); emitUpdate(m);
+  });
   socket.on('msg:react', (p) => {
     const m = myMsg(p?.id); if (!m || m.deleted) return;
     const emoji = String(p.emoji || '').slice(0, 16);
@@ -1675,6 +1783,7 @@ io.on('connection', (socket) => {
       const ok = canMessage(socket.user, to);
       if (ok.error) { errors.push(ok.error); continue; }
       for (const m of src) {
+        if (m.viewOnce) continue;
         const f = { type: m.type || 'text', text: m.text || '', forwarded: true };
         if (m.file) f.file = { ...m.file };
         if (m.contact) f.contact = { ...m.contact };
@@ -1888,7 +1997,7 @@ io.on('connection', (socket) => {
 });
 
 loadDb()
-  .then(() => { cleanStatuses(); })
+  .then(() => { cleanStatuses(); cleanExpiredMessages(); })
   .then(() => server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`)))
   .catch((e) => {
     console.error('[db] Could not connect to MongoDB. Check MONGODB_URI, the database password, and Network Access (allow 0.0.0.0/0).');
