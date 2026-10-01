@@ -1068,41 +1068,76 @@ const GEMINI_KEY = (() => {
   return k ? String(process.env[k]).trim() : '';
 })();
 console.log(GEMINI_KEY
-  ? '[ai] Maata AI: Gemini key found (' + GEMINI_KEY.slice(0, 4) + '…' + GEMINI_KEY.slice(-4) + ', ' + GEMINI_KEY.length + ' characters)' + (/^AIza/.test(GEMINI_KEY) ? '' : ' - WARNING: Gemini keys normally start with "AIza"')
+  ? '[ai] Maata AI: Gemini key found (' + GEMINI_KEY.slice(0, 4) + '…' + GEMINI_KEY.slice(-4) + ', ' + GEMINI_KEY.length + ' characters)' + (/^(AIza|AQ\.)/.test(GEMINI_KEY) ? '' : ' - WARNING: Gemini keys normally start with "AIza"')
   : '[ai] Maata AI: OFF - no GEMINI_API_KEY in Environment. Variables seen: ' + Object.keys(process.env).filter((n) => /KEY|SECRET|URI|PASSWORD/i.test(n)).join(', '));
 let aiLastError = null;
 const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'].filter(Boolean))];
 let geminiModelOk = null, aiCount = 0;
+// How the key is sent: Google's classic keys ("AIza…") and newer keys ("AQ.…") are accepted in different ways,
+// so we try each way once and remember the one that works.
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/';
+let geminiAuthOk = null;
+const AUTH_WAYS = ['header', 'query', 'bearer'];
+function geminiFetch(path, way, init = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(init.headers || {}) };
+  let url = GEMINI_BASE + path;
+  if (way === 'header') headers['x-goog-api-key'] = GEMINI_KEY;
+  else if (way === 'query') url += (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(GEMINI_KEY);
+  else headers.Authorization = 'Bearer ' + GEMINI_KEY;
+  return fetch(url, { ...init, headers, signal: AbortSignal.timeout(20000) });
+}
+// Ask Google which models this key can use, and pick the best "flash" model (fast and free-tier friendly)
+let modelListAt = 0;
+async function discoverModels() {
+  if (geminiModelOk || now() - modelListAt < 600000) return;
+  modelListAt = now();
+  for (const way of geminiAuthOk ? [geminiAuthOk] : AUTH_WAYS) {
+    try {
+      const r = await geminiFetch('models?pageSize=200', way, { method: 'GET' });
+      const d = await r.json();
+      if (!r.ok) { aiLastError = 'list models (' + way + '): ' + r.status + ' ' + String(d.error?.message || '').slice(0, 150); console.error('[ai]', aiLastError); continue; }
+      geminiAuthOk = way;
+      const names = (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => String(m.name).replace(/^models\//, ''));
+      const score = (n) => (/flash/.test(n) ? 100 : 0) - (/lite/.test(n) ? 20 : 0) - (/preview|exp|image|tts|audio|live|thinking|embedding|vision/.test(n) ? 50 : 0) + (/latest/.test(n) ? 30 : 0) + (parseFloat((n.match(/(\d+(\.\d+)?)/) || [0, 0])[1]) || 0);
+      const best = names.sort((a, b) => score(b) - score(a)).slice(0, 3);
+      if (best.length) { GEMINI_MODELS.splice(0, GEMINI_MODELS.length, ...new Set([process.env.GEMINI_MODEL, ...best].filter(Boolean))); console.log('[ai] models available for this key:', best.join(', '), '| auth:', way); }
+      return;
+    } catch (e) { aiLastError = 'list models: ' + e.message; console.error('[ai]', aiLastError); }
+  }
+}
 async function gemini(system, contents, { json = false, maxTokens = 600, temperature = 0.7 } = {}) {
   if (!GEMINI_KEY) return { error: 'not-configured' };
+  await discoverModels();
+  const body = JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents,
+    generationConfig: { temperature, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) } });
   const models = geminiModelOk ? [geminiModelOk] : GEMINI_MODELS;
+  const ways = geminiAuthOk ? [geminiAuthOk] : AUTH_WAYS;
+  let last = { error: 'service' };
   for (const model of models) {
-    try {
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
-        body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents,
-          generationConfig: { temperature, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) } }),
-        signal: AbortSignal.timeout(20000),
-      });
-      if (r.status === 404) continue; // model name not available, try the next one
-      const d = await r.json();
-      if (r.status === 429) return { error: 'limit' };
+    for (const way of ways) {
+      let r, d;
+      try { r = await geminiFetch('models/' + model + ':generateContent', way, { method: 'POST', body }); d = await r.json().catch(() => ({})); }
+      catch (e) { aiLastError = model + ': ' + e.message; console.error('[ai]', aiLastError); last = { error: 'service' }; continue; }
+      if (r.status === 429) { aiLastError = 'rate limit (429)'; return { error: 'limit' }; }
+      if (r.status === 404) { aiLastError = 'model not found: ' + model; console.error('[ai]', aiLastError); last = { error: 'service' }; break; } // try next model
+      if (r.status === 401 || (r.status === 400 && /API key|credential|UNAUTHENTICATED/i.test(JSON.stringify(d)))) {
+        aiLastError = 'auth (' + way + '): ' + r.status + ' ' + String(d.error?.message || '').slice(0, 150); console.error('[ai]', aiLastError);
+        last = { error: /API_KEY_INVALID|API key not valid/i.test(JSON.stringify(d)) ? 'badkey' : 'service' }; continue; // try next way of sending the key
+      }
       if (d.error) {
         const msg = String(d.error.message || ''), why = JSON.stringify(d.error.details || '');
-        console.error('[ai]', r.status, msg);
-        aiLastError = msg.slice(0, 200);
-        if (/API_KEY_INVALID|API key not valid/i.test(msg + why)) return { error: 'badkey' };
+        aiLastError = model + ': ' + r.status + ' ' + msg.slice(0, 180); console.error('[ai]', aiLastError);
         if (r.status === 403 || /SERVICE_DISABLED|has not been used|is disabled|PERMISSION_DENIED/i.test(msg + why)) return { error: 'disabled' };
         if (/location is not supported|User location/i.test(msg)) return { error: 'region' };
-        return { error: 'service' };
+        last = { error: 'service' }; break;
       }
       const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
       if (!text) return { error: d.promptFeedback?.blockReason ? 'blocked' : 'empty' };
-      geminiModelOk = model; aiCount++; aiLastError = null;
+      geminiModelOk = model; geminiAuthOk = way; aiCount++; aiLastError = null;
       return { text };
-    } catch (e) { console.error('[ai]', e.message); return { error: 'service' }; }
+    }
   }
-  return { error: 'service' };
+  return last;
 }
 const AI_ERR = { badkey: 'The Gemini API key is not valid. Please copy the key again from aistudio.google.com and update GEMINI_API_KEY on Render.', disabled: 'The Gemini API is not enabled for this key. Create the key at aistudio.google.com (it switches the API on automatically).', region: 'Gemini is not available for this server location right now.', 'not-configured': 'Maata AI is not switched on yet. The admin needs to add GEMINI_API_KEY.', limit: 'Maata AI is busy (free limit reached). Please try again later.', service: 'Maata AI is not available right now. Try again.', blocked: 'Maata AI cannot answer that.', empty: 'Maata AI had no answer. Try asking differently.', quota: 'You have used your Maata AI requests for today. Try again tomorrow.' };
 const aiUse = new Map();
@@ -1127,7 +1162,7 @@ app.post('/api/ai/chat', auth, async (req, res) => {
   const past = db.aichats.filter((m) => m.userId === req.user.id).slice(-12);
   const r = await gemini('You are Maata AI, a helpful assistant inside the Maata chat app, made in India. The person chatting with you is ' + req.user.name + '. ' + LANG_HINT + ' Never claim to be a human. For medical, legal or money decisions, give general information and suggest asking an expert.',
     [...past.map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.text }] })), { role: 'user', parts: [{ text }] }]);
-  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] + (r.error === 'service' && aiLastError ? ' (' + aiLastError + ')' : '') });
   const ai = { id: newId(), userId: req.user.id, role: 'ai', text: plain(r.text).slice(0, 4000), ts: now() };
   db.aichats.push(mine, ai);
   const all = db.aichats.filter((m) => m.userId === req.user.id);
