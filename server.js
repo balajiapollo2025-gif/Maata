@@ -1051,7 +1051,16 @@ app.get('/api/groups/:id/photo', (req, res) => {
 
 // ---------- AI (Google Gemini, free tier) ----------
 // Set GEMINI_API_KEY (free from aistudio.google.com). Optional GEMINI_MODEL.
-const GEMINI_KEY = (process.env.GEMINI_API_KEY || '').trim();
+// Accept the key even if the variable name was typed slightly differently on Render (spaces, case, GEMINI_KEY…)
+const GEMINI_KEY = (() => {
+  const direct = process.env.GEMINI_API_KEY || process.env.GEMINI_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_API_KEY;
+  if (direct) return direct.trim();
+  const k = Object.keys(process.env).find((n) => ['GEMINIAPIKEY', 'GEMINIKEY'].includes(n.replace(/[\s_-]/g, '').toUpperCase()) && String(process.env[n]).trim());
+  return k ? String(process.env[k]).trim() : '';
+})();
+console.log(GEMINI_KEY
+  ? '[ai] Maata AI: Gemini key found (' + GEMINI_KEY.slice(0, 4) + '…' + GEMINI_KEY.slice(-4) + ', ' + GEMINI_KEY.length + ' characters)' + (/^AIza/.test(GEMINI_KEY) ? '' : ' - WARNING: Gemini keys normally start with "AIza"')
+  : '[ai] Maata AI: OFF - no GEMINI_API_KEY in Environment. Variables seen: ' + Object.keys(process.env).filter((n) => /KEY|SECRET|URI|PASSWORD/i.test(n)).join(', '));
 let aiLastError = null;
 const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'].filter(Boolean))];
 let geminiModelOk = null, aiCount = 0;
