@@ -603,6 +603,13 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .ai-tag{font-size:11.5px;font-weight:700;opacity:.8;margin-bottom:3px}
 .avatar.aiav{background:linear-gradient(135deg,#7A4E9E,#1F6FB2)!important}
 @media (max-width:480px){.composer{gap:2px;padding:8px 6px}.composer .cbtn{width:34px;height:40px}.composer textarea{padding:10px 12px}.send{width:44px;height:44px}}
+/* ---------- App language ---------- */
+.lang-opt{display:flex;align-items:center;gap:18px;width:100%;padding:14px 18px;text-align:left;border-bottom:1px solid var(--line)}
+.lang-opt .radio{width:24px;height:24px;border-radius:50%;border:2.5px solid var(--muted);flex:none;display:grid;place-items:center}
+.lang-opt[aria-checked="true"] .radio{border-color:var(--leaf)}
+.lang-opt[aria-checked="true"] .radio::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--leaf)}
+.lang-opt .txt b{display:block;font-size:18px;font-weight:600}
+.lang-opt .txt small{color:var(--muted);font-size:14px}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -667,10 +674,10 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
         </g>
       </svg>
     </div>
-    <p class="tagline" id="authTagline">Free voice calls, video calls and messages with anyone on Maata. Just internet, no call charges.</p>
-    <label class="field" id="nameField" hidden><span>Your name</span><input id="name" autocomplete="name" maxlength="40"></label>
-    <label class="field"><span>Mobile number</span><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="9876543210"></label>
-    <label class="field"><span>Password</span><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters"></label>
+    <p class="tagline" id="authTagline" data-t="tagline">Free voice calls, video calls and messages with anyone on Maata. Just internet, no call charges.</p>
+    <label class="field" id="nameField" hidden><span data-t="name">Your name</span><input id="name" autocomplete="name" maxlength="40"></label>
+    <label class="field"><span data-t="mobile">Mobile number</span><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="9876543210"></label>
+    <label class="field"><span data-t="password">Password</span><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters"></label>
     <p class="error" id="authError" role="alert"></p>
     <button class="primary" id="authSubmit" type="submit">Log in</button>
     <p class="switch"><span id="switchText">New to Maata?</span> <button type="button" id="switchMode">Create account</button></p>
@@ -688,17 +695,17 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       </button>
     </header>
     <div class="me" id="meBox"></div>
-    <div class="notice" id="langNotice" hidden><span aria-hidden="true">🌐</span><p>Choose your language to use live call translation.</p><button id="langNoticeBtn" style="font-size:14px;font-weight:600;opacity:1;text-decoration:underline">Choose</button></div>
+    <div class="notice" id="langNotice" hidden><span aria-hidden="true">🌐</span><p data-t="langBanner">Choose your language to use live call translation.</p><button id="langNoticeBtn" data-t="choose" style="font-size:14px;font-weight:600;opacity:1;text-decoration:underline">Choose</button></div>
     <div class="notice" id="notice" hidden role="status"><span aria-hidden="true">📢</span><p id="noticeText"></p><button id="noticeClose" aria-label="Dismiss announcement">×</button></div>
     <div class="add-row">
-      <input class="search" id="search" type="search" placeholder="Search name or mobile number" aria-label="Search contacts">
-      <button class="add-btn" id="addContactBtn" aria-label="Add contact"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>Add</button>
+      <input class="search" id="search" type="search" placeholder="Search name or mobile number" data-tp="search" aria-label="Search contacts">
+      <button class="add-btn" id="addContactBtn" aria-label="Add contact"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg><span data-t="add">Add</span></button>
     </div>
     <div class="tabs" role="tablist" aria-label="Chats and calls">
-      <button class="tab" id="tabChats" role="tab" aria-selected="true">💬 Chats</button>
-      <button class="tab" id="tabStatus" role="tab" aria-selected="false">⭕ Status <span class="dot" id="statusDot" hidden></span></button>
-      <button class="tab" id="tabCalls" role="tab" aria-selected="false">📞 Calls <span class="badge" id="missedBadge" hidden></span></button>
-      <button class="tab" id="tabContacts" role="tab" aria-selected="false">📒 Contacts</button>
+      <button class="tab" id="tabChats" role="tab" aria-selected="true">💬 <span data-t="chats">Chats</span></button>
+      <button class="tab" id="tabStatus" role="tab" aria-selected="false">⭕ <span data-t="status">Status</span> <span class="dot" id="statusDot" hidden></span></button>
+      <button class="tab" id="tabCalls" role="tab" aria-selected="false">📞 <span data-t="calls">Calls</span> <span class="badge" id="missedBadge" hidden></span></button>
+      <button class="tab" id="tabContacts" role="tab" aria-selected="false">📒 <span data-t="contacts">Contacts</span></button>
     </div>
     <div class="chips-row" id="chatFilters" role="toolbar" aria-label="Chat filters"></div>
     <div class="chat-sel-bar" id="chatSelBar" hidden>
@@ -712,27 +719,27 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <ul class="contacts" id="contacts"></ul>
     <div id="statusPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
       <div id="stMine"></div>
-      <div class="st-actions"><button id="stTextBtn">✏️ Text</button><button id="stMediaBtn">📷 Photo / Video</button></div>
+      <div class="st-actions"><button id="stTextBtn">✏️ <span data-t="text">Text</span></button><button id="stMediaBtn">📷 <span data-t="photoVideo">Photo / Video</span></button></div>
       <div class="call-day" id="stRecentTitle">Recent updates</div><ul class="contacts" id="stRecent" style="overflow:visible;padding:0"></ul>
       <div class="call-day" id="stSeenTitle">Viewed updates</div><ul class="contacts" id="stSeen" style="overflow:visible;padding:0"></ul>
       <p class="info-note">🔒 Only contacts who saved your number, and whom you saved, can see your status. It disappears after 24 hours.</p>
       <input type="file" id="stFile" accept="image/*,video/*" hidden>
     </div>
     <div id="contactsPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
-      <div class="pc-actions"><button id="pcSync">📱 Sync phone contacts</button><button id="pcImport">📥 Import contacts file</button></div>
+      <div class="pc-actions"><button id="pcSync">📱 <span data-t="sync">Sync phone contacts</span></button><button id="pcImport">📥 <span data-t="import">Import contacts file</span></button></div>
       <div class="calls-head"><span id="pcCount"></span><button id="pcClear">Clear list</button></div>
       <ul class="contacts" id="pcList" style="overflow:visible;padding:0"></ul>
       <p class="info-note">🔒 Your phone contacts stay on this device. Maata only checks which numbers are registered. Import file: export contacts from your phone or Google Contacts as .vcf or .csv.</p>
       <input type="file" id="pcFile" accept=".vcf,.csv,text/vcard,text/csv" hidden>
     </div>
     <div id="callsPane" hidden style="flex:1;overflow-y:auto;min-height:0">
-      <div class="calls-head"><span id="callsCount"></span><button id="clearCalls">Clear history</button></div>
+      <div class="calls-head"><span id="callsCount"></span><button id="clearCalls" data-t="clearHistory">Clear history</button></div>
       <ul class="contacts" id="callList" style="overflow:visible"></ul>
     </div>
   </aside>
 
   <main class="chat" id="chat">
-    <div class="chat-empty" id="chatEmpty"><strong>Pick someone to talk to</strong>Choose a contact on the left to send a message or start a free call.</div>
+    <div class="chat-empty" id="chatEmpty"><strong data-t="pickChat">Pick someone to talk to</strong><span data-t="pickChatSub">Choose a contact on the left to send a message or start a free call.</span></div>
     <header class="chat-head" id="chatHead" hidden>
       <button class="icon-btn back" id="backBtn" aria-label="Back to contacts"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div id="chatAvatar"></div>
@@ -766,7 +773,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <button type="button" class="cbtn" id="attachBtn" aria-label="Attach" title="Attach"><svg viewBox="0 0 24 24"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></button>
       <button type="button" class="cbtn" id="emojiBtn" aria-label="Emojis, GIFs and stickers" title="Emojis, GIFs, Stickers" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
       <button type="button" class="cbtn" id="aiBtn" aria-label="Write with AI" title="Write with AI">✨</button>
-      <textarea id="msgInput" rows="1" placeholder="Type a message" aria-label="Message"></textarea>
+      <textarea id="msgInput" rows="1" placeholder="Type a message" data-tp="type" aria-label="Message"></textarea>
       <button type="button" class="cbtn" id="camBtnChat" aria-label="Camera: photo or video" title="Camera"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <button class="send" id="sendBtn" aria-label="Send message" hidden><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
       <button type="button" class="send" id="micBtn" aria-label="Record voice message" title="Voice message"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg></button>
@@ -937,6 +944,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   <section class="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="settings-head"><h2 id="setTitle">Settings</h2><button class="icon-btn" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
 
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setAppLang">🌐 <span data-t="appLang">App language</span> <span id="setAppLangName" style="margin-left:auto;color:var(--muted)"></span></button></div>
     <div class="set-title">Language &amp; translation</div>
     <div class="set-group">
       <div class="set-row tone">
@@ -1082,9 +1090,9 @@ let mode = 'login';
 function setMode(m) {
   mode = m;
   $('#nameField').hidden = m === 'login';
-  $('#authSubmit').textContent = m === 'login' ? 'Log in' : 'Create account';
-  $('#switchText').textContent = m === 'login' ? 'New to Maata?' : 'Already have an account?';
-  $('#switchMode').textContent = m === 'login' ? 'Create account' : 'Log in';
+  $('#authSubmit').textContent = m === 'login' ? i18n('login') : i18n('create');
+  $('#switchText').textContent = m === 'login' ? i18n('newTo') : i18n('haveAcc');
+  $('#switchMode').textContent = m === 'login' ? i18n('create') : i18n('login');
   $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
   $('#authError').textContent = '';
 }
@@ -1458,6 +1466,7 @@ function toneLabel(kind) {
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
+  $('#setAppLangName').textContent = (APP_LANGS.find((x) => x[0] === appLang) || APP_LANGS[0])[1];
   const ls = $('#myLang'); ls.innerHTML = '';
   if (!me || !me.lang) ls.add(new Option('Choose…', ''));
   for (const [code, l] of Object.entries(LANGS)) ls.add(new Option(l.native + ' — ' + l.name, code));
@@ -1530,6 +1539,7 @@ function openSettings() { if (call) return toast('Settings are available after t
 function closeSettings() { stopRing(); $('#settingsSheet').hidden = true; }
 // Settings opens from the ⋮ menu
 $('#settingsClose').onclick = closeSettings;
+$('#setAppLang').onclick = () => { closeSettings(); openAppLanguage(); };
 $('#settingsSheet').onclick = (e) => { if (e.target.id === 'settingsSheet') closeSettings(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#settingsSheet').hidden) closeSettings(); });
 $('#setLogout').onclick = () => { if (confirm('Log out of Maata on this device?')) logout(); };
@@ -2217,7 +2227,7 @@ function renderStatus() {
   const has = statusData.mine.length;
   const av = ringAvatar(me, has ? '' : 'none'); if (!has) av.classList.add('st-plus');
   const t = document.createElement('div'); t.className = 'c-body';
-  t.innerHTML = '<div class="c-name">My status</div><div class="c-last"></div>';
+  t.innerHTML = '<div class="c-name"></div><div class="c-last"></div>'; t.querySelector('.c-name').textContent = i18n('myStatus');
   t.querySelector('.c-last').textContent = has ? has + ' update' + (has > 1 ? 's' : '') + ' · ' + ago2(statusData.mine[has - 1].createdAt) + ' · tap to see views' : 'Share a photo, video or text';
   mb.append(av, t);
   mb.onclick = () => (has ? openViewer([{ user: me, statuses: statusData.mine, mine: true }], 0) : openTextStatus());
@@ -2237,7 +2247,8 @@ function renderStatus() {
     });
   }
   if (!statusData.users.length) { $('#stRecentTitle').hidden = false; $('#stRecentTitle').textContent = 'No updates from contacts yet'; }
-  else $('#stRecentTitle').textContent = 'Recent updates';
+  else $('#stRecentTitle').textContent = i18n('recent');
+  $('#stSeenTitle').textContent = i18n('viewed');
 }
 
 // ----- composer -----
@@ -3362,6 +3373,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  lang: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
   ai: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01M9 16h6"/></svg>',
   group: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M22 21a6 6 0 0 0-4-5.6"/></svg>',
   broadcast: '<svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>',
@@ -3384,18 +3396,19 @@ function openMainMenu(btn) {
   const menu = el('div', 'main-menu'); menu.setAttribute('role', 'menu');
   const list = el('div', 'menu-list');
   const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = MI[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
-  item('group', 'New group', openNewGroup);
-  item('broadcast', 'Business broadcast', openBroadcast);
-  item('quick', 'Quick replies', openQuickReplies);
-  item('ai', 'AI auto-reply', openAutoReply);
-  item('star', 'Starred messages', openStarred);
-  item('select', 'Select chats', () => { setTab('chats'); startChatSelect(); });
-  item('lists', 'Lists', openLists);
-  item('read', 'Mark all as read', markAllRead);
+  item('group', i18n('newGroup'), openNewGroup);
+  item('broadcast', i18n('broadcast'), openBroadcast);
+  item('quick', i18n('quick'), openQuickReplies);
+  item('ai', i18n('aiAuto'), openAutoReply);
+  item('star', i18n('starred'), openStarred);
+  item('select', i18n('selectChats'), () => { setTab('chats'); startChatSelect(); });
+  item('lists', i18n('lists'), openLists);
+  item('read', i18n('markRead'), markAllRead);
   list.append(el('hr'));
-  item('lock', 'App lock', openLockSettings);
-  item('settings', 'Settings', openSettings);
-  item('logout', 'Log out', () => { if (confirm('Log out of Maata on this device?')) logout(); }, true);
+  item('lock', i18n('appLock'), openLockSettings);
+  item('settings', i18n('settings'), openSettings);
+  item('lang', i18n('appLang'), openAppLanguage);
+  item('logout', i18n('logout'), () => { if (confirm('Log out of Maata on this device?')) logout(); }, true);
   menu.append(list); document.body.append(shade, menu); menuEls = [shade, menu];
   const r = btn.getBoundingClientRect();
   menu.style.top = Math.min(r.bottom + 6, innerHeight - menu.offsetHeight - 8) + 'px';
@@ -3416,7 +3429,7 @@ function renderChips() {
   if (!prefs.lists.some((l) => l.id === chatFilter) && !['all', 'unread', 'favs'].includes(chatFilter)) chatFilter = 'all';
   const unread = users.filter((u) => u.unread > 0).length;
   const chip = (id, label, n) => { const b = el('button', 'fchip', label); if (n) b.append(el('span', 'n', String(n))); b.setAttribute('aria-pressed', String(chatFilter === id)); b.onclick = () => { chatFilter = id; renderChips(); renderContacts(); }; row.append(b); };
-  chip('all', 'All'); chip('unread', 'Unread', unread); chip('favs', 'Favourites');
+  chip('all', i18n('all')); chip('unread', i18n('unread'), unread); chip('favs', i18n('favs'));
   for (const l of prefs.lists) chip(l.id, l.name);
   const add = el('button', 'fchip', '＋'); add.setAttribute('aria-label', 'Create a list'); add.onclick = () => editList(null); row.append(add);
 }
@@ -4373,7 +4386,7 @@ function renderPhoneContacts() {
   const list = $('#pcList'); list.innerHTML = '';
   if (!phoneBook.length && !on.length) list.append(el('li', 'empty-list', 'Sync or import your phone contacts to see who is on Maata.'));
   if (on.length) {
-    list.append(el('li', 'call-day', '✅ On Maata (' + on.length + ')'));
+    list.append(el('li', 'call-day', '✅ ' + i18n('onMaata') + ' (' + on.length + ')'));
     for (const { u, label } of on) {
       const li = el('li'), row = el('div', 'contact');
       const body = el('div', 'c-body'); body.append(el('div', 'c-name', label), el('div', 'c-last', u.phone + (u.name && u.name !== label ? ' · ' + u.name : '')));
@@ -4383,7 +4396,7 @@ function renderPhoneContacts() {
     }
   }
   if (off.length) {
-    list.append(el('li', 'call-day', '📨 Invite to Maata (' + off.length + ')'));
+    list.append(el('li', 'call-day', '📨 ' + i18n('invite') + ' (' + off.length + ')'));
     for (const c of off.slice(0, 500)) {
       const li = el('li'), row = el('div', 'contact');
       const body = el('div', 'c-body'); body.append(el('div', 'c-name', c.name), el('div', 'c-last', c.phone));
@@ -4513,7 +4526,7 @@ function renderAiSuggest() {
   bar.hidden = !show; if (!show) return;
   if (bar.dataset.for === last.id) return;
   bar.dataset.for = last.id; bar.innerHTML = '';
-  const ask = el('button', 'chip-ai', '✨ Suggest replies');
+  const ask = el('button', 'chip-ai', i18n('suggest'));
   ask.onclick = async () => {
     ask.disabled = true; ask.textContent = '✨ Thinking…';
     const ctx = list.filter((m) => isText(m) && !m.deleted).slice(-6).map((m) => ({ mine: m.from === me.id, text: m.text }));
@@ -4565,7 +4578,36 @@ function aiForward(text) {
     }
   });
 }
+const I18N = {"en": {"chats": "Chats", "status": "Status", "calls": "Calls", "contacts": "Contacts", "search": "Search name or mobile number", "add": "Add", "all": "All", "unread": "Unread", "favs": "Favourites", "type": "Type a message", "newGroup": "New group", "broadcast": "Business broadcast", "quick": "Quick replies", "aiAuto": "AI auto-reply", "starred": "Starred messages", "selectChats": "Select chats", "lists": "Lists", "markRead": "Mark all as read", "appLock": "App lock", "appLang": "App language", "settings": "Settings", "logout": "Log out", "myStatus": "My status", "text": "Text", "photoVideo": "Photo / Video", "recent": "Recent updates", "viewed": "Viewed updates", "sync": "Sync phone contacts", "import": "Import contacts file", "onMaata": "On Maata", "invite": "Invite to Maata", "clearHistory": "Clear history", "login": "Log in", "create": "Create account", "mobile": "Mobile number", "password": "Password", "name": "Your name", "newTo": "New to Maata?", "haveAcc": "Already have an account?", "tagline": "Free voice calls, video calls and messages with anyone on Maata. Just internet, no call charges.", "langBanner": "Choose your language to use live call translation.", "choose": "Choose", "suggest": "✨ Suggest replies", "pickChat": "Pick someone to talk to", "pickChatSub": "Choose a contact on the left to send a message or start a free call."}, "hi": {"chats": "चैट", "status": "स्टेटस", "calls": "कॉल", "contacts": "संपर्क", "search": "नाम या मोबाइल नंबर खोजें", "add": "जोड़ें", "all": "सभी", "unread": "अपठित", "favs": "पसंदीदा", "type": "संदेश लिखें", "newGroup": "नया ग्रुप", "broadcast": "बिज़नेस ब्रॉडकास्ट", "quick": "क्विक रिप्लाई", "aiAuto": "AI ऑटो-रिप्लाई", "starred": "तारांकित संदेश", "selectChats": "चैट चुनें", "lists": "सूचियाँ", "markRead": "सभी को पढ़ा हुआ करें", "appLock": "ऐप लॉक", "appLang": "ऐप की भाषा", "settings": "सेटिंग्स", "logout": "लॉग आउट", "myStatus": "मेरा स्टेटस", "text": "टेक्स्ट", "photoVideo": "फ़ोटो / वीडियो", "recent": "हाल के अपडेट", "viewed": "देखे गए अपडेट", "sync": "फ़ोन संपर्क सिंक करें", "import": "संपर्क फ़ाइल इम्पोर्ट करें", "onMaata": "Maata पर", "invite": "Maata पर बुलाएँ", "clearHistory": "इतिहास साफ़ करें", "login": "लॉग इन", "create": "खाता बनाएँ", "mobile": "मोबाइल नंबर", "password": "पासवर्ड", "name": "आपका नाम", "newTo": "Maata पर नए हैं?", "haveAcc": "पहले से खाता है?", "tagline": "Maata पर किसी से भी मुफ़्त वॉइस कॉल, वीडियो कॉल और संदेश। बस इंटरनेट, कोई कॉल चार्ज नहीं।", "langBanner": "लाइव कॉल अनुवाद के लिए अपनी भाषा चुनें।", "choose": "चुनें", "suggest": "✨ जवाब सुझाएँ", "pickChat": "बात करने के लिए किसी को चुनें", "pickChatSub": "संदेश भेजने या मुफ़्त कॉल करने के लिए बाईं ओर से संपर्क चुनें।"}, "mr": {"chats": "चॅट्स", "status": "स्टेटस", "calls": "कॉल्स", "contacts": "संपर्क", "search": "नाव किंवा मोबाइल नंबर शोधा", "add": "जोडा", "all": "सर्व", "unread": "न वाचलेले", "favs": "आवडते", "type": "संदेश टाइप करा", "newGroup": "नवीन ग्रुप", "broadcast": "बिझनेस ब्रॉडकास्ट", "quick": "झटपट उत्तरे", "aiAuto": "AI ऑटो-रिप्लाय", "starred": "तारांकित संदेश", "selectChats": "चॅट्स निवडा", "lists": "याद्या", "markRead": "सर्व वाचले म्हणून चिन्हांकित करा", "appLock": "ॲप लॉक", "appLang": "ॲपची भाषा", "settings": "सेटिंग्ज", "logout": "लॉग आउट", "myStatus": "माझे स्टेटस", "text": "मजकूर", "photoVideo": "फोटो / व्हिडिओ", "recent": "अलीकडील अपडेट्स", "viewed": "पाहिलेले अपडेट्स", "sync": "फोन संपर्क सिंक करा", "import": "संपर्क फाइल आयात करा", "onMaata": "Maata वर असलेले", "invite": "Maata वर आमंत्रित करा", "clearHistory": "इतिहास साफ करा", "login": "लॉग इन", "create": "खाते तयार करा", "mobile": "मोबाइल नंबर", "password": "पासवर्ड", "name": "तुमचे नाव", "newTo": "Maata वर नवीन आहात?", "haveAcc": "आधीच खाते आहे?", "tagline": "Maata वर कोणाशीही मोफत व्हॉइस कॉल, व्हिडिओ कॉल आणि संदेश. फक्त इंटरनेट, कॉल शुल्क नाही.", "langBanner": "थेट कॉल अनुवादासाठी तुमची भाषा निवडा.", "choose": "निवडा", "suggest": "✨ उत्तरे सुचवा", "pickChat": "बोलण्यासाठी कोणालातरी निवडा", "pickChatSub": "संदेश पाठवण्यासाठी किंवा मोफत कॉलसाठी डावीकडून संपर्क निवडा."}, "gu": {"chats": "ચેટ્સ", "status": "સ્ટેટસ", "calls": "કૉલ્સ", "contacts": "સંપર્કો", "search": "નામ અથવા મોબાઇલ નંબર શોધો", "add": "ઉમેરો", "all": "બધા", "unread": "ન વાંચેલા", "favs": "મનપસંદ", "type": "સંદેશ લખો", "newGroup": "નવું ગ્રુપ", "broadcast": "બિઝનેસ બ્રોડકાસ્ટ", "quick": "ઝડપી જવાબો", "aiAuto": "AI ઓટો-રિપ્લાય", "starred": "સ્ટાર કરેલા સંદેશા", "selectChats": "ચેટ્સ પસંદ કરો", "lists": "યાદીઓ", "markRead": "બધાને વાંચેલા ચિહ્નિત કરો", "appLock": "ઍપ લૉક", "appLang": "ઍપની ભાષા", "settings": "સેટિંગ્સ", "logout": "લૉગ આઉટ", "myStatus": "મારું સ્ટેટસ", "text": "ટેક્સ્ટ", "photoVideo": "ફોટો / વિડિયો", "recent": "તાજેતરના અપડેટ્સ", "viewed": "જોયેલા અપડેટ્સ", "sync": "ફોન સંપર્કો સિંક કરો", "import": "સંપર્ક ફાઇલ આયાત કરો", "onMaata": "Maata પર છે", "invite": "Maata પર આમંત્રિત કરો", "clearHistory": "ઇતિહાસ સાફ કરો", "login": "લૉગ ઇન", "create": "એકાઉન્ટ બનાવો", "mobile": "મોબાઇલ નંબર", "password": "પાસવર્ડ", "name": "તમારું નામ", "newTo": "Maata પર નવા છો?", "haveAcc": "પહેલેથી એકાઉન્ટ છે?", "tagline": "Maata પર કોઈપણ સાથે મફત વૉઇસ કૉલ, વિડિયો કૉલ અને સંદેશા. ફક્ત ઇન્ટરનેટ, કોઈ કૉલ ચાર્જ નહીં.", "langBanner": "લાઇવ કૉલ અનુવાદ માટે તમારી ભાષા પસંદ કરો.", "choose": "પસંદ કરો", "suggest": "✨ જવાબો સૂચવો", "pickChat": "વાત કરવા કોઈને પસંદ કરો", "pickChatSub": "સંદેશ મોકલવા અથવા મફત કૉલ માટે ડાબી બાજુથી સંપર્ક પસંદ કરો."}, "ta": {"chats": "அரட்டைகள்", "status": "நிலை", "calls": "அழைப்புகள்", "contacts": "தொடர்புகள்", "search": "பெயர் அல்லது மொபைல் எண்ணைத் தேடுங்கள்", "add": "சேர்", "all": "அனைத்தும்", "unread": "படிக்காதவை", "favs": "பிடித்தவை", "type": "செய்தியை உள்ளிடவும்", "newGroup": "புதிய குழு", "broadcast": "வணிக ஒளிபரப்பு", "quick": "விரைவு பதில்கள்", "aiAuto": "AI தானியங்கு பதில்", "starred": "நட்சத்திரமிட்ட செய்திகள்", "selectChats": "அரட்டைகளைத் தேர்ந்தெடு", "lists": "பட்டியல்கள்", "markRead": "அனைத்தையும் படித்ததாகக் குறி", "appLock": "ஆப் பூட்டு", "appLang": "ஆப் மொழி", "settings": "அமைப்புகள்", "logout": "வெளியேறு", "myStatus": "என் நிலை", "text": "உரை", "photoVideo": "புகைப்படம் / வீடியோ", "recent": "சமீபத்திய அப்டேட்கள்", "viewed": "பார்த்த அப்டேட்கள்", "sync": "தொலைபேசி தொடர்புகளை ஒத்திசை", "import": "தொடர்புக் கோப்பை இறக்கு", "onMaata": "Maata-வில் உள்ளவர்கள்", "invite": "Maata-க்கு அழைக்கவும்", "clearHistory": "வரலாற்றை அழி", "login": "உள்நுழை", "create": "கணக்கை உருவாக்கு", "mobile": "மொபைல் எண்", "password": "கடவுச்சொல்", "name": "உங்கள் பெயர்", "newTo": "Maata-க்கு புதியவரா?", "haveAcc": "ஏற்கனவே கணக்கு உள்ளதா?", "tagline": "Maata-வில் யாருடனும் இலவச குரல் அழைப்பு, வீடியோ அழைப்பு மற்றும் செய்திகள். இணையம் போதும், அழைப்புக் கட்டணம் இல்லை.", "langBanner": "நேரடி அழைப்பு மொழிபெயர்ப்புக்கு உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்.", "choose": "தேர்ந்தெடு", "suggest": "✨ பதில்களைப் பரிந்துரை", "pickChat": "பேச ஒருவரைத் தேர்ந்தெடுக்கவும்", "pickChatSub": "செய்தி அனுப்ப அல்லது இலவச அழைப்புக்கு இடதுபுறம் ஒரு தொடர்பைத் தேர்ந்தெடுக்கவும்."}, "bn": {"chats": "চ্যাট", "status": "স্ট্যাটাস", "calls": "কল", "contacts": "পরিচিতি", "search": "নাম বা মোবাইল নম্বর খুঁজুন", "add": "যোগ করুন", "all": "সব", "unread": "অপঠিত", "favs": "প্রিয়", "type": "বার্তা লিখুন", "newGroup": "নতুন গ্রুপ", "broadcast": "বিজনেস ব্রডকাস্ট", "quick": "দ্রুত উত্তর", "aiAuto": "AI স্বয়ংক্রিয় উত্তর", "starred": "তারকাচিহ্নিত বার্তা", "selectChats": "চ্যাট নির্বাচন করুন", "lists": "তালিকা", "markRead": "সব পড়া হয়েছে চিহ্নিত করুন", "appLock": "অ্যাপ লক", "appLang": "অ্যাপের ভাষা", "settings": "সেটিংস", "logout": "লগ আউট", "myStatus": "আমার স্ট্যাটাস", "text": "লেখা", "photoVideo": "ছবি / ভিডিও", "recent": "সাম্প্রতিক আপডেট", "viewed": "দেখা আপডেট", "sync": "ফোনের পরিচিতি সিঙ্ক করুন", "import": "পরিচিতি ফাইল আমদানি", "onMaata": "Maata-তে আছেন", "invite": "Maata-তে আমন্ত্রণ জানান", "clearHistory": "ইতিহাস মুছুন", "login": "লগ ইন", "create": "অ্যাকাউন্ট তৈরি করুন", "mobile": "মোবাইল নম্বর", "password": "পাসওয়ার্ড", "name": "আপনার নাম", "newTo": "Maata-তে নতুন?", "haveAcc": "আগে থেকেই অ্যাকাউন্ট আছে?", "tagline": "Maata-তে যে কারও সাথে বিনামূল্যে ভয়েস কল, ভিডিও কল ও বার্তা। শুধু ইন্টারনেট, কোনো কল চার্জ নেই।", "langBanner": "লাইভ কল অনুবাদের জন্য আপনার ভাষা বেছে নিন।", "choose": "বেছে নিন", "suggest": "✨ উত্তর প্রস্তাব করুন", "pickChat": "কথা বলার জন্য কাউকে বেছে নিন", "pickChatSub": "বার্তা পাঠাতে বা বিনামূল্যে কল করতে বাঁদিক থেকে একটি পরিচিতি বেছে নিন।"}, "te": {"chats": "చాట్‌లు", "status": "స్టేటస్", "calls": "కాల్స్", "contacts": "కాంటాక్ట్స్", "search": "పేరు లేదా మొబైల్ నంబర్ వెతకండి", "add": "జోడించు", "all": "అన్నీ", "unread": "చదవనివి", "favs": "ఇష్టమైనవి", "type": "మెసేజ్ టైప్ చేయండి", "newGroup": "కొత్త గ్రూప్", "broadcast": "బిజినెస్ బ్రాడ్‌కాస్ట్", "quick": "క్విక్ రిప్లైలు", "aiAuto": "AI ఆటో-రిప్లై", "starred": "స్టార్ చేసిన మెసేజ్‌లు", "selectChats": "చాట్‌లు ఎంచుకోండి", "lists": "లిస్టులు", "markRead": "అన్నీ చదివినట్టు గుర్తించు", "appLock": "యాప్ లాక్", "appLang": "యాప్ భాష", "settings": "సెట్టింగ్స్", "logout": "లాగ్ అవుట్", "myStatus": "నా స్టేటస్", "text": "టెక్స్ట్", "photoVideo": "ఫోటో / వీడియో", "recent": "కొత్త అప్‌డేట్‌లు", "viewed": "చూసిన అప్‌డేట్‌లు", "sync": "ఫోన్ కాంటాక్ట్స్ సింక్ చేయండి", "import": "కాంటాక్ట్స్ ఫైల్ ఇంపోర్ట్", "onMaata": "Maata లో ఉన్నవారు", "invite": "Maata కి ఆహ్వానించండి", "clearHistory": "హిస్టరీ తొలగించు", "login": "లాగిన్", "create": "అకౌంట్ సృష్టించండి", "mobile": "మొబైల్ నంబర్", "password": "పాస్‌వర్డ్", "name": "మీ పేరు", "newTo": "Maata కి కొత్తా?", "haveAcc": "ఇప్పటికే అకౌంట్ ఉందా?", "tagline": "Maata లో ఎవరితోనైనా ఉచిత వాయిస్ కాల్స్, వీడియో కాల్స్, మెసేజ్‌లు. ఇంటర్నెట్ చాలు, కాల్ చార్జీలు లేవు.", "langBanner": "లైవ్ కాల్ అనువాదం కోసం మీ భాష ఎంచుకోండి.", "choose": "ఎంచుకోండి", "suggest": "✨ జవాబులు సూచించు", "pickChat": "మాట్లాడటానికి ఎవరినైనా ఎంచుకోండి", "pickChatSub": "మెసేజ్ పంపడానికి లేదా ఉచిత కాల్ చేయడానికి ఎడమ వైపు కాంటాక్ట్ ఎంచుకోండి."}, "kn": {"chats": "ಚಾಟ್‌ಗಳು", "status": "ಸ್ಟೇಟಸ್", "calls": "ಕರೆಗಳು", "contacts": "ಸಂಪರ್ಕಗಳು", "search": "ಹೆಸರು ಅಥವಾ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಹುಡುಕಿ", "add": "ಸೇರಿಸಿ", "all": "ಎಲ್ಲಾ", "unread": "ಓದದಿರುವುದು", "favs": "ಮೆಚ್ಚಿನವು", "type": "ಸಂದೇಶ ಟೈಪ್ ಮಾಡಿ", "newGroup": "ಹೊಸ ಗುಂಪು", "broadcast": "ವ್ಯಾಪಾರ ಬ್ರಾಡ್‌ಕಾಸ್ಟ್", "quick": "ತ್ವರಿತ ಉತ್ತರಗಳು", "aiAuto": "AI ಸ್ವಯಂ-ಉತ್ತರ", "starred": "ನಕ್ಷತ್ರ ಹಾಕಿದ ಸಂದೇಶಗಳು", "selectChats": "ಚಾಟ್‌ಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ", "lists": "ಪಟ್ಟಿಗಳು", "markRead": "ಎಲ್ಲವನ್ನೂ ಓದಿದ್ದು ಎಂದು ಗುರುತಿಸಿ", "appLock": "ಆ್ಯಪ್ ಲಾಕ್", "appLang": "ಆ್ಯಪ್ ಭಾಷೆ", "settings": "ಸೆಟ್ಟಿಂಗ್‌ಗಳು", "logout": "ಲಾಗ್ ಔಟ್", "myStatus": "ನನ್ನ ಸ್ಟೇಟಸ್", "text": "ಪಠ್ಯ", "photoVideo": "ಫೋಟೋ / ವೀಡಿಯೊ", "recent": "ಇತ್ತೀಚಿನ ಅಪ್‌ಡೇಟ್‌ಗಳು", "viewed": "ನೋಡಿದ ಅಪ್‌ಡೇಟ್‌ಗಳು", "sync": "ಫೋನ್ ಸಂಪರ್ಕಗಳನ್ನು ಸಿಂಕ್ ಮಾಡಿ", "import": "ಸಂಪರ್ಕ ಫೈಲ್ ಆಮದು", "onMaata": "Maata ನಲ್ಲಿ ಇರುವವರು", "invite": "Maata ಗೆ ಆಹ್ವಾನಿಸಿ", "clearHistory": "ಇತಿಹಾಸ ಅಳಿಸಿ", "login": "ಲಾಗಿನ್", "create": "ಖಾತೆ ರಚಿಸಿ", "mobile": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆ", "password": "ಪಾಸ್‌ವರ್ಡ್", "name": "ನಿಮ್ಮ ಹೆಸರು", "newTo": "Maata ಗೆ ಹೊಸಬರೇ?", "haveAcc": "ಈಗಾಗಲೇ ಖಾತೆ ಇದೆಯೇ?", "tagline": "Maata ನಲ್ಲಿ ಯಾರೊಂದಿಗಾದರೂ ಉಚಿತ ಧ್ವನಿ ಕರೆ, ವೀಡಿಯೊ ಕರೆ ಮತ್ತು ಸಂದೇಶಗಳು. ಇಂಟರ್ನೆಟ್ ಸಾಕು, ಕರೆ ಶುಲ್ಕವಿಲ್ಲ.", "langBanner": "ಲೈವ್ ಕರೆ ಅನುವಾದಕ್ಕಾಗಿ ನಿಮ್ಮ ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ.", "choose": "ಆಯ್ಕೆಮಾಡಿ", "suggest": "✨ ಉತ್ತರಗಳನ್ನು ಸೂಚಿಸಿ", "pickChat": "ಮಾತನಾಡಲು ಯಾರನ್ನಾದರೂ ಆಯ್ಕೆಮಾಡಿ", "pickChatSub": "ಸಂದೇಶ ಕಳುಹಿಸಲು ಅಥವಾ ಉಚಿತ ಕರೆ ಮಾಡಲು ಎಡಭಾಗದಿಂದ ಸಂಪರ್ಕ ಆಯ್ಕೆಮಾಡಿ."}, "ml": {"chats": "ചാറ്റുകൾ", "status": "സ്റ്റാറ്റസ്", "calls": "കോളുകൾ", "contacts": "കോൺടാക്റ്റുകൾ", "search": "പേരോ മൊബൈൽ നമ്പറോ തിരയുക", "add": "ചേർക്കുക", "all": "എല്ലാം", "unread": "വായിക്കാത്തവ", "favs": "പ്രിയപ്പെട്ടവ", "type": "സന്ദേശം ടൈപ്പ് ചെയ്യുക", "newGroup": "പുതിയ ഗ്രൂപ്പ്", "broadcast": "ബിസിനസ് ബ്രോഡ്‌കാസ്റ്റ്", "quick": "ദ്രുത മറുപടികൾ", "aiAuto": "AI ഓട്ടോ-മറുപടി", "starred": "നക്ഷത്രമിട്ട സന്ദേശങ്ങൾ", "selectChats": "ചാറ്റുകൾ തിരഞ്ഞെടുക്കുക", "lists": "ലിസ്റ്റുകൾ", "markRead": "എല്ലാം വായിച്ചതായി അടയാളപ്പെടുത്തുക", "appLock": "ആപ്പ് ലോക്ക്", "appLang": "ആപ്പ് ഭാഷ", "settings": "ക്രമീകരണങ്ങൾ", "logout": "ലോഗ് ഔട്ട്", "myStatus": "എന്റെ സ്റ്റാറ്റസ്", "text": "ടെക്സ്റ്റ്", "photoVideo": "ഫോട്ടോ / വീഡിയോ", "recent": "പുതിയ അപ്ഡേറ്റുകൾ", "viewed": "കണ്ട അപ്ഡേറ്റുകൾ", "sync": "ഫോൺ കോൺടാക്റ്റുകൾ സമന്വയിപ്പിക്കുക", "import": "കോൺടാക്റ്റ് ഫയൽ ഇമ്പോർട്ട്", "onMaata": "Maata-യിൽ ഉള്ളവർ", "invite": "Maata-യിലേക്ക് ക്ഷണിക്കുക", "clearHistory": "ചരിത്രം മായ്ക്കുക", "login": "ലോഗിൻ", "create": "അക്കൗണ്ട് സൃഷ്ടിക്കുക", "mobile": "മൊബൈൽ നമ്പർ", "password": "പാസ്‌വേഡ്", "name": "നിങ്ങളുടെ പേര്", "newTo": "Maata-യിൽ പുതിയതാണോ?", "haveAcc": "ഇതിനകം അക്കൗണ്ട് ഉണ്ടോ?", "tagline": "Maata-യിൽ ആരുമായും സൗജന്യ വോയ്‌സ് കോൾ, വീഡിയോ കോൾ, സന്ദേശങ്ങൾ. ഇന്റർനെറ്റ് മതി, കോൾ ചാർജ് ഇല്ല.", "langBanner": "തത്സമയ കോൾ വിവർത്തനത്തിനായി നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക.", "choose": "തിരഞ്ഞെടുക്കുക", "suggest": "✨ മറുപടികൾ നിർദ്ദേശിക്കുക", "pickChat": "സംസാരിക്കാൻ ഒരാളെ തിരഞ്ഞെടുക്കുക", "pickChatSub": "സന്ദേശം അയക്കാനോ സൗജന്യ കോൾ ചെയ്യാനോ ഇടതുവശത്ത് നിന്ന് കോൺടാക്റ്റ് തിരഞ്ഞെടുക്കുക."}, "pa": {"chats": "ਚੈਟਾਂ", "status": "ਸਟੇਟਸ", "calls": "ਕਾਲਾਂ", "contacts": "ਸੰਪਰਕ", "search": "ਨਾਮ ਜਾਂ ਮੋਬਾਈਲ ਨੰਬਰ ਖੋਜੋ", "add": "ਜੋੜੋ", "all": "ਸਾਰੇ", "unread": "ਨਾ ਪੜ੍ਹੇ", "favs": "ਮਨਪਸੰਦ", "type": "ਸੁਨੇਹਾ ਲਿਖੋ", "newGroup": "ਨਵਾਂ ਗਰੁੱਪ", "broadcast": "ਬਿਜ਼ਨਸ ਬ੍ਰੌਡਕਾਸਟ", "quick": "ਤੁਰੰਤ ਜਵਾਬ", "aiAuto": "AI ਆਟੋ-ਜਵਾਬ", "starred": "ਤਾਰੇ ਵਾਲੇ ਸੁਨੇਹੇ", "selectChats": "ਚੈਟਾਂ ਚੁਣੋ", "lists": "ਸੂਚੀਆਂ", "markRead": "ਸਾਰੇ ਪੜ੍ਹੇ ਵਜੋਂ ਨਿਸ਼ਾਨ ਲਗਾਓ", "appLock": "ਐਪ ਲੌਕ", "appLang": "ਐਪ ਦੀ ਭਾਸ਼ਾ", "settings": "ਸੈਟਿੰਗਾਂ", "logout": "ਲੌਗ ਆਊਟ", "myStatus": "ਮੇਰਾ ਸਟੇਟਸ", "text": "ਟੈਕਸਟ", "photoVideo": "ਫ਼ੋਟੋ / ਵੀਡੀਓ", "recent": "ਤਾਜ਼ਾ ਅੱਪਡੇਟ", "viewed": "ਦੇਖੇ ਗਏ ਅੱਪਡੇਟ", "sync": "ਫ਼ੋਨ ਸੰਪਰਕ ਸਿੰਕ ਕਰੋ", "import": "ਸੰਪਰਕ ਫ਼ਾਈਲ ਆਯਾਤ ਕਰੋ", "onMaata": "Maata 'ਤੇ ਹਨ", "invite": "Maata 'ਤੇ ਸੱਦੋ", "clearHistory": "ਇਤਿਹਾਸ ਮਿਟਾਓ", "login": "ਲੌਗ ਇਨ", "create": "ਖਾਤਾ ਬਣਾਓ", "mobile": "ਮੋਬਾਈਲ ਨੰਬਰ", "password": "ਪਾਸਵਰਡ", "name": "ਤੁਹਾਡਾ ਨਾਮ", "newTo": "Maata 'ਤੇ ਨਵੇਂ ਹੋ?", "haveAcc": "ਪਹਿਲਾਂ ਹੀ ਖਾਤਾ ਹੈ?", "tagline": "Maata 'ਤੇ ਕਿਸੇ ਨਾਲ ਵੀ ਮੁਫ਼ਤ ਵੌਇਸ ਕਾਲ, ਵੀਡੀਓ ਕਾਲ ਅਤੇ ਸੁਨੇਹੇ। ਬੱਸ ਇੰਟਰਨੈੱਟ, ਕੋਈ ਕਾਲ ਖਰਚਾ ਨਹੀਂ।", "langBanner": "ਲਾਈਵ ਕਾਲ ਅਨੁਵਾਦ ਲਈ ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ।", "choose": "ਚੁਣੋ", "suggest": "✨ ਜਵਾਬ ਸੁਝਾਓ", "pickChat": "ਗੱਲ ਕਰਨ ਲਈ ਕਿਸੇ ਨੂੰ ਚੁਣੋ", "pickChatSub": "ਸੁਨੇਹਾ ਭੇਜਣ ਜਾਂ ਮੁਫ਼ਤ ਕਾਲ ਲਈ ਖੱਬੇ ਪਾਸਿਓਂ ਸੰਪਰਕ ਚੁਣੋ।"}, "ur": {"chats": "چیٹس", "status": "اسٹیٹس", "calls": "کالز", "contacts": "رابطے", "search": "نام یا موبائل نمبر تلاش کریں", "add": "شامل کریں", "all": "سب", "unread": "نہ پڑھے گئے", "favs": "پسندیدہ", "type": "پیغام لکھیں", "newGroup": "نیا گروپ", "broadcast": "بزنس براڈکاسٹ", "quick": "فوری جوابات", "aiAuto": "AI خودکار جواب", "starred": "ستارہ والے پیغامات", "selectChats": "چیٹس منتخب کریں", "lists": "فہرستیں", "markRead": "سب کو پڑھا ہوا نشان زد کریں", "appLock": "ایپ لاک", "appLang": "ایپ کی زبان", "settings": "ترتیبات", "logout": "لاگ آؤٹ", "myStatus": "میرا اسٹیٹس", "text": "متن", "photoVideo": "تصویر / ویڈیو", "recent": "حالیہ اپڈیٹس", "viewed": "دیکھی گئی اپڈیٹس", "sync": "فون کے رابطے سنک کریں", "import": "رابطوں کی فائل درآمد کریں", "onMaata": "Maata پر موجود", "invite": "Maata پر مدعو کریں", "clearHistory": "تاریخ صاف کریں", "login": "لاگ ان", "create": "اکاؤنٹ بنائیں", "mobile": "موبائل نمبر", "password": "پاس ورڈ", "name": "آپ کا نام", "newTo": "Maata پر نئے ہیں؟", "haveAcc": "پہلے سے اکاؤنٹ ہے؟", "tagline": "Maata پر کسی سے بھی مفت وائس کال، ویڈیو کال اور پیغامات۔ صرف انٹرنیٹ، کوئی کال چارج نہیں۔", "langBanner": "لائیو کال ترجمے کے لیے اپنی زبان منتخب کریں۔", "choose": "منتخب کریں", "suggest": "✨ جوابات تجویز کریں", "pickChat": "بات کرنے کے لیے کسی کو منتخب کریں", "pickChatSub": "پیغام بھیجنے یا مفت کال کے لیے بائیں طرف سے رابطہ منتخب کریں۔"}};
+
+// ================= App language (interface language) =================
+const APP_LANGS = [['en', 'English', 'English'], ['hi', 'हिन्दी', 'Hindi'], ['mr', 'मराठी', 'Marathi'], ['gu', 'ગુજરાતી', 'Gujarati'], ['ta', 'தமிழ்', 'Tamil'], ['bn', 'বাংলা', 'Bangla'], ['te', 'తెలుగు', 'Telugu'], ['kn', 'ಕನ್ನಡ', 'Kannada'], ['ml', 'മലയാളം', 'Malayalam'], ['pa', 'ਪੰਜਾਬੀ', 'Punjabi'], ['ur', 'اردو', 'Urdu']];
+const deviceLang = (() => { const d = (navigator.language || 'en').slice(0, 2).toLowerCase(); return I18N[d] ? d : 'en'; })();
+let appLang = store.get('maata_app_lang') || deviceLang;
+if (!I18N[appLang]) appLang = 'en';
+function i18n(key) { return (I18N[appLang] && I18N[appLang][key]) || I18N.en[key] || key; }
+function applyAppLang() {
+  document.documentElement.lang = appLang;
+  document.querySelectorAll('[data-t]').forEach((e) => (e.textContent = i18n(e.dataset.t)));
+  document.querySelectorAll('[data-tp]').forEach((e) => (e.placeholder = i18n(e.dataset.tp)));
+  if (!$('#auth').hidden) setMode(mode);
+  if (me) { renderContacts(); if (tab === 'status') renderStatus(); if (tab === 'contacts') renderPhoneContacts(); const bar = $('#aiSuggest'); if (bar) bar.dataset.for = ''; if (activeId) renderAiSuggest(); }
+}
+function openAppLanguage() {
+  sheet(i18n('appLang'), (list) => {
+    for (const [code, native, english] of APP_LANGS) {
+      const b = el('button', 'lang-opt'); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(code === appLang));
+      const dot = el('span', 'radio'), txt = el('span', 'txt');
+      txt.append(el('b', null, native), el('small', null, code === 'en' ? (deviceLang === 'en' ? "(device's language)" : '') : english + (code === deviceLang ? " (device's language)" : '')));
+      b.append(dot, txt);
+      b.onclick = () => { appLang = code; store.set('maata_app_lang', code); applyAppLang(); closeSheet('moreSheet'); toast('✓ ' + native); };
+      list.append(b);
+    }
+  });
+}
+
 // ---------------- go ----------------
+applyAppLang();
 setMode('login');
 if (token) { if (lockCfg()) showLock(); start(); } else $('#auth').hidden = false;
 </script>

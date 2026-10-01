@@ -27,7 +27,7 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats'];
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n'];
 const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -1051,7 +1051,8 @@ app.get('/api/groups/:id/photo', (req, res) => {
 
 // ---------- AI (Google Gemini, free tier) ----------
 // Set GEMINI_API_KEY (free from aistudio.google.com). Optional GEMINI_MODEL.
-const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_KEY = (process.env.GEMINI_API_KEY || '').trim();
+let aiLastError = null;
 const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'].filter(Boolean))];
 let geminiModelOk = null, aiCount = 0;
 async function gemini(system, contents, { json = false, maxTokens = 600, temperature = 0.7 } = {}) {
@@ -1068,16 +1069,24 @@ async function gemini(system, contents, { json = false, maxTokens = 600, tempera
       if (r.status === 404) continue; // model name not available, try the next one
       const d = await r.json();
       if (r.status === 429) return { error: 'limit' };
-      if (d.error) { console.error('[ai]', d.error.message); return { error: 'service' }; }
+      if (d.error) {
+        const msg = String(d.error.message || ''), why = JSON.stringify(d.error.details || '');
+        console.error('[ai]', r.status, msg);
+        aiLastError = msg.slice(0, 200);
+        if (/API_KEY_INVALID|API key not valid/i.test(msg + why)) return { error: 'badkey' };
+        if (r.status === 403 || /SERVICE_DISABLED|has not been used|is disabled|PERMISSION_DENIED/i.test(msg + why)) return { error: 'disabled' };
+        if (/location is not supported|User location/i.test(msg)) return { error: 'region' };
+        return { error: 'service' };
+      }
       const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
       if (!text) return { error: d.promptFeedback?.blockReason ? 'blocked' : 'empty' };
-      geminiModelOk = model; aiCount++;
+      geminiModelOk = model; aiCount++; aiLastError = null;
       return { text };
     } catch (e) { console.error('[ai]', e.message); return { error: 'service' }; }
   }
   return { error: 'service' };
 }
-const AI_ERR = { 'not-configured': 'Maata AI is not switched on yet. The admin needs to add GEMINI_API_KEY.', limit: 'Maata AI is busy (free limit reached). Please try again later.', service: 'Maata AI is not available right now. Try again.', blocked: 'Maata AI cannot answer that.', empty: 'Maata AI had no answer. Try asking differently.', quota: 'You have used your Maata AI requests for today. Try again tomorrow.' };
+const AI_ERR = { badkey: 'The Gemini API key is not valid. Please copy the key again from aistudio.google.com and update GEMINI_API_KEY on Render.', disabled: 'The Gemini API is not enabled for this key. Create the key at aistudio.google.com (it switches the API on automatically).', region: 'Gemini is not available for this server location right now.', 'not-configured': 'Maata AI is not switched on yet. The admin needs to add GEMINI_API_KEY.', limit: 'Maata AI is busy (free limit reached). Please try again later.', service: 'Maata AI is not available right now. Try again.', blocked: 'Maata AI cannot answer that.', empty: 'Maata AI had no answer. Try asking differently.', quota: 'You have used your Maata AI requests for today. Try again tomorrow.' };
 const aiUse = new Map();
 function aiQuota(u, n = 1) {
   const day = dayKey(now()), q = aiUse.get(u.id);
@@ -1087,7 +1096,7 @@ function aiQuota(u, n = 1) {
 }
 const LANG_HINT = 'Reply in the same language and script the person used. If they write Telugu in English letters (like "ela unnav"), reply the same way. Keep replies short and friendly, suitable for a phone chat. Use plain text, no markdown symbols like ** or #.';
 const plain = (t) => String(t || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/^#+\s*/gm, '').replace(/^\s*[-*]\s+/gm, '• ').trim();
-app.get('/api/ai/status', auth, (req, res) => res.json({ enabled: !!GEMINI_KEY }));
+app.get('/api/ai/status', auth, (req, res) => res.json({ enabled: !!GEMINI_KEY, model: geminiModelOk, lastError: aiLastError }));
 
 // 1) Maata AI chat (history is private to each customer)
 app.get('/api/ai/history', auth, (req, res) => res.json(db.aichats.filter((m) => m.userId === req.user.id).slice(-100)));
@@ -1163,6 +1172,52 @@ async function maybeAutoReply(customer, owner, m) {
   if (r.error || !canMessage(owner, customer.id).target) return;
   deliverMessage(owner, customer, { type: 'text', text: plain(r.text).slice(0, 1500), ai: true }, null);
 }
+
+// ---------- App language: interface text translated once per language, then cached for everyone ----------
+const UI_LANGS = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', ta: 'Tamil', bn: 'Bengali', te: 'Telugu', kn: 'Kannada', ml: 'Malayalam', pa: 'Punjabi', ur: 'Urdu' };
+const i18nHits = new Map(), i18nBusy = new Map();
+function i18nDoc(lang) { let d = db.i18n.find((x) => x.id === lang); if (!d) { d = { id: lang, map: {} }; db.i18n.push(d); } return d; }
+async function translateUi(lang, list) {
+  // 1) Gemini (understands these are app buttons/menus), 2) Google Translate, 3) free service
+  if (GEMINI_KEY) {
+    const r = await gemini('You translate the user interface of "Maata", a chat and calling app (like WhatsApp), from English to ' + UI_LANGS[lang] + '. Use the short, natural words that ' + UI_LANGS[lang] + ' apps use for buttons and menus. Keep emojis, numbers, symbols and the names "Maata", "Maata AI", "Google", "Gemini", "WhatsApp", "PIN", "GPS", "GIF" unchanged. Return JSON: {"t": [translations in the same order]}.',
+      [{ role: 'user', parts: [{ text: JSON.stringify(list) }] }], { json: true, temperature: 0.2, maxTokens: 8000 });
+    if (!r.error) { try { const t = JSON.parse(r.text).t; if (Array.isArray(t) && t.length === list.length) return t.map(String); } catch { /* fall through */ } }
+  }
+  if (GOOGLE_TRANSLATE_KEY) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 100) {
+      const r = await fetch('https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(GOOGLE_TRANSLATE_KEY), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: list.slice(i, i + 100), source: 'en', target: lang, format: 'text' }), signal: AbortSignal.timeout(15000),
+      }).then((x) => x.json()).catch(() => null);
+      const t = r?.data?.translations; if (!t) return null; out.push(...t.map((x) => x.translatedText));
+    }
+    return out;
+  }
+  const out = [];
+  for (const s2 of list.slice(0, 25)) out.push(await translate(s2, 'en', lang));
+  return out;
+}
+app.post('/api/i18n', async (req, res) => {
+  const lang = String(req.body?.lang || '');
+  if (!UI_LANGS[lang]) return res.status(400).json({ error: 'Unknown language.' });
+  const doc = i18nDoc(lang);
+  const want = [...new Set((Array.isArray(req.body?.strings) ? req.body.strings : []).map((x) => String(x).trim()).filter((x) => x && x.length <= 220))].slice(0, 300);
+  const missing = want.filter((x) => !(x in doc.map));
+  if (missing.length && Object.keys(doc.map).length < 6000) {
+    const key = req.ip, t = now(), l = (i18nHits.get(key) || []).filter((x) => t - x < 3600_000);
+    if (l.length < 60 && !i18nBusy.get(lang)) {
+      l.push(t); i18nHits.set(key, l); i18nBusy.set(lang, true);
+      try {
+        const batch = missing.slice(0, 150), out = await translateUi(lang, batch);
+        if (out) batch.forEach((s2, i) => { if (out[i] && String(out[i]).trim()) doc.map[s2] = String(out[i]).trim().slice(0, 400); });
+        save();
+      } catch (e) { console.error('[i18n]', e.message); } finally { i18nBusy.set(lang, false); }
+    }
+  }
+  const map = {}; for (const s2 of want) if (s2 in doc.map) map[s2] = doc.map[s2];
+  res.json({ map, missing: want.filter((x) => !(x in doc.map)).length });
+});
 
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
@@ -1244,7 +1299,7 @@ app.get('/admin/api/stats', adminAuth, (req, res) => {
       openReports: db.reports.filter((r) => r.status === 'open').length,
       translatedCalls: db.calls.filter((c) => c.translated).length,
       activeStatuses: db.statuses.filter((x) => x.expiresAt > now()).length,
-      aiAnswersSinceRestart: aiCount,
+      aiAnswersSinceRestart: aiCount, aiOn: !!GEMINI_KEY, aiError: aiLastError,
       translationsSinceRestart: trCount,
     },
     today: {
