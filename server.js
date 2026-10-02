@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -370,6 +370,7 @@ function contactView(meUser, u, extra = {}) {
     inContacts,
     blocked: blockedOf(meUser).includes(u.id),
     online: inContacts && isOnline(u.id),
+    biz: u.business ? { name: u.business.name, category: u.business.category } : null,
     ...extra,
   };
 }
@@ -1357,6 +1358,120 @@ app.put('/api/status/privacy', auth, (req, res) => {
   res.json(req.user.statusPrivacy);
 });
 
+// ---------- Business: profile, catalogue (products), ads (admin approved) ----------
+const BIZ_CATS = ['Mobile & electronics', 'Grocery', 'Clothing', 'Food & restaurant', 'Beauty & salon', 'Health & medical', 'Education', 'Services', 'Automobile', 'Real estate', 'Travel', 'Other'];
+const clip = (v, n) => String(v ?? '').trim().slice(0, n);
+function bizView(u) {
+  const b = u.business; if (!b) return null;
+  return { ...b, ownerId: u.id, ownerName: u.name, phone: u.phone, productCount: db.products.filter((p) => p.ownerId === u.id).length };
+}
+app.get('/api/business/:id', auth, (req, res) => {
+  const u = userById(req.params.id);
+  if (!u || u.status === 'blocked' || blockedOf(u).includes(req.user.id) || !u.business) return res.status(404).json({ error: 'This is not a business account.' });
+  res.json(bizView(u));
+});
+app.put('/api/business', auth, (req, res) => {
+  const b = req.body || {};
+  if (b.remove) { delete req.user.business; save(); return res.json(null); }
+  const name = clip(b.name, 60);
+  if (!name) return res.status(400).json({ error: 'Enter your business name.' });
+  const web = clip(b.website, 200), email = clip(b.email, 120);
+  if (web && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(web)) return res.status(400).json({ error: 'Website must start with https://' });
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+  req.user.business = { name, category: BIZ_CATS.includes(b.category) ? b.category : 'Other', description: clip(b.description, 600), address: clip(b.address, 300), hours: clip(b.hours, 300), email, website: web, updatedAt: now() };
+  save(); res.json(bizView(req.user));
+});
+
+// Catalogue
+const productOut = (p) => ({ id: p.id, ownerId: p.ownerId, name: p.name, price: p.price, description: p.description, available: p.available, hasPhoto: !!p.photo, photoV: p.photoV || 0, createdAt: p.createdAt });
+app.get('/api/catalogue/:ownerId', auth, (req, res) => {
+  const u = userById(req.params.ownerId);
+  if (!u || u.status === 'blocked' || blockedOf(u).includes(req.user.id)) return res.status(404).json({ error: 'Not found.' });
+  const mine = u.id === req.user.id;
+  res.json(db.products.filter((p) => p.ownerId === u.id && (mine || p.available)).sort((a, b) => b.createdAt - a.createdAt).map(productOut));
+});
+app.post('/api/catalogue', auth, (req, res) => {
+  if (!req.user.business) return res.status(400).json({ error: 'Create your business profile first.' });
+  if (db.products.filter((p) => p.ownerId === req.user.id).length >= 200) return res.status(400).json({ error: 'You can have up to 200 products.' });
+  const name = clip(req.body?.name, 80); if (!name) return res.status(400).json({ error: 'Enter a product name.' });
+  const price = req.body?.price === '' || req.body?.price == null ? null : Math.round(Number(req.body.price) * 100) / 100;
+  if (price !== null && !(price >= 0 && price < 1e8)) return res.status(400).json({ error: 'Enter a valid price.' });
+  const p = { id: newId(), ownerId: req.user.id, name, price, description: clip(req.body?.description, 500), available: req.body?.available !== false, createdAt: now() };
+  db.products.push(p); save(); res.json(productOut(p));
+});
+app.put('/api/catalogue/:id', auth, (req, res) => {
+  const p = db.products.find((x) => x.id === req.params.id && x.ownerId === req.user.id); if (!p) return res.status(404).json({ error: 'Not found.' });
+  const b = req.body || {};
+  if (b.name !== undefined) { const n = clip(b.name, 80); if (!n) return res.status(400).json({ error: 'Enter a product name.' }); p.name = n; }
+  if (b.price !== undefined) { const pr = b.price === '' || b.price == null ? null : Math.round(Number(b.price) * 100) / 100; if (pr !== null && !(pr >= 0 && pr < 1e8)) return res.status(400).json({ error: 'Enter a valid price.' }); p.price = pr; }
+  if (b.description !== undefined) p.description = clip(b.description, 500);
+  if (b.available !== undefined) p.available = !!b.available;
+  save(); res.json(productOut(p));
+});
+app.delete('/api/catalogue/:id', auth, (req, res) => {
+  const p = db.products.find((x) => x.id === req.params.id && x.ownerId === req.user.id); if (!p) return res.status(404).json({ error: 'Not found.' });
+  db.products = db.products.filter((x) => x.id !== p.id); if (p.photo) deleteChatFile(p.photo); save(); res.json({ ok: true });
+});
+async function savePhotoInto(obj, req, res) {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) { res.status(400).json({ error: 'Choose a photo.' }); return false; }
+  const id = newId(), mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0];
+  try { await saveChatFile(id, req.body, mime); } catch { res.status(500).json({ error: 'Could not save the photo.' }); return false; }
+  if (obj.photo) deleteChatFile(obj.photo);
+  Object.assign(obj, { photo: id, photoMime: mime, photoSize: req.body.length, photoV: now() }); save(); return true;
+}
+app.post('/api/catalogue/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
+  const p = db.products.find((x) => x.id === req.params.id && x.ownerId === req.user.id); if (!p) return res.status(404).json({ error: 'Not found.' });
+  if (await savePhotoInto(p, req, res)) res.json(productOut(p));
+});
+function streamPhoto(obj, req, res) {
+  let viewer = null; try { viewer = findUserByToken(String(req.query.t || '')); } catch { /* bad token */ }
+  if (!viewer || !obj || !obj.photo) return res.status(404).end();
+  res.setHeader('Content-Type', obj.photoMime); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(obj.photo, 0, obj.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
+}
+app.get('/api/catalogue/photo/:id', (req, res) => streamPhoto(db.products.find((x) => x.id === req.params.id), req, res));
+
+// Ads: business owners create a promotion → admin approves → shown as "Sponsored" in everyone's Status tab
+const adOut = (a, mine) => ({ id: a.id, ownerId: a.ownerId, title: a.title, text: a.text, productId: a.productId || null, hasPhoto: !!a.photo, photoV: a.photoV || 0, days: a.days, status: a.status, reason: a.reason || '', createdAt: a.createdAt, startsAt: a.startsAt || null, endsAt: a.endsAt || null, ...(mine ? { views: (a.viewers || []).length, clicks: a.clicks || 0 } : {}) });
+const adLive = (a) => a.status === 'approved' && a.endsAt > now();
+app.get('/api/ads/mine', auth, (req, res) => res.json(db.ads.filter((a) => a.ownerId === req.user.id).sort((a, b) => b.createdAt - a.createdAt).map((a) => adOut(a, true))));
+app.post('/api/ads', auth, (req, res) => {
+  if (!req.user.business) return res.status(400).json({ error: 'Create your business profile first.' });
+  const open = db.ads.filter((a) => a.ownerId === req.user.id && (a.status === 'pending' || adLive(a)));
+  if (open.length >= 2) return res.status(400).json({ error: 'You can have up to 2 ads waiting or running at a time.' });
+  const title = clip(req.body?.title, 60), text = clip(req.body?.text, 300);
+  if (!title || !text) return res.status(400).json({ error: 'Add a title and a message for your ad.' });
+  const days = [1, 3, 7].includes(Number(req.body?.days)) ? Number(req.body.days) : 3;
+  const pid = String(req.body?.productId || ''); const prod = pid && db.products.find((p) => p.id === pid && p.ownerId === req.user.id);
+  const a = { id: newId(), ownerId: req.user.id, title, text, productId: prod ? prod.id : null, days, status: 'pending', createdAt: now(), viewers: [], clicks: 0 };
+  db.ads.push(a); save();
+  io.to('admins').emit('feed', { kind: 'ad', text: 'New ad to review from ' + req.user.business.name, ts: now() });
+  res.json(adOut(a, true));
+});
+app.post('/api/ads/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
+  const a = db.ads.find((x) => x.id === req.params.id && x.ownerId === req.user.id && x.status === 'pending'); if (!a) return res.status(404).json({ error: 'Not found.' });
+  if (await savePhotoInto(a, req, res)) res.json(adOut(a, true));
+});
+app.delete('/api/ads/:id', auth, (req, res) => {
+  const a = db.ads.find((x) => x.id === req.params.id && x.ownerId === req.user.id); if (!a) return res.status(404).json({ error: 'Not found.' });
+  if (a.status === 'pending') { db.ads = db.ads.filter((x) => x.id !== a.id); if (a.photo) deleteChatFile(a.photo); } else { a.status = 'stopped'; a.endsAt = Math.min(a.endsAt || now(), now()); }
+  save(); res.json({ ok: true });
+});
+app.get('/api/ads/photo/:id', (req, res) => streamPhoto(db.ads.find((x) => x.id === req.params.id), req, res));
+app.get('/api/ads/feed', auth, (req, res) => {
+  const live = db.ads.filter((a) => adLive(a) && !blockedOf(req.user).includes(a.ownerId)).filter((a) => { const o = userById(a.ownerId); return o && o.status !== 'blocked' && !blockedOf(o).includes(req.user.id); });
+  live.sort(() => Math.random() - 0.5);
+  let changed = false;
+  const out = live.slice(0, 5).map((a) => {
+    if (a.ownerId !== req.user.id && !(a.viewers || []).includes(req.user.id)) { (a.viewers = a.viewers || []).push(req.user.id); if (a.viewers.length > 5000) a.viewers = a.viewers.slice(-5000); changed = true; }
+    const o = userById(a.ownerId);
+    return { ...adOut(a, false), owner: contactView(req.user, o, { lastMessage: null, unread: 0 }), business: o.business ? { name: o.business.name, category: o.business.category } : null };
+  });
+  if (changed) save();
+  res.json(out);
+});
+app.post('/api/ads/:id/click', auth, (req, res) => { const a = db.ads.find((x) => x.id === req.params.id); if (a && a.ownerId !== req.user.id) { a.clicks = (a.clicks || 0) + 1; save(); } res.json({ ok: true }); });
+
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -1437,6 +1552,7 @@ app.get('/admin/api/stats', adminAuth, (req, res) => {
       openReports: db.reports.filter((r) => r.status === 'open').length,
       translatedCalls: db.calls.filter((c) => c.translated).length,
       activeStatuses: db.statuses.filter((x) => x.expiresAt > now()).length,
+      pendingAds: db.ads.filter((a) => a.status === 'pending').length,
       aiAnswersSinceRestart: aiCount, aiOn: !!GEMINI_KEY, aiError: aiLastError,
       translationsSinceRestart: trCount,
     },
@@ -1466,6 +1582,28 @@ function userAggregates() {
   for (const m of db.messages) get(m.from).sent++;
   return agg;
 }
+
+// Ads review
+app.get('/admin/api/ads', adminAuth, (req, res) => {
+  res.json(db.ads.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 300).map((a) => { const o = userById(a.ownerId); return { ...adOut(a, true), ownerName: o ? o.name : 'Deleted user', ownerPhone: o ? o.phone : '', businessName: o && o.business ? o.business.name : '', live: adLive(a) }; }));
+});
+app.get('/admin/api/ads/photo/:id', (req, res) => {
+  const a = db.ads.find((x) => x.id === req.params.id);
+  try { jwt.verify(String(req.query.t || ''), JWT_SECRET); } catch { return res.status(401).end(); }
+  if (!a || !a.photo) return res.status(404).end();
+  res.setHeader('Content-Type', a.photoMime); const st = chatFileStream(a.photo, 0, a.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.post('/admin/api/ads/:id/:action', adminAuth, (req, res) => {
+  const a = db.ads.find((x) => x.id === req.params.id); if (!a) return res.status(404).json({ error: 'Not found.' });
+  const act = req.params.action;
+  if (act === 'approve') { Object.assign(a, { status: 'approved', startsAt: now(), endsAt: now() + a.days * 86400000, reason: '' }); }
+  else if (act === 'reject') { Object.assign(a, { status: 'rejected', reason: clip(req.body?.reason, 200) || 'Not suitable for Maata.' }); }
+  else if (act === 'stop') { Object.assign(a, { status: 'stopped', endsAt: now(), reason: clip(req.body?.reason, 200) }); }
+  else return res.status(400).json({ error: 'Unknown action.' });
+  save(); audit(req.admin, 'ad-' + act, a.title, a.reason || '');
+  io.to('user:' + a.ownerId).emit('ad:update', adOut(a, true));
+  res.json(adOut(a, true));
+});
 
 app.get('/admin/api/users', adminAuth, (req, res) => {
   const q = String(req.query.q || '').toLowerCase().trim();
@@ -1703,12 +1841,16 @@ io.on('connection', (socket) => {
     const reply = (x) => typeof ack === 'function' && ack(x);
     const ok = canMessage(socket.user, String(p?.to || ''));
     if (ok.error) return reply({ error: ok.error });
-    const type = ['contact', 'poll', 'event', 'location', 'gif', 'sticker'].includes(p?.type) ? p.type : 'text';
+    const type = ['contact', 'poll', 'event', 'location', 'gif', 'sticker', 'product'].includes(p?.type) ? p.type : 'text';
     const str = (v, n) => String(v ?? '').trim().slice(0, n);
     let fields;
     if (type === 'text') {
       const text = str(p?.text, 4000); if (!text) return reply({ error: 'Message not sent.' });
       fields = { type, text };
+    } else if (type === 'product') {
+      const pr = db.products.find((x) => x.id === String(p?.product?.id || ''));
+      if (!pr) return reply({ error: 'Product not found.' });
+      fields = { type, product: { id: pr.id, ownerId: pr.ownerId, name: pr.name, price: pr.price, hasPhoto: !!pr.photo, photoV: pr.photoV || 0 }, text: clip(p?.text, 1000) };
     } else if (type === 'gif') {
       const g = p?.gif || {}, okUrl = (u) => typeof u === 'string' && /^https:\/\/media\d*\.tenor\.com\/[\w\-./%]+$/.test(u) && u.length < 400;
       if (!okUrl(g.url) || (g.preview && !okUrl(g.preview))) return reply({ error: 'GIF not sent.' });
@@ -1826,6 +1968,7 @@ io.on('connection', (socket) => {
         if (m.event) f.event = { ...m.event, rsvp: {} };
         if (m.location) f.location = { lat: m.location.lat, lng: m.location.lng, acc: m.location.acc, live: false };
         if (m.gif) f.gif = { ...m.gif };
+        if (m.product) f.product = { ...m.product };
         if (m.sticker) f.sticker = { ...m.sticker };
         deliverMessage(socket.user, ok.target, f, null); sent++;
       }

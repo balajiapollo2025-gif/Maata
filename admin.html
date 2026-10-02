@@ -182,6 +182,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="calls"><svg class="ico" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>Call report</button>
     <button data-view="messages"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat report</button>
     <button data-view="logins"><svg class="ico" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>Login report</button>
+    <button data-view="ads"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Ads <span class="count" id="adCount" hidden></span></button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
     <button data-view="audit"><svg class="ico" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin log</button>
@@ -269,6 +270,13 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="top"><h2>Customer complaints</h2></div>
       <div class="chips" id="repChips"><button class="chip" data-f="open" aria-pressed="true">Open</button><button class="chip" data-f="resolved" aria-pressed="false">Resolved</button><button class="chip" data-f="all" aria-pressed="false">All</button></div>
       <div id="repList"></div>
+    </section>
+
+    <section data-page="ads" hidden>
+      <div class="top"><h2>Business ads</h2></div>
+      <p class="muted" style="margin-top:-6px">Approve only honest offers. Not allowed: adult content, alcohol/tobacco, gambling, loans, fake or misleading offers.</p>
+      <div class="chips" id="adChips"><button class="chip" data-f="pending" aria-pressed="true">Waiting</button><button class="chip" data-f="live" aria-pressed="false">Live</button><button class="chip" data-f="all" aria-pressed="false">All</button></div>
+      <div id="adList"></div>
     </section>
 
     <!-- ANNOUNCEMENTS -->
@@ -388,7 +396,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -584,6 +592,30 @@ async function loadReports() {
   $$('[data-resolve]').forEach((b) => b.onclick = async () => {
     const note = prompt('What action was taken? (optional)'); if (note === null) return;
     try { await api(`/admin/api/reports/${b.dataset.resolve}/resolve`, { method: 'POST', body: JSON.stringify({ note }) }); toast('Complaint resolved.'); loadReports(); } catch (e) { toast(e.message); }
+  });
+}
+
+// ---------- ads ----------
+let adFilter = 'pending';
+$$('#adChips .chip').forEach((c) => (c.onclick = () => { adFilter = c.dataset.f; $$('#adChips .chip').forEach((x) => x.setAttribute('aria-pressed', String(x === c))); loadAds(); }));
+async function loadAds() {
+  const all = await api('/admin/api/ads');
+  const n = all.filter((a) => a.status === 'pending').length; $('#adCount').textContent = n; $('#adCount').hidden = !n;
+  const list = all.filter((a) => adFilter === 'all' || (adFilter === 'pending' ? a.status === 'pending' : a.live));
+  const label = (a) => a.status === 'pending' ? '<span class="tag t-amber">Waiting</span>' : a.live ? '<span class="tag t-green">Live</span>' : a.status === 'rejected' ? '<span class="tag t-red">Rejected</span>' : '<span class="tag">Ended</span>';
+  $('#adList').innerHTML = list.length ? list.map((a) => `<div class="report">
+    <div class="r-top">${av({ id: a.ownerId, name: a.ownerName })}<b>${esc(a.businessName || a.ownerName)}</b><span class="muted">${esc(a.ownerPhone)}</span>${label(a)}</div>
+    ${a.hasPhoto ? `<img src="/admin/api/ads/photo/${esc(a.id)}?t=${encodeURIComponent(token)}" alt="" style="max-width:260px;max-height:180px;border-radius:12px;display:block;margin:6px 0">` : ''}
+    <b>${esc(a.title)}</b><blockquote>${esc(a.text)}</blockquote>
+    <div class="muted" style="font-size:13px;margin-bottom:10px">${a.days} day(s) · sent ${dt(a.createdAt)}${a.endsAt ? ' · ends ' + dt(a.endsAt) : ''} · 👁 ${a.views} · 👆 ${a.clicks}${a.reason ? ' · ' + esc(a.reason) : ''}</div>
+    <div class="actions" style="margin:0">
+      ${a.status === 'pending' ? `<button class="btn ok" data-ad="${esc(a.id)}" data-act="approve">Approve</button><button class="btn danger" data-ad="${esc(a.id)}" data-act="reject">Reject</button>` : ''}
+      ${a.live ? `<button class="btn danger" data-ad="${esc(a.id)}" data-act="stop">Stop ad</button>` : ''}
+    </div></div>`).join('') : '<div class="card empty">No ads here.</div>';
+  $$('[data-ad]').forEach((b) => b.onclick = async () => {
+    let reason = '';
+    if (b.dataset.act !== 'approve') { reason = prompt('Reason (the business will see this):', b.dataset.act === 'reject' ? 'Not suitable for Maata.' : ''); if (reason === null) return; }
+    try { await api(`/admin/api/ads/${b.dataset.ad}/${b.dataset.act}`, { method: 'POST', body: JSON.stringify({ reason }) }); toast('Done.'); loadAds(); } catch (e) { toast(e.message); }
   });
 }
 

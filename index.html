@@ -621,6 +621,26 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .chat-search input{flex:1;padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper);font:inherit;font-size:15px;color:var(--ink)}
 .bubble.hit{box-shadow:0 0 0 2px var(--turmeric)}
 .dis-ic{margin-left:6px}
+/* ---------- Business: profile, catalogue, ads ---------- */
+.biz-photo{width:100%;height:170px;border-radius:14px;border:2px dashed var(--line);background:var(--paper) center/cover no-repeat;font-weight:600;color:var(--muted);margin-bottom:12px}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.prod-tile{display:flex;flex-direction:column;gap:3px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;position:relative}
+.prod-tile .pimg{aspect-ratio:1;border-radius:10px;background:var(--paper) center/cover no-repeat;display:grid;place-items:center;font-size:34px;margin-bottom:4px}
+.prod-tile b{font-size:14px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.price{color:var(--leaf);font-weight:700;font-size:14px}.price.big{font-size:20px;margin:4px 0 8px}
+.oos{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;border-radius:6px;padding:1px 6px}
+.prod-big{width:100%;max-height:320px;object-fit:contain;border-radius:14px;background:var(--paper);margin-bottom:10px}
+.biz-row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:15px}
+.biz-row .bi{width:22px;text-align:center}
+.biz-tag{font-size:11px;font-weight:700;color:#8a5a00;background:#FFF1CC;border-radius:6px;padding:0 6px;margin-left:6px}
+.prod-card{min-width:220px}.prod-card .pic{margin-bottom:6px}.prod-card .ptitle{font-weight:700}
+.ad-row{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:2px}
+.ad-row small{color:var(--muted)}
+.ad-strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x mandatory}
+.ad-card{flex:none;width:250px;scroll-snap-align:start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:4px}
+.ad-card .ad-img{height:120px;border-radius:12px;background:var(--paper) center/cover no-repeat}
+.ad-card p{margin:0;font-size:14px;color:var(--ink)}.ad-card small{color:var(--muted)}
+.ad-card .row2{display:flex;gap:8px;align-items:center;margin-top:4px}.ad-card .primary{width:auto;padding:8px 16px}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -729,6 +749,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     </div>
     <ul class="contacts" id="contacts"></ul>
     <div id="statusPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
+      <div id="stSponsored" hidden></div>
       <div id="stMine"></div>
       <div class="st-actions"><button id="stPrivacyBtn" aria-label="Status privacy" title="Status privacy" style="flex:none;width:46px">🔒</button><button id="stTextBtn">✏️ <span data-t="text">Text</span></button><button id="stMediaBtn">📷 <span data-t="photoVideo">Photo / Video</span></button></div>
       <div class="call-day" id="stRecentTitle">Recent updates</div><ul class="contacts" id="stRecent" style="overflow:visible;padding:0"></ul>
@@ -1262,6 +1283,7 @@ function renderContacts() {
     if (u.unread) { const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = u.unread; b.append(bd); }
     if (chatSel) { const ck = el('span', 'ck', chatSel.has(u.id) ? '✓' : ''); b.prepend(ck); b.classList.toggle('picked', chatSel.has(u.id)); }
     if (prefs.favs.includes(u.id)) name.append(el('span', 'fav-star', '★'));
+    if (u.biz) name.append(el('span', 'biz-tag', '🏪'));
     b.onclick = () => (chatSel ? toggleChatSel(u.id) : openChat(u.id));
     b.oncontextmenu = (e) => { e.preventDefault(); chatSel ? toggleChatSel(u.id) : startChatSelect(u.id); };
     li.append(b); list.append(li);
@@ -1294,6 +1316,7 @@ function renderChatHead() {
   const u = userById(activeId); if (!u) return;
   const a = $('#chatAvatar'); a.innerHTML = ''; a.append(avatar(u, 'sm'));
   $('#chatName').textContent = nameOf(u);
+  if (u.biz) $('#chatName').append(el('span', 'biz-tag', '🏪 Business'));
   $('#strangerBar').hidden = !!u.inContacts || !!u.blocked;
   let jb = $('#gJoinBtn'); if (jb) jb.remove();
   $('#chatSearchBtn').hidden = !!u.isAI;
@@ -2061,6 +2084,7 @@ $('#moreBtn').onclick = () => {
   add('🔍  Search in chat', openChatSearch);
   if (u.blocked) add('✅  Unblock', () => setBlocked(u, false)); else add('🚫  Block', () => setBlocked(u, true), true);
   add(prefs.favs.includes(u.id) ? '☆  Remove from favourites' : '⭐  Add to favourites', () => savePrefs({ favs: prefs.favs.includes(u.id) ? prefs.favs.filter((f) => f !== u.id) : [...prefs.favs, u.id] }));
+  if (u.biz) add('🏪  Business profile & catalogue', () => viewBusiness(u.id));
   add('📋  Add to list', () => pickListFor([u.id]));
   add('🚩  Report to Maata', () => reportUser(u), true);
   openSheet('moreSheet');
@@ -2099,7 +2123,7 @@ function setTab(t) {
   $('#statusPane').hidden = t !== 'status';
   $('#tabContacts').setAttribute('aria-selected', String(t === 'contacts')); $('#contactsPane').hidden = t !== 'contacts'; if (t === 'contacts') renderPhoneContacts();
   $('#chatFilters').hidden = t !== 'chats'; if (t !== 'chats' && chatSel) endChatSelect();
-  if (t === 'status') { $('#statusDot').hidden = true; renderStatus(); loadStatus(); }
+  if (t === 'status') { $('#statusDot').hidden = true; renderStatus(); loadStatus(); renderSponsored(); }
   if (t === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); if (!callsLoaded) loadCalls(); }
   updateMissedBadge();
 }
@@ -2466,6 +2490,7 @@ function previewText(m) {
     case 'image': return m.file && m.file.sticker ? '💟 Sticker' : '📷 Photo' + (m.text ? ': ' + m.text : '');
     case 'gif': return '🎞️ GIF';
     case 'sticker': return '💟 Sticker';
+    case 'product': return '🛍️ ' + (m.product ? m.product.name : 'Product');
     case 'video': return '🎥 Video' + (m.text ? ': ' + m.text : '');
     case 'audio': return m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio';
     case 'file': return '📄 ' + (m.file ? m.file.name : 'Document');
@@ -2553,6 +2578,7 @@ function renderRich(b, m, mine) {
     card.append(fn); b.append(card); return;
   }
   const f = m.file;
+  if (m.type === 'product') return renderProductCard(b, m, mine);
   if (m.type === 'sticker') { b.classList.add('stk'); const w = el('div', 'stkwrap'); w.innerHTML = stickerSvg(m.sticker.id) || '💟'; b.append(w); return; }
   if (m.type === 'gif') {
     b.classList.add('media'); const box = el('div', 'gifbox'); const im = el('img'); im.loading = 'lazy'; im.alt = 'GIF'; im.src = m.gif.url;
@@ -2718,7 +2744,7 @@ $('#fAudio').onchange = (e) => { sendPickedFiles([...e.target.files], 'audio'); 
 // ----- attach sheet -----
 const ATT = [
   ['doc', '📄', 'Document', '#7A4E9E'], ['media', '🖼️', 'Photos & videos', '#1F6FB2'], ['camera', '📷', 'Camera', '#C8413A'], ['audio', '🎧', 'Audio', '#B5651D'],
-  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'], ['once', '①', 'View once', '#4A5568'],
+  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'], ['once', '①', 'View once', '#4A5568'], ['catalogue', '🛍️', 'Catalogue', '#B5651D'],
 ];
 function openAttach() {
   if (!activeId) return;
@@ -2746,6 +2772,7 @@ function attachAction(id) {
   else if (id === 'event') eventView();
   else if (id === 'location') locationView();
   else if (id === 'once') { closeSheet('attachSheet'); const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*,video/*'; fi.hidden = true; document.body.append(fi); fi.onchange = async () => { const f = fi.files[0]; fi.remove(); if (!f) return; let blob = f, kind = f.type.startsWith('video/') ? 'video' : 'image'; if (kind === 'image') { try { blob = await compressImage(f); } catch {} } uploadFile(blob, { kind, name: (kind === 'image' ? 'Photo.jpg' : f.name), once: true }); }; fi.click(); }
+  else if (id === 'catalogue') { closeSheet('attachSheet'); pickProductToSend(); }
   else if (id === 'gps') { closeSheet('attachSheet'); openCamera({ gps: true }); }
 }
 
@@ -3414,6 +3441,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  biz: '<svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/><path d="M10 21v-5h4v5"/></svg>',
   lang: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
   ai: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01M9 16h6"/></svg>',
   group: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M22 21a6 6 0 0 0-4-5.6"/></svg>',
@@ -3438,6 +3466,7 @@ function openMainMenu(btn) {
   const list = el('div', 'menu-list');
   const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = MI[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
   item('group', i18n('newGroup'), openNewGroup);
+  item('biz', 'Business tools', openBusinessTools);
   item('broadcast', i18n('broadcast'), openBroadcast);
   item('quick', i18n('quick'), openQuickReplies);
   item('ai', i18n('aiAuto'), openAutoReply);
@@ -4849,6 +4878,250 @@ $('#shareBtn').onclick = toggleScreenShare;
 $('#camOnce').onclick = () => { const on = $('#camOnce').getAttribute('aria-pressed') !== 'true'; $('#camOnce').setAttribute('aria-pressed', String(on)); toast(on ? '① View once: they can open it one time' : 'View once off'); };
 $('#stPrivacyBtn').onclick = openStatusPrivacy;
 $('#setTwoStep').onclick = () => { closeSettings(); openTwoStep(); };
+// ================= Business tools: profile, catalogue, advertise =================
+const BIZ_CATS = ['Mobile & electronics', 'Grocery', 'Clothing', 'Food & restaurant', 'Beauty & salon', 'Health & medical', 'Education', 'Services', 'Automobile', 'Real estate', 'Travel', 'Other'];
+const rupee = (p) => (p === null || p === undefined || p === '' ? '' : '₹' + Number(p).toLocaleString('en-IN', { maximumFractionDigits: 2 }));
+const prodPhoto = (p) => '/api/catalogue/photo/' + p.id + '?t=' + encodeURIComponent(token) + '&v=' + (p.photoV || 0);
+const adPhoto = (a) => '/api/ads/photo/' + a.id + '?t=' + encodeURIComponent(token) + '&v=' + (a.photoV || 0);
+let myBiz = null;
+async function loadMyBiz() { try { myBiz = await api('/api/business/' + me.id); } catch { myBiz = null; } }
+function upPhoto(url, blob) {
+  return fetch(url, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': blob.type || 'image/jpeg' }, body: blob })
+    .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error || 'Photo not saved.'); return d; });
+}
+function photoPicker(box, current, onPick) {
+  const ph = el('button', 'biz-photo'); ph.type = 'button'; ph.setAttribute('aria-label', 'Choose photo');
+  if (current) { ph.style.backgroundImage = 'url("' + current + '")'; } else ph.textContent = '📷 Add photo';
+  const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true; box.append(fi);
+  ph.onclick = () => fi.click();
+  fi.onchange = async () => { const f = fi.files[0]; if (!f) return; try { const b = await compressImage(f); ph.textContent = ''; ph.style.backgroundImage = 'url("' + URL.createObjectURL(b) + '")'; onPick(b); } catch { toast('Could not open that photo.'); } };
+  box.append(ph);
+}
+
+// ----- Business tools hub -----
+async function openBusinessTools() {
+  await loadMyBiz();
+  sheet('🏪 Business tools', (list) => {
+    const b = (label, sub, fn) => { const x = el('button', 'mem-row'); const t = el('div', 'txt'); t.append(el('b', null, label), el('small', null, sub)); x.append(t); x.onclick = fn; list.append(x); };
+    b('🏪 Business profile', myBiz ? myBiz.name + ' · ' + myBiz.category : 'Add your shop name, address and timings', () => editBusinessProfile());
+    b('🛍️ Catalogue', myBiz ? myBiz.productCount + ' products' : 'Create your business profile first', () => (myBiz ? openMyCatalogue() : editBusinessProfile()));
+    b('📢 Advertise', 'Show your offer to everyone on Maata (free, after review)', () => (myBiz ? openAdvertise() : editBusinessProfile()));
+    b('⚡ Quick replies', 'Saved answers, type "/" in chat', openQuickReplies);
+    b('🤖 AI auto-reply', 'Answer customers when you are busy', openAutoReply);
+    b('📣 Business broadcast', 'One message to many customers', openBroadcast);
+    if (myBiz) b('👁 See my profile as customers do', '', () => viewBusiness(me.id));
+  });
+}
+function editBusinessProfile() {
+  const b0 = myBiz || {};
+  sheet('🏪 Business profile', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Customers see this when they open your chat. Your account becomes a business account with a 🏪 badge.'));
+    const f = (label, tag, val, attrs = {}) => { const l = el('label'); l.append(el('span', null, label)); const i = el(tag); if (tag === 'input') i.type = attrs.type || 'text'; Object.assign(i, attrs); i.value = val || ''; l.append(i); box.append(l); return i; };
+    const name = f('Business name', 'input', b0.name, { maxLength: 60, placeholder: 'e.g. Kavitha Telecom' });
+    const cl = el('label'); cl.append(el('span', null, 'Category')); const cat = el('select'); BIZ_CATS.forEach((c) => cat.add(new Option(c, c))); cat.value = b0.category || 'Mobile & electronics'; cl.append(cat); box.append(cl);
+    const desc = f('About your business', 'textarea', b0.description, { maxLength: 600, placeholder: 'Mobile accessories, chargers, earphones, tempered glass…' });
+    const addr = f('Address', 'textarea', b0.address, { maxLength: 300, placeholder: 'Shop No. 34, Adhithya Complex, Mount Road, Chennai' });
+    const hrs = f('Business hours', 'input', b0.hours, { maxLength: 300, placeholder: 'Mon–Sat 10 AM – 9 PM, Sunday closed' });
+    const em = f('Email (optional)', 'input', b0.email, { type: 'email', maxLength: 120 });
+    const web = f('Website (optional)', 'input', b0.website, { type: 'url', maxLength: 200, placeholder: 'https://' });
+    const go = el('button', 'primary', myBiz ? 'Save' : 'Create business profile');
+    go.onclick = async () => {
+      try { myBiz = await api('/api/business', { method: 'PUT', body: JSON.stringify({ name: name.value, category: cat.value, description: desc.value, address: addr.value, hours: hrs.value, email: em.value, website: web.value }) }); toast('Business profile saved 🏪'); openBusinessTools(); }
+      catch (e) { toast(e.message); }
+    };
+    box.append(go);
+    if (myBiz) { const rm = el('button', 'danger-btn', 'Turn off business account'); rm.onclick = async () => { if (!confirm('Remove your business profile? Your catalogue stays saved.')) return; await api('/api/business', { method: 'PUT', body: JSON.stringify({ remove: true }) }); myBiz = null; closeSheet('moreSheet'); toast('Business account turned off'); }; box.append(rm); }
+    list.append(box); name.focus();
+  });
+}
+
+// ----- my catalogue -----
+async function openMyCatalogue() {
+  let items = []; try { items = await api('/api/catalogue/' + me.id); } catch (e) { return toast(e.message); }
+  sheet('🛍️ My catalogue · ' + items.length, (list) => {
+    const box = el('div'); box.style.padding = '12px';
+    const add = el('button', 'primary', '＋ Add product'); add.onclick = () => editProduct(null); box.append(add);
+    const grid = el('div', 'prod-grid');
+    if (!items.length) box.append(el('p', 'info-note', 'Add your products with photo and price. Customers can browse them from your business profile, and you can send them in any chat.'));
+    for (const p of items) grid.append(productTile(p, () => editProduct(p), true));
+    box.append(grid); list.append(box);
+  });
+}
+function productTile(p, onClick, mine) {
+  const t = el('button', 'prod-tile'); t.type = 'button';
+  const img = el('div', 'pimg'); if (p.hasPhoto) img.style.backgroundImage = 'url("' + prodPhoto(p) + '")'; else img.textContent = '🛍️';
+  t.append(img, el('b', null, p.name), el('span', 'price', rupee(p.price) || ' '));
+  if (mine && !p.available) t.append(el('span', 'oos', 'Hidden'));
+  t.onclick = onClick; return t;
+}
+function editProduct(p) {
+  let photo = null;
+  sheet(p ? 'Edit product' : 'New product', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    photoPicker(box, p && p.hasPhoto ? prodPhoto(p) : null, (b) => (photo = b));
+    const f = (label, tag, val, attrs = {}) => { const l = el('label'); l.append(el('span', null, label)); const i = el(tag); if (tag === 'input') i.type = attrs.type || 'text'; Object.assign(i, attrs); i.value = val ?? ''; l.append(i); box.append(l); return i; };
+    const name = f('Product name', 'input', p && p.name, { maxLength: 80, placeholder: 'e.g. 20W fast charger' });
+    const price = f('Price in ₹ (optional)', 'input', p && p.price, { type: 'number', min: 0, step: '0.01', inputMode: 'decimal' });
+    const desc = f('Description (optional)', 'textarea', p && p.description, { maxLength: 500 });
+    const r = el('div', 'set-row'); r.style.padding = '8px 0'; const t = el('div', 'txt'); t.append(el('b', null, 'Show to customers')); const sw = el('label', 'switch-ui'); const av = el('input'); av.type = 'checkbox'; av.checked = p ? p.available : true; av.setAttribute('aria-label', 'Show to customers'); sw.append(av, el('span')); r.append(t, sw); box.append(r);
+    const go = el('button', 'primary', p ? 'Save product' : 'Add product');
+    go.onclick = async () => {
+      if (!name.value.trim()) return toast('Enter a product name.');
+      go.disabled = true;
+      try {
+        const body = JSON.stringify({ name: name.value, price: price.value, description: desc.value, available: av.checked });
+        let np = p ? await api('/api/catalogue/' + p.id, { method: 'PUT', body }) : await api('/api/catalogue', { method: 'POST', body });
+        if (photo) np = await upPhoto('/api/catalogue/' + np.id + '/photo', photo);
+        toast('Saved ✓'); openMyCatalogue();
+      } catch (e) { toast(e.message); go.disabled = false; }
+    };
+    box.append(go);
+    if (p) {
+      const share = el('button', 'primary', '↪ Send to a chat'); share.style.cssText = 'margin-top:8px;background:var(--peacock-soft);color:var(--ink)'; share.onclick = () => shareProduct(p); box.append(share);
+      const del = el('button', 'danger-btn', 'Delete product'); del.onclick = async () => { if (!confirm('Delete "' + p.name + '"?')) return; await api('/api/catalogue/' + p.id, { method: 'DELETE' }).catch((e) => toast(e.message)); openMyCatalogue(); }; box.append(del);
+    }
+    list.append(box); if (!p) name.focus();
+  });
+}
+function shareProduct(p, note) {
+  sheet('Send "' + p.name + '" to', (list) => {
+    for (const u of users.filter((x) => !x.isAI && !x.blocked && (x.inContacts || x.lastMessage))) {
+      const b = el('button', 'mem-row'); b.append(avatar(u, 'sm'), el('b', null, nameOf(u)));
+      b.onclick = () => { closeSheet('moreSheet'); openChat(u.id).then(() => sendRich({ type: 'product', product: { id: p.id }, text: note || '' })); };
+      list.append(b);
+    }
+  });
+}
+
+// ----- view a business (customer side) -----
+async function viewBusiness(uid) {
+  let b, items = [];
+  try { b = await api('/api/business/' + uid); items = await api('/api/catalogue/' + uid); } catch (e) { return toast(e.message); }
+  sheet('🏪 ' + b.name, (list) => {
+    const head = el('div', 'gi-head'); head.append(avatar({ id: uid, name: b.name }), el('h3', null, b.name), el('small', null, '🏪 ' + b.category));
+    if (b.description) head.append(el('p', 'info-note', b.description));
+    list.append(head);
+    const grp = el('div', 'set-group'); grp.style.margin = '0 12px';
+    const row = (icon, text, href) => { const r = el(href ? 'a' : 'div', 'biz-row'); if (href) { r.href = href; r.target = '_blank'; r.rel = 'noopener'; } r.append(el('span', 'bi', icon), el('span', null, text)); grp.append(r); };
+    if (b.address) row('📍', b.address, 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.address));
+    if (b.hours) row('🕘', b.hours);
+    row('📞', b.phone, 'tel:' + b.phone);
+    if (b.email) row('✉️', b.email, 'mailto:' + b.email);
+    if (b.website) row('🌐', b.website.replace(/^https?:\/\//, ''), b.website);
+    list.append(grp);
+    if (uid !== me.id) {
+      const act = el('div', 'row2'); act.style.cssText = 'display:flex;gap:8px;padding:12px';
+      const chat = el('button', 'primary', '💬 Message'); chat.onclick = async () => { closeSheet('moreSheet'); await ensureUser(uid); openChat(uid); };
+      act.append(chat); list.append(act);
+    }
+    list.append(el('div', 'set-title', '🛍️ Catalogue · ' + items.length)); list.lastChild.style.margin = '12px 16px 6px';
+    const grid = el('div', 'prod-grid'); grid.style.padding = '0 12px 12px';
+    if (!items.length) grid.append(el('p', 'info-note', 'No products yet.'));
+    for (const p of items) grid.append(productTile(p, () => viewProduct(p, b)));
+    list.append(grid);
+  });
+}
+async function ensureUser(uid) {
+  if (userById(uid)) return;
+  try { const r = await api('/api/users/' + uid); upsertUser(r); }
+  catch { try { const b = await api('/api/business/' + uid); upsertUser({ id: uid, name: b.ownerName, displayName: b.ownerName, phone: b.phone, inContacts: false, online: false, biz: { name: b.name, category: b.category }, lastMessage: null, unread: 0 }); } catch {} }
+}
+function viewProduct(p, b) {
+  sheet(p.name, (list) => {
+    const box = el('div'); box.style.padding = '12px';
+    if (p.hasPhoto) { const im = el('img', 'prod-big'); im.src = prodPhoto(p); im.alt = p.name; box.append(im); }
+    box.append(el('h3', null, p.name)); if (p.price !== null) box.append(el('div', 'price big', rupee(p.price)));
+    if (p.description) box.append(el('p', null, p.description));
+    if (b) box.append(el('p', 'info-note', '🏪 ' + b.name));
+    const mine = p.ownerId === me.id;
+    if (!mine) {
+      const ask = el('button', 'primary', '💬 Ask about this'); ask.onclick = async () => { closeSheet('moreSheet'); await ensureUser(p.ownerId); await openChat(p.ownerId); sendRich({ type: 'product', product: { id: p.id }, text: 'Hi, is this available?' }); };
+      box.append(ask);
+    }
+    const sh = el('button', 'primary', '↪ Share with a friend'); sh.style.cssText = 'margin-top:8px;background:var(--peacock-soft);color:var(--ink)'; sh.onclick = () => shareProduct(p); box.append(sh);
+    list.append(box);
+  });
+}
+function renderProductCard(b, m, mine) {
+  const P = m.product, card = el('div', 'card-x prod-card');
+  if (P.hasPhoto) { const im = el('img', 'pic'); im.loading = 'lazy'; im.alt = P.name; im.src = prodPhoto(P); card.append(im); }
+  card.append(el('div', 'ptitle', '🛍️ ' + P.name)); if (P.price !== null) card.append(el('div', 'price', rupee(P.price)));
+  const row = el('div', 'row2');
+  const view = el('button', null, 'View'); view.onclick = async (e) => { e.stopPropagation(); try { const items = await api('/api/catalogue/' + P.ownerId); const full = items.find((x) => x.id === P.id); if (!full) return toast('This product is no longer available.'); viewProduct(full, null); } catch (er) { toast(er.message); } };
+  const shop = el('button', null, '🏪 Shop'); shop.onclick = (e) => { e.stopPropagation(); viewBusiness(P.ownerId); };
+  row.append(view, shop); card.append(row);
+  b.classList.add('media'); b.append(card); if (m.text) b.append(el('div', 'cap', m.text));
+}
+function pickProductToSend() {
+  api('/api/catalogue/' + me.id).then((items) => {
+    sheet('🛍️ Send from catalogue', (list) => {
+      const grid = el('div', 'prod-grid'); grid.style.padding = '12px';
+      if (!items.length) grid.append(el('p', 'info-note', 'Your catalogue is empty. ⋮ → Business tools → Catalogue to add products.'));
+      for (const p of items.filter((x) => x.available)) grid.append(productTile(p, () => { closeSheet('moreSheet'); sendRich({ type: 'product', product: { id: p.id } }); }));
+      list.append(grid);
+    });
+  }).catch((e) => toast(e.message));
+}
+
+// ----- advertise -----
+async function openAdvertise() {
+  let ads = []; try { ads = await api('/api/ads/mine'); } catch (e) { return toast(e.message); }
+  sheet('📢 Advertise', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Your ad appears as "Sponsored" at the top of the Status tab for everyone on Maata. It is free. The Maata team checks every ad before it goes live (usually within a day).'));
+    const add = el('button', 'primary', '＋ Create ad'); add.onclick = createAd; box.append(add);
+    for (const a of ads) {
+      const c = el('div', 'ad-row');
+      const st = a.status === 'pending' ? '⏳ Waiting for review' : a.status === 'approved' && a.endsAt > Date.now() ? '🟢 Live until ' + new Date(a.endsAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : a.status === 'rejected' ? '❌ Not approved: ' + a.reason : '⚪ Ended';
+      c.append(el('b', null, a.title), el('small', null, st), el('small', null, '👁 ' + a.views + ' views · 👆 ' + a.clicks + ' chats'));
+      if (a.status === 'pending' || (a.status === 'approved' && a.endsAt > Date.now())) { const x = el('button', 'linkbtn', a.status === 'pending' ? 'Cancel' : 'Stop ad'); x.onclick = async () => { if (!confirm('Stop this ad?')) return; await api('/api/ads/' + a.id, { method: 'DELETE' }); openAdvertise(); }; c.append(x); }
+      box.append(c);
+    }
+    list.append(box);
+  });
+}
+async function createAd() {
+  let photo = null, items = [];
+  try { items = await api('/api/catalogue/' + me.id); } catch {}
+  sheet('📢 New ad', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    photoPicker(box, null, (b) => (photo = b));
+    const f = (label, tag, attrs = {}) => { const l = el('label'); l.append(el('span', null, label)); const i = el(tag); Object.assign(i, attrs); l.append(i); box.append(l); return i; };
+    const title = f('Headline', 'input', { maxLength: 60, placeholder: 'Diwali offer: 20% off on all chargers' });
+    const text = f('Message', 'textarea', { maxLength: 300, placeholder: 'Visit Kavitha Telecom, Mount Road. Offer till Sunday!' });
+    const pl = el('label'); pl.append(el('span', null, 'Link a product (optional)')); const ps = el('select'); ps.add(new Option('No product', '')); items.forEach((p) => ps.add(new Option(p.name + (p.price !== null ? ' · ' + rupee(p.price) : ''), p.id))); pl.append(ps); box.append(pl);
+    const dl = el('label'); dl.append(el('span', null, 'Run for')); const ds = el('select'); for (const [v, t2] of [[1, '1 day'], [3, '3 days'], [7, '7 days']]) ds.add(new Option(t2, v)); ds.value = '3'; dl.append(ds); box.append(dl);
+    box.append(el('p', 'info-note', 'Not allowed: fake offers, adult content, alcohol/tobacco, gambling, loans, or misleading claims.'));
+    const go = el('button', 'primary', 'Send for review');
+    go.onclick = async () => {
+      if (!title.value.trim() || !text.value.trim()) return toast('Add a headline and a message.');
+      go.disabled = true;
+      try { const a = await api('/api/ads', { method: 'POST', body: JSON.stringify({ title: title.value, text: text.value, productId: ps.value, days: ds.value }) }); if (photo) await upPhoto('/api/ads/' + a.id + '/photo', photo); toast('Sent for review ⏳'); openAdvertise(); }
+      catch (e) { toast(e.message); go.disabled = false; }
+    };
+    box.append(go); list.append(box); title.focus();
+  });
+}
+async function renderSponsored() {
+  const box = $('#stSponsored'); if (!box) return;
+  let ads = []; try { ads = await api('/api/ads/feed'); } catch {}
+  box.innerHTML = ''; box.hidden = !ads.length; if (!ads.length) return;
+  box.append(el('div', 'call-day', 'Sponsored'));
+  const row = el('div', 'ad-strip');
+  for (const a of ads) {
+    const c = el('div', 'ad-card');
+    if (a.hasPhoto) { const im = el('div', 'ad-img'); im.style.backgroundImage = 'url("' + adPhoto(a) + '")'; c.append(im); }
+    c.append(el('b', null, a.title), el('p', null, a.text), el('small', null, '🏪 ' + (a.business ? a.business.name : a.owner.name) + ' · Sponsored'));
+    const bt = el('div', 'row2');
+    if (a.ownerId !== me.id) { const ch = el('button', 'primary', '💬 Chat'); ch.onclick = async () => { api('/api/ads/' + a.id + '/click', { method: 'POST' }).catch(() => {}); upsertUser(a.owner); setTab('chats'); await openChat(a.ownerId); }; bt.append(ch); }
+    const sh = el('button', 'linkbtn', '🏪 Shop'); sh.onclick = () => { api('/api/ads/' + a.id + '/click', { method: 'POST' }).catch(() => {}); viewBusiness(a.ownerId); }; bt.append(sh);
+    c.append(bt); row.append(c);
+  }
+  box.append(row);
+}
+
+socket_ready_hooks.push(() => socket.on('ad:update', (a) => toast(a.status === 'approved' ? '📢 Your ad "' + a.title + '" is now live!' : a.status === 'rejected' ? '📢 Ad not approved: ' + a.reason : '📢 Your ad "' + a.title + '" was stopped.')));
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
