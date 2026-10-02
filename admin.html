@@ -484,7 +484,7 @@ async function loadCustomers() {
   const list = await api('/admin/api/users?' + new URLSearchParams({ q: $('#custQ').value, filter: custFilter }));
   $('#custBody').innerHTML = list.length ? list.map((u) => `<tr class="click" data-id="${esc(u.id)}" tabindex="0">
     <td><div class="who">${av(u, u.online)}<div><b>${esc(u.name)}</b><br><span class="muted">${esc(u.phone)}</span></div></div></td>
-    <td>${u.status === 'blocked' ? '<span class="tag t-red">Blocked</span>' : u.online ? '<span class="tag t-green">Online</span>' : '<span class="tag t-grey">Offline · ' + ago(u.lastSeenAt || u.lastLoginAt) + '</span>'}</td>
+    <td>${u.duplicate ? '<span class="tag t-amber" title="Same mobile number as another account (with +91 / 0). Delete one.">Duplicate</span> ' : ''}${u.status === 'blocked' ? '<span class="tag t-red">Blocked</span>' : u.online ? '<span class="tag t-green">Online</span>' : '<span class="tag t-grey">Offline · ' + ago(u.lastSeenAt || u.lastLoginAt) + '</span>'}</td>
     <td>${dt(u.createdAt)}</td><td>${dt(u.lastLoginAt)}</td><td>${num(u.logins)}</td><td>${num(u.calls)}</td><td>${dur(u.talkSec)}</td><td>${num(u.sent)}</td></tr>`).join('')
     : '<tr><td colspan="8" class="empty">No customers match this filter.</td></tr>';
   $$('#custBody tr.click').forEach((tr) => { tr.onclick = () => openCustomer(tr.dataset.id); tr.onkeydown = (e) => e.key === 'Enter' && openCustomer(tr.dataset.id); });

@@ -126,7 +126,7 @@ function rangeStart(range) {
   if (range === '30d') return s - 29 * 86400000;
   return 0;
 }
-const publicUser = (u) => ({ id: u.id, name: u.name, phone: u.phone, lang: u.lang || null });
+const publicUser = (u) => ({ id: u.id, name: u.name, phone: u.phone, lang: u.lang || null, about: u.about || '', photo: !!u.photo, photoV: u.photoV || 0 });
 
 // ---------- Translation ----------
 // Languages customers can choose. Speech recognition & voice playback happen in the browser;
@@ -422,14 +422,23 @@ function recordLogin(u, req, kind) {
 }
 
 // ---------- Customer API ----------
+// Indian mobile numbers are stored as exactly 10 digits (no +91, no 0), so one number = one account
+function cleanMobile(raw) {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  else if (d.length === 13 && d.startsWith('091')) d = d.slice(3);
+  return /^[6-9]\d{9}$/.test(d) ? d : null;
+}
+const findByMobile = (m) => db.users.find((x) => cleanMobile(x.phone) === m);
 app.post('/api/register', rateLimit, async (req, res) => {
   const name = String(req.body?.name || '').trim().slice(0, 40);
-  const phone = String(req.body?.phone || '').replace(/[^\d+]/g, '');
+  const phone = cleanMobile(req.body?.phone);
   const password = String(req.body?.password || '');
   if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters.' });
-  if (!/^\+?\d{8,15}$/.test(phone)) return res.status(400).json({ error: 'Enter a valid mobile number.' });
+  if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number (without +91 or 0).' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-  if (db.users.some((u) => u.phone === phone)) return res.status(409).json({ error: 'This number is already registered. Log in instead.' });
+  if (findByMobile(phone)) return res.status(409).json({ error: 'This number is already registered. Log in instead.' });
   const u = { id: newId(), name, phone, passHash: await bcrypt.hash(password, 10), createdAt: now(), status: 'active', tokenVersion: 0 };
   db.users.push(u);
   recordLogin(u, req, 'signup');
@@ -438,9 +447,10 @@ app.post('/api/register', rateLimit, async (req, res) => {
 });
 
 app.post('/api/login', rateLimit, async (req, res) => {
-  const phone = String(req.body?.phone || '').replace(/[^\d+]/g, '');
+  const phone = cleanMobile(req.body?.phone);
   const password = String(req.body?.password || '');
-  const u = db.users.find((x) => x.phone === phone);
+  if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number.' });
+  const u = db.users.find((x) => x.phone === phone) || findByMobile(phone);
   if (!u || !(await bcrypt.compare(password, u.passHash))) return res.status(401).json({ error: 'Wrong mobile number or password.' });
   if (u.status === 'blocked') return res.status(403).json({ error: 'This account is blocked. Contact Maata support.' });
   if (u.twoStep) { const ticket = crypto.randomBytes(18).toString('base64url'); pinTickets.set(ticket, { uid: u.id, t: now(), tries: 0 }); return res.json({ needPin: true, ticket, hint: u.twoStep.hint || '' }); }
@@ -450,6 +460,45 @@ app.post('/api/login', rateLimit, async (req, res) => {
 });
 
 app.get('/api/me', auth, (req, res) => res.json(publicUser(req.user)));
+
+// ---------- My profile: name, about, photo ----------
+app.put('/api/me/profile', auth, (req, res) => {
+  const b = req.body || {};
+  if (b.name !== undefined) {
+    const n = String(b.name).trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (n.length < 2) return res.status(400).json({ error: 'Name must be at least 2 letters.' });
+    req.user.name = n;
+  }
+  if (b.about !== undefined) req.user.about = String(b.about).trim().slice(0, 140);
+  save();
+  for (const w of watchersOf(req.user.id)) io.to('user:' + w).emit('user:profile', { id: req.user.id });
+  res.json(publicUser(req.user));
+});
+app.post('/api/me/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a photo.' });
+  const id = newId(), mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0];
+  try { await saveChatFile(id, req.body, mime); } catch { return res.status(500).json({ error: 'Could not save the photo.' }); }
+  const old = req.user.photo;
+  Object.assign(req.user, { photo: id, photoMime: mime, photoSize: req.body.length, photoV: now() });
+  if (old) deleteChatFile(old);
+  save();
+  for (const w of watchersOf(req.user.id)) io.to('user:' + w).emit('user:profile', { id: req.user.id });
+  res.json(publicUser(req.user));
+});
+app.delete('/api/me/photo', auth, (req, res) => {
+  if (req.user.photo) deleteChatFile(req.user.photo);
+  delete req.user.photo; req.user.photoV = now(); save();
+  for (const w of watchersOf(req.user.id)) io.to('user:' + w).emit('user:profile', { id: req.user.id });
+  res.json(publicUser(req.user));
+});
+// Profile photos open for any logged-in Maata user (like WhatsApp's default "Everyone"), never for people they blocked
+app.get('/api/users/:id/photo', (req, res) => {
+  let viewer = null; try { viewer = findUserByToken(String(req.query.t || '')); } catch { /* bad token */ }
+  const u = userById(req.params.id);
+  if (!viewer || !u || !u.photo || blockedOf(u).includes(viewer.id)) return res.status(404).end();
+  res.setHeader('Content-Type', u.photoMime); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(u.photo, 0, u.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
 
 app.post('/api/me/lang', auth, (req, res) => {
   const lang = String(req.body?.lang || '');
@@ -1367,24 +1416,38 @@ async function discoverModels() {
     } catch (e) { aiLastError = 'list models: ' + e.message; console.error('[ai]', aiLastError); }
   }
 }
+// Spare models to switch to when Google says one is busy (503) — tried after the preferred ones
+const GEMINI_SPARES = ['gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+const busyUntil = new Map(); // model -> time; skip a model for a minute after it says "busy"
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function gemini(system, contents, { json = false, maxTokens = 600, temperature = 0.7 } = {}) {
   if (!GEMINI_KEY) return { error: 'not-configured' };
   await discoverModels();
   const body = JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents,
     generationConfig: { temperature, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) } });
-  const models = geminiModelOk ? [geminiModelOk] : GEMINI_MODELS;
+  // the model that worked last time first, then the others, then spares; models that were busy a moment ago go last
+  const all = [...new Set([geminiModelOk, ...GEMINI_MODELS, ...GEMINI_SPARES].filter(Boolean))];
+  const models = [...all.filter((m) => !(busyUntil.get(m) > now())), ...all.filter((m) => busyUntil.get(m) > now())].slice(0, 6);
   const ways = geminiAuthOk ? [geminiAuthOk] : AUTH_WAYS;
-  let last = { error: 'service' };
+  let last = { error: 'service' }, sawBusy = false;
   for (const model of models) {
     for (const way of ways) {
       let r, d;
-      try { r = await geminiFetch('models/' + model + ':generateContent', way, { method: 'POST', body }); d = await r.json().catch(() => ({})); }
-      catch (e) { aiLastError = model + ': ' + e.message; console.error('[ai]', aiLastError); last = { error: 'service' }; continue; }
-      if (r.status === 429) { aiLastError = 'rate limit (429)'; return { error: 'limit' }; }
-      if (r.status === 404) { aiLastError = 'model not found: ' + model; console.error('[ai]', aiLastError); last = { error: 'service' }; break; } // try next model
+      for (let attempt = 0; attempt < 2; attempt++) { // a busy model gets one quick retry before we move on
+        try { r = await geminiFetch('models/' + model + ':generateContent', way, { method: 'POST', body }); d = await r.json().catch(() => ({})); }
+        catch (e) { r = null; d = { error: { message: e.message } }; }
+        const busy = !r || [500, 502, 503, 504].includes(r.status) || /overloaded|high demand|UNAVAILABLE|try again later/i.test(String(d?.error?.message || d?.error?.status || ''));
+        if (!busy) break;
+        sawBusy = true; aiLastError = model + ': busy (' + (r ? r.status : 'network') + ')'; console.error('[ai]', aiLastError);
+        if (attempt === 0) await sleep(1200);
+        else { busyUntil.set(model, now() + 60000); r = null; }
+      }
+      if (!r) break; // still busy → next model
+      if (r.status === 429) { aiLastError = model + ': rate limit (429)'; busyUntil.set(model, now() + 60000); last = { error: 'limit' }; break; } // free limit for this model → try another model
+      if (r.status === 404) { aiLastError = 'model not found: ' + model; console.error('[ai]', aiLastError); last = { error: 'service' }; break; }
       if (r.status === 401 || (r.status === 400 && /API key|credential|UNAUTHENTICATED/i.test(JSON.stringify(d)))) {
         aiLastError = 'auth (' + way + '): ' + r.status + ' ' + String(d.error?.message || '').slice(0, 150); console.error('[ai]', aiLastError);
-        last = { error: /API_KEY_INVALID|API key not valid/i.test(JSON.stringify(d)) ? 'badkey' : 'service' }; continue; // try next way of sending the key
+        last = { error: /API_KEY_INVALID|API key not valid/i.test(JSON.stringify(d)) ? 'badkey' : 'service' }; continue;
       }
       if (d.error) {
         const msg = String(d.error.message || ''), why = JSON.stringify(d.error.details || '');
@@ -1395,13 +1458,14 @@ async function gemini(system, contents, { json = false, maxTokens = 600, tempera
       }
       const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
       if (!text) return { error: d.promptFeedback?.blockReason ? 'blocked' : 'empty' };
-      geminiModelOk = model; geminiAuthOk = way; aiCount++; aiLastError = null;
+      if (model !== geminiModelOk && !busyUntil.has(geminiModelOk)) geminiModelOk = model;
+      geminiAuthOk = way; aiCount++; aiLastError = null;
       return { text };
     }
   }
-  return last;
+  return sawBusy && last.error === 'service' ? { error: 'busy' } : last;
 }
-const AI_ERR = { badkey: 'The Gemini API key is not valid. Please copy the key again from aistudio.google.com and update GEMINI_API_KEY on Render.', disabled: 'The Gemini API is not enabled for this key. Create the key at aistudio.google.com (it switches the API on automatically).', region: 'Gemini is not available for this server location right now.', 'not-configured': 'Maata AI is not switched on yet. The admin needs to add GEMINI_API_KEY.', limit: 'Maata AI is busy (free limit reached). Please try again later.', service: 'Maata AI is not available right now. Try again.', blocked: 'Maata AI cannot answer that.', empty: 'Maata AI had no answer. Try asking differently.', quota: 'You have used your Maata AI requests for today. Try again tomorrow.' };
+const AI_ERR = { busy: 'Maata AI is very busy right now (Google servers are crowded). Please try again in a minute. 🙏', badkey: 'The Gemini API key is not valid. Please copy the key again from aistudio.google.com and update GEMINI_API_KEY on Render.', disabled: 'The Gemini API is not enabled for this key. Create the key at aistudio.google.com (it switches the API on automatically).', region: 'Gemini is not available for this server location right now.', 'not-configured': 'Maata AI is not switched on yet. The admin needs to add GEMINI_API_KEY.', limit: 'Maata AI is busy (free limit reached). Please try again later.', service: 'Maata AI is not available right now. Try again.', blocked: 'Maata AI cannot answer that.', empty: 'Maata AI had no answer. Try asking differently.', quota: 'You have used your Maata AI requests for today. Try again tomorrow.' };
 const aiUse = new Map();
 function aiQuota(u, n = 1) {
   const day = dayKey(now()), q = aiUse.get(u.id);
@@ -2089,7 +2153,7 @@ app.get('/admin/api/users', adminAuth, (req, res) => {
   const t0 = startOfToday();
   let list = db.users.map((u) => ({
     ...publicUser(u), status: u.status || 'active', createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null,
-    lastSeenAt: isOnline(u.id) ? now() : u.lastSeenAt || null, online: isOnline(u.id),
+    lastSeenAt: isOnline(u.id) ? now() : u.lastSeenAt || null, online: isOnline(u.id), duplicate: !!u.duplicateOf,
     ...(agg[u.id] || { logins: 0, calls: 0, talkSec: 0, sent: 0 }),
   }));
   if (q) list = list.filter((u) => u.name.toLowerCase().includes(q) || u.phone.includes(q));
@@ -2155,6 +2219,7 @@ app.post('/admin/api/users/:id/logout', adminAuth, (req, res) => {
 // Removes a customer and everything they own (used by admins, and by customers deleting their own account)
 function deleteAccountData(u, why) {
   kick(u.id, why);
+  if (u.photo) deleteChatFile(u.photo);
   const removedWatchers = watchersOf(u.id);
   db.users = db.users.filter((x) => x.id !== u.id);
   for (const g of db.groups) g.members = g.members.filter((x) => x.id !== u.id);
@@ -2729,6 +2794,17 @@ io.on('connection', (socket) => {
 });
 
 loadDb()
+  .then(() => {
+    let fixed = 0; const dups = [];
+    for (const u of db.users) {
+      const m = cleanMobile(u.phone); if (!m || m === u.phone) continue;
+      const other = db.users.find((x) => x !== u && x.phone === m);
+      if (other) { dups.push(u.name + ' ' + u.phone + ' = ' + other.name + ' ' + m); u.duplicateOf = other.id; continue; }
+      u.phone = m; fixed++;
+    }
+    if (fixed) { save(); console.log('[phones] cleaned ' + fixed + ' numbers to 10 digits'); }
+    if (dups.length) console.log('[phones] same number registered twice (delete one in the admin panel): ' + dups.join(' | '));
+  })
   .then(() => { cleanStatuses(); cleanExpiredMessages(); return setupPush().catch((e) => console.error('[push] setup failed', e.message)); })
   .then(() => server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`)))
   .catch((e) => {

@@ -672,9 +672,83 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .notif-banner .nb-go{padding:8px 16px;border-radius:999px;background:var(--leaf);color:#fff;font-weight:700}
 .notif-banner .nb-later{padding:8px 10px;color:#4A5B55;font-size:13px}
 @media (prefers-color-scheme:dark){.notif-banner{background:#163428;border-color:#24543f}.notif-banner p{color:#CDEBDD}.notif-banner .nb-later{color:#A9C6B9}}
+/* ---------- Profile ---------- */
+#meBox{cursor:pointer;border-radius:12px}
+#meBox:hover{background:var(--paper)}
+#meBox .me-txt{display:flex;flex-direction:column;min-width:0}
+#meBox .me-txt b{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#meBox .me-txt small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avatar.uimg{background-size:cover!important;background-position:center;color:transparent}
+.pf-card{display:flex;align-items:center;gap:14px;padding:14px;margin:4px 0 10px;background:var(--panel);border:1px solid var(--line);border-radius:18px}
+.pf-card .pf-av{width:68px;height:68px;font-size:24px;cursor:pointer;flex:none}
+.pf-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pf-txt b{font-size:18px}.pf-txt span{color:var(--ink);opacity:.8;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pf-txt small{color:var(--muted)}
+.pf-edit{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:var(--peacock-soft);color:var(--peacock);font-weight:700;font-size:14px;flex:none}
+@media (prefers-color-scheme:dark){.pf-edit{color:#7CC4D4}}
+.pf-edit svg{width:16px;height:16px}
+.pf-edit-top{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 16px}
+.pf-big{width:130px;height:130px;font-size:44px;cursor:pointer}
+.pf-cam{position:absolute;top:92px;left:calc(50% + 30px);width:42px;height:42px;border-radius:50%;background:var(--leaf);color:#fff;font-size:18px;display:grid;place-items:center;border:3px solid var(--panel)}
+.about-chips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
+.about-chips button{padding:6px 12px;border-radius:999px;background:var(--paper);border:1px solid var(--line);font-size:13px;color:var(--ink)}
+.ph-wrap{display:flex;align-items:stretch;border:1.5px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.ph-wrap:focus-within{border-color:var(--turmeric)}
+.field .ph-cc,.ph-cc{display:flex!important;align-items:center;margin:0!important;font-size:16px;color:var(--ink);padding:0 12px;background:var(--paper);border-right:1.5px solid var(--line);font-weight:600;white-space:nowrap}
+.ph-wrap input{border:0!important;outline:0;flex:1;min-width:0;letter-spacing:1px}
+.ph-hint{display:block;min-height:18px;font-size:12.5px;margin-top:4px;color:var(--muted)}
+.ph-hint.bad{color:var(--chili)}
 /* ---------- Mobile ---------- */
+/* ================= Mobile app layout (WhatsApp-style): big header, pill search, bottom tab bar, floating button ================= */
+.bnav,.fab,.side-head .cam-btn,.side-head .page-title{display:none}
 @media (max-width:760px){
-  .app{grid-template-columns:1fr}
+  :root{--wa-green:#1DAA61;--wa-pill:#D8FDD2;--wa-pill-ink:#0A3A21}
+  @media (prefers-color-scheme:dark){:root{--wa-green:#21C063;--wa-pill:#103629;--wa-pill-ink:#D8FDD2}}
+  .side{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .side-head{padding:14px 16px 6px;gap:6px}
+  .side-head .brand-row .mini{width:34px;height:34px}
+  .side-head .brand{font-size:28px;font-weight:800;letter-spacing:-.3px}
+  .side-head .icon-btn{width:46px;height:46px}
+  .side-head .icon-btn svg{width:25px;height:25px}
+  .side-head .cam-btn{display:grid}
+  #logoutBtn{display:none}
+  #meBox{display:none}
+  .side[data-tab]:not([data-tab="chats"]) .side-head .brand-row{display:none}
+  .side[data-tab]:not([data-tab="chats"]) .side-head .page-title{display:block;font-size:26px;font-weight:700}
+  .add-row{padding:6px 16px 10px;gap:0}
+  .add-row .search{height:50px;border-radius:999px;border:0;background:var(--line);padding:0 20px 0 52px;font-size:17px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667781' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:18px center;background-size:22px}
+  .add-row .add-btn{display:none}
+  .tabs{display:none!important}
+  .chips-row{padding:2px 16px 10px;gap:8px}
+  .fchip{padding:8px 16px;font-size:15px;font-weight:500;border-color:var(--line);color:var(--muted)}
+  .fchip[aria-pressed="true"]{background:var(--wa-pill);color:var(--wa-pill-ink);border-color:transparent;font-weight:600}
+  .contacts{padding:0 6px}
+  .contact{padding:12px 10px;gap:14px;border-radius:14px}
+  .contact .avatar{width:54px;height:54px;font-size:20px;flex:none}
+  .c-name{font-size:17px;font-weight:600}
+  .c-last{font-size:15px;margin-top:3px}
+  .c-time{font-size:13px}
+  .add-row .search{flex:1;width:100%}
+  .contact .badge{background:var(--wa-green);color:#fff;min-width:22px;height:22px;border-radius:11px;font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 6px}
+  .contact:has(.badge) .c-time{color:var(--wa-green);font-weight:600}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:8px 4px calc(10px + env(safe-area-inset-bottom,0px));justify-content:space-around}
+  .app.in-chat ~ .bnav,.app[hidden] ~ .bnav,.app[hidden] ~ .fab,.bnav.away{display:none}
+  .bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13.5px;font-weight:600;color:var(--ink);position:relative;background:none}
+  .bnav .ic{width:64px;height:34px;border-radius:999px;display:grid;place-items:center;transition:background .15s}
+  .bnav .ic svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button[aria-selected="true"] .ic{background:var(--wa-pill);color:var(--wa-pill-ink)}
+  .bnav button[aria-selected="true"]{font-weight:700}
+  .bnav .bb{position:absolute;top:-2px;left:calc(50% + 10px);min-width:20px;height:20px;border-radius:10px;background:var(--wa-green);color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+  .bnav .bdot{position:absolute;top:2px;left:calc(50% + 14px);width:10px;height:10px;border-radius:50%;background:var(--wa-green)}
+  .fab{display:grid;position:fixed;right:18px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:21;width:60px;height:60px;border-radius:18px;background:var(--wa-green);color:#fff;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+  .fab svg{width:26px;height:26px}
+  .fab[hidden],.app.in-chat ~ .fab{display:none}
+  #commPane .comm-row{display:flex;align-items:center;gap:14px;padding:12px 10px;border-radius:14px;width:100%;text-align:left}
+  #commPane .comm-row .avatar{width:54px;height:54px;border-radius:16px;font-size:20px}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{min-width:0;max-width:100vw;overflow-x:hidden}
+  .side .chips-row,.side .add-row,.side .contacts{max-width:100%;min-width:0}
   .chat{display:none}
   .app.in-chat .side{display:none}
   .app.in-chat .chat{display:flex}
@@ -738,7 +812,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     </div>
     <p class="tagline" id="authTagline" data-t="tagline">Free voice calls, video calls and messages with anyone on Maata. Just internet, no call charges.</p>
     <label class="field" id="nameField" hidden><span data-t="name">Your name</span><input id="name" autocomplete="name" maxlength="40"></label>
-    <label class="field"><span data-t="mobile">Mobile number</span><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="9876543210"></label>
+    <label class="field"><span data-t="mobile">Mobile number</span><div class="ph-wrap"><span class="ph-cc" aria-hidden="true">🇮🇳 +91</span><input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="10-digit mobile number" aria-describedby="phoneHint"></div><small class="ph-hint" id="phoneHint"></small></label>
     <label class="field"><span data-t="password">Password</span><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters"></label>
     <p class="error" id="authError" role="alert"></p>
     <button class="primary" id="authSubmit" type="submit">Log in</button>
@@ -751,6 +825,8 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   <aside class="side">
     <header class="side-head">
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand">Maata</div></div>
+      <h1 class="page-title" id="pageTitle">Maata</h1>
+      <button class="icon-btn cam-btn" id="camHeadBtn" title="Camera" aria-label="Camera" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -796,6 +872,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <p class="info-note">🔒 Your phone contacts stay on this device. Maata only checks which numbers are registered. Import file: export contacts from your phone or Google Contacts as .vcf or .csv.</p>
       <input type="file" id="pcFile" accept=".vcf,.csv,text/vcard,text/csv" hidden>
     </div>
+    <div id="commPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 6px"></div>
     <div id="callsPane" hidden style="flex:1;overflow-y:auto;min-height:0">
       <div class="calls-head"><span id="callsCount"></span><button id="clearCalls" data-t="clearHistory">Clear history</button></div>
       <ul class="contacts" id="callList" style="overflow:visible"></ul>
@@ -845,6 +922,13 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     </form>
   </main>
 </div>
+<nav class="bnav" id="bnav" aria-label="Main">
+  <button data-go="chats" aria-selected="true"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/><path d="M8 11h8M8 14.5h5"/></svg></span><span data-t="chats">Chats</span><span class="bb" id="bnChats" hidden></span></button>
+  <button data-go="status" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3a9 9 0 0 1 9 9M21 12a9 9 0 0 1-9 9M12 21a9 9 0 0 1-9-9" /><path d="M3 12a9 9 0 0 1 9-9" stroke-dasharray="2 3"/></svg></span><span>Updates</span><span class="bdot" id="bnUpd" hidden></span></button>
+  <button data-go="communities" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><circle cx="5" cy="10" r="2.4"/><circle cx="19" cy="10" r="2.4"/><path d="M6.5 19a5.5 5.5 0 0 1 11 0"/><path d="M1.5 18a3.6 3.6 0 0 1 4.6-3.4M22.5 18a3.6 3.6 0 0 0-4.6-3.4"/></svg></span><span>Communities</span></button>
+  <button data-go="calls" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span><span data-t="calls">Calls</span><span class="bb" id="bnCalls" hidden></span></button>
+</nav>
+<button class="fab" id="fab" aria-label="New chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/><path d="M12 8.5v7M8.5 12h7"/></svg></button>
 
 <!-- ============ CALL SCREEN ============ -->
 <section class="call" id="callScreen" hidden aria-live="polite">
@@ -1009,6 +1093,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 <div class="settings-bg" id="settingsSheet" hidden>
   <section class="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="settings-head"><h2 id="setTitle">Settings</h2><button class="icon-btn" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="pf-card" id="setProfile"></div>
 
     <div id="setNotifBox"></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setAppLang">🌐 <span data-t="appLang">App language</span> <span id="setAppLangName" style="margin-left:auto;color:var(--muted)"></span></button></div>
@@ -1143,6 +1228,7 @@ function avatar(user, size = '', withDot = false) {
   if (user.isAI) { el.textContent = '🦜'; el.classList.add('aiav'); }
   else if (user.isGroup && user.photo) { el.classList.add('gimg'); el.style.backgroundImage = 'url("' + groupPhotoUrl(user) + '")'; }
   else if (user.isGroup && !user.photo) el.textContent = '👥';
+  else if (user.photo && !user.isGroup && typeof token === 'string' && token) { el.classList.add('uimg'); el.style.backgroundImage = 'url("' + userPhotoUrl(user) + '")'; }
   if (withDot && user.online) { const d = document.createElement('span'); d.className = 'dot'; el.appendChild(d); }
   return el;
 }
@@ -1174,7 +1260,9 @@ $('#authForm').onsubmit = async (e) => {
     let r;
     if (pinTicket) { r = await api('/api/login/pin', { method: 'POST', body: JSON.stringify({ ticket: pinTicket, pin: $('#loginPin').value }) }); }
     else {
-      const body = { phone: $('#phone').value, password: $('#password').value };
+      const mobile = cleanMobileInput($('#phone').value);
+      if (!/^[6-9]\d{9}$/.test(mobile)) throw new Error('Enter your 10-digit mobile number (without +91 or 0).');
+      const body = { phone: mobile, password: $('#password').value };
       if (mode === 'register') body.name = $('#name').value;
       r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
       if (r.needPin) { showPinStep(r); return; }
@@ -1201,7 +1289,7 @@ async function start() {
   } catch { $('#auth').hidden = false; $('#app').hidden = true; return; }
   $('#auth').hidden = true; $('#app').hidden = false;
   const box = $('#meBox'); box.innerHTML = '';
-  box.append(avatar(me, 'sm'), Object.assign(document.createElement('div'), { textContent: me.name + ' · ' + me.phone }));
+  renderMeBox();
   renderContacts();
   connectSocket();
   api('/api/announcement').then(showNotice).catch(() => {});
@@ -1245,6 +1333,7 @@ function connectSocket() {
   });
   socket.on('call:log', onCallLog);
   socket.on('msg:update', refreshBubble);
+  socket.on('user:profile', () => { reloadUsers(); });
   socket.on('msg:expired', ({ ids }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => !ids.includes(m.id)); if (activeId) renderMessages(); });
   socket.on('msg:hidden', ({ id }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => m.id !== id); if (activeId) renderMessages(); });
   socket.on('star:update', ({ ids, star }) => { ids.forEach((i) => (star ? starred.add(i) : starred.delete(i))); if (activeId) renderMessages(); });
@@ -1289,6 +1378,7 @@ async function reportUser(u) {
 $('#search').oninput = () => (tab === 'calls' ? renderCalls() : tab === 'contacts' ? renderPhoneContacts() : renderContacts());
 function renderContacts() {
   renderChips();
+  if (typeof syncMobileChrome === 'function') try { syncMobileChrome(); } catch {}
   const q = $('#search').value.trim().toLowerCase();
   const list = $('#contacts'); list.innerHTML = '';
   const shown = users
@@ -1557,6 +1647,7 @@ function toneLabel(kind) {
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
+  renderProfileCard();
   const nb = $('#setNotifBox'); if (nb) { nb.innerHTML = ''; nb.append(notifSettingsRow()); }
   $('#setAppLangName').textContent = (APP_LANGS.find((x) => x[0] === appLang) || APP_LANGS[0])[1];
   const ls = $('#myLang'); ls.innerHTML = '';
@@ -2164,11 +2255,14 @@ function setTab(t) {
   $('#contacts').hidden = t !== 'chats';
   $('#callsPane').hidden = t !== 'calls';
   $('#statusPane').hidden = t !== 'status';
+  $('#commPane').hidden = t !== 'communities'; if (t === 'communities') renderCommunitiesPane();
+  $('.add-row').hidden = t === 'communities';
   $('#tabContacts').setAttribute('aria-selected', String(t === 'contacts')); $('#contactsPane').hidden = t !== 'contacts'; if (t === 'contacts') renderPhoneContacts();
   $('#chatFilters').hidden = t !== 'chats'; if (t !== 'chats' && chatSel) endChatSelect();
   if (t === 'status') { $('#statusDot').hidden = true; renderStatus(); loadStatus(); renderSponsored(); loadChannels(); }
   if (t === 'calls') { store.set('maata_calls_seen', String(Date.now())); renderCalls(); if (!callsLoaded) loadCalls(); }
   updateMissedBadge();
+  syncMobileChrome();
 }
 $('#tabChats').onclick = () => setTab('chats');
 $('#tabCalls').onclick = () => setTab('calls');
@@ -3557,15 +3651,16 @@ $('#mainMenuBtn').onclick = (e) => openMainMenu(e.currentTarget);
 function filterOk(u) {
   if (chatFilter === 'unread') return (u.unread || 0) > 0;
   if (chatFilter === 'favs') return prefs.favs.includes(u.id);
+  if (chatFilter === 'groups') return !!u.isGroup;
   if (chatFilter !== 'all') { const l = prefs.lists.find((x) => x.id === chatFilter); return !!l && l.members.includes(u.id); }
   return true;
 }
 function renderChips() {
   const row = $('#chatFilters'); row.innerHTML = '';
-  if (!prefs.lists.some((l) => l.id === chatFilter) && !['all', 'unread', 'favs'].includes(chatFilter)) chatFilter = 'all';
+  if (!prefs.lists.some((l) => l.id === chatFilter) && !['all', 'unread', 'favs', 'groups'].includes(chatFilter)) chatFilter = 'all';
   const unread = users.filter((u) => u.unread > 0).length;
   const chip = (id, label, n) => { const b = el('button', 'fchip', label); if (n) b.append(el('span', 'n', String(n))); b.setAttribute('aria-pressed', String(chatFilter === id)); b.onclick = () => { chatFilter = id; renderChips(); renderContacts(); }; row.append(b); };
-  chip('all', i18n('all')); chip('unread', i18n('unread'), unread); chip('favs', i18n('favs'));
+  chip('all', i18n('all')); chip('unread', i18n('unread'), unread); chip('favs', i18n('favs')); chip('groups', 'Groups');
   for (const l of prefs.lists) chip(l.id, l.name);
   const add = el('button', 'fchip', '＋'); add.setAttribute('aria-label', 'Create a list'); add.onclick = () => editList(null); row.append(add);
 }
@@ -5555,6 +5650,147 @@ $('#setDeleteAcc').onclick = () => {
     box.append(l, go); list.append(box); pw.focus();
   });
 };
+// ================= My profile (top of Settings) =================
+const userPhotoUrl = (u) => '/api/users/' + u.id + '/photo?t=' + encodeURIComponent(token) + '&v=' + (u.photoV || 0);
+const ABOUT_PRESETS = ['Available', 'Busy', 'At work', 'At the shop', 'In a meeting', 'Urgent calls only', 'Sleeping', 'Battery about to die'];
+function renderMeBox() {
+  const box = $('#meBox'); if (!box || !me) return;
+  box.innerHTML = '';
+  const t = el('div', 'me-txt'); t.append(el('b', null, me.name), el('small', null, me.phone + (me.about ? ' · ' + me.about : '')));
+  box.append(avatar(me, 'sm'), t);
+  box.onclick = openProfileEdit; box.setAttribute('role', 'button'); box.tabIndex = 0; box.title = 'My profile';
+}
+function renderProfileCard() {
+  const card = $('#setProfile'); if (!card || !me) return;
+  card.innerHTML = '';
+  const av = avatar(me); av.classList.add('pf-av');
+  const t = el('div', 'pf-txt'); t.append(el('b', null, me.name), el('span', null, me.about || 'Hey there! I am using Maata.'), el('small', null, '📞 ' + me.phone));
+  const ed = el('button', 'pf-edit'); ed.setAttribute('aria-label', 'Edit profile'); ed.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Edit</span>';
+  ed.onclick = openProfileEdit;
+  card.append(av, t, ed);
+  av.onclick = openProfileEdit;
+}
+function openProfileEdit() {
+  closeSettings();
+  let photo = null;
+  sheet('👤 My profile', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const top = el('div', 'pf-edit-top');
+    const av = avatar(me); av.classList.add('pf-big');
+    const cam = el('button', 'pf-cam'); cam.setAttribute('aria-label', 'Change profile photo'); cam.textContent = '📷';
+    const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.hidden = true;
+    const pick = () => fi.click();
+    cam.onclick = pick; av.onclick = pick;
+    fi.onchange = async () => {
+      const f = fi.files[0]; if (!f) return;
+      try {
+        const bmp = await createImageBitmap(f), s2 = Math.min(bmp.width, bmp.height), c = document.createElement('canvas'); c.width = c.height = 512;
+        c.getContext('2d').drawImage(bmp, (bmp.width - s2) / 2, (bmp.height - s2) / 2, s2, s2, 0, 0, 512, 512); // square crop from the centre
+        photo = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
+        av.textContent = ''; av.style.backgroundImage = 'url("' + URL.createObjectURL(photo) + '")'; av.classList.add('gimg');
+      } catch { toast('Could not open that photo.'); }
+    };
+    top.append(av, cam, fi);
+    if (me.photo) { const rm = el('button', 'linkbtn', 'Remove photo'); rm.onclick = async () => { if (!confirm('Remove your profile photo?')) return; try { me = await api('/api/me/photo', { method: 'DELETE' }); afterProfile(); openProfileEdit(); } catch (e) { toast(e.message); } }; top.append(rm); }
+    box.append(top);
+    const n = el('label'); n.append(el('span', null, 'Your name')); const ni = el('input'); ni.maxLength = 40; ni.value = me.name; ni.autocomplete = 'name'; n.append(ni);
+    box.append(n, el('p', 'info-note', 'This name is shown to people who have not saved your number.'));
+    const a = el('label'); a.append(el('span', null, 'About')); const ai = el('input'); ai.maxLength = 140; ai.value = me.about || ''; ai.placeholder = 'Hey there! I am using Maata.'; a.append(ai); box.append(a);
+    const chips = el('div', 'about-chips');
+    for (const p of ABOUT_PRESETS) { const c = el('button', null, p); c.type = 'button'; c.onclick = () => (ai.value = p); chips.append(c); }
+    box.append(chips);
+    const ph = el('label'); ph.append(el('span', null, 'Phone')); const pi = el('input'); pi.value = me.phone; pi.disabled = true; ph.append(pi); box.append(ph);
+    const save2 = el('button', 'primary', 'Save');
+    save2.onclick = async () => {
+      if (ni.value.trim().length < 2) return toast('Name must be at least 2 letters.');
+      save2.disabled = true;
+      try {
+        if (photo) me = await fetch('/api/me/photo', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: photo }).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d; });
+        me = await api('/api/me/profile', { method: 'PUT', body: JSON.stringify({ name: ni.value, about: ai.value }) });
+        afterProfile(); closeSheet('moreSheet'); toast('Profile saved ✓');
+      } catch (e) { toast(e.message); save2.disabled = false; }
+    };
+    box.append(save2); list.append(box);
+  });
+}
+function afterProfile() { bubbleCache.clear(); renderMeBox(); renderProfileCard(); renderContacts(); if (tab === 'status') renderStatus(); }
+
+// ================= Mobile bottom navigation, floating button, Communities tab =================
+const FAB_ICONS = {
+  chats: '<path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/><path d="M12 8.5v7M8.5 12h7"/>',
+  status: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  calls: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/><path d="M15 3h6v6M21 3l-6 6"/>',
+  contacts: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/>',
+};
+const PAGE_TITLES = { status: 'Updates', communities: 'Communities', calls: 'Calls', contacts: 'Select contact' };
+function syncMobileChrome() {
+  const side = $('.side'); if (side) side.dataset.tab = tab;
+  const pt = $('#pageTitle'); if (pt) pt.textContent = PAGE_TITLES[tab] || 'Maata';
+  document.querySelectorAll('#bnav [data-go]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.go === (tab === 'contacts' ? 'chats' : tab))));
+  const fab = $('#fab');
+  if (fab) {
+    const kind = tab === 'communities' ? null : tab === 'contacts' ? 'contacts' : tab;
+    fab.hidden = !kind;
+    if (kind) { fab.querySelector('svg').innerHTML = FAB_ICONS[kind]; fab.setAttribute('aria-label', { chats: 'New chat', status: 'New status', calls: 'New call', contacts: 'New contact' }[kind]); }
+  }
+  $('#search').placeholder = tab === 'chats' ? 'Ask Maata AI or Search' : tab === 'contacts' ? 'Search name or number' : 'Search';
+  const unreadChats = users.filter((u) => !u.isAI && (u.unread || 0) > 0).length;
+  const bc = $('#bnChats'); if (bc) { bc.textContent = unreadChats; bc.hidden = !unreadChats; }
+  const mb = $('#missedBadge'), bk = $('#bnCalls'); if (bk && mb) { bk.textContent = mb.textContent; bk.hidden = mb.hidden; }
+  const bu = $('#bnUpd'); if (bu) bu.hidden = $('#statusDot').hidden;
+}
+document.querySelectorAll('#bnav [data-go]').forEach((b) => (b.onclick = () => setTab(b.dataset.go)));
+$('#fab').onclick = () => {
+  if (tab === 'chats') setTab('contacts');
+  else if (tab === 'status') $('#stMediaBtn').click();
+  else if (tab === 'calls') { setTab('contacts'); toast('Choose someone, then tap 📞 to call'); }
+  else if (tab === 'contacts') $('#addContactBtn').click();
+};
+$('#camHeadBtn').onclick = () => $('#stMediaBtn').click();
+// "Ask Maata AI or Search": press Enter on text that matches nobody → ask Maata AI
+$('#search').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || tab !== 'chats') return;
+  const q = $('#search').value.trim(); if (!q || /^[\d+\s()-]+$/.test(q)) return;
+  if (document.querySelector('#contacts .contact:not(.lookup)') && !document.querySelector('#contacts .empty-list')) return;
+  e.preventDefault(); $('#search').value = ''; renderContacts();
+  openChat(AI_ID).then(() => aiSend(q));
+});
+async function renderCommunitiesPane() {
+  const box = $('#commPane'); if (!box) return;
+  let list = []; try { list = await api('/api/communities'); } catch {}
+  box.innerHTML = '';
+  const nb = el('button', 'comm-row'); const ic = el('span', 'avatar', '＋'); ic.style.background = 'var(--wa-green, #1DAA61)'; ic.style.borderRadius = '16px';
+  const t0 = el('div', 'c-body'); t0.append(el('div', 'c-name', 'New community'), el('div', 'c-last', 'Bring your groups together'));
+  nb.append(ic, t0); nb.onclick = newCommunity; box.append(nb);
+  for (const c of list) {
+    const r = el('button', 'comm-row'); const av = avatar({ id: c.id, name: c.name }); av.style.borderRadius = '16px';
+    const t = el('div', 'c-body'); t.append(el('div', 'c-name', c.name), el('div', 'c-last', c.groups.length + ' groups · ' + c.memberCount + ' members'));
+    r.append(av, t); r.onclick = () => openCommunity(c.id); box.append(r);
+    if (c.announce) { const a = el('button', 'comm-row'); a.style.paddingLeft = '30px'; const ai2 = el('span', 'avatar sm', '📢'); ai2.style.background = 'var(--peacock-soft)'; const ta = el('div', 'c-body'); ta.append(el('div', 'c-name', 'Announcements'), el('div', 'c-last', c.isAdmin ? 'Only admins can post' : 'Updates from admins')); a.append(ai2, ta); a.onclick = async () => { await reloadUsers(); setTab('chats'); openChat(c.announce.id); }; box.append(a); }
+  }
+  if (!list.length) box.append(el('p', 'info-note', 'Communities bring members together in topic-based groups, and make it easy to get admin announcements.'));
+}
+
+// Mobile number box: keep only the 10-digit number (paste "+91 98765 43210" or "098765…" → 9876543210)
+function cleanMobileInput(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (d.length > 10 && d.startsWith('91')) d = d.slice(2);
+  if (d.length > 10 && d.startsWith('0')) d = d.slice(1);
+  if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return d.slice(0, 10);
+}
+(function phoneBox() {
+  const ph = $('#phone'), hint = $('#phoneHint');
+  const check = () => {
+    const d = ph.value;
+    hint.classList.remove('bad');
+    if (!d) hint.textContent = '';
+    else if (!/^[6-9]/.test(d)) { hint.textContent = 'Indian mobile numbers start with 6, 7, 8 or 9'; hint.classList.add('bad'); }
+    else hint.textContent = d.length < 10 ? (10 - d.length) + ' more digit' + (10 - d.length > 1 ? 's' : '') : '✓';
+  };
+  ph.addEventListener('input', () => { const c = cleanMobileInput(ph.value); if (c !== ph.value) ph.value = c; check(); });
+  ph.addEventListener('paste', (e) => { e.preventDefault(); ph.value = cleanMobileInput((e.clipboardData || window.clipboardData).getData('text')); check(); });
+})();
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
