@@ -565,6 +565,8 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .gc-head .who{flex:1;min-width:0}
 .gc-head b{display:block;font-size:17px}
 .gc-head small{opacity:.75}
+.gc-grid.many{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:150px}
+.gc-tile.speaking{outline:3px solid var(--leaf)}
 .gc-grid{flex:1;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));grid-auto-rows:minmax(150px,1fr);min-height:0;overflow-y:auto}
 .gc-tile{position:relative;background:#1C2A31;border-radius:14px;overflow:hidden;display:grid;place-items:center}
 .gc-tile video{width:100%;height:100%;object-fit:cover}
@@ -2700,7 +2702,8 @@ function sendRich(payload, cb) {
 }
 function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0, sticker = false, onDone = null, once = false }) {
   const to = activeId; if (!to) return;
-  if (blob.size > 16 * 1024 * 1024) return toast(name + ' is bigger than 16 MB.');
+  const maxFile = (serverCfg && serverCfg.maxFile) || 16 * 1024 * 1024, big = maxFile > 16 * 1024 * 1024;
+  if (blob.size > maxFile) return toast(name + ' is bigger than ' + (big ? '2 GB' : '16 MB') + '.');
   const temp = { id: 'up' + Date.now() + Math.floor(Math.random() * 1e6), from: me.id, to, ts: Date.now(), status: 'pending', type: kind, uploading: true, progress: 0, file: { name, size: blob.size } };
   (messagesCache[to] = messagesCache[to] || []).push(temp); if (activeId === to) renderMessages();
   const q = new URLSearchParams({ to, kind, name, caption, mime: blob.type || 'application/octet-stream', sid: socket.id || '' });
@@ -2722,6 +2725,22 @@ function uploadFile(blob, { kind, name, caption = '', voice = false, dur = 0, st
     bubbleCache.delete(temp.id);
     if (activeId === to) renderMessages();
   };
+  if (big) { // straight to cloud storage (R2): 1) ask for a signed link, 2) upload with progress, 3) tell the server it is done
+    const mime = blob.type || 'application/octet-stream';
+    api('/api/chat/upload-url', { method: 'POST', body: JSON.stringify({ to, kind, name, mime, size: blob.size, caption, voice, dur, sticker, once }) })
+      .then(({ uploadId, url }) => new Promise((ok, bad) => {
+        const put = new XMLHttpRequest(); temp.xhr = put;
+        put.open('PUT', url); put.setRequestHeader('Content-Type', mime);
+        put.upload.onprogress = xhr.upload.onprogress;
+        put.onload = () => (put.status >= 200 && put.status < 300 ? ok(uploadId) : bad(new Error('Upload failed (' + put.status + '). Try again.')));
+        put.onerror = () => bad(new Error('Upload failed. Check your internet, or ask the admin to check R2 CORS settings.'));
+        put.send(blob);
+      }))
+      .then((uploadId) => api('/api/chat/upload-done', { method: 'POST', body: JSON.stringify({ uploadId, sid: socket.id || '' }) }))
+      .then((r) => { done(r.message); if (onDone) onDone(r.message); })
+      .catch((e) => { toast(e.message); done(null); });
+    return;
+  }
   xhr.onload = () => {
     let r = {}; try { r = JSON.parse(xhr.responseText); } catch {}
     if (xhr.status >= 200 && xhr.status < 300 && r.message) { done(r.message); if (onDone) onDone(r.message); } else { toast(r.error || 'Upload failed. Try again.'); done(null); }
@@ -4288,9 +4307,15 @@ function gcPeer(uid, initiator) {
   return peer;
 }
 function gcDrop(uid) { const p = GC.peers.get(uid); if (p) { p.pc.close(); GC.peers.delete(uid); } const t = $('#gcGrid') && $('#gcGrid').querySelector('[data-uid="' + uid + '"]'); if (t) t.remove(); gcCount(); }
-function gcCount() { const v = $('#gcView'); if (!v || !GC.id) return; v.querySelector('.gc-head small').textContent = (GC.peers.size + 1) + ' in call · ' + fmtDur((Date.now() - GC.t0) / 1000); }
+function gcCount() {
+  const v = $('#gcView'); if (!v || !GC.id) return;
+  const n = GC.room ? GC.room.remoteParticipants.size + 1 : GC.peers.size + 1;
+  v.querySelector('.gc-head small').textContent = n + ' in call · ' + fmtDur((Date.now() - GC.t0) / 1000);
+  const g = $('#gcGrid'); if (g) g.classList.toggle('many', g.children.length > 6);
+}
 function gcLeave() {
   if (GC.id) socket.emit('gcall:leave', { callId: GC.id });
+  if (GC.room) { const r = GC.room; GC.room = null; r.disconnect().catch(() => {}); }
   for (const uid of [...GC.peers.keys()]) gcDrop(uid);
   if (GC.local) GC.local.getTracks().forEach((t) => t.stop());
   clearInterval(GC.timer); const v = $('#gcView'); if (v) v.remove();
@@ -4302,6 +4327,8 @@ socket_ready_hooks.push(() => {
     if (GC.gid !== p.gid) return socket.emit('gcall:leave', { callId: p.callId });
     GC.id = p.callId; GC.kind = p.kind; GC.t0 = Date.now(); gcShow(p.peers.length ? 'Connecting…' : 'Ringing the group…');
     clearInterval(GC.timer); GC.timer = setInterval(gcCount, 1000);
+    GC.max = p.max || 8;
+    if (p.sfu) return lkJoin(p);
     for (const uid of p.peers) gcPeer(uid, true);
   });
   socket.on('gcall:signal', async (p) => {
@@ -4316,7 +4343,7 @@ socket_ready_hooks.push(() => {
     } catch {}
   });
   socket.on('gcall:peer-left', (p) => { if (p.callId === GC.id) gcDrop(p.id); });
-  socket.on('gcall:full', () => { toast('This call is full (8 people).'); gcLeave(); });
+  socket.on('gcall:full', (p) => { toast('This call is full (' + ((p && p.max) || 8) + ' people).'); gcLeave(); });
   socket.on('gcall:ended', () => { toast('This call has ended.'); gcLeave(); });
   socket.on('gcall:state', (s2) => {
     const g = userById(s2.gid); if (g) { g.activeCall = s2.participants.length ? { id: s2.callId, kind: s2.kind, count: s2.participants.length } : null; if (activeId === s2.gid) renderChatHead(); }
@@ -5122,6 +5149,48 @@ async function renderSponsored() {
 }
 
 socket_ready_hooks.push(() => socket.on('ad:update', (a) => toast(a.status === 'approved' ? '📢 Your ad "' + a.title + '" is now live!' : a.status === 'rejected' ? '📢 Ad not approved: ' + a.reason : '📢 Your ad "' + a.title + '" was stopped.')));
+// ================= group calls through LiveKit (up to 50 people) =================
+let lkLoading = null;
+function loadLiveKit() {
+  if (window.LivekitClient) return Promise.resolve();
+  if (!lkLoading) lkLoading = new Promise((ok, bad) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.js';
+    sc.onload = () => (window.LivekitClient ? ok() : bad(new Error('LiveKit did not load')));
+    sc.onerror = () => { lkLoading = null; bad(new Error('Could not load the call service. Check your internet.')); };
+    document.head.append(sc);
+  });
+  return lkLoading;
+}
+async function lkJoin(p) {
+  try { await loadLiveKit(); } catch (e) { toast(e.message); return gcLeave(); }
+  if (GC.id !== p.callId) return;
+  const LK = window.LivekitClient;
+  const room = new LK.Room({ adaptiveStream: true, dynacast: true });
+  GC.room = room;
+  const tileFor = (pt) => gcTile(pt.identity, null);
+  const attach = (track, pt) => {
+    const t = tileFor(pt); t.classList.remove('connecting');
+    if (track.kind === 'video') { const v = t.querySelector('video'); track.attach(v); t.classList.add('has-video'); }
+    else { const a = track.attach(); a.dataset.lk = pt.identity; a.hidden = true; t.append(a); }
+    gcCount();
+  };
+  room.on(LK.RoomEvent.TrackSubscribed, (track, pub, pt) => attach(track, pt));
+  room.on(LK.RoomEvent.TrackUnsubscribed, (track, pub, pt) => { track.detach(); if (track.kind === 'video') { const t = tileFor(pt); t.classList.remove('has-video'); } });
+  room.on(LK.RoomEvent.TrackMuted, (pub, pt) => { if (pub.kind === 'video' && pt.identity !== me.id) tileFor(pt).classList.remove('has-video'); });
+  room.on(LK.RoomEvent.TrackUnmuted, (pub, pt) => { if (pub.kind === 'video' && pt.identity !== me.id) tileFor(pt).classList.add('has-video'); });
+  room.on(LK.RoomEvent.ParticipantConnected, (pt) => { tileFor(pt); gcCount(); });
+  room.on(LK.RoomEvent.ParticipantDisconnected, (pt) => gcDrop(pt.identity));
+  room.on(LK.RoomEvent.ActiveSpeakersChanged, (list) => { document.querySelectorAll('.gc-tile').forEach((t) => t.classList.toggle('speaking', list.some((s2) => s2.identity === t.dataset.uid))); });
+  room.on(LK.RoomEvent.Disconnected, () => { if (GC.room === room) { toast('Call ended.'); gcLeave(); } });
+  try {
+    await room.connect(p.sfu.url, p.sfu.token, { autoSubscribe: true });
+    for (const tr of GC.local.getTracks()) await room.localParticipant.publishTrack(tr, { source: tr.kind === 'video' ? LK.Track.Source.Camera : LK.Track.Source.Microphone });
+    for (const pt of room.remoteParticipants.values()) { tileFor(pt); for (const pub of pt.trackPublications.values()) if (pub.track) attach(pub.track, pt); }
+    gcCount();
+  } catch (e) { console.error(e); toast('Could not join the call. Try again.'); gcLeave(); }
+}
+
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

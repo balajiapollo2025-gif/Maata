@@ -307,6 +307,8 @@ async function speechToText(base64, lang) {
 }
 
 app.get('/api/config', auth, (req, res) => res.json({
+  maxFile: R2_ON ? MAX_BIG_FILE : MAX_FILE,
+  groupCallMax: GCALL_MAX,
   serverSpeech: !!SPEECH_KEY,
   serverVoice: !!(process.env.GOOGLE_TTS_KEY || process.env.GOOGLE_TRANSLATE_KEY),
   translate: GOOGLE_TRANSLATE_KEY ? 'google' : 'free',
@@ -674,7 +676,7 @@ async function saveChatFile(id, buf, mime) {
   if (chatBucket) await new Promise((res, rej) => { const up = chatBucket.openUploadStreamWithId(id, id, { contentType: mime }); up.on('error', rej).on('finish', res); up.end(buf); });
   else { fs.mkdirSync(CHAT_DIR, { recursive: true }); fs.writeFileSync(path.join(CHAT_DIR, id), buf); }
 }
-async function deleteChatFile(id) { try { if (chatBucket) await chatBucket.delete(id); else fs.unlinkSync(path.join(CHAT_DIR, id)); } catch { /* gone */ } }
+async function deleteChatFile(id) { if (isR2(id)) return r2Delete(id); try { if (chatBucket) await chatBucket.delete(id); else fs.unlinkSync(path.join(CHAT_DIR, id)); } catch { /* gone */ } }
 const chatFileStream = (id, start, end) => (chatBucket ? chatBucket.openDownloadStream(id, { start, end: end + 1 }) : fs.createReadStream(path.join(CHAT_DIR, id), { start, end }));
 
 // Checks both people and the blocks; returns an error text or null
@@ -863,8 +865,12 @@ app.post('/api/status/from-message', auth, async (req, res) => {
   if (!m.type || m.type === 'text') st = { ...base, type: 'text', text: String(m.text || '').slice(0, 700), bg: '#0F4C5C' };
   else {
     try {
-      const chunks = []; await new Promise((ok, bad) => { const r = chatFileStream(m.file.id, 0, m.file.size - 1); r.on('data', (c) => chunks.push(c)); r.on('end', ok); r.on('error', bad); });
-      await saveMedia(base.id, Buffer.concat(chunks), m.file.mime);
+      let buf;
+      if (isR2(m.file.id)) {
+        if (m.file.size > 16 * 1024 * 1024) return res.status(400).json({ error: 'This file is too big for status (16 MB max).' });
+        const r2r = await fetch(r2Url('GET', m.file.id, 300), { signal: AbortSignal.timeout(60000) }); if (!r2r.ok) throw new Error('r2'); buf = Buffer.from(await r2r.arrayBuffer());
+      } else { const chunks = []; await new Promise((ok, bad) => { const r = chatFileStream(m.file.id, 0, m.file.size - 1); r.on('data', (c) => chunks.push(c)); r.on('end', ok); r.on('error', bad); }); buf = Buffer.concat(chunks); }
+      await saveMedia(base.id, buf, m.file.mime);
     } catch { return res.status(500).json({ error: 'Could not copy this file to status.' }); }
     st = { ...base, type: m.type, caption: String(m.text || '').slice(0, 300), mime: m.file.mime, size: m.file.size };
   }
@@ -891,6 +897,62 @@ app.post('/api/chat/upload', auth, express.raw({ type: () => true, limit: '16mb'
 });
 
 // Files open only for the two people in that chat. <img>/<video> send the login token as ?t=
+// ---------- Big files (up to 2 GB) on Cloudflare R2 (S3-compatible) ----------
+// Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET. Phones upload straight to R2 with a
+// short-lived signed link, so big files never pass through (or fill up) this server or MongoDB.
+const R2 = { account: (process.env.R2_ACCOUNT_ID || '').trim(), key: (process.env.R2_ACCESS_KEY_ID || '').trim(), secret: (process.env.R2_SECRET_ACCESS_KEY || '').trim(), bucket: (process.env.R2_BUCKET || '').trim() };
+const R2_ON = !!(R2.account && R2.key && R2.secret && R2.bucket);
+const MAX_BIG_FILE = 2 * 1024 * 1024 * 1024;
+console.log(R2_ON ? '[files] Cloudflare R2 storage on: files up to 2 GB (bucket ' + R2.bucket + ')' : '[files] Files up to 16 MB (add R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET for 2 GB)');
+const isR2 = (id) => typeof id === 'string' && id.startsWith('r2-');
+const rfc3986 = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+function r2Url(method, key, expires = 3600, extra = {}) {
+  const host = R2.account + '.r2.cloudflarestorage.com', region = 'auto', service = 's3';
+  const amz = new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''), date = amz.slice(0, 8);
+  const scope = `${date}/${region}/${service}/aws4_request`;
+  const p = '/' + rfc3986(R2.bucket) + '/' + rfc3986(key);
+  const q = { 'X-Amz-Algorithm': 'AWS4-HMAC-SHA256', 'X-Amz-Credential': R2.key + '/' + scope, 'X-Amz-Date': amz, 'X-Amz-Expires': String(expires), 'X-Amz-SignedHeaders': 'host', ...extra };
+  const qs = Object.keys(q).sort().map((k) => rfc3986(k) + '=' + rfc3986(q[k])).join('&');
+  const canonical = [method, p, qs, 'host:' + host + '\n', 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const toSign = ['AWS4-HMAC-SHA256', amz, scope, crypto.createHash('sha256').update(canonical).digest('hex')].join('\n');
+  const h = (k, d) => crypto.createHmac('sha256', k).update(d).digest();
+  const sig = crypto.createHmac('sha256', h(h(h(h('AWS4' + R2.secret, date), region), service), 'aws4_request')).update(toSign).digest('hex');
+  return `https://${host}${p}?${qs}&X-Amz-Signature=${sig}`;
+}
+async function r2Delete(id) { try { await fetch(r2Url('DELETE', id, 300), { method: 'DELETE', signal: AbortSignal.timeout(15000) }); } catch (e) { console.error('[r2] delete', e.message); } }
+const pendingUploads = new Map(); // uploadId -> details, until the phone says "done"
+app.post('/api/chat/upload-url', auth, (req, res) => {
+  if (!R2_ON) return res.status(400).json({ error: 'Big files are not switched on.' });
+  const b = req.body || {}, ok = canMessage(req.user, String(b.to || ''));
+  if (ok.error) return res.status(400).json({ error: ok.error });
+  const size = Number(b.size);
+  if (!(size > 0)) return res.status(400).json({ error: 'Choose a file first.' });
+  if (size > MAX_BIG_FILE) return res.status(413).json({ error: 'File is too big. The limit is 2 GB.' });
+  const mine = [...pendingUploads.values()].filter((u) => u.by === req.user.id && u.exp > now());
+  if (mine.length >= 10) return res.status(429).json({ error: 'Too many uploads at once. Wait for the others to finish.' });
+  const fileId = 'r2-' + newId(), uploadId = newId();
+  const kind = ['image', 'video', 'audio', 'file'].includes(b.kind) ? b.kind : 'file';
+  pendingUploads.set(uploadId, { by: req.user.id, to: String(b.to), fileId, kind, size, exp: now() + 3 * 3600_000,
+    name: String(b.name || 'file').replace(/[\\/\r\n"]/g, '_').slice(0, 120), mime: String(b.mime || 'application/octet-stream').split(';')[0].slice(0, 100),
+    caption: String(b.caption || '').trim().slice(0, 1000), voice: !!b.voice, dur: Math.round(Number(b.dur) || 0), once: !!b.once && (kind === 'image' || kind === 'video'), sticker: !!b.sticker && kind === 'image' });
+  res.json({ uploadId, url: r2Url('PUT', fileId, 3 * 3600) });
+});
+app.post('/api/chat/upload-done', auth, async (req, res) => {
+  const u = pendingUploads.get(String(req.body?.uploadId || ''));
+  if (!u || u.by !== req.user.id) return res.status(404).json({ error: 'Upload not found. Try again.' });
+  pendingUploads.delete(String(req.body.uploadId));
+  let realSize = 0;
+  try { const h = await fetch(r2Url('HEAD', u.fileId, 300), { method: 'HEAD', signal: AbortSignal.timeout(15000) }); realSize = Number(h.headers.get('content-length')) || 0; if (!h.ok) throw new Error('status ' + h.status); }
+  catch (e) { console.error('[r2] check', e.message); return res.status(400).json({ error: 'The file did not finish uploading. Try again.' }); }
+  if (realSize > MAX_BIG_FILE) { r2Delete(u.fileId); return res.status(413).json({ error: 'File is too big. The limit is 2 GB.' }); }
+  const ok = canMessage(req.user, u.to);
+  if (ok.error) { r2Delete(u.fileId); return res.status(400).json({ error: ok.error }); }
+  const file = { id: u.fileId, name: u.name, mime: u.mime, size: realSize, ...(u.voice ? { voice: true } : {}), ...(u.dur ? { duration: u.dur } : {}), ...(u.sticker ? { sticker: true } : {}) };
+  const m = deliverMessage(req.user, ok.target, { type: u.kind, text: u.caption, file, ...(u.once ? { viewOnce: true, openedBy: {} } : {}) }, String(req.body.sid || '') || null);
+  res.json({ message: m });
+});
+setInterval(() => { for (const [k, u] of pendingUploads) if (u.exp < now()) { pendingUploads.delete(k); r2Delete(u.fileId); } }, 3600_000);
+
 app.get('/api/chat/file/:id', (req, res) => {
   let viewer = null;
   try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* invalid */ }
@@ -898,6 +960,11 @@ app.get('/api/chat/file/:id', (req, res) => {
   const m = db.messages.find((x) => x.file && x.file.id === req.params.id && (x.from === viewer.id || x.to === viewer.id || (x.group && gMember(groupById(x.group), viewer.id))));
   if (!m) return res.status(404).end();
   if (m.viewOnce && (m.from === viewer.id || (m.openedBy || {})[viewer.id])) return res.status(410).end(); // view once: opened already (or sender)
+  if (isR2(m.file.id)) { // big file on R2: send the phone a short-lived signed link (supports seeking in videos)
+    const inline2 = /^(image|video|audio)\//.test(m.file.mime) || m.file.mime === 'application/pdf';
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.redirect(302, r2Url('GET', m.file.id, 3600, { 'response-content-type': m.file.mime, 'response-content-disposition': (req.query.dl === '1' || !inline2 ? 'attachment' : 'inline') + "; filename*=UTF-8''" + rfc3986(m.file.name) }));
+  }
   const size = m.file.size;
   let start = 0, end = size - 1, code = 200;
   const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
@@ -920,7 +987,17 @@ app.get('/api/chat/file/:id', (req, res) => {
 
 // ---------- Groups: messages, members, admins, invite links, group photo ----------
 const GROUP_MAX = 1024;          // members per group
-const GCALL_MAX = 8;             // people in one group call (each phone sends video to every other)
+// Group calls: with a LiveKit media server (LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET) up to 50 people,
+// because each phone sends its video once to the server. Without it, phones connect to each other directly (max 8).
+const LK_URL = (process.env.LIVEKIT_URL || '').trim(), LK_KEY = (process.env.LIVEKIT_API_KEY || '').trim(), LK_SECRET = (process.env.LIVEKIT_API_SECRET || '').trim();
+const LIVEKIT = !!(LK_URL && LK_KEY && LK_SECRET);
+const GCALL_MAX = LIVEKIT ? 50 : 8;
+console.log(LIVEKIT ? '[calls] Group calls: LiveKit media server on, up to 50 people (' + LK_URL + ')' : '[calls] Group calls: direct mode, up to 8 people (add LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET for 50)');
+// LiveKit access token = a signed JWT (same format their SDK makes), so no extra package is needed
+function livekitToken(user, room) {
+  return jwt.sign({ name: user.name, video: { room, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: false } },
+    LK_SECRET, { issuer: LK_KEY, subject: user.id, expiresIn: '3h', notBefore: 0, jwtid: newId() });
+}
 const gidOf = (to) => (typeof to === 'string' && to.startsWith('g:') ? to.slice(2) : null);
 const groupById = (id) => db.groups.find((g) => g.id === id);
 const gMember = (g, uid) => !!g && g.members.some((x) => x.id === uid);
@@ -2115,7 +2192,7 @@ io.on('connection', (socket) => {
   function gcallJoin(c) {
     const peers = [...c.parts.keys()].filter((x) => x !== me);
     c.parts.set(me, now()); c.ever.add(me); socket.join('gc:' + c.id); socket.gcall = c.id;
-    socket.emit('gcall:joined', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, peers });
+    socket.emit('gcall:joined', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, peers, max: GCALL_MAX, ...(LIVEKIT ? { sfu: { url: LK_URL, token: livekitToken(socket.user, 'maata-' + c.id) } } : {}) });
     gcallState(c); pushLive();
   }
   function gcallLeave(callId) {
@@ -2143,14 +2220,14 @@ io.on('connection', (socket) => {
       gcalls.set(g.id, c);
       socket.to('grp:' + g.id).emit('gcall:ring', { gid: 'g:' + g.id, callId: c.id, kind: c.kind, from: me, fromName: socket.user.name, groupName: g.name });
     }
-    if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id });
+    if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id, max: GCALL_MAX });
     gcallJoin(c);
   });
   socket.on('gcall:join', (p) => {
     const g = groupById(gidOf(String(p?.gid || ''))); const c = g && gcalls.get(g.id);
     if (!c || !gMember(g, me)) return socket.emit('gcall:ended', { callId: p?.callId });
     if (c.parts.has(me)) return;
-    if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id });
+    if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id, max: GCALL_MAX });
     if (socket.gcall) gcallLeave(socket.gcall);
     gcallJoin(c);
   });
