@@ -1211,7 +1211,7 @@ async function start() {
   aiInit();
   setTimeout(handleJoinLink, 800);
   setTimeout(handleChannelLink, 900);
-  setTimeout(() => { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); handleAppLink(location.href); }, 1200);
+  setTimeout(() => { registerNativePush(); if (!isNativeApp()) { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); } handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
@@ -5471,7 +5471,15 @@ const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in win
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (me) renderNotifBanner(); });
 window.addEventListener('appinstalled', () => { installEvt = null; toast('Maata app installed 🦜'); });
-const inApp = () => matchMedia('(display-mode: standalone)').matches || document.referrer.startsWith('android-app://');
+const isNativeApp = () => !!window.MaataAndroid;
+const inApp = () => isNativeApp() || matchMedia('(display-mode: standalone)').matches || document.referrer.startsWith('android-app://');
+// Inside the Play Store app: give the server this phone's push token, so calls ring full screen even when Maata is closed
+async function registerNativePush(tries = 0) {
+  if (!isNativeApp()) return;
+  let t = ''; try { t = window.MaataAndroid.getFcmToken() || ''; } catch {}
+  if (!t) { if (tries < 8) setTimeout(() => registerNativePush(tries + 1), 2500); return; }
+  try { await api('/api/push/fcm', { method: 'POST', body: JSON.stringify({ token: t, model: (window.MaataAndroid.deviceModel && window.MaataAndroid.deviceModel()) || '' }) }); } catch {}
+}
 function b64ToBytes(b) { const p = '='.repeat((4 - (b.length % 4)) % 4), s2 = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s2, (c) => c.charCodeAt(0)); }
 async function enablePush(silent) {
   if (!pushSupported()) { if (!silent) toast('This browser cannot show notifications when Maata is closed. Install the Maata app.'); return false; }
@@ -5515,6 +5523,7 @@ function handleAppLink(url) {
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.maata === 'open') handleAppLink(e.data.url); });
 function notifSettingsRow() {
+  if (isNativeApp()) { const box0 = el('div', 'set-group'); const r0 = el('div', 'set-row'), t0 = el('div', 'txt'); t0.append(el('b', null, '🔔 Notifications & calls when Maata is closed'), el('small', null, 'On ✓ (Maata app)')); const b0 = el('button', 'linkbtn', 'Phone settings'); b0.onclick = () => window.MaataAndroid.openNotificationSettings && window.MaataAndroid.openNotificationSettings(); r0.append(t0, b0); box0.append(r0); return box0; }
   const box = el('div', 'set-group'); box.style.marginTop = '4px';
   const r = el('div', 'set-row'), t = el('div', 'txt');
   const state = !pushSupported() ? 'Not available in this browser' : Notification.permission === 'granted' ? 'On ✓' : Notification.permission === 'denied' ? 'Blocked in browser settings' : 'Off';

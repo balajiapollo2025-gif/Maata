@@ -1,0 +1,180 @@
+package com.maataapp.app
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.AlertDialog
+import android.app.DownloadManager
+import android.app.NotificationManager
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
+import android.webkit.*
+import android.widget.Toast
+import com.google.firebase.messaging.FirebaseMessaging
+
+/** Maata app: the Maata web app in a full-screen WebView, with native calls, notifications and permissions. */
+class MainActivity : Activity() {
+    companion object {
+        const val EXTRA_URL = "maata_url"
+        const val EXTRA_STOP_RING = "maata_stop_ring"
+        private const val REQ_FILE = 11
+        private const val REQ_PERMS = 12
+        private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
+    }
+    private lateinit var web: WebView
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private var pendingWebPermission: PermissionRequest? = null
+    private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
+    private var pageReady = false
+
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Notifier.createChannels(this)
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { Notifier.saveToken(this, it) }
+
+        web = WebView(this)
+        setContentView(web)
+        with(web.settings) {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            mediaPlaybackRequiresUserGesture = false
+            allowFileAccess = false
+            setGeolocationEnabled(true)
+            userAgentString = "$userAgentString MaataAndroid/${BuildConfig.VERSION_NAME}"
+        }
+        CookieManager.getInstance().setAcceptCookie(true)
+        web.addJavascriptInterface(Bridge(), "MaataAndroid")
+        web.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
+                val u = req.url
+                if ((u.scheme == "https" || u.scheme == "http") && u.host in OUR_HOSTS) return false
+                openOutside(u); return true // WhatsApp invites, phone numbers, maps, websites
+            }
+            override fun onPageFinished(view: WebView, url: String) { pageReady = true }
+            override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
+                if (req.isForMainFrame) view.loadData(OFFLINE_PAGE, "text/html", "utf-8")
+            }
+        }
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest) = runOnUiThread { handleWebPermission(request) }
+            override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                if (has(Manifest.permission.ACCESS_FINE_LOCATION)) callback.invoke(origin, true, false)
+                else { pendingGeo = origin to callback; requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_PERMS) }
+            }
+            override fun onShowFileChooser(view: WebView, cb: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
+                fileCallback?.onReceiveValue(null); fileCallback = cb
+                return try { startActivityForResult(params.createIntent().apply { if (params.mode == FileChooserParams.MODE_OPEN_MULTIPLE) putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }, REQ_FILE); true }
+                catch (e: ActivityNotFoundException) { fileCallback = null; false }
+            }
+        }
+        web.setDownloadListener { url, _, disposition, mime, _ ->
+            try {
+                val name = URLUtil.guessFileName(url, disposition, mime)
+                val r = DownloadManager.Request(Uri.parse(url)).setMimeType(mime).setTitle(name)
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
+                getSystemService(DownloadManager::class.java).enqueue(r)
+                Toast.makeText(this, "Downloading $name", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) { openOutside(Uri.parse(url)) }
+        }
+
+        web.loadUrl(BuildConfig.APP_URL + (intent.getStringExtra(EXTRA_URL) ?: intent.data?.let { it.encodedPath + (it.encodedFragment?.let { f -> "#$f" } ?: "") } ?: "/"))
+        if (intent.getBooleanExtra(EXTRA_STOP_RING, false)) Notifier.stopRinging(this)
+        // Back: go back inside Maata; on the first screen keep Maata running in the background (Android 13+ way)
+        if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
+            if (web.canGoBack()) web.goBack() else moveTaskToBack(true)
+        }
+        askFirstPermissions()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_STOP_RING, false)) Notifier.stopRinging(this)
+        val path = intent.getStringExtra(EXTRA_URL) ?: intent.data?.let { it.encodedPath + (it.encodedFragment?.let { f -> "#$f" } ?: "") } ?: return
+        val full = BuildConfig.APP_URL + path
+        // the page is already open: tell it what to show (chat, or answer a call) without reloading
+        if (pageReady) web.evaluateJavascript("window.handleAppLink ? handleAppLink(${org.json.JSONObject.quote(full)}) : location.assign(${org.json.JSONObject.quote(full)})", null)
+        else web.loadUrl(full)
+    }
+
+    private fun askFirstPermissions() {
+        if (Build.VERSION.SDK_INT >= 33 && !has(Manifest.permission.POST_NOTIFICATIONS))
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_PERMS)
+        // Android 14+: calls can only show full screen if this is allowed
+        if (Build.VERSION.SDK_INT >= 34) {
+            val nm = getSystemService(NotificationManager::class.java)
+            val asked = getSharedPreferences("maata", MODE_PRIVATE).getBoolean("askedFsi", false)
+            if (!nm.canUseFullScreenIntent() && !asked) {
+                getSharedPreferences("maata", MODE_PRIVATE).edit().putBoolean("askedFsi", true).apply()
+                AlertDialog.Builder(this).setTitle("Show calls on full screen")
+                    .setMessage("Allow Maata to show incoming calls on your full screen, like a normal phone call, even when your phone is locked.")
+                    .setPositiveButton("Allow") { _, _ -> try { startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName"))) } catch (_: Exception) {} }
+                    .setNegativeButton("Later", null).show()
+            }
+        }
+    }
+
+    private fun has(p: String) = checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+
+    private fun handleWebPermission(request: PermissionRequest) {
+        val need = mutableListOf<String>()
+        if (request.resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE) && !has(Manifest.permission.CAMERA)) need += Manifest.permission.CAMERA
+        if (request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE) && !has(Manifest.permission.RECORD_AUDIO)) need += Manifest.permission.RECORD_AUDIO
+        if (need.isEmpty()) request.grant(request.resources)
+        else { pendingWebPermission = request; requestPermissions(need.toTypedArray(), REQ_PERMS) }
+    }
+
+    override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, results: IntArray) {
+        super.onRequestPermissionsResult(code, perms, results)
+        pendingWebPermission?.let { r ->
+            val ok = r.resources.filter {
+                (it == PermissionRequest.RESOURCE_VIDEO_CAPTURE && has(Manifest.permission.CAMERA)) || (it == PermissionRequest.RESOURCE_AUDIO_CAPTURE && has(Manifest.permission.RECORD_AUDIO))
+            }
+            if (ok.isNotEmpty()) r.grant(ok.toTypedArray()) else r.deny()
+            pendingWebPermission = null
+        }
+        pendingGeo?.let { (origin, cb) -> cb.invoke(origin, has(Manifest.permission.ACCESS_FINE_LOCATION) || has(Manifest.permission.ACCESS_COARSE_LOCATION), false); pendingGeo = null }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_FILE) {
+            val uris: Array<Uri>? = if (resultCode != RESULT_OK || data == null) null
+                else data.clipData?.let { c -> Array(c.itemCount) { c.getItemAt(it).uri } } ?: data.data?.let { arrayOf(it) }
+            fileCallback?.onReceiveValue(uris); fileCallback = null
+        }
+    }
+
+    private fun openOutside(u: Uri) {
+        try { startActivity(Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (e: Exception) { Toast.makeText(this, "No app can open this link", Toast.LENGTH_SHORT).show() }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (web.canGoBack()) web.goBack() else moveTaskToBack(true) // keep Maata running in the background
+    }
+
+    /** Functions the Maata web app can call: window.MaataAndroid.getFcmToken() and so on. */
+    inner class Bridge {
+        @JavascriptInterface fun getFcmToken(): String = Notifier.token(this@MainActivity)
+        @JavascriptInterface fun deviceModel(): String = "${Build.MANUFACTURER} ${Build.MODEL}"
+        @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
+        @JavascriptInterface fun openNotificationSettings() {
+            runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
+        }
+    }
+
+    private val OFFLINE_PAGE = """<html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0A3A47;color:#fff;font-family:sans-serif;text-align:center">
+        <div style="font-size:64px">🦜</div><h2>No internet</h2><p style="opacity:.8">Check your connection and try again.</p>
+        <button onclick="location.href='${BuildConfig.APP_URL}'" style="margin-top:12px;padding:14px 28px;border:0;border-radius:999px;background:#2E8B57;color:#fff;font-size:17px">Try again</button></body></html>"""
+}

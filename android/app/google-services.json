@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "89310922293",
+    "project_id": "maata-7d82a",
+    "storage_bucket": "maata-7d82a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:89310922293:android:4d4f1f9b0691a8d092137c",
+        "android_client_info": {
+          "package_name": "com.maataapp.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBj2GQRdYXF4a3N1Gxxc_swpkjsXyXJumA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

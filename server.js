@@ -213,6 +213,7 @@ async function setupPush() {
   console.log('[push] Notifications when the app is closed: on');
 }
 async function pushTo(user, payload, opts = {}) {
+  if (user && !opts.webOnly) fcmTo(user, payload, opts.ttl).catch(() => {});
   if (!VAPID || !user || !(user.pushSubs || []).length) return 0;
   let sent = 0; const dead = [];
   await Promise.all(user.pushSubs.map(async (s) => {
@@ -222,7 +223,7 @@ async function pushTo(user, payload, opts = {}) {
   if (dead.length) { user.pushSubs = user.pushSubs.filter((s) => !dead.includes(s.endpoint)); save(); }
   return sent;
 }
-const hasPush = (u) => !!(VAPID && u && (u.pushSubs || []).length);
+const hasPush = (u) => !!(u && ((VAPID && (u.pushSubs || []).length) || (FCM && (u.fcmTokens || []).length)));
 app.get('/api/push/key', auth, (req, res) => res.json({ key: VAPID ? VAPID.publicKey : null }));
 app.post('/api/push/subscribe', auth, (req, res) => {
   const s = req.body?.subscription;
@@ -233,6 +234,65 @@ app.post('/api/push/subscribe', auth, (req, res) => {
 });
 app.post('/api/push/unsubscribe', auth, (req, res) => { req.user.pushSubs = (req.user.pushSubs || []).filter((x) => x.endpoint !== String(req.body?.endpoint || '')); save(); res.json({ ok: true }); });
 app.post('/api/push/test', auth, async (req, res) => res.json({ sent: await pushTo(req.user, { type: 'test', title: 'Maata 🦜', body: 'Notifications are working!', url: '/' }) }));
+
+// ---------- Native Android app: Firebase Cloud Messaging (full-screen incoming calls, like WhatsApp) ----------
+// Reads the service-account key from Render's secret file (or FIREBASE_SERVICE_ACCOUNT_JSON). No extra package needed.
+let FCM = null;
+(function loadFirebase() {
+  try {
+    let raw = (process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '').trim();
+    if (!raw) for (const f of ['/etc/secrets/firebase-service-account.json', path.join(__dirname, 'firebase-service-account.json')]) if (fs.existsSync(f)) { raw = fs.readFileSync(f, 'utf8'); break; }
+    if (!raw) return console.log('[fcm] Android app push: off (no firebase-service-account.json)');
+    const sa = JSON.parse(raw);
+    if (!sa.client_email || !sa.private_key || !sa.project_id) throw new Error('the key file is missing fields');
+    FCM = { sa, token: null, exp: 0 };
+    console.log('[fcm] Android app push: on (project ' + sa.project_id + ')');
+  } catch (e) { console.error('[fcm] could not read the Firebase key:', e.message); }
+})();
+async function fcmAccessToken() {
+  if (FCM.token && FCM.exp > now() + 60000) return FCM.token;
+  const assertion = jwt.sign({ scope: 'https://www.googleapis.com/auth/firebase.messaging' }, FCM.sa.private_key,
+    { algorithm: 'RS256', issuer: FCM.sa.client_email, audience: 'https://oauth2.googleapis.com/token', expiresIn: 3600 });
+  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }), signal: AbortSignal.timeout(10000) });
+  const d = await r.json(); if (!d.access_token) throw new Error('token: ' + (d.error_description || d.error || r.status));
+  FCM.token = d.access_token; FCM.exp = now() + (d.expires_in || 3600) * 1000; return FCM.token;
+}
+// data-only, high priority: wakes the phone even when Maata is closed; the app decides how to show it
+async function fcmSend(token, data, ttlSec) {
+  const body = { message: { token, data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? '')])), android: { priority: 'HIGH', ttl: (ttlSec || 3600) + 's' } } };
+  const r = await fetch('https://fcm.googleapis.com/v1/projects/' + FCM.sa.project_id + '/messages:send', { method: 'POST',
+    headers: { Authorization: 'Bearer ' + (await fcmAccessToken()), 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000) });
+  if (r.ok) return 'ok';
+  const t = await r.text();
+  if (r.status === 404 || /UNREGISTERED|registration-token-not-registered|INVALID_ARGUMENT.*token/i.test(t)) return 'dead';
+  console.error('[fcm]', r.status, t.slice(0, 200)); return 'error';
+}
+async function fcmTo(user, data, ttlSec) {
+  if (!FCM || !user || !(user.fcmTokens || []).length) return 0;
+  let sent = 0; const dead = [];
+  await Promise.all(user.fcmTokens.map(async (t) => { try { const r = await fcmSend(t.token, data, ttlSec); if (r === 'ok') sent++; if (r === 'dead') dead.push(t.token); } catch (e) { console.error('[fcm]', e.message); } }));
+  if (dead.length) { user.fcmTokens = user.fcmTokens.filter((t) => !dead.includes(t.token)); save(); }
+  return sent;
+}
+app.post('/api/push/fcm', auth, (req, res) => {
+  const token = String(req.body?.token || '').trim();
+  if (token.length < 20 || token.length > 4096) return res.status(400).json({ error: 'Bad token.' });
+  for (const u of db.users) if (u.id !== req.user.id && (u.fcmTokens || []).some((t) => t.token === token)) u.fcmTokens = u.fcmTokens.filter((t) => t.token !== token); // phone changed account
+  req.user.fcmTokens = [...(req.user.fcmTokens || []).filter((t) => t.token !== token), { token, at: now(), model: clip(req.body?.model, 80) }].slice(-5);
+  save(); res.json({ ok: true, fcm: !!FCM });
+});
+// "Decline" pressed on the full-screen call screen (the app is closed, so it proves itself with its push token)
+app.post('/api/push/decline', (req, res) => {
+  const token = String(req.body?.fcm || ''), callId = String(req.body?.callId || '');
+  const u = token && db.users.find((x) => (x.fcmTokens || []).some((t) => t.token === token));
+  const pr = u && pendingRings.get(u.id);
+  if (!pr || pr.callId !== callId) return res.json({ ok: false });
+  clearInterval(pr.timer); pendingRings.delete(u.id);
+  const rec = activeCalls.get(callId); if (rec) finishCall(rec, 'declined');
+  io.to('user:' + pr.from).emit('call:rejected', { callId, from: u.id });
+  res.json({ ok: true });
+});
 
 // Message notifications for people who are not online right now
 function previewOf(m) {
@@ -286,7 +346,7 @@ app.get('/sw.js', (req, res) => {
   res.send(SW_SOURCE);
 });
 const SW_SOURCE = `
-const CACHE = 'maata-shell-v1';
+const CACHE = 'maata-shell-v2';
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icons/icon-192.png', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 // Pages: always try the network first (so updates show at once), fall back to the saved copy when offline
@@ -300,7 +360,7 @@ self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data.json(); } catch { d = { title: 'Maata', body: e.data ? e.data.text() : '' }; }
   const call = d.type === 'call';
   const opts = { body: d.body || '', icon: '/icons/icon-192.png', badge: '/icons/badge-96.png', tag: d.tag || d.type || 'maata', renotify: true, data: { url: d.url || '/', type: d.type, callId: d.callId },
-    vibrate: call ? [600, 300, 600, 300, 600, 300, 600, 300, 600] : [150, 80, 150], requireInteraction: call, timestamp: Date.now(),
+    vibrate: call ? [800, 400, 800, 400, 800, 400, 800] : [150, 80, 150], requireInteraction: call, silent: false, timestamp: Date.now(), image: undefined,
     actions: call ? [{ action: 'answer', title: '📞 Answer' }, { action: 'decline', title: '✖ Decline' }] : [{ action: 'open', title: 'Open' }] };
   e.waitUntil(self.registration.showNotification(d.title || 'Maata', opts));
 });
@@ -2292,6 +2352,8 @@ io.on('connection', (socket) => {
   online.set(me, (online.get(me) || 0) + 1);
   const waiting = pendingRings.get(me);
   if (waiting) {
+    clearInterval(waiting.timer);
+    fcmTo(socket.user, { type: 'call_end', callId: waiting.callId, answered: '1' }, 30).catch(() => {});
     if (waiting.until > now() && activeCalls.has(waiting.callId)) {
       setTimeout(() => { socket.emit('call:incoming', waiting.offer); for (const c of waiting.ice) socket.emit('call:ice', c); io.to('user:' + waiting.from).emit('call:ringing', { callId: waiting.callId }); }, 1200);
     }
@@ -2528,9 +2590,12 @@ io.on('connection', (socket) => {
     if (!isOnline(p.to)) {
       if (!hasPush(target)) return socket.emit('call:unavailable', { callId: p.callId });
       // their app is closed: wake the phone and keep the offer until they open Maata (40 s)
-      pendingRings.set(p.to, { offer: clean(p), ice: [], until: now() + 40000, callId, from: me });
-      const saved = contactsOf(target).find((c) => c.id === me);
-      pushTo(target, { type: 'call', callId, title: (p.kind === 'video' ? '🎥 Video call' : '📞 Voice call') + ' · Maata', body: (saved ? saved.name : socket.user.name + ' (' + socket.user.phone + ')') + ' is calling you', tag: 'call-' + callId }, { ttl: 40, urgency: 'high', topic: 'call' });
+      const saved = contactsOf(target).find((c) => c.id === me), who = saved ? saved.name : socket.user.name + ' (' + socket.user.phone + ')';
+      const ringPush = { type: 'call', callId, kind: p.kind === 'video' ? 'video' : 'voice', title: (p.kind === 'video' ? '🎥 ' : '📞 ') + who + ' is calling…', body: 'Maata ' + (p.kind === 'video' ? 'video' : 'voice') + ' call · tap Answer', tag: 'call-' + callId };
+      const pr = { offer: clean(p), ice: [], until: now() + 40000, callId, from: me, rings: 0 };
+      // "Ring": repeat the notification (sound + vibration) every 4 s until answered, cancelled or 40 s pass
+      const ringOnce = () => { const cur = pendingRings.get(p.to); if (!cur || cur.callId !== callId || cur.until < now() || cur.rings >= 10) { clearInterval(pr.timer); return; } cur.rings++; pushTo(target, ringPush, { ttl: 30, urgency: 'high', webOnly: cur.rings > 1 }); };
+      pendingRings.set(p.to, pr); ringOnce(); pr.timer = setInterval(ringOnce, 4000);
       socket.emit('call:waking', { callId });
       return;
     }
@@ -2595,7 +2660,7 @@ io.on('connection', (socket) => {
   socket.on('call:end', (p) => {
     if (!valid(p)) return;
     const pr = pendingRings.get(p.to);
-    if (pr && pr.callId === String(p.callId)) { pendingRings.delete(p.to); const t = userById(p.to); const saved = t && contactsOf(t).find((c) => c.id === me); pushTo(t, { type: 'missed', title: 'Missed call · Maata', body: (saved ? saved.name : socket.user.name) + ' called you', tag: 'call-' + p.callId, url: '/#chat=' + me }); }
+    if (pr && pr.callId === String(p.callId)) { clearInterval(pr.timer); pendingRings.delete(p.to); const t = userById(p.to); fcmTo(t, { type: 'call_end', callId: p.callId }, 60).catch(() => {}); const saved = t && contactsOf(t).find((c) => c.id === me); pushTo(t, { type: 'missed', title: 'Missed call · Maata', body: (saved ? saved.name : socket.user.name) + ' called you', tag: 'call-' + p.callId, url: '/#chat=' + me }); }
     finishCall(recFor(p), 'missed'); io.to(room(p.to)).emit('call:ended', clean(p));
   });
 
