@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F4C5C">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Maata">
 <title>Maata — free calls & messages</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -661,6 +667,11 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .chv-compose textarea{flex:1;resize:none;border:1.5px solid var(--line);border-radius:22px;padding:10px 14px;font:inherit;font-size:16px;background:var(--paper);color:var(--ink);max-height:140px}
 .chv-note{text-align:center;padding:12px;color:var(--muted);background:var(--panel);border-top:1px solid var(--line)}
 .comm-tag{font-size:11px;color:var(--muted);margin-left:6px}
+.notif-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 16px 8px;background:#E7F6EE;border:1px solid #BFE6D0;border-radius:14px;padding:10px 12px}
+.notif-banner p{flex:1 1 180px;margin:0;font-size:14px;color:#17463A}
+.notif-banner .nb-go{padding:8px 16px;border-radius:999px;background:var(--leaf);color:#fff;font-weight:700}
+.notif-banner .nb-later{padding:8px 10px;color:#4A5B55;font-size:13px}
+@media (prefers-color-scheme:dark){.notif-banner{background:#163428;border-color:#24543f}.notif-banner p{color:#CDEBDD}.notif-banner .nb-later{color:#A9C6B9}}
 /* ---------- Mobile ---------- */
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
@@ -999,6 +1010,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   <section class="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="settings-head"><h2 id="setTitle">Settings</h2><button class="icon-btn" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
 
+    <div id="setNotifBox"></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setAppLang">🌐 <span data-t="appLang">App language</span> <span id="setAppLangName" style="margin-left:auto;color:var(--muted)"></span></button></div>
     <div class="set-title">Language &amp; translation</div>
     <div class="set-group">
@@ -1087,6 +1099,8 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
       <button class="sheet-btn" id="setTwoStep">🔐 Two-step verification</button>
     </div>
     <button class="danger-btn" id="setLogout">Log out</button>
+    <button class="linkbtn" id="setDeleteAcc" style="display:block;margin:14px auto 0;color:var(--chili)">Delete my account</button>
+    <p class="info-note" style="text-align:center"><a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
     <input type="file" id="toneFile" accept="audio/*" hidden>
   </section>
 </div>
@@ -1197,6 +1211,7 @@ async function start() {
   aiInit();
   setTimeout(handleJoinLink, 800);
   setTimeout(handleChannelLink, 900);
+  setTimeout(() => { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
@@ -1245,6 +1260,8 @@ function connectSocket() {
   });
   // calls
   socket.on('call:incoming', onIncoming);
+  socket.on('call:waking', (x) => { if (call && call.id === x.callId) setCallStatus('Ringing… (their app is closed, waking their phone)'); });
+  socket.on('call:ringing', (x) => { if (call && call.id === x.callId) setCallStatus('Ringing…'); });
   socket.on('call:answered', onAnswered);
   socket.on('call:ice', onRemoteIce);
   socket.on('call:rejected', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' declined the call.'); });
@@ -1540,6 +1557,7 @@ function toneLabel(kind) {
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
+  const nb = $('#setNotifBox'); if (nb) { nb.innerHTML = ''; nb.append(notifSettingsRow()); }
   $('#setAppLangName').textContent = (APP_LANGS.find((x) => x[0] === appLang) || APP_LANGS[0])[1];
   const ls = $('#myLang'); ls.innerHTML = '';
   if (!me || !me.lang) ls.add(new Option('Choose…', ''));
@@ -1714,6 +1732,7 @@ function onIncoming(p) {
   $('#incoming').hidden = false; closeSettings(); if (!$('#camView').hidden) closeCamera(); stopRecorder(true); ring('incoming', p.kind);
   notify('Incoming ' + (p.kind === 'video' ? 'video' : 'voice') + ' call', call.peerName + ' is calling you');
   call.timeout = setTimeout(() => { if (call && call.state === 'incoming') { socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall('Missed call from ' + call.peerName); } }, 45000);
+  if (autoAnswer && autoAnswer === p.callId) { autoAnswer = null; setTimeout(() => $('#acceptBtn').click(), 300); }
 }
 $('#declineBtn').onclick = () => { if (!call) return; socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(''); };
 $('#acceptBtn').onclick = async () => {
@@ -3482,6 +3501,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  install: '<svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 7v8M9 12l3 3 3-3"/></svg>',
   community: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
   channel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>',
   biz: '<svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/><path d="M10 21v-5h4v5"/></svg>',
@@ -3522,6 +3542,7 @@ function openMainMenu(btn) {
   list.append(el('hr'));
   item('lock', i18n('appLock'), openLockSettings);
   item('settings', i18n('settings'), openSettings);
+  if (!inApp()) item('install', 'Install Maata app', installApp);
   item('lang', i18n('appLang'), openAppLanguage);
   item('logout', i18n('logout'), () => { if (confirm('Log out of Maata on this device?')) logout(); }, true);
   menu.append(list); document.body.append(shade, menu); menuEls = [shade, menu];
@@ -5444,6 +5465,87 @@ socket_ready_hooks.push(() => {
 });
 async function handleChannelLink() { const m = /#channel=([\w-]+)/.exec(location.hash); if (!m) return; history.replaceState(null, '', location.pathname); setTab('status'); openChannel(m[1]); }
 
+// ================= App install + notifications when Maata is closed =================
+let installEvt = null, autoAnswer = null;
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
+if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (me) renderNotifBanner(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('Maata app installed 🦜'); });
+const inApp = () => matchMedia('(display-mode: standalone)').matches || document.referrer.startsWith('android-app://');
+function b64ToBytes(b) { const p = '='.repeat((4 - (b.length % 4)) % 4), s2 = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s2, (c) => c.charCodeAt(0)); }
+async function enablePush(silent) {
+  if (!pushSupported()) { if (!silent) toast('This browser cannot show notifications when Maata is closed. Install the Maata app.'); return false; }
+  try {
+    const perm = silent ? Notification.permission : await Notification.requestPermission();
+    if (perm !== 'granted') { if (!silent) toast('Notifications are blocked. Allow them in your browser or phone settings.'); return false; }
+    const reg = await navigator.serviceWorker.ready;
+    const { key } = await api('/api/push/key'); if (!key) return false;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+    await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON() }) });
+    renderNotifBanner(); if (!silent) toast('🔔 Notifications on: you will get messages and calls even when Maata is closed');
+    return true;
+  } catch (e) { if (!silent) toast('Could not turn on notifications: ' + e.message); return false; }
+}
+function renderNotifBanner() {
+  let b = $('#notifBanner');
+  const need = pushSupported() && Notification.permission === 'default' && store.get('maata_notif_later') !== '1';
+  const canInstall = !!installEvt && !inApp() && store.get('maata_install_later') !== '1';
+  if (!need && !canInstall) { if (b) b.remove(); return; }
+  if (!b) { b = el('div', 'notice notif-banner'); b.id = 'notifBanner'; $('#contacts').before(b); }
+  b.innerHTML = '';
+  const t = el('p', null, need ? '🔔 Turn on notifications to get messages and calls even when Maata is closed.' : '📲 Install the Maata app on your phone for the full app experience.');
+  const go = el('button', 'nb-go', need ? 'Turn on' : 'Install'), later = el('button', 'nb-later', 'Later');
+  go.onclick = () => (need ? enablePush(false) : installApp());
+  later.onclick = () => { store.set(need ? 'maata_notif_later' : 'maata_install_later', '1'); renderNotifBanner(); };
+  b.append(t, go, later);
+}
+async function installApp() {
+  if (!installEvt) return toast(/iPhone|iPad/.test(navigator.userAgent) ? 'On iPhone: tap Share ⬆️ then "Add to Home Screen".' : 'Open the ⋮ browser menu and choose "Install app" / "Add to Home screen".');
+  installEvt.prompt(); const r = await installEvt.userChoice; installEvt = null; renderNotifBanner();
+  if (r.outcome === 'accepted') toast('Installing Maata… 🦜');
+}
+function handleAppLink(url) {
+  const h = (url.split('#')[1] || '');
+  const m = /^(chat|answer|tab)=(.+)$/.exec(h); if (!m) return;
+  history.replaceState(null, '', location.pathname);
+  if (m[1] === 'chat') { setTab('chats'); if (userById(m[2])) openChat(m[2]); else setTimeout(() => userById(m[2]) && openChat(m[2]), 1500); }
+  else if (m[1] === 'tab') setTab(m[2]);
+  else if (m[1] === 'answer') { autoAnswer = m[2]; if (call && call.id === autoAnswer && call.state === 'incoming') $('#acceptBtn').click(); }
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.maata === 'open') handleAppLink(e.data.url); });
+function notifSettingsRow() {
+  const box = el('div', 'set-group'); box.style.marginTop = '4px';
+  const r = el('div', 'set-row'), t = el('div', 'txt');
+  const state = !pushSupported() ? 'Not available in this browser' : Notification.permission === 'granted' ? 'On ✓' : Notification.permission === 'denied' ? 'Blocked in browser settings' : 'Off';
+  t.append(el('b', null, '🔔 Notifications when Maata is closed'), el('small', null, state));
+  r.append(t);
+  if (pushSupported() && Notification.permission !== 'denied') {
+    const b = el('button', 'linkbtn', Notification.permission === 'granted' ? 'Test' : 'Turn on');
+    b.onclick = async () => { if (Notification.permission !== 'granted') { await enablePush(false); closeSettings(); return; } const r2 = await api('/api/push/test', { method: 'POST' }).catch(() => ({ sent: 0 })); toast(r2.sent ? 'Test notification sent 🔔' : 'No device registered yet. Tap Turn on again.'); };
+    r.append(b);
+  }
+  box.append(r);
+  if (!inApp()) { const r3 = el('div', 'set-row'), t3 = el('div', 'txt'); t3.append(el('b', null, '📲 Install Maata app'), el('small', null, 'Home screen icon, full screen, faster')); const b3 = el('button', 'linkbtn', 'Install'); b3.onclick = installApp; r3.append(t3, b3); box.append(r3); }
+  return box;
+}
+
+$('#setDeleteAcc').onclick = () => {
+  closeSettings();
+  sheet('Delete my account', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', '⚠️ This permanently deletes your Maata account, chats, photos, videos, statuses, business profile, catalogue and ads. It cannot be undone.'));
+    const l = el('label'); l.append(el('span', null, 'Enter your password to confirm')); const pw = el('input'); pw.type = 'password'; pw.autocomplete = 'current-password'; l.append(pw);
+    const go = el('button', 'danger-btn', 'Delete my account permanently');
+    go.onclick = async () => {
+      if (!pw.value) return toast('Enter your password.');
+      if (!confirm('Delete your Maata account forever?')) return;
+      try { await api('/api/me/delete', { method: 'POST', body: JSON.stringify({ password: pw.value }) }); store.del('maata_token'); toast('Your account was deleted.'); setTimeout(() => location.reload(), 1200); }
+      catch (e) { toast(e.message); }
+    };
+    box.append(l, go); list.append(box); pw.focus();
+  });
+};
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

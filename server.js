@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -197,6 +197,124 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '100kb' }));
 // HTML files can sit in a "public" folder or right next to server.js (easier to upload from a phone)
 const PAGES = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
+// ---------- Installable app (PWA / Play Store TWA) + push notifications when the app is closed ----------
+const webpush = require('web-push');
+const APP_ORIGIN = (process.env.APP_ORIGIN || 'https://maataapp.com').replace(/\/$/, '');
+let VAPID = null;
+async function setupPush() {
+  let pub = (process.env.VAPID_PUBLIC_KEY || '').trim(), priv = (process.env.VAPID_PRIVATE_KEY || '').trim();
+  if (!pub || !priv) { // keep one key pair forever (stored in the database), or every phone would have to subscribe again
+    let m = db.meta.find((x) => x.id === 'vapid');
+    if (!m) { const k = webpush.generateVAPIDKeys(); m = { id: 'vapid', publicKey: k.publicKey, privateKey: k.privateKey, createdAt: now() }; db.meta.push(m); save(); }
+    pub = m.publicKey; priv = m.privateKey;
+  }
+  webpush.setVapidDetails('mailto:' + (process.env.PUSH_CONTACT || 'support@maataapp.com'), pub, priv);
+  VAPID = { publicKey: pub };
+  console.log('[push] Notifications when the app is closed: on');
+}
+async function pushTo(user, payload, opts = {}) {
+  if (!VAPID || !user || !(user.pushSubs || []).length) return 0;
+  let sent = 0; const dead = [];
+  await Promise.all(user.pushSubs.map(async (s) => {
+    try { await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), { TTL: opts.ttl || 3600, urgency: opts.urgency || 'normal', topic: opts.topic }); sent++; }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) dead.push(s.endpoint); else console.error('[push]', e.statusCode || '', e.body || e.message); }
+  }));
+  if (dead.length) { user.pushSubs = user.pushSubs.filter((s) => !dead.includes(s.endpoint)); save(); }
+  return sent;
+}
+const hasPush = (u) => !!(VAPID && u && (u.pushSubs || []).length);
+app.get('/api/push/key', auth, (req, res) => res.json({ key: VAPID ? VAPID.publicKey : null }));
+app.post('/api/push/subscribe', auth, (req, res) => {
+  const s = req.body?.subscription;
+  if (!s || typeof s.endpoint !== 'string' || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return res.status(400).json({ error: 'Bad subscription.' });
+  const list = (req.user.pushSubs || []).filter((x) => x.endpoint !== s.endpoint);
+  list.push({ endpoint: s.endpoint.slice(0, 1000), keys: { p256dh: String(s.keys.p256dh).slice(0, 200), auth: String(s.keys.auth).slice(0, 100) }, ua: clip(req.headers['user-agent'], 120), at: now() });
+  req.user.pushSubs = list.slice(-5); save(); res.json({ ok: true });
+});
+app.post('/api/push/unsubscribe', auth, (req, res) => { req.user.pushSubs = (req.user.pushSubs || []).filter((x) => x.endpoint !== String(req.body?.endpoint || '')); save(); res.json({ ok: true }); });
+app.post('/api/push/test', auth, async (req, res) => res.json({ sent: await pushTo(req.user, { type: 'test', title: 'Maata 🦜', body: 'Notifications are working!', url: '/' }) }));
+
+// Message notifications for people who are not online right now
+function previewOf(m) {
+  if (m.type === 'text') return m.text.slice(0, 120);
+  return ({ image: '📷 Photo', video: '🎥 Video', audio: m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio', file: '📄 Document', contact: '👤 Contact', poll: '📊 Poll', event: '📅 Event', location: '📍 Location', gif: '🎞️ GIF', sticker: '💟 Sticker', product: '🛍️ Product' })[m.type] || 'New message';
+}
+function notifyOffline(fromUser, m) {
+  if (!VAPID || m.type === 'system' || m.viewOnce) return;
+  const body = m.viewOnce ? '① View once' : previewOf(m);
+  if (m.group) {
+    const g = groupById(m.group); if (!g) return;
+    for (const x of g.members) {
+      if (x.id === fromUser.id || isOnline(x.id)) continue;
+      const u = userById(x.id); if (!u || (u.muted || []).includes('g:' + g.id)) continue;
+      const saved = contactsOf(u).find((c) => c.id === fromUser.id);
+      pushTo(u, { type: 'msg', title: g.name, body: (saved ? saved.name : fromUser.name) + ': ' + body, tag: 'g:' + g.id, url: '/#chat=g:' + g.id });
+    }
+  } else {
+    const u = userById(m.to); if (!u || isOnline(u.id) || (u.muted || []).includes(fromUser.id)) return;
+    const saved = contactsOf(u).find((c) => c.id === fromUser.id);
+    pushTo(u, { type: 'msg', title: saved ? saved.name : fromUser.name + ' (' + fromUser.phone + ')', body, tag: fromUser.id, url: '/#chat=' + fromUser.id });
+  }
+}
+// Calls to someone whose app is closed: wake the phone with a push, keep the call waiting ~40 s
+const pendingRings = new Map(); // userId -> { offer, ice: [], until, callId, from }
+app.get('/manifest.webmanifest', (req, res) => {
+  res.type('application/manifest+json').json({
+    id: '/', name: 'Maata — free calls & messages', short_name: 'Maata', description: 'Free voice calls, video calls and chat with live translation.',
+    start_url: '/?source=app', scope: '/', display: 'standalone', orientation: 'portrait', background_color: '#0A3A47', theme_color: '#0F4C5C', lang: 'en-IN', categories: ['communication', 'social'],
+    icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
+    shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] }],
+  });
+});
+const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png'];
+app.get('/icons/:f', (req, res) => {
+  if (!ICON_FILES.includes(req.params.f)) return res.status(404).end();
+  const p1 = path.join(PAGES, 'icons', req.params.f), p2 = path.join(PAGES, req.params.f);
+  const f = fs.existsSync(p1) ? p1 : fs.existsSync(p2) ? p2 : null;
+  if (!f) return res.status(404).end();
+  res.setHeader('Cache-Control', 'public, max-age=604800'); res.sendFile(f);
+});
+app.get('/favicon.ico', (req, res) => res.redirect(301, '/icons/icon-192.png'));
+// Play Store app (TWA): proves maataapp.com and the Android app belong together, so the app opens full screen
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const pkg = (process.env.TWA_PACKAGE || '').trim(), fps = (process.env.TWA_SHA256 || '').split(',').map((x) => x.trim()).filter(Boolean);
+  res.json(pkg && fps.length ? [{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: pkg, sha256_cert_fingerprints: fps } }] : []);
+});
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript'); res.setHeader('Cache-Control', 'no-cache'); res.setHeader('Service-Worker-Allowed', '/');
+  res.send(SW_SOURCE);
+});
+const SW_SOURCE = `
+const CACHE = 'maata-shell-v1';
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icons/icon-192.png', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+// Pages: always try the network first (so updates show at once), fall back to the saved copy when offline
+self.addEventListener('fetch', (e) => {
+  const r = e.request;
+  if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
+  if (r.mode === 'navigate') { e.respondWith(fetch(r).then((res) => { const cp = res.clone(); caches.open(CACHE).then((c) => c.put('/', cp)); return res; }).catch(() => caches.match('/'))); return; }
+  if (r.url.includes('/icons/')) e.respondWith(caches.match(r).then((m) => m || fetch(r)));
+});
+self.addEventListener('push', (e) => {
+  let d = {}; try { d = e.data.json(); } catch { d = { title: 'Maata', body: e.data ? e.data.text() : '' }; }
+  const call = d.type === 'call';
+  const opts = { body: d.body || '', icon: '/icons/icon-192.png', badge: '/icons/badge-96.png', tag: d.tag || d.type || 'maata', renotify: true, data: { url: d.url || '/', type: d.type, callId: d.callId },
+    vibrate: call ? [600, 300, 600, 300, 600, 300, 600, 300, 600] : [150, 80, 150], requireInteraction: call, timestamp: Date.now(),
+    actions: call ? [{ action: 'answer', title: '📞 Answer' }, { action: 'decline', title: '✖ Decline' }] : [{ action: 'open', title: 'Open' }] };
+  e.waitUntil(self.registration.showNotification(d.title || 'Maata', opts));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const d = e.notification.data || {};
+  if (e.action === 'decline') return;
+  const url = d.type === 'call' ? '/#answer=' + d.callId : d.url || '/';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) if (new URL(c.url).origin === location.origin) { c.postMessage({ maata: 'open', url }); return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
+});`;
+
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PAGES, 'index.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(PAGES, 'admin.html')));
 const server = http.createServer(app);
@@ -702,6 +820,7 @@ function deliverMessage(fromUser, target, fields, exceptSocketId) {
     const m = { id: newId(), from: fromUser.id, to: target.id, group: g.id, ts: now(), status: anyOn ? 'delivered' : 'sent', readBy: {}, type: 'text', text: '', ...(ttl ? { expiresAt: now() + ttl * 1000 } : {}), ...fields };
     db.messages.push(m); save();
     (exceptSocketId ? io.to('grp:' + g.id).except(exceptSocketId) : io.to('grp:' + g.id)).emit('msg:new', m);
+    notifyOffline(fromUser, m);
     if (m.type !== 'system') feed('message', `${fromUser.name} → group ${g.name}: ${m.type === 'text' ? 'message' : m.type}`);
     return m;
   }
@@ -710,6 +829,7 @@ function deliverMessage(fromUser, target, fields, exceptSocketId) {
   const m = { id: newId(), from: fromUser.id, to: target.id, ts: now(), status: online2 ? 'delivered' : 'sent', ...(online2 ? { deliveredAt: now() } : {}), ...(ttl ? { expiresAt: now() + ttl * 1000 } : {}), type: 'text', text: '', ...fields };
   db.messages.push(m); save();
   io.to('user:' + target.id).emit('msg:new', m);
+  if (!online2) notifyOffline(fromUser, m);
   (exceptSocketId ? io.to('user:' + fromUser.id).except(exceptSocketId) : io.to('user:' + fromUser.id)).emit('msg:new', m);
   feed('message', `${fromUser.name} → ${target.name}: ${m.type === 'text' ? 'message' : m.type}`);
   return m;
@@ -1972,10 +2092,9 @@ app.post('/admin/api/users/:id/logout', adminAuth, (req, res) => {
   save();
   res.json({ ok: true });
 });
-app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
-  const u = userById(req.params.id);
-  if (!u) return res.status(404).json({ error: 'Customer not found.' });
-  kick(u.id, 'This account was deleted.');
+// Removes a customer and everything they own (used by admins, and by customers deleting their own account)
+function deleteAccountData(u, why) {
+  kick(u.id, why);
   const removedWatchers = watchersOf(u.id);
   db.users = db.users.filter((x) => x.id !== u.id);
   for (const g of db.groups) g.members = g.members.filter((x) => x.id !== u.id);
@@ -1985,9 +2104,57 @@ app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
   db.messages = db.messages.filter((m) => m.from !== u.id && m.to !== u.id);
   for (const st of db.statuses.filter((x) => x.userId === u.id)) if (st.type !== 'text') deleteMedia(st.id);
   db.statuses = db.statuses.filter((x) => x.userId !== u.id);
-  audit(req.admin, 'delete', u.name + ' (' + u.phone + ')');
+  for (const p of db.products.filter((x) => x.ownerId === u.id)) if (p.photo) deleteChatFile(p.photo);
+  db.products = db.products.filter((x) => x.ownerId !== u.id);
+  db.ads = db.ads.filter((x) => x.ownerId !== u.id);
+  db.aichats = db.aichats.filter((x) => x.userId !== u.id);
+  for (const c of db.channels) { if (c.ownerId === u.id) c.removed = true; c.followers = (c.followers || []).filter((x) => x !== u.id); }
+  db.logins = db.logins.filter((x) => x.userId !== u.id);
   save();
   for (const w of removedWatchers) io.to('user:' + w).emit('user:removed', { id: u.id });
+}
+// Google Play requires that people can delete their own account (in the app, and from a web page)
+app.post('/api/me/delete', auth, rateLimit, async (req, res) => {
+  const ok = await bcrypt.compare(String(req.body?.password || ''), req.user.passHash || '');
+  if (!ok) return res.status(400).json({ error: 'Wrong password.' });
+  audit('customer:' + req.user.phone, 'self-delete', req.user.name + ' (' + req.user.phone + ')');
+  deleteAccountData(req.user, 'Your account was deleted.');
+  res.json({ ok: true });
+});
+const PAGE_CSS = 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:760px;margin:0 auto;padding:28px 20px 60px;color:#1C2230;line-height:1.65}h1{color:#0F4C5C}h2{color:#0F4C5C;margin-top:28px;font-size:20px}a{color:#11606F}.top{display:flex;align-items:center;gap:12px}.top img{width:56px;height:56px;border-radius:14px}small{color:#5B6474}';
+app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy · Maata</title><style>${PAGE_CSS}</style></head><body>
+<div class="top"><img src="/icons/icon-192.png" alt=""><h1>Maata Privacy Policy</h1></div><small>Last updated: ${new Date().toISOString().slice(0, 10)} · Contact: ${process.env.PUSH_CONTACT || 'support@maataapp.com'}</small>
+<p>Maata ("we") provides free voice calls, video calls and messaging. This policy explains what we collect, why, and your choices.</p>
+<h2>What we collect</h2><ul>
+<li><b>Account:</b> your name, mobile number and a securely hashed password.</li>
+<li><b>Contacts:</b> numbers you save in Maata. If you choose to sync or import phone contacts, numbers are only checked against Maata users; the full list stays on your device.</li>
+<li><b>Messages and files:</b> chats, photos, videos, voice messages and documents you send are stored on our servers so they can be delivered and shown on your devices. Maata is not end-to-end encrypted. Disappearing and view-once messages are deleted as described in the app.</li>
+<li><b>Calls:</b> calls connect directly between devices or through our media server; we keep call history (who, when, how long), not call audio or video. If you use live call translation, speech is sent to Google Cloud to be transcribed and translated.</li>
+<li><b>Status, channels, communities, business profile, catalogue and ads</b> you create.</li>
+<li><b>Location:</b> only when you choose to share a location or take a GPS photo.</li>
+<li><b>Maata AI:</b> questions you send to Maata AI, text you ask it to rewrite, and (if a business turns on AI auto-reply) customer messages to that business are sent to Google Gemini to create answers.</li>
+<li><b>Device data:</b> login times, approximate device type, and a notification token so we can alert you about messages and calls.</li></ul>
+<h2>How we use it</h2><p>To deliver messages and calls, keep accounts secure, prevent spam and abuse, review reports, and improve Maata. We do not sell your personal data. We do not show ads based on your chats.</p>
+<h2>Who we share it with</h2><p>Service providers that run Maata for us: Render (hosting), MongoDB Atlas (database), Cloudflare (domain and file storage), Google (notifications, translation, speech, Gemini AI), and LiveKit (group call media, if enabled). We may share data when required by Indian law.</p>
+<h2>Your choices</h2><ul><li>Block or report anyone; control who sees your status.</li><li>Delete messages, chats or your status at any time.</li><li><b>Delete your account:</b> in the app go to ⋮ → Settings → Delete my account, or visit <a href="/delete-account">maataapp.com/delete-account</a>. Your account, messages, statuses, products and files are deleted from our active systems.</li></ul>
+<h2>Children</h2><p>Maata is not intended for children under 13.</p>
+<h2>Changes</h2><p>We will update this page when the policy changes.</p></body></html>`));
+app.get('/delete-account', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your Maata account</title><style>${PAGE_CSS}input,button{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid #D5DCE0;width:100%;box-sizing:border-box;margin:6px 0}button{background:#C8413A;color:#fff;border:0;font-weight:700;cursor:pointer}#msg{margin-top:10px;font-weight:600}</style></head><body>
+<div class="top"><img src="/icons/icon-192.png" alt=""><h1>Delete your Maata account</h1></div>
+<p>This permanently deletes your Maata account, chats, files, statuses, business profile, catalogue and ads. It cannot be undone.</p>
+<p>In the app: <b>⋮ → Settings → Delete my account</b>. Or enter your mobile number and password here:</p>
+<form id="f"><input id="ph" inputmode="tel" placeholder="Mobile number" required><input id="pw" type="password" placeholder="Password" required><button>Delete my account permanently</button></form><div id="msg" role="status"></div>
+<script>document.getElementById('f').onsubmit=async(e)=>{e.preventDefault();const m=document.getElementById('msg');if(!confirm('Delete your Maata account forever?'))return;
+try{const l=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:ph.value,password:pw.value})}).then(r=>r.json());
+if(l.error)throw new Error(l.error);if(l.needPin)throw new Error('Two-step verification is on: please delete the account from inside the Maata app.');
+const d=await fetch('/api/me/delete',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+l.token},body:JSON.stringify({password:pw.value})}).then(r=>r.json());
+if(d.error)throw new Error(d.error);m.style.color='#2E8B57';m.textContent='Your account has been deleted.';f.remove();}catch(er){m.style.color='#C8413A';m.textContent=er.message;}};</script></body></html>`));
+
+app.delete('/admin/api/users/:id', adminAuth, (req, res) => {
+  const u = userById(req.params.id);
+  if (!u) return res.status(404).json({ error: 'Customer not found.' });
+  deleteAccountData(u, 'This account was deleted.');
+  audit(req.admin, 'delete', u.name + ' (' + u.phone + ')');
   res.json({ ok: true });
 });
 
@@ -2123,6 +2290,13 @@ io.on('connection', (socket) => {
 
   const wasOnline = isOnline(me);
   online.set(me, (online.get(me) || 0) + 1);
+  const waiting = pendingRings.get(me);
+  if (waiting) {
+    if (waiting.until > now() && activeCalls.has(waiting.callId)) {
+      setTimeout(() => { socket.emit('call:incoming', waiting.offer); for (const c of waiting.ice) socket.emit('call:ice', c); io.to('user:' + waiting.from).emit('call:ringing', { callId: waiting.callId }); }, 1200);
+    }
+    pendingRings.delete(me);
+  }
   if (!wasOnline) toWatchers(me, 'presence', { userId: me, online: true });
   pushLive();
 
@@ -2349,9 +2523,17 @@ io.on('connection', (socket) => {
     if (!db.calls.some((c) => c.id === callId)) {
       const rec = { id: callId, from: me, to: p.to, kind: p.kind === 'video' ? 'video' : 'voice', status: 'ringing', startedAt: now(), duration: 0 };
       db.calls.push(rec); activeCalls.set(callId, rec); save(); pushLive();
-      if (!isOnline(p.to)) finishCall(rec, 'unavailable');
+      if (!isOnline(p.to) && !hasPush(target)) finishCall(rec, 'unavailable');
     }
-    if (!isOnline(p.to)) return socket.emit('call:unavailable', { callId: p.callId });
+    if (!isOnline(p.to)) {
+      if (!hasPush(target)) return socket.emit('call:unavailable', { callId: p.callId });
+      // their app is closed: wake the phone and keep the offer until they open Maata (40 s)
+      pendingRings.set(p.to, { offer: clean(p), ice: [], until: now() + 40000, callId, from: me });
+      const saved = contactsOf(target).find((c) => c.id === me);
+      pushTo(target, { type: 'call', callId, title: (p.kind === 'video' ? '🎥 Video call' : '📞 Voice call') + ' · Maata', body: (saved ? saved.name : socket.user.name + ' (' + socket.user.phone + ')') + ' is calling you', tag: 'call-' + callId }, { ttl: 40, urgency: 'high', topic: 'call' });
+      socket.emit('call:waking', { callId });
+      return;
+    }
     io.to(room(p.to)).emit('call:incoming', clean(p));
   });
   socket.on('call:answer', (p) => {
@@ -2368,7 +2550,11 @@ io.on('connection', (socket) => {
     socket.to(room(me)).emit('call:taken-elsewhere', { callId: p.callId });
   });
   socket.on('call:busy', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'busy'); io.to(room(p.to)).emit('call:busy', clean(p)); });
-  socket.on('call:ice', (p) => { if (valid(p)) io.to(room(p.to)).emit('call:ice', clean(p)); });
+  socket.on('call:ice', (p) => {
+    if (!valid(p)) return;
+    const pr = pendingRings.get(p.to); if (pr && pr.callId === String(p.callId) && !isOnline(p.to)) { if (pr.ice.length < 60) pr.ice.push(clean(p)); return; }
+    io.to(room(p.to)).emit('call:ice', clean(p));
+  });
   // Live call translation: the speaker's browser turns speech into text, the server translates it
   // into the listener's language, and the listener's browser shows subtitles and speaks it aloud.
   // Languages always come from each person's own Settings (stored on the server), so a Telugu speaker's
@@ -2406,7 +2592,12 @@ io.on('connection', (socket) => {
     } finally { sttBusy--; }
   });
 
-  socket.on('call:end', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'missed'); io.to(room(p.to)).emit('call:ended', clean(p)); });
+  socket.on('call:end', (p) => {
+    if (!valid(p)) return;
+    const pr = pendingRings.get(p.to);
+    if (pr && pr.callId === String(p.callId)) { pendingRings.delete(p.to); const t = userById(p.to); const saved = t && contactsOf(t).find((c) => c.id === me); pushTo(t, { type: 'missed', title: 'Missed call · Maata', body: (saved ? saved.name : socket.user.name) + ' called you', tag: 'call-' + p.callId, url: '/#chat=' + me }); }
+    finishCall(recFor(p), 'missed'); io.to(room(p.to)).emit('call:ended', clean(p));
+  });
 
   // ----- group calls (everyone connects to everyone; up to GCALL_MAX people) -----
   function gcallState(c) { io.to('grp:' + c.gid).emit('gcall:state', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, participants: [...c.parts.keys()] }); }
@@ -2473,7 +2664,7 @@ io.on('connection', (socket) => {
 });
 
 loadDb()
-  .then(() => { cleanStatuses(); cleanExpiredMessages(); })
+  .then(() => { cleanStatuses(); cleanExpiredMessages(); return setupPush().catch((e) => console.error('[push] setup failed', e.message)); })
   .then(() => server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`)))
   .catch((e) => {
     console.error('[db] Could not connect to MongoDB. Check MONGODB_URI, the database password, and Network Access (allow 0.0.0.0/0).');
