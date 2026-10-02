@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1012,6 +1012,7 @@ function groupView(viewer, g, extra = {}) {
     photo: !!g.photo, photoV: g.photoV || 0, memberCount: g.members.length, myRole: me2 ? me2.role : null,
     members: g.members.map((x) => { const u = userById(x.id); return { id: x.id, name: u ? saved.get(x.id) || u.name : 'Deleted user', phone: u ? u.phone : '', role: x.role, lang: u ? u.lang || null : null }; }),
     settings: g.settings, createdBy: g.createdBy, createdAt: g.createdAt, inContacts: true, online: false,
+    community: g.communityId && db.communities.find((x) => x.id === g.communityId) ? { id: g.communityId, name: db.communities.find((x) => x.id === g.communityId).name, announce: !!g.isAnnounce } : null,
     ...(me2 && me2.role === 'admin' ? { invite: g.invite } : {}),
     activeCall: c ? { id: c.id, kind: c.kind, count: c.parts.size } : null,
     lastMessage: null, unread: 0, ...extra,
@@ -1030,7 +1031,10 @@ function groupsFor(viewer) {
 }
 const joinGroupRoom = (uid, gid) => io.in('user:' + uid).socketsJoin('grp:' + gid);
 const leaveGroupRoom = (uid, gid) => io.in('user:' + uid).socketsLeave('grp:' + gid);
-function groupChanged(g, extraIds = []) { io.to('grp:' + g.id).emit('group:update', { id: 'g:' + g.id }); for (const id of extraIds) io.to('user:' + id).emit('group:update', { id: 'g:' + g.id }); }
+function groupChanged(g, extraIds = []) {
+  io.to('grp:' + g.id).emit('group:update', { id: 'g:' + g.id }); for (const id of extraIds) io.to('user:' + id).emit('group:update', { id: 'g:' + g.id });
+  if (g.communityId && !g.isAnnounce) { const c = db.communities.find((x) => x.id === g.communityId); if (c) syncCommunity(c); } // new group members join the community's announcements
+}
 function sysMsg(g, actor, text) { return deliverMessage(actor, { id: 'g:' + g.id, name: g.name, isGroup: true }, { type: 'system', text }, null); }
 function groupFor(req, res, needAdmin) {
   const g = groupById(req.params.id);
@@ -1549,6 +1553,213 @@ app.get('/api/ads/feed', auth, (req, res) => {
 });
 app.post('/api/ads/:id/click', auth, (req, res) => { const a = db.ads.find((x) => x.id === req.params.id); if (a && a.ownerId !== req.user.id) { a.clicks = (a.clicks || 0) + 1; save(); } res.json({ ok: true }); });
 
+// ---------- Communities: many groups under one roof + an Announcements group ----------
+const commById = (id) => db.communities.find((c) => c.id === id);
+const commAdmin = (c, uid) => !!c && (c.ownerId === uid || (c.admins || []).includes(uid));
+function commMembers(c) { const s = new Set([c.ownerId, ...(c.admins || [])]); for (const gid of c.groups) { const g = groupById(gid); if (g) g.members.forEach((m) => s.add(m.id)); } return s; }
+const commMember = (c, uid) => commMembers(c).has(uid);
+// Everyone in any group of the community is also in its Announcements group
+function syncCommunity(c) {
+  const ann = groupById(c.announceId); if (!ann) return;
+  let added = 0;
+  for (const uid of commMembers(c)) if (!gMember(ann, uid) && userById(uid)) { ann.members.push({ id: uid, role: commAdmin(c, uid) ? 'admin' : 'member', joinedAt: now() }); joinGroupRoom(uid, ann.id); added++; }
+  if (added) { save(); groupChanged(ann); }
+}
+function commView(viewer, c) {
+  const members = commMembers(c);
+  return {
+    id: c.id, name: c.name, description: c.description || '', ownerId: c.ownerId, isAdmin: commAdmin(c, viewer.id), memberCount: members.size, createdAt: c.createdAt,
+    announce: c.announceId ? { id: 'g:' + c.announceId, joined: gMember(groupById(c.announceId), viewer.id) } : null,
+    groups: c.groups.map((gid) => { const g = groupById(gid); return g ? { id: 'g:' + g.id, name: g.name, memberCount: g.members.length, joined: gMember(g, viewer.id), description: g.description || '' } : null; }).filter(Boolean),
+  };
+}
+app.get('/api/communities', auth, (req, res) => res.json(db.communities.filter((c) => commMember(c, req.user.id)).map((c) => commView(req.user, c))));
+app.post('/api/communities', auth, (req, res) => {
+  const name = clip(req.body?.name, 60); if (!name) return res.status(400).json({ error: 'Give the community a name.' });
+  if (db.communities.filter((c) => c.ownerId === req.user.id).length >= 10) return res.status(400).json({ error: 'You can create up to 10 communities.' });
+  const gids = [...new Set((Array.isArray(req.body?.groups) ? req.body.groups : []).map((x) => String(x).replace(/^g:/, '')))]
+    .filter((gid) => { const g = groupById(gid); return g && gAdmin(g, req.user.id) && !g.communityId; }).slice(0, 50);
+  const c = { id: newId(), name, description: clip(req.body?.description, 500), ownerId: req.user.id, admins: [], groups: gids, createdAt: now() };
+  const ann = { id: newId(), name: name + ' · Announcements', description: 'Announcements for everyone in ' + name, createdBy: req.user.id, createdAt: now(),
+    members: [{ id: req.user.id, role: 'admin', joinedAt: now() }], settings: { onlyAdminsMessage: true, onlyAdminsEdit: true }, invite: inviteCode(), communityId: c.id, isAnnounce: true };
+  db.groups.push(ann); c.announceId = ann.id;
+  for (const gid of gids) groupById(gid).communityId = c.id;
+  db.communities.push(c); save(); joinGroupRoom(req.user.id, ann.id);
+  syncCommunity(c);
+  sysMsg(ann, req.user, req.user.name + ' created the community "' + name + '"');
+  for (const gid of gids) groupChanged(groupById(gid));
+  res.json(commView(req.user, c));
+});
+function commFor(req, res, needAdmin) {
+  const c = commById(req.params.id);
+  if (!c || !commMember(c, req.user.id)) { res.status(404).json({ error: 'Community not found.' }); return null; }
+  if (needAdmin && !commAdmin(c, req.user.id)) { res.status(403).json({ error: 'Only community admins can do this.' }); return null; }
+  return c;
+}
+app.put('/api/communities/:id', auth, (req, res) => {
+  const c = commFor(req, res, true); if (!c) return;
+  if (req.body?.name !== undefined) { const n = clip(req.body.name, 60); if (n) c.name = n; }
+  if (req.body?.description !== undefined) c.description = clip(req.body.description, 500);
+  save(); res.json(commView(req.user, c));
+});
+app.post('/api/communities/:id/groups', auth, (req, res) => {
+  const c = commFor(req, res, true); if (!c) return;
+  if (c.groups.length >= 50) return res.status(400).json({ error: 'A community can have up to 50 groups.' });
+  let g;
+  if (req.body?.newName) {
+    const n = clip(req.body.newName, 60); if (!n) return res.status(400).json({ error: 'Give the group a name.' });
+    g = { id: newId(), name: n, description: '', createdBy: req.user.id, createdAt: now(), members: [{ id: req.user.id, role: 'admin', joinedAt: now() }], settings: { onlyAdminsMessage: false, onlyAdminsEdit: false }, invite: inviteCode() };
+    db.groups.push(g); joinGroupRoom(req.user.id, g.id); sysMsg(g, req.user, req.user.name + ' created the group "' + n + '" in ' + c.name);
+  } else {
+    g = groupById(String(req.body?.groupId || '').replace(/^g:/, ''));
+    if (!g || !gAdmin(g, req.user.id)) return res.status(400).json({ error: 'You must be an admin of that group.' });
+    if (g.communityId) return res.status(400).json({ error: 'That group is already in a community.' });
+  }
+  g.communityId = c.id; c.groups.push(g.id); save(); syncCommunity(c); groupChanged(g);
+  sysMsg(groupById(c.announceId), req.user, req.user.name + ' added the group "' + g.name + '"');
+  res.json(commView(req.user, c));
+});
+app.delete('/api/communities/:id/groups/:gid', auth, (req, res) => {
+  const c = commFor(req, res, true); if (!c) return;
+  const gid = req.params.gid.replace(/^g:/, ''); c.groups = c.groups.filter((x) => x !== gid);
+  const g = groupById(gid); if (g) { delete g.communityId; groupChanged(g); }
+  save(); res.json(commView(req.user, c));
+});
+// Any community member can join any group inside it (no invite needed)
+app.post('/api/communities/:id/groups/:gid/join', auth, (req, res) => {
+  const c = commFor(req, res); if (!c) return;
+  const g = groupById(req.params.gid.replace(/^g:/, ''));
+  if (!g || g.communityId !== c.id) return res.status(404).json({ error: 'Group not found.' });
+  if (!gMember(g, req.user.id)) {
+    if (g.members.length >= GROUP_MAX) return res.status(400).json({ error: 'This group is full.' });
+    g.members.push({ id: req.user.id, role: 'member', joinedAt: now(), via: 'community' }); joinGroupRoom(req.user.id, g.id);
+    sysMsg(g, req.user, req.user.name + ' joined from the community'); save(); groupChanged(g);
+  }
+  res.json(groupView(req.user, g));
+});
+app.delete('/api/communities/:id', auth, (req, res) => {
+  const c = commById(req.params.id);
+  if (!c || c.ownerId !== req.user.id) return res.status(403).json({ error: 'Only the owner can deactivate the community.' });
+  for (const gid of c.groups) { const g = groupById(gid); if (g) { delete g.communityId; groupChanged(g); } }
+  const ann = groupById(c.announceId); if (ann) { ann.isAnnounce = false; delete ann.communityId; sysMsg(ann, req.user, 'The community "' + c.name + '" was deactivated'); }
+  db.communities = db.communities.filter((x) => x.id !== c.id); save(); res.json({ ok: true });
+});
+
+// ---------- Channels: one-way updates to followers ----------
+const chById = (id) => db.channels.find((c) => c.id === id && !c.removed);
+const chAdmin = (c, uid) => !!c && (c.ownerId === uid || (c.admins || []).includes(uid));
+function chView(viewer, c) {
+  const posts = db.channelPosts.filter((p) => p.channelId === c.id);
+  const seen = (viewer.chSeen || {})[c.id] || 0, last = posts[posts.length - 1];
+  return { id: c.id, name: c.name, description: c.description || '', ownerId: c.ownerId, ownerName: userById(c.ownerId)?.name || '', isAdmin: chAdmin(c, viewer.id),
+    following: (c.followers || []).includes(viewer.id), followers: (c.followers || []).length, photo: !!c.photo, photoV: c.photoV || 0, createdAt: c.createdAt,
+    lastPost: last ? { text: last.text || (last.type === 'image' ? '📷 Photo' : last.type === 'video' ? '🎥 Video' : ''), ts: last.ts } : null,
+    unread: posts.filter((p) => p.ts > seen && p.from !== viewer.id).length, muted: (viewer.chMuted || []).includes(c.id) };
+}
+function postView(viewer, p, admin) {
+  const rs = Object.values(p.reactions || {}), counts = {};
+  for (const e of rs) counts[e] = (counts[e] || 0) + 1;
+  return { id: p.id, channelId: p.channelId, ts: p.ts, type: p.type, text: p.text || '', file: p.file ? { id: p.file.id, mime: p.file.mime, size: p.file.size, name: p.file.name } : null,
+    reactions: counts, total: rs.length, mine: (p.reactions || {})[viewer.id] || null, editedAt: p.editedAt || null, ...(admin ? { views: (p.viewers || []).length } : {}) };
+}
+app.get('/api/channels', auth, (req, res) => {
+  const q = clip(req.query.q, 60).toLowerCase();
+  res.json(db.channels.filter((c) => !c.removed && (!q || c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q)))
+    .sort((a, b) => (b.followers || []).length - (a.followers || []).length).slice(0, 50).map((c) => chView(req.user, c)));
+});
+app.get('/api/channels/mine', auth, (req, res) => res.json(db.channels.filter((c) => !c.removed && ((c.followers || []).includes(req.user.id) || chAdmin(c, req.user.id))).map((c) => chView(req.user, c)).sort((a, b) => (b.lastPost?.ts || b.createdAt) - (a.lastPost?.ts || a.createdAt))));
+app.get('/api/channels/:id', auth, (req, res) => { const c = chById(req.params.id); if (!c) return res.status(404).json({ error: 'Channel not found.' }); res.json(chView(req.user, c)); });
+app.post('/api/channels', auth, (req, res) => {
+  if (db.channels.filter((c) => c.ownerId === req.user.id && !c.removed).length >= 5) return res.status(400).json({ error: 'You can create up to 5 channels.' });
+  const name = clip(req.body?.name, 60); if (!name) return res.status(400).json({ error: 'Give your channel a name.' });
+  const c = { id: newId(), name, description: clip(req.body?.description, 500), ownerId: req.user.id, admins: [], followers: [req.user.id], createdAt: now() };
+  db.channels.push(c); save(); io.in('user:' + req.user.id).socketsJoin('ch:' + c.id);
+  feed('channel', req.user.name + ' created channel "' + name + '"');
+  res.json(chView(req.user, c));
+});
+app.put('/api/channels/:id', auth, (req, res) => {
+  const c = chById(req.params.id); if (!chAdmin(c, req.user.id)) return res.status(403).json({ error: 'Only channel admins can do this.' });
+  if (req.body?.name !== undefined) { const n = clip(req.body.name, 60); if (n) c.name = n; }
+  if (req.body?.description !== undefined) c.description = clip(req.body.description, 500);
+  save(); res.json(chView(req.user, c));
+});
+app.delete('/api/channels/:id', auth, (req, res) => {
+  const c = chById(req.params.id); if (!c || c.ownerId !== req.user.id) return res.status(403).json({ error: 'Only the owner can delete the channel.' });
+  c.removed = true; save(); io.to('ch:' + c.id).emit('channel:removed', { id: c.id }); res.json({ ok: true });
+});
+app.post('/api/channels/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
+  const c = chById(req.params.id); if (!chAdmin(c, req.user.id)) return res.status(403).json({ error: 'Only channel admins can do this.' });
+  if (await savePhotoInto(c, req, res)) res.json(chView(req.user, c));
+});
+app.get('/api/channels/photo/:id', (req, res) => streamPhoto(chById(req.params.id), req, res));
+app.post('/api/channels/:id/follow', auth, (req, res) => {
+  const c = chById(req.params.id); if (!c) return res.status(404).json({ error: 'Channel not found.' });
+  c.followers = c.followers || [];
+  if (req.body?.follow === false) { if (c.ownerId === req.user.id) return res.status(400).json({ error: 'You own this channel.' }); c.followers = c.followers.filter((x) => x !== req.user.id); io.in('user:' + req.user.id).socketsLeave('ch:' + c.id); }
+  else if (!c.followers.includes(req.user.id)) { c.followers.push(req.user.id); io.in('user:' + req.user.id).socketsJoin('ch:' + c.id); }
+  save(); res.json(chView(req.user, c));
+});
+app.post('/api/channels/:id/mute', auth, (req, res) => {
+  const c = chById(req.params.id); if (!c) return res.status(404).json({ error: 'Channel not found.' });
+  const m = new Set(req.user.chMuted || []); req.body?.mute ? m.add(c.id) : m.delete(c.id); req.user.chMuted = [...m]; save(); res.json(chView(req.user, c));
+});
+app.get('/api/channels/:id/posts', auth, (req, res) => {
+  const c = chById(req.params.id); if (!c) return res.status(404).json({ error: 'Channel not found.' });
+  const admin = chAdmin(c, req.user.id), list = db.channelPosts.filter((p) => p.channelId === c.id).slice(-100);
+  let changed = false;
+  for (const p of list) if (!(p.viewers || []).includes(req.user.id)) { (p.viewers = p.viewers || []).push(req.user.id); if (p.viewers.length > 20000) p.viewers = p.viewers.slice(-20000); changed = true; }
+  req.user.chSeen = { ...(req.user.chSeen || {}), [c.id]: now() };
+  if (changed) save(); else save();
+  res.json(list.map((p) => postView(req.user, p, admin)));
+});
+function chPost(req, c, fields) {
+  const p = { id: newId(), channelId: c.id, from: req.user.id, ts: now(), reactions: {}, viewers: [req.user.id], ...fields };
+  db.channelPosts.push(p); save();
+  io.to('ch:' + c.id).emit('channel:post', { channelId: c.id, channelName: c.name, post: postView({ id: '' }, p, false) });
+  return p;
+}
+app.post('/api/channels/:id/posts', auth, (req, res) => {
+  const c = chById(req.params.id); if (!chAdmin(c, req.user.id)) return res.status(403).json({ error: 'Only channel admins can post.' });
+  const text = clip(req.body?.text, 4000); if (!text) return res.status(400).json({ error: 'Write something first.' });
+  res.json(postView(req.user, chPost(req, c, { type: 'text', text }), true));
+});
+app.post('/api/channels/:id/posts/media', auth, express.raw({ type: ['image/*', 'video/*'], limit: '16mb' }), async (req, res) => {
+  const c = chById(req.params.id); if (!chAdmin(c, req.user.id)) return res.status(403).json({ error: 'Only channel admins can post.' });
+  const mime = String(req.headers['content-type'] || '').split(';')[0], type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : null;
+  if (!type || !Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a photo or video.' });
+  const id = newId(); try { await saveChatFile(id, req.body, mime); } catch { return res.status(500).json({ error: 'Could not save the file.' }); }
+  res.json(postView(req.user, chPost(req, c, { type, text: clip(req.query.caption, 1000), file: { id, mime, size: req.body.length, name: type + '.' + (mime.split('/')[1] || 'bin') } }), true));
+});
+app.get('/api/channels/file/:fileId', (req, res) => {
+  let viewer = null; try { viewer = findUserByToken(String(req.query.t || '')); } catch { /* bad token */ }
+  const p = db.channelPosts.find((x) => x.file && x.file.id === req.params.fileId);
+  if (!viewer || !p || !chById(p.channelId)) return res.status(404).end();
+  const size = p.file.size; let start = 0, end = size - 1, code = 200;
+  const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+  if (r) { if (r[1]) { start = parseInt(r[1], 10); end = r[2] ? Math.min(parseInt(r[2], 10), size - 1) : size - 1; } else if (r[2]) start = Math.max(0, size - parseInt(r[2], 10)); if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); } code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`); }
+  res.status(code); res.setHeader('Content-Type', p.file.mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=604800');
+  const st = chatFileStream(p.file.id, start, end); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.post('/api/channels/posts/:pid/react', auth, (req, res) => {
+  const p = db.channelPosts.find((x) => x.id === req.params.pid); if (!p || !chById(p.channelId)) return res.status(404).json({ error: 'Not found.' });
+  const e = clip(req.body?.emoji, 16); p.reactions = p.reactions || {};
+  if (e && p.reactions[req.user.id] !== e) p.reactions[req.user.id] = e; else delete p.reactions[req.user.id];
+  save(); const c = chById(p.channelId);
+  io.to('ch:' + p.channelId).emit('channel:react', { postId: p.id, reactions: postView(req.user, p, false).reactions });
+  res.json(postView(req.user, p, chAdmin(c, req.user.id)));
+});
+app.delete('/api/channels/posts/:pid', auth, (req, res) => {
+  const p = db.channelPosts.find((x) => x.id === req.params.pid); const c = p && chById(p.channelId);
+  if (!c || !chAdmin(c, req.user.id)) return res.status(403).json({ error: 'Not allowed.' });
+  db.channelPosts = db.channelPosts.filter((x) => x.id !== p.id); if (p.file) deleteChatFile(p.file.id); save();
+  io.to('ch:' + c.id).emit('channel:postDeleted', { postId: p.id }); res.json({ ok: true });
+});
+app.post('/api/channels/:id/report', auth, (req, res) => {
+  const c = chById(req.params.id); if (!c) return res.status(404).json({ error: 'Channel not found.' });
+  db.reports.push({ id: newId(), by: req.user.id, reported: c.ownerId, reason: 'Channel "' + c.name + '": ' + (clip(req.body?.reason, 300) || 'reported'), ts: now(), status: 'open' });
+  save(); io.to('admins').emit('feed', { kind: 'report', text: 'Channel reported: ' + c.name, ts: now() }); res.json({ ok: true });
+});
+
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -1680,6 +1891,15 @@ app.post('/admin/api/ads/:id/:action', adminAuth, (req, res) => {
   save(); audit(req.admin, 'ad-' + act, a.title, a.reason || '');
   io.to('user:' + a.ownerId).emit('ad:update', adOut(a, true));
   res.json(adOut(a, true));
+});
+
+// Channels moderation
+app.get('/admin/api/channels', adminAuth, (req, res) => res.json(db.channels.slice().sort((a, b) => (b.followers || []).length - (a.followers || []).length).map((c) => ({ id: c.id, name: c.name, description: c.description || '', ownerName: userById(c.ownerId)?.name || 'Deleted user', ownerPhone: userById(c.ownerId)?.phone || '', followers: (c.followers || []).length, posts: db.channelPosts.filter((p) => p.channelId === c.id).length, removed: !!c.removed, createdAt: c.createdAt }))));
+app.post('/admin/api/channels/:id/remove', adminAuth, (req, res) => {
+  const c = db.channels.find((x) => x.id === req.params.id); if (!c) return res.status(404).json({ error: 'Not found.' });
+  c.removed = !c.removed; save(); audit(req.admin, c.removed ? 'channel-remove' : 'channel-restore', c.name, '');
+  if (c.removed) io.to('ch:' + c.id).emit('channel:removed', { id: c.id });
+  res.json({ removed: c.removed });
 });
 
 app.get('/admin/api/users', adminAuth, (req, res) => {
@@ -1899,6 +2119,7 @@ io.on('connection', (socket) => {
   const room = (id) => 'user:' + id;
   socket.join(room(me));
   for (const g of db.groups) if (gMember(g, me)) socket.join('grp:' + g.id);
+  for (const c of db.channels) if (!c.removed && (c.followers || []).includes(me)) socket.join('ch:' + c.id);
 
   const wasOnline = isOnline(me);
   online.set(me, (online.get(me) || 0) + 1);

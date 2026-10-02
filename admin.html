@@ -183,6 +183,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="messages"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat report</button>
     <button data-view="logins"><svg class="ico" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>Login report</button>
     <button data-view="ads"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Ads <span class="count" id="adCount" hidden></span></button>
+    <button data-view="channels"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>Channels</button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
     <button data-view="audit"><svg class="ico" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin log</button>
@@ -277,6 +278,12 @@ textarea.input{min-height:110px;resize:vertical}
       <p class="muted" style="margin-top:-6px">Approve only honest offers. Not allowed: adult content, alcohol/tobacco, gambling, loans, fake or misleading offers.</p>
       <div class="chips" id="adChips"><button class="chip" data-f="pending" aria-pressed="true">Waiting</button><button class="chip" data-f="live" aria-pressed="false">Live</button><button class="chip" data-f="all" aria-pressed="false">All</button></div>
       <div id="adList"></div>
+    </section>
+
+    <section data-page="channels" hidden>
+      <div class="top"><h2>Channels</h2></div>
+      <p class="muted" style="margin-top:-6px">Public channels anyone can follow. Remove channels that spread spam, scams, hate or adult content. You can restore them later.</p>
+      <div class="card"><table><thead><tr><th>Channel</th><th>Owner</th><th>Followers</th><th>Updates</th><th>Created</th><th></th></tr></thead><tbody id="chTbody"></tbody></table></div>
     </section>
 
     <!-- ANNOUNCEMENTS -->
@@ -396,7 +403,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -593,6 +600,13 @@ async function loadReports() {
     const note = prompt('What action was taken? (optional)'); if (note === null) return;
     try { await api(`/admin/api/reports/${b.dataset.resolve}/resolve`, { method: 'POST', body: JSON.stringify({ note }) }); toast('Complaint resolved.'); loadReports(); } catch (e) { toast(e.message); }
   });
+}
+
+// ---------- channels ----------
+async function loadChannelsAdmin() {
+  const list = await api('/admin/api/channels');
+  $('#chTbody').innerHTML = list.length ? list.map((c) => `<tr><td><b>${esc(c.name)}</b>${c.removed ? ' <span class="tag t-red">Removed</span>' : ''}<div class="muted" style="font-size:12.5px">${esc(c.description.slice(0, 80))}</div></td><td>${esc(c.ownerName)}<div class="muted">${esc(c.ownerPhone)}</div></td><td>${num(c.followers)}</td><td>${num(c.posts)}</td><td class="muted">${dt(c.createdAt)}</td><td><button class="btn ${c.removed ? '' : 'danger'}" data-ch="${esc(c.id)}">${c.removed ? 'Restore' : 'Remove'}</button></td></tr>`).join('') : '<tr><td colspan="6" class="muted">No channels yet.</td></tr>';
+  $$('[data-ch]').forEach((b) => b.onclick = async () => { if (!confirm(b.textContent + ' this channel?')) return; try { await api('/admin/api/channels/' + b.dataset.ch + '/remove', { method: 'POST', body: '{}' }); loadChannelsAdmin(); } catch (e) { toast(e.message); } });
 }
 
 // ---------- ads ----------
