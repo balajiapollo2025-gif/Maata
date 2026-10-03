@@ -11,10 +11,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Maata">
 <title>Maata — free calls & messages</title>
+<script data-theme>
+/* apply the saved theme before the page draws (no white flash in dark mode) */
+(function () {
+  try {
+    var h = document.documentElement, g = function (k, d) { return localStorage.getItem(k) || d; };
+    var mq = matchMedia('(prefers-color-scheme: dark)');
+    window.applyMaataTheme = function () {
+      var m = g('maata_theme_mode', 'system'), dark = m === 'dark' || (m === 'system' && mq.matches);
+      h.classList.toggle('dark', dark);
+      h.dataset.accent = g('maata_accent', 'teal'); h.dataset.wall = g('maata_wall', 'default'); h.dataset.font = g('maata_font', 'medium');
+      var t = document.querySelector('meta[name="theme-color"]'); if (t) t.setAttribute('content', dark ? '#12181F' : getComputedStyle(h).getPropertyValue('--peacock').trim() || '#0F4C5C');
+    };
+    applyMaataTheme();
+    if (mq.addEventListener) mq.addEventListener('change', applyMaataTheme);
+  } catch (e) {}
+})();
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
+  color-scheme:light;
   --paper:#FBFAF7; --panel:#FFFFFF; --ink:#1C2230; --muted:#667085; --line:#E4E7EC;
   --peacock:#0F4C5C; --peacock-soft:#E3EFF1; --turmeric:#E8A317; --leaf:#2E8B57; --chili:#C8413A;
   --mine:#0F4C5C; --mine-ink:#FFFFFF; --theirs:#FFFFFF;
@@ -23,10 +42,10 @@
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   box-sizing:border-box;
 }
-@media (prefers-color-scheme:dark){
-  :root{--paper:#12181F;--panel:#1A222B;--ink:#EEF1F4;--muted:#98A2B3;--line:#2A343F;
+
+  html.dark{--paper:#12181F;--panel:#1A222B;--ink:#EEF1F4;--muted:#98A2B3;--line:#2A343F;
     --peacock-soft:#1E3A42;--mine:#1B6B7F;--theirs:#222C36}
-}
+
 *,*::before,*::after{box-sizing:inherit}
 html,body{height:100%;margin:0}
 body{background:var(--paper);overflow:hidden}
@@ -43,7 +62,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
    radial-gradient(circle at 85% 80%, rgba(15,76,92,.14) 0 180px, transparent 181px), var(--paper)}
 .auth-card{width:100%;max-width:380px}
 .wordmark{font-size:56px;font-weight:700;letter-spacing:-.04em;line-height:1;margin:0;color:var(--peacock)}
-@media (prefers-color-scheme:dark){.wordmark{color:#7CC4D4}}
+html.dark .wordmark{color:#7CC4D4}
 .wordmark span{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--turmeric);margin-left:4px}
 .tagline{color:var(--muted);margin:10px 0 28px;line-height:1.5}
 .field{display:block;margin-bottom:14px}
@@ -54,7 +73,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 .primary:disabled{opacity:.6}
 .switch{margin-top:16px;text-align:center;color:var(--muted);font-size:14px}
 .switch button{color:var(--peacock);font-weight:600;text-decoration:underline}
-@media (prefers-color-scheme:dark){.switch button{color:#7CC4D4}}
+html.dark .switch button{color:#7CC4D4}
 .error{color:var(--chili);font-size:14px;min-height:20px;margin:4px 0 10px}
 
 /* ---------- App shell ---------- */
@@ -62,7 +81,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 .side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .side-head{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 8px}
 .brand{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--peacock)}
-@media (prefers-color-scheme:dark){.brand{color:#7CC4D4}}
+html.dark .brand{color:#7CC4D4}
 .icon-btn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
 .icon-btn:hover{background:var(--peacock-soft);color:var(--ink)}
 .me{display:flex;gap:10px;align-items:center;padding:4px 16px 12px;font-size:13px;color:var(--muted)}
@@ -93,7 +112,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 .chat-head .status{font-size:13px;color:var(--muted)}
 .chat-head .status.on{color:var(--leaf)}
 .call-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--peacock);background:var(--peacock-soft)}
-@media (prefers-color-scheme:dark){.call-btn{color:#7CC4D4}}
+html.dark .call-btn{color:#7CC4D4}
 .back{display:none}
 .messages{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:6px}
 .day{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:3px 10px;border-radius:10px;margin:10px 0}
@@ -165,7 +184,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 
 /* ---------- Announcement ---------- */
 .notice{margin:0 16px 10px;padding:10px 12px;border-radius:12px;background:#FFF4D6;color:#5A4300;font-size:14px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
-@media (prefers-color-scheme:dark){.notice{background:#3A2F12;color:#FFE6A6}}
+html.dark .notice{background:#3A2F12;color:#FFE6A6}
 .notice p{margin:0;flex:1}
 .notice button{font-size:18px;line-height:1;padding:0 4px;opacity:.7}
 .flag-btn{background:transparent}
@@ -187,7 +206,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-l
 .tone-pick{display:flex;gap:10px;align-items:center;flex:1 1 100%;padding-left:52px}
 .tone-pick select{flex:1;min-width:0;font:inherit;font-size:15px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
 .play-btn{width:40px;height:40px;border-radius:50%;background:var(--peacock-soft);color:var(--peacock);display:grid;place-items:center;flex:none;font-size:15px}
-@media (prefers-color-scheme:dark){.play-btn{color:#7CC4D4}}
+html.dark .play-btn{color:#7CC4D4}
 .play-btn[aria-pressed="true"]{background:var(--peacock);color:#fff}
 .switch-ui{position:relative;width:50px;height:30px;flex:none}
 .switch-ui input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
@@ -223,7 +242,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .empty-card b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
 .empty-card .primary{margin-top:14px}
 .stranger{margin:10px 12px 0;padding:12px 14px;border-radius:14px;background:#FFF6DC;border:1px solid #F3DDA0;color:#5A4300;font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-@media (prefers-color-scheme:dark){.stranger{background:#3A2F12;border-color:#5A4A1C;color:#FFE6A6}}
+html.dark .stranger{background:#3A2F12;border-color:#5A4A1C;color:#FFE6A6}
 .stranger span{flex:1 1 180px}
 .stranger button{padding:7px 12px;border-radius:10px;font-weight:600;font-size:13px;background:var(--panel);border:1px solid var(--line)}
 .stranger button.warn{color:var(--chili)}
@@ -260,7 +279,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .call-meta .arrow{font-weight:700}
 .call-meta .arrow.in{color:var(--leaf)}.call-meta .arrow.out{color:var(--blue,#2D7FF9)}.call-meta .arrow.miss{color:var(--chili)}
 .recall{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--peacock);background:var(--peacock-soft);flex:none}
-@media (prefers-color-scheme:dark){.recall{color:#7CC4D4}}
+html.dark .recall{color:#7CC4D4}
 .recall svg{width:20px;height:20px}
 .call-day{font-size:12px;font-weight:600;color:var(--muted);padding:12px 10px 4px;text-transform:uppercase;letter-spacing:.04em}
 /* ---------- Status ---------- */
@@ -275,7 +294,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .st-plus::after{content:"+";position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:var(--leaf);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center;border:2px solid var(--panel)}
 .st-actions{display:flex;gap:8px;padding:4px 10px 8px}
 .st-actions button{flex:1;padding:11px;border-radius:12px;font-weight:600;font-size:14px;background:var(--peacock-soft);color:var(--peacock)}
-@media (prefers-color-scheme:dark){.st-actions button{color:#7CC4D4}}
+html.dark .st-actions button{color:#7CC4D4}
 .overlay{position:fixed;inset:0;z-index:35;background:#0B0F14;color:#fff;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 0 calc(12px + env(safe-area-inset-bottom,0px))}
 .ov-head{display:flex;align-items:center;gap:10px;padding:8px 14px;position:relative;z-index:2}
 .ov-head .who{flex:1;min-width:0}
@@ -342,7 +361,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .opt-row{display:flex;gap:6px;margin-bottom:8px}
 .opt-row button{width:40px;border-radius:10px;background:var(--paper);border:1px solid var(--line);color:var(--chili)}
 .linkbtn{color:var(--peacock);font-weight:600;padding:6px 0}
-@media (prefers-color-scheme:dark){.linkbtn{color:#7CC4D4}}
+html.dark .linkbtn{color:#7CC4D4}
 .pick-list{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}
 .pick-list li button{display:flex;gap:10px;align-items:center;width:100%;padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
 .rec{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0}
@@ -475,7 +494,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .chips-row::-webkit-scrollbar{display:none}
 .fchip{flex:none;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:600;color:var(--muted)}
 .fchip[aria-pressed="true"]{background:var(--peacock-soft);color:var(--peacock);border-color:transparent}
-@media (prefers-color-scheme:dark){.fchip[aria-pressed="true"]{color:#7CC4D4}}
+html.dark .fchip[aria-pressed="true"]{color:#7CC4D4}
 .fchip .n{font-weight:400;margin-left:3px}
 .main-menu{position:fixed;z-index:40;width:250px}
 .chat-sel-bar{display:flex;align-items:center;gap:4px;margin:0 16px 8px;padding:6px 8px;border-radius:12px;background:var(--peacock);color:#fff}
@@ -503,7 +522,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .qr-pop button{display:block;width:100%;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
 .qr-pop button:last-child{border-bottom:0}
 .qr-pop button b{color:var(--peacock);margin-right:6px}
-@media (prefers-color-scheme:dark){.qr-pop button b{color:#7CC4D4}}
+html.dark .qr-pop button b{color:#7CC4D4}
 .qr-pop button span{color:var(--muted);font-size:14px}
 .qr-pop button[aria-selected="true"]{background:var(--peacock-soft)}
 .composer{position:relative}
@@ -545,7 +564,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .recbar .t{font-variant-numeric:tabular-nums;font-weight:600;min-width:44px}
 .recbar .lv{flex:1;display:flex;align-items:center;gap:2px;height:32px;overflow:hidden}
 .recbar .lv i{flex:1;max-width:4px;min-width:2px;border-radius:2px;background:var(--peacock);height:3px;transition:height .08s}
-@media (prefers-color-scheme:dark){.recbar .lv i{background:#7CC4D4}}
+html.dark .recbar .lv i{background:#7CC4D4}
 .recbar .cbtn.del{color:var(--chili)}
 .composer.recording > :not(.recbar):not(.send){display:none!important}
 /* ---------- GPS camera ---------- */
@@ -592,7 +611,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .tabs .tab{padding:8px 2px;font-size:12.5px;white-space:nowrap;gap:3px;min-width:0}
 .pc-actions{display:flex;gap:8px;padding:4px 10px 6px;flex-wrap:wrap}
 .pc-actions button{flex:1;min-width:120px;padding:10px;border-radius:12px;font-weight:600;font-size:13px;background:var(--peacock-soft);color:var(--peacock)}
-@media (prefers-color-scheme:dark){.pc-actions button{color:#7CC4D4}}
+html.dark .pc-actions button{color:#7CC4D4}
 #pcList .contact{cursor:default}
 #pcList .recall{margin-left:4px;font-size:17px}
 .lookup .invite{margin:0 8px 8px}
@@ -603,7 +622,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .ai-suggest::-webkit-scrollbar{display:none}
 .chip-ai{flex:none;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:14px;color:var(--ink)}
 .chip-ai:first-child{border-color:#B9A3E3;color:#5B3FA6}
-@media (prefers-color-scheme:dark){.chip-ai:first-child{color:#C9B6FF}}
+html.dark .chip-ai:first-child{color:#C9B6FF}
 .chip-ai.x{color:var(--muted)}
 .ai-tasks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ai-tasks button{padding:8px 14px;border-radius:999px;background:var(--peacock-soft);color:var(--ink);font-weight:600;font-size:14px}
@@ -671,7 +690,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .notif-banner p{flex:1 1 180px;margin:0;font-size:14px;color:#17463A}
 .notif-banner .nb-go{padding:8px 16px;border-radius:999px;background:var(--leaf);color:#fff;font-weight:700}
 .notif-banner .nb-later{padding:8px 10px;color:#4A5B55;font-size:13px}
-@media (prefers-color-scheme:dark){.notif-banner{background:#163428;border-color:#24543f}.notif-banner p{color:#CDEBDD}.notif-banner .nb-later{color:#A9C6B9}}
+html.dark .notif-banner{background:#163428;border-color:#24543f}html.dark .notif-banner p{color:#CDEBDD}html.dark .notif-banner .nb-later{color:#A9C6B9}
 /* ---------- Profile ---------- */
 #meBox{cursor:pointer;border-radius:12px}
 #meBox:hover{background:var(--paper)}
@@ -684,7 +703,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .pf-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .pf-txt b{font-size:18px}.pf-txt span{color:var(--ink);opacity:.8;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pf-txt small{color:var(--muted)}
 .pf-edit{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:var(--peacock-soft);color:var(--peacock);font-weight:700;font-size:14px;flex:none}
-@media (prefers-color-scheme:dark){.pf-edit{color:#7CC4D4}}
+html.dark .pf-edit{color:#7CC4D4}
 .pf-edit svg{width:16px;height:16px}
 .pf-edit-top{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 16px}
 .pf-big{width:130px;height:130px;font-size:44px;cursor:pointer}
@@ -698,7 +717,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .ph-hint{display:block;min-height:18px;font-size:12.5px;margin-top:4px;color:var(--muted)}
 .ph-hint.bad{color:var(--chili)}
 .forgot-link{display:block;margin:-4px 0 6px auto;color:var(--peacock);font-weight:600;font-size:14px;padding:4px 0}
-@media (prefers-color-scheme:dark){.forgot-link{color:#7CC4D4}}
+html.dark .forgot-link{color:#7CC4D4}
 /* ---------- Contact profile page ---------- */
 .ci{position:fixed;inset:0;z-index:30;background:var(--paper);overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .ci-top{position:sticky;top:0;display:flex;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 8px 8px;background:var(--paper);z-index:2}
@@ -734,7 +753,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .bnav,.fab,.side-head .cam-btn,.side-head .page-title{display:none}
 @media (max-width:760px){
   :root{--wa-green:#1DAA61;--wa-pill:#D8FDD2;--wa-pill-ink:#0A3A21}
-  @media (prefers-color-scheme:dark){:root{--wa-green:#21C063;--wa-pill:#103629;--wa-pill-ink:#D8FDD2}}
+  html.dark{--wa-green:#21C063;--wa-pill:#103629;--wa-pill-ink:#D8FDD2}
   .side{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .side-head{padding:14px 16px 6px;gap:6px}
   .side-head .brand-row .mini{width:34px;height:34px}
@@ -786,6 +805,41 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
   .app.in-chat .chat{display:flex}
   .back{display:grid}
 }
+html.dark{color-scheme:dark}
+/* ================= Themes: accent colours, chat wallpapers, text size ================= */
+html[data-accent="green"]{--peacock:#008069;--peacock-soft:#E1F5EC;--mine:#D9FDD3;--mine-ink:#111B21;--leaf:#1DAA61}
+html.dark[data-accent="green"]{--peacock:#00A884;--peacock-soft:#103529;--mine:#005C4B;--mine-ink:#E9EDEF;--leaf:#21C063}
+html[data-accent="blue"]{--peacock:#1F5FA8;--peacock-soft:#E4EEF9;--mine:#1F5FA8;--leaf:#1F7AE0}
+html.dark[data-accent="blue"]{--peacock:#3D8BDB;--peacock-soft:#18304A;--mine:#1E4E8C;--leaf:#3D8BDB}
+html[data-accent="purple"]{--peacock:#5B3FA6;--peacock-soft:#EEE9FA;--mine:#5B3FA6;--leaf:#7A4E9E}
+html.dark[data-accent="purple"]{--peacock:#9B7FE0;--peacock-soft:#2B2340;--mine:#4A3591;--leaf:#9B7FE0}
+html[data-accent="orange"]{--peacock:#B4521A;--peacock-soft:#FCEBDD;--mine:#C2561A;--leaf:#D9771E}
+html.dark[data-accent="orange"]{--peacock:#F08A4B;--peacock-soft:#3A2618;--mine:#9C4412;--leaf:#F08A4B}
+html[data-accent="pink"]{--peacock:#AD1457;--peacock-soft:#FBE4EE;--mine:#AD1457;--leaf:#D81B60}
+html.dark[data-accent="pink"]{--peacock:#F06292;--peacock-soft:#3B1D2A;--mine:#8E1048;--leaf:#F06292}
+html[data-accent="graphite"]{--peacock:#2B3440;--peacock-soft:#E9ECEF;--mine:#2B3440;--leaf:#3C8D5A}
+html.dark[data-accent="graphite"]{--peacock:#A9B4C2;--peacock-soft:#262E38;--mine:#323C48;--leaf:#5FBF85}
+html[data-wall="plain"] #messages{background:var(--paper)!important}
+html[data-wall="mint"] #messages{background:#E9F7EF!important}html.dark[data-wall="mint"] #messages{background:#0E2219!important}
+html[data-wall="sky"] #messages{background:#E7F1FB!important}html.dark[data-wall="sky"] #messages{background:#0E1C2B!important}
+html[data-wall="rose"] #messages{background:#FBEDF1!important}html.dark[data-wall="rose"] #messages{background:#2A1520!important}
+html[data-wall="sand"] #messages{background:#F6EEDC!important}html.dark[data-wall="sand"] #messages{background:#2A2418!important}
+html[data-wall="night"] #messages{background:#0B141A!important}
+html[data-wall="doodle"] #messages{background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' fill='none' stroke='%2399A3AD' stroke-opacity='.22' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M18 22a8 8 0 1 1 16 0c0 6-8 6-8 12M26 40h.1'/%3E%3Cpath d='M78 18l8 8M86 18l-8 8'/%3E%3Ccircle cx='96' cy='76' r='8'/%3E%3Cpath d='M20 86c6-6 12 6 18 0s12 6 18 0'/%3E%3Cpath d='M60 58l6-10 6 10z'/%3E%3Cpath d='M44 104h12M50 98v12'/%3E%3C/svg%3E")!important}
+html[data-font="small"] .bubble{font-size:13.5px}html[data-font="large"] .bubble{font-size:18px}html[data-font="xl"] .bubble{font-size:20px}
+html[data-font="large"] .c-name{font-size:18px}html[data-font="large"] .c-last{font-size:16px}html[data-font="xl"] .c-name{font-size:19.5px}html[data-font="xl"] .c-last{font-size:17px}
+.th-seg{display:flex;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:4px}
+.th-seg button{flex:1;padding:10px 6px;border-radius:10px;font-weight:600;font-size:14px;color:var(--muted)}
+.th-seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.th-sw{display:flex;flex-wrap:wrap;gap:12px;padding:4px 0}
+.th-sw button{width:46px;height:46px;border-radius:50%;border:3px solid transparent;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.th-sw button[aria-pressed="true"]{border-color:var(--ink)}
+.th-walls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.th-walls button{height:64px;border-radius:12px;border:2px solid var(--line);font-size:12px;font-weight:600;color:#55606B;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
+.th-walls button[aria-pressed="true"]{border-color:var(--peacock);box-shadow:0 0 0 2px var(--peacock)}
+.th-prev{border-radius:16px;border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}
+.th-prev .bubble{max-width:80%}
+.th-title{font-size:13.5px;font-weight:700;color:var(--muted);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.4px}
 </style>
 </head>
 <body>
@@ -1130,6 +1184,7 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <div class="pf-card" id="setProfile"></div>
 
     <div id="setNotifBox"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setThemes">🎨 Theme &amp; colours <span style="margin-left:auto;color:var(--muted)" id="setThemeName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setAppLang">🌐 <span data-t="appLang">App language</span> <span id="setAppLangName" style="margin-left:auto;color:var(--muted)"></span></button></div>
     <div class="set-title">Language &amp; translation</div>
     <div class="set-group">
@@ -1685,6 +1740,7 @@ function toneLabel(kind) {
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
+  { const m = store.get('maata_theme_mode') || 'system', a = (ACCENTS.find((x) => x[0] === (store.get('maata_accent') || 'teal')) || ACCENTS[0])[2]; $('#setThemeName').textContent = ({ system: 'System', light: 'Light', dark: 'Dark' })[m] + ' · ' + a; }
   renderProfileCard();
   const nb = $('#setNotifBox'); if (nb) { nb.innerHTML = ''; nb.append(notifSettingsRow()); }
   $('#setAppLangName').textContent = (APP_LANGS.find((x) => x[0] === appLang) || APP_LANGS[0])[1];
@@ -1830,13 +1886,17 @@ function onConnected() {
   if (!tr.on && translationWanted()) startTranslation();
 }
 
+
+// Android app: keep the microphone working while the phone is locked during a call (shows an "ongoing call" notification)
+function nativeCall(on, kind, name) { try { const A = window.MaataAndroid; if (!A) return; if (on && A.callStarted) A.callStarted(kind || 'voice', name || 'Maata'); else if (!on && A.callEnded) A.callEnded(); } catch {} }
+window.maataHangup = () => { if (call) { const b = $('#endBtn'); if (b) b.click(); else endCall('Call ended', true); } else if (GC.id) gcLeave(); };
 async function startCall(kind) {
   if (isGroupId(activeId)) return startGroupCall(activeId, kind);
   if (call || GC.id) return toast('You are already on a call.');
   const u = userById(activeId); if (!u) return;
   // The server decides if the other person is reachable (online status is only shown for saved contacts).
   call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: nameOf(u), peerLang: u.lang, kind, role: 'caller', state: 'calling', pendingIce: [] };
-  showCallScreen('Calling…');
+  showCallScreen('Calling…'); nativeCall(true, kind, call.peerName);
   try { call.local = await getMedia(kind); }
   catch (e) { const msg = mediaError(e); endCall(msg); return; }
   if (!call) { return; }
@@ -1868,7 +1928,7 @@ $('#acceptBtn').onclick = async () => {
   if (!call || call.state !== 'incoming') return;
   stopRing(); clearTimeout(call.timeout);
   call.state = 'connecting'; $('#incoming').hidden = true;
-  showCallScreen('Connecting…');
+  showCallScreen('Connecting…'); nativeCall(true, call.kind, call.peerName);
   try { call.local = await getMedia(call.kind); }
   catch (e) { const msg = mediaError(e); socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(msg); return; }
   call.pc = createPeer();
@@ -1894,6 +1954,7 @@ async function onRemoteIce(p) {
 
 function endCall(reason, notifyPeer = false) {
   if (!call) return;
+  if (!GC.id) nativeCall(false);
   stopScreenShare(true);
   if (notifyPeer) socket.emit('call:end', { to: call.peerId, callId: call.id });
   stopTranslation();
@@ -4440,6 +4501,7 @@ async function gcMedia(kind) {
   catch { toast('Allow microphone' + (kind === 'video' ? ' and camera' : '') + ' to join the call.'); return false; }
 }
 function gcShow(status) {
+  nativeCall(true, GC.kind, (userById(GC.gid) || {}).name || 'Group call');
   let v = $('#gcView');
   if (!v) {
     v = el('section', 'gc'); v.id = 'gcView'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-label', 'Group call');
@@ -4496,6 +4558,7 @@ function gcCount() {
   const g = $('#gcGrid'); if (g) g.classList.toggle('many', g.children.length > 6);
 }
 function gcLeave() {
+  if (!call) nativeCall(false);
   if (GC.id) socket.emit('gcall:leave', { callId: GC.id });
   if (GC.room) { const r = GC.room; GC.room = null; r.disconnect().catch(() => {}); }
   for (const uid of [...GC.peers.keys()]) gcDrop(uid);
@@ -5992,6 +6055,58 @@ for (const sel of ['#chatAvatar', '#chatHead .who']) {
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#ciView') && $('#moreSheet').hidden) $('#ciView').remove(); });
 
+// ================= Theme & colours (Settings) =================
+const ACCENTS = [['teal', '#0F4C5C', 'Maata teal'], ['green', '#008069', 'Green'], ['blue', '#1F5FA8', 'Blue'], ['purple', '#5B3FA6', 'Purple'], ['orange', '#C2561A', 'Orange'], ['pink', '#AD1457', 'Pink'], ['graphite', '#2B3440', 'Graphite']];
+const WALLS = [['default', 'Default', 'var(--paper)'], ['plain', 'Plain', 'var(--paper)'], ['mint', 'Mint', '#E9F7EF'], ['sky', 'Sky', '#E7F1FB'], ['rose', 'Rose', '#FBEDF1'], ['sand', 'Sand', '#F6EEDC'], ['night', 'Night', '#0B141A'], ['doodle', 'Doodle', 'var(--paper)']];
+function setThemePref(k, v) { store.set(k, v); window.applyMaataTheme && applyMaataTheme(); bubbleCache.clear(); if (activeId) renderMessages(); }
+function openThemes() {
+  closeSettings();
+  sheet('🎨 Theme & colours', (list) => {
+    const box = el('div'); box.style.padding = '4px 14px 16px';
+    const prev = el('div', 'th-prev'); prev.id = 'thPrev';
+    const b1 = el('div', 'bubble', 'Hi! Shop eppudu open? 🙂'), b2 = el('div', 'bubble mine', 'Morning 10 ki open anna 👍');
+    b2.style.alignSelf = 'flex-end'; prev.append(b1, b2);
+    const syncPrev = () => { const w = store.get('maata_wall') || 'default'; const W = WALLS.find((x) => x[0] === w); prev.style.background = w === 'doodle' || w === 'default' || w === 'plain' ? 'var(--paper)' : getComputedStyle($('#messages') || document.body).backgroundColor; if (w === 'night') prev.style.background = '#0B141A'; };
+    box.append(el('div', 'th-title', 'Preview'), prev);
+    box.append(el('div', 'th-title', 'Theme'));
+    const seg = el('div', 'th-seg');
+    for (const [v, label] of [['system', '📱 System'], ['light', '☀️ Light'], ['dark', '🌙 Dark']]) {
+      const b = el('button', null, label); b.setAttribute('aria-pressed', String((store.get('maata_theme_mode') || 'system') === v));
+      b.onclick = () => { setThemePref('maata_theme_mode', v); [...seg.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); syncPrev(); };
+      seg.append(b);
+    }
+    box.append(seg, el('div', 'th-title', 'Colour'));
+    const sw = el('div', 'th-sw');
+    for (const [v, col, label] of ACCENTS) {
+      const b = el('button'); b.style.background = col; b.title = label; b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', String((store.get('maata_accent') || 'teal') === v));
+      b.onclick = () => { setThemePref('maata_accent', v); [...sw.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); };
+      sw.append(b);
+    }
+    box.append(sw, el('div', 'th-title', 'Chat wallpaper'));
+    const walls = el('div', 'th-walls');
+    for (const [v, label, bg] of WALLS) {
+      const b = el('button', null, label); b.style.background = bg; if (v === 'night') b.style.color = '#cfd6dc';
+      if (v === 'doodle') b.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none' stroke='%2399A3AD' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M24 26l8 8M32 26l-8 8'/%3E%3C/svg%3E\")";
+      b.setAttribute('aria-pressed', String((store.get('maata_wall') || 'default') === v));
+      b.onclick = () => { setThemePref('maata_wall', v); [...walls.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); syncPrev(); };
+      walls.append(b);
+    }
+    box.append(walls, el('div', 'th-title', 'Text size'));
+    const fs = el('div', 'th-seg');
+    for (const [v, label] of [['small', 'A'], ['medium', 'A'], ['large', 'A'], ['xl', 'A']]) {
+      const b = el('button', null, label); b.style.fontSize = { small: '13px', medium: '16px', large: '19px', xl: '22px' }[v]; b.setAttribute('aria-label', 'Text size ' + v);
+      b.setAttribute('aria-pressed', String((store.get('maata_font') || 'medium') === v));
+      b.onclick = () => { setThemePref('maata_font', v); [...fs.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); };
+      fs.append(b);
+    }
+    box.append(fs);
+    const reset = el('button', 'linkbtn', 'Reset to Maata default'); reset.style.marginTop = '14px';
+    reset.onclick = () => { for (const k of ['maata_theme_mode', 'maata_accent', 'maata_wall', 'maata_font']) store.del(k); window.applyMaataTheme && applyMaataTheme(); openThemes(); };
+    box.append(reset); list.append(box); syncPrev();
+  });
+}
+
+$('#setThemes').onclick = openThemes;
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

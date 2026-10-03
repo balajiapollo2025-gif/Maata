@@ -23,6 +23,7 @@ class MainActivity : Activity() {
     companion object {
         const val EXTRA_URL = "maata_url"
         const val EXTRA_STOP_RING = "maata_stop_ring"
+        const val EXTRA_HANGUP = "maata_hangup"
         private const val REQ_FILE = 11
         private const val REQ_PERMS = 12
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
@@ -98,6 +99,9 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_STOP_RING, false)) Notifier.stopRinging(this)
+        if (intent.getBooleanExtra(EXTRA_HANGUP, false)) { // "Hang up" from the ongoing-call notification
+            web.evaluateJavascript("window.maataHangup && maataHangup()", null); CallService.stop(this); return
+        }
         val path = intent.getStringExtra(EXTRA_URL) ?: intent.data?.let { it.encodedPath + (it.encodedFragment?.let { f -> "#$f" } ?: "") } ?: return
         val full = BuildConfig.APP_URL + path
         // the page is already open: tell it what to show (chat, or answer a call) without reloading
@@ -159,6 +163,8 @@ class MainActivity : Activity() {
         catch (e: Exception) { Toast.makeText(this, "No app can open this link", Toast.LENGTH_SHORT).show() }
     }
 
+    override fun onDestroy() { CallService.stop(this); super.onDestroy() }
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (web.canGoBack()) web.goBack() else moveTaskToBack(true) // keep Maata running in the background
@@ -169,6 +175,9 @@ class MainActivity : Activity() {
         @JavascriptInterface fun getFcmToken(): String = Notifier.token(this@MainActivity)
         @JavascriptInterface fun deviceModel(): String = "${Build.MANUFACTURER} ${Build.MODEL}"
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
+        /** The web app tells us a call started/ended, so the mic keeps working when the phone locks. */
+        @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
+        @JavascriptInterface fun callEnded() { CallService.stop(this@MainActivity) }
         @JavascriptInterface fun openNotificationSettings() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
         }
