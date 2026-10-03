@@ -698,7 +698,7 @@ function callView(meUser, c) {
   if (c.group) {
     const g = groupById(c.group), joined = (c.participants || []).includes(meUser.id);
     return { id: c.id, kind: c.kind, status: joined ? c.status : 'missed', direction: c.from === meUser.id ? 'out' : 'in', startedAt: c.startedAt, duration: joined ? c.duration || 0 : 0, group: true, people: (c.participants || []).length,
-      other: g ? { id: 'g:' + g.id, isGroup: true, name: g.name, displayName: g.name, phone: '', photo: !!g.photo, photoV: g.photoV || 0 } : { id: 'g:' + c.group, name: 'Group', displayName: 'Group', phone: '', deleted: true } };
+      other: g ? { id: 'g:' + g.id, isGroup: true, name: g.name, displayName: g.name, phone: '', photo: !!g.photo, photoV: g.photoV || 0 } : { id: 'g:' + c.group, name: c.groupName || 'Group', displayName: c.groupName || 'Group', phone: '', deleted: true, isGroup: true } };
   }
   const outgoing = c.from === meUser.id;
   const otherId = outgoing ? c.to : c.from;
@@ -1304,7 +1304,7 @@ function groupView(viewer, g, extra = {}) {
   const c = gcalls.get(g.id);
   return {
     id: 'g:' + g.id, isGroup: true, name: g.name, displayName: g.name, phone: '', description: g.description || '',
-    photo: !!g.photo, photoV: g.photoV || 0, memberCount: g.members.length, myRole: me2 ? me2.role : null,
+    photo: !!g.photo, photoV: g.photoV || 0, memberCount: g.members.length, myRole: me2 ? me2.role : null, adhoc: !!g.adhoc,
     members: g.members.map((x) => { const u = userById(x.id); return { id: x.id, name: u ? saved.get(x.id) || u.name : 'Deleted user', phone: u ? u.phone : '', role: x.role, lang: u ? u.lang || null : null }; }),
     settings: g.settings, createdBy: g.createdBy, createdAt: g.createdAt, inContacts: true, online: false,
     community: g.communityId && db.communities.find((x) => x.id === g.communityId) ? { id: g.communityId, name: db.communities.find((x) => x.id === g.communityId).name, announce: !!g.isAnnounce } : null,
@@ -2805,18 +2805,20 @@ io.on('connection', (socket) => {
   });
 
   // ----- group calls (everyone connects to everyone; up to GCALL_MAX people) -----
-  function gcallState(c) { io.to('grp:' + c.gid).emit('gcall:state', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, participants: [...c.parts.keys()] }); }
+  const confNames = (c) => (c.conf ? Object.fromEntries([...c.allowed].map((id) => [id, (userById(id) || {}).name || 'Maata user'])) : undefined);
+  function gcallState(c) { io.to(c.conf ? 'gc:' + c.id : 'grp:' + c.gid).emit('gcall:state', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, participants: [...c.parts.keys()], names: confNames(c) }); }
   function gcallJoin(c) {
     const peers = [...c.parts.keys()].filter((x) => x !== me);
     c.parts.set(me, now()); c.ever.add(me); socket.join('gc:' + c.id); socket.gcall = c.id;
-    socket.emit('gcall:joined', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, peers, max: GCALL_MAX, ...(LIVEKIT ? { sfu: { url: LK_URL, token: livekitToken(socket.user, 'maata-' + c.id) } } : {}) });
+    socket.emit('gcall:joined', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, peers, max: GCALL_MAX, conf: !!c.conf, names: confNames(c), ...(LIVEKIT ? { sfu: { url: LK_URL, token: livekitToken(socket.user, 'maata-' + c.id) } } : {}) });
     gcallState(c); pushLive();
   }
   function gcallLeave(callId) {
     const c = [...gcalls.values()].find((x) => x.id === callId); if (!c || !c.parts.has(me)) return;
     c.parts.delete(me); socket.leave('gc:' + c.id); socket.gcall = null;
     io.to('gc:' + c.id).emit('gcall:peer-left', { callId: c.id, id: me });
-    if (!c.parts.size) {
+    if (!c.parts.size && c.conf) { gcalls.delete(c.gid); feed('call', 'Conference ' + c.kind + ' call: ' + c.ever.size + ' people'); }
+    else if (!c.parts.size) {
       gcalls.delete(c.gid);
       const rec = { id: c.id, from: c.by, to: 'g:' + c.gid, group: c.gid, kind: c.kind, startedAt: c.startedAt, endedAt: now(), participants: [...c.ever] };
       if (c.ever.size > 1) Object.assign(rec, { status: 'completed', answeredAt: c.startedAt, duration: Math.round((now() - c.startedAt) / 1000) }); else Object.assign(rec, { status: 'missed', duration: 0 });
@@ -2841,8 +2843,8 @@ io.on('connection', (socket) => {
     gcallJoin(c);
   });
   socket.on('gcall:join', (p) => {
-    const g = groupById(gidOf(String(p?.gid || ''))); const c = g && gcalls.get(g.id);
-    if (!c || !gMember(g, me)) return socket.emit('gcall:ended', { callId: p?.callId });
+    const gk = gidOf(String(p?.gid || '')), c = gcalls.get(gk), g = groupById(gk);
+    if (!c || !(c.conf ? c.allowed.has(me) : gMember(g, me))) return socket.emit('gcall:ended', { callId: p?.callId });
     if (c.parts.has(me)) return;
     if (c.parts.size >= GCALL_MAX) return socket.emit('gcall:full', { callId: c.id, max: GCALL_MAX });
     if (socket.gcall) gcallLeave(socket.gcall);
@@ -2854,6 +2856,38 @@ io.on('connection', (socket) => {
     io.to('user:' + p.to).emit('gcall:signal', { callId: c.id, from: me, data: p.data });
   });
   socket.on('gcall:leave', (p) => gcallLeave(String(p?.callId || '')));
+
+  // ---------- Conference call (like "Add call / Merge" on a normal phone): people chosen by the caller, no group needed ----------
+  const mayCall = (uid) => { const t = userById(uid); return t && t.status !== 'blocked' && !blockedOf(t).includes(me) && !blockedOf(socket.user).includes(uid); };
+  function confRing(c, uid) {
+    if (!isOnline(uid)) return false;
+    io.to('user:' + uid).emit('gcall:ring', { gid: 'g:' + c.gid, callId: c.id, kind: c.kind, from: me, fromName: socket.user.name, groupName: 'Conference call', conf: true, names: confNames(c) });
+    return true;
+  }
+  socket.on('conf:create', (p, reply) => {
+    const kind = p?.kind === 'video' ? 'video' : 'voice', moveId = String(p?.move || '');
+    const invite = [...new Set((Array.isArray(p?.invite) ? p.invite : []).map(String))].filter((id) => id !== me && mayCall(id)).slice(0, GCALL_MAX - 1);
+    if (!invite.length) return reply?.({ error: 'Choose someone to add.' });
+    if (socket.gcall) gcallLeave(socket.gcall);
+    const id = newId(), c = { id, gid: 'conf-' + id, conf: true, kind, startedAt: now(), by: me, parts: new Map(), ever: new Set(), allowed: new Set([me, ...invite]) };
+    gcalls.set(c.gid, c);
+    const offline = [];
+    for (const uid of invite) {
+      if (uid === moveId) io.to('user:' + uid).emit('conf:move', { gid: 'g:' + c.gid, callId: c.id, kind, names: confNames(c) }); // already talking to us: joins without ringing
+      else if (!confRing(c, uid)) offline.push((userById(uid) || {}).name || 'Someone');
+    }
+    reply?.({ ok: true, gid: 'g:' + c.gid, callId: c.id, names: confNames(c), offline });
+  });
+  socket.on('conf:invite', (p, reply) => {
+    const c = [...gcalls.values()].find((x) => x.id === String(p?.callId || ''));
+    if (!c || !c.conf || !c.parts.has(me)) return reply?.({ error: 'Call not found.' });
+    const uid = String(p?.userId || '');
+    if (!mayCall(uid)) return reply?.({ error: 'You cannot call this person.' });
+    if (c.allowed.size >= GCALL_MAX) return reply?.({ error: 'The call is full (' + GCALL_MAX + ' people).' });
+    c.allowed.add(uid); gcallState(c);
+    if (!confRing(c, uid)) return reply?.({ error: ((userById(uid) || {}).name || 'They') + ' is not online right now.' });
+    reply?.({ ok: true });
+  });
   socket.on('disconnect', () => { if (socket.gcall) gcallLeave(socket.gcall); });
 
   socket.on('disconnect', () => {

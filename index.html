@@ -18,12 +18,12 @@
     var h = document.documentElement, g = function (k, d) { return localStorage.getItem(k) || d; };
     var mq = matchMedia('(prefers-color-scheme: dark)');
     window.applyMaataTheme = function () {
-      var m = g('maata_theme_mode', 'system'), dark = m === 'dark' || (m === 'system' && mq.matches);
-      h.classList.toggle('dark', dark);
+      var m = g('maata_theme_mode', 'system'), dark = m === 'dark' || m === 'black' || m === 'midnight' || m === 'forest' || (m === 'system' && mq.matches);
+      h.classList.toggle('dark', dark); h.dataset.bg = m;
       h.dataset.accent = g('maata_accent', 'teal'); h.dataset.wall = g('maata_wall', 'default'); h.dataset.font = g('maata_font', 'medium');
-      var t = document.querySelector('meta[name="theme-color"]'); if (t) t.setAttribute('content', dark ? '#12181F' : getComputedStyle(h).getPropertyValue('--peacock').trim() || '#0F4C5C');
+      var t = document.querySelector('meta[name="theme-color"]'), cs = getComputedStyle(h); if (t) t.setAttribute('content', (dark ? cs.getPropertyValue('--panel') : cs.getPropertyValue('--peacock')).trim() || (dark ? '#12181F' : '#0F4C5C'));
     };
-    applyMaataTheme();
+    applyMaataTheme(); document.addEventListener('DOMContentLoaded', applyMaataTheme);
     if (mq.addEventListener) mq.addEventListener('change', applyMaataTheme);
   } catch (e) {}
 })();
@@ -807,6 +807,14 @@ html.dark .forgot-link{color:#7CC4D4}
 }
 html.dark{color-scheme:dark}
 /* ================= Themes: accent colours, chat wallpapers, text size ================= */
+html[data-bg="black"]{--paper:#000000;--panel:#0C0C0C;--line:#232323;--theirs:#161616;--muted:#9AA0A6;--peacock-soft:#14262B}
+html[data-bg="midnight"]{--paper:#0D1626;--panel:#14203A;--line:#23345A;--theirs:#1A2A48;--muted:#9FB0CC;--peacock-soft:#1D3157}
+html[data-bg="forest"]{--paper:#0E1E16;--panel:#15291E;--line:#244030;--theirs:#1B3325;--muted:#9DBBA9;--peacock-soft:#1D3B2B}
+html[data-bg="sepia"]{--paper:#F3EAD3;--panel:#FBF4E2;--line:#E2D3AF;--theirs:#FFF9EA;--ink:#3A2E1C;--muted:#7A6A4E;--peacock-soft:#EADDBF}
+.th-modes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.th-modes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:14px;border:2px solid var(--line);background:var(--panel);font-size:13px;font-weight:600;color:var(--ink)}
+.th-modes button[aria-pressed="true"]{border-color:var(--peacock);box-shadow:0 0 0 2px var(--peacock)}
+.th-modes .dot{width:34px;height:34px;border-radius:50%;border:1px solid rgba(128,128,128,.4);display:grid;place-items:center;font-size:16px}
 html[data-accent="green"]{--peacock:#008069;--peacock-soft:#E1F5EC;--mine:#D9FDD3;--mine-ink:#111B21;--leaf:#1DAA61}
 html.dark[data-accent="green"]{--peacock:#00A884;--peacock-soft:#103529;--mine:#005C4B;--mine-ink:#E9EDEF;--leaf:#21C063}
 html[data-accent="blue"]{--peacock:#1F5FA8;--peacock-soft:#E4EEF9;--mine:#1F5FA8;--leaf:#1F7AE0}
@@ -1046,6 +1054,7 @@ html[data-font="large"] .c-name{font-size:18px}html[data-font="large"] .c-last{f
     <button class="round video-only" id="flipBtn" aria-label="Switch camera">
       <svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg>
     </button>
+    <button class="round" id="addCallBtn" aria-label="Add call" title="Add people (conference)"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg></button>
     <button class="round end" id="endBtn" aria-label="End call">
       <svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
     </button>
@@ -1740,7 +1749,7 @@ function toneLabel(kind) {
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
-  { const m = store.get('maata_theme_mode') || 'system', a = (ACCENTS.find((x) => x[0] === (store.get('maata_accent') || 'teal')) || ACCENTS[0])[2]; $('#setThemeName').textContent = ({ system: 'System', light: 'Light', dark: 'Dark' })[m] + ' · ' + a; }
+  { const m = store.get('maata_theme_mode') || 'system', a = (ACCENTS.find((x) => x[0] === (store.get('maata_accent') || 'teal')) || ACCENTS[0])[2]; $('#setThemeName').textContent = ({ system: 'System', light: 'Light', dark: 'Dark', black: 'Black', midnight: 'Midnight', forest: 'Forest', sepia: 'Sepia' })[m] + ' · ' + a; }
   renderProfileCard();
   const nb = $('#setNotifBox'); if (nb) { nb.innerHTML = ''; nb.append(notifSettingsRow()); }
   $('#setAppLangName').textContent = (APP_LANGS.find((x) => x[0] === appLang) || APP_LANGS[0])[1];
@@ -4501,7 +4510,7 @@ async function gcMedia(kind) {
   catch { toast('Allow microphone' + (kind === 'video' ? ' and camera' : '') + ' to join the call.'); return false; }
 }
 function gcShow(status) {
-  nativeCall(true, GC.kind, (userById(GC.gid) || {}).name || 'Group call');
+  nativeCall(true, GC.kind, GC.conf ? 'Conference' : (userById(GC.gid) || {}).name || 'Group call');
   let v = $('#gcView');
   if (!v) {
     v = el('section', 'gc'); v.id = 'gcView'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-label', 'Group call');
@@ -4515,12 +4524,12 @@ function gcShow(status) {
     const end = mk('gcEnd', 'Leave call', '<svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>', 'end');
     mic.onclick = () => { const t = GC.local && GC.local.getAudioTracks()[0]; if (!t) return; t.enabled = !t.enabled; mic.setAttribute('aria-pressed', String(!t.enabled)); };
     cam.onclick = () => { const t = GC.local && GC.local.getVideoTracks()[0]; if (!t) return toast('This is a voice call.'); t.enabled = !t.enabled; cam.setAttribute('aria-pressed', String(!t.enabled)); };
-    add.onclick = () => { const g = userById(GC.gid); if (g) { g.myRole === 'admin' ? addGroupMembers(g) : toast('Members can join from the group chat. Only admins can add new members.'); } };
+    add.onclick = () => { if (GC.conf) return addToConference(); const g = userById(GC.gid); if (g) { g.myRole === 'admin' ? addGroupMembers(g) : toast('Members can join from the group chat. Only admins can add new members.'); } };
     end.onclick = gcLeave;
     v.append(head, grid, bar); document.body.append(v);
   }
   const g = userById(GC.gid);
-  v.querySelector('.gc-head b').textContent = (g ? g.name : 'Group') + ' · ' + (GC.kind === 'video' ? 'Video call' : 'Voice call');
+  v.querySelector('.gc-head b').textContent = (GC.conf ? 'Conference' : g ? g.name : 'Group') + ' · ' + (GC.kind === 'video' ? 'Video call' : 'Voice call');
   v.querySelector('.gc-head small').textContent = status;
   $('#gcCam').hidden = GC.kind !== 'video';
   gcTile(me.id, GC.local, true);
@@ -4532,7 +4541,8 @@ function gcTile(uid, stream, mine) {
     t = el('div', 'gc-tile' + (mine ? ' me' : ' connecting')); t.dataset.uid = uid;
     const g = userById(GC.gid);
     const v = el('video'); v.autoplay = true; v.playsInline = true; if (mine) v.muted = true;
-    t.append(v, avatar({ id: uid, name: mine ? me.name : memberName(g, uid) }), el('span', 'nm', mine ? 'You' : memberName(g, uid)));
+    const nm2 = mine ? 'You' : (GC.names && GC.names[uid]) || memberName(g, uid);
+    t.append(v, avatar(mine ? me : (userById(uid) || { id: uid, name: nm2 })), el('span', 'nm', nm2));
     grid.append(t);
   }
   if (stream) { const v = t.querySelector('video'); if (v.srcObject !== stream) { v.srcObject = stream; v.play().catch(() => {}); } t.classList.toggle('has-video', stream.getVideoTracks().length > 0); }
@@ -4558,6 +4568,7 @@ function gcCount() {
   const g = $('#gcGrid'); if (g) g.classList.toggle('many', g.children.length > 6);
 }
 function gcLeave() {
+  GC.conf = false; GC.names = {};
   if (!call) nativeCall(false);
   if (GC.id) socket.emit('gcall:leave', { callId: GC.id });
   if (GC.room) { const r = GC.room; GC.room = null; r.disconnect().catch(() => {}); }
@@ -4569,6 +4580,7 @@ function gcLeave() {
 function gcStopRing() { stopRing(); if (GC.ring) { clearTimeout(GC.ring.t); GC.ring.el.remove(); GC.ring = null; } }
 socket_ready_hooks.push(() => {
   socket.on('gcall:joined', (p) => {
+    if (p.conf) { GC.conf = true; GC.names = Object.assign({}, GC.names || {}, p.names || {}); }
     if (GC.gid !== p.gid) return socket.emit('gcall:leave', { callId: p.callId });
     GC.id = p.callId; GC.kind = p.kind; GC.t0 = Date.now(); gcShow(p.peers.length ? 'Connecting…' : 'Ringing the group…');
     clearInterval(GC.timer); GC.timer = setInterval(gcCount, 1000);
@@ -4591,20 +4603,30 @@ socket_ready_hooks.push(() => {
   socket.on('gcall:full', (p) => { toast('This call is full (' + ((p && p.max) || 8) + ' people).'); gcLeave(); });
   socket.on('gcall:ended', () => { toast('This call has ended.'); gcLeave(); });
   socket.on('gcall:state', (s2) => {
+    if (s2.names && GC.id === s2.callId) GC.names = Object.assign({}, GC.names || {}, s2.names);
     const g = userById(s2.gid); if (g) { g.activeCall = s2.participants.length ? { id: s2.callId, kind: s2.kind, count: s2.participants.length } : null; if (activeId === s2.gid) renderChatHead(); }
     if (GC.ring && GC.ring.callId === s2.callId && !s2.participants.length) gcStopRing();
+  });
+  socket.on('conf:move', (p) => {
+    if (!call) return;
+    const stream = call.local; call.local = null;
+    endCall('Joining the conference call…');
+    GC.local = stream; GC.kind = p.kind; GC.gid = p.gid; GC.conf = true; GC.names = p.names || {};
+    if (!GC.local) { gcMedia(p.kind).then((ok) => { if (ok) { gcShow('Joining…'); socket.emit('gcall:join', { gid: p.gid, callId: p.callId }); } }); return; }
+    gcShow('Joining the conference…'); socket.emit('gcall:join', { gid: p.gid, callId: p.callId });
+    toast('👥 Conference call: more people are being added');
   });
   socket.on('gcall:ring', (p) => {
     if (call || GC.id || muted(p.gid)) { const g = userById(p.gid); if (g) g.activeCall = { id: p.callId, kind: p.kind, count: 1 }; return; }
     gcStopRing();
     const r = el('div', 'gring'); r.setAttribute('role', 'alertdialog');
-    const g = userById(p.gid); r.append(avatar(g || { id: p.gid, name: p.groupName }));
-    const who = el('div', 'who'); who.append(el('b', null, p.groupName), el('small', null, p.fromName + ' started a group ' + (p.kind === 'video' ? 'video' : 'voice') + ' call')); r.append(who);
+    const g = userById(p.gid); r.append(avatar(p.conf ? (userById(p.from) || { id: p.from, name: p.fromName }) : (g || { id: p.gid, name: p.groupName })));
+    const who = el('div', 'who'); who.append(el('b', null, p.conf ? '👥 ' + p.fromName : p.groupName), el('small', null, p.conf ? 'is inviting you to a conference ' + (p.kind === 'video' ? 'video' : 'voice') + ' call' : p.fromName + ' started a group ' + (p.kind === 'video' ? 'video' : 'voice') + ' call')); r.append(who);
     const no = el('button', 'no', 'Decline'), yes = el('button', 'yes', 'Join');
-    no.onclick = gcStopRing; yes.onclick = () => joinGroupCall(p.gid, p.callId, p.kind);
+    no.onclick = gcStopRing; yes.onclick = () => { if (p.conf) { GC.conf = true; GC.names = p.names || {}; } joinGroupCall(p.gid, p.callId, p.kind); };
     r.append(no, yes); document.body.append(r);
     GC.ring = { el: r, callId: p.callId, t: setTimeout(gcStopRing, 40000) };
-    ring('incoming', p.kind); notify(p.groupName, p.fromName + ' started a group call');
+    ring('incoming', p.kind); notify(p.conf ? 'Conference call' : p.groupName, p.conf ? p.fromName + ' is adding you to a conference call' : p.fromName + ' started a group call');
   });
   socket.on('group:update', () => reloadUsers());
 });
@@ -6062,16 +6084,17 @@ function setThemePref(k, v) { store.set(k, v); window.applyMaataTheme && applyMa
 function openThemes() {
   closeSettings();
   sheet('🎨 Theme & colours', (list) => {
-    const box = el('div'); box.style.padding = '4px 14px 16px';
+    const box = el('div'); box.style.padding = '4px 14px calc(40px + env(safe-area-inset-bottom,0px))';
     const prev = el('div', 'th-prev'); prev.id = 'thPrev';
     const b1 = el('div', 'bubble', 'Hi! Shop eppudu open? 🙂'), b2 = el('div', 'bubble mine', 'Morning 10 ki open anna 👍');
     b2.style.alignSelf = 'flex-end'; prev.append(b1, b2);
     const syncPrev = () => { const w = store.get('maata_wall') || 'default'; const W = WALLS.find((x) => x[0] === w); prev.style.background = w === 'doodle' || w === 'default' || w === 'plain' ? 'var(--paper)' : getComputedStyle($('#messages') || document.body).backgroundColor; if (w === 'night') prev.style.background = '#0B141A'; };
     box.append(el('div', 'th-title', 'Preview'), prev);
     box.append(el('div', 'th-title', 'Theme'));
-    const seg = el('div', 'th-seg');
-    for (const [v, label] of [['system', '📱 System'], ['light', '☀️ Light'], ['dark', '🌙 Dark']]) {
-      const b = el('button', null, label); b.setAttribute('aria-pressed', String((store.get('maata_theme_mode') || 'system') === v));
+    const seg = el('div', 'th-modes');
+    for (const [v, label, dot, ic] of [['system', 'System', 'linear-gradient(135deg,#FBFAF7 50%,#12181F 50%)', '📱'], ['light', 'Light', '#FBFAF7', '☀️'], ['dark', 'Dark', '#12181F', '🌙'], ['black', 'Black', '#000', '⚫'], ['midnight', 'Midnight', '#0D1626', '🌌'], ['forest', 'Forest', '#0E1E16', '🌲'], ['sepia', 'Sepia', '#F3EAD3', '📜']]) {
+      const b = el('button'); const d = el('span', 'dot', ic); d.style.background = dot; b.append(d, el('span', null, label)); b.setAttribute('aria-label', label + ' theme');
+      b.setAttribute('aria-pressed', String((store.get('maata_theme_mode') || 'system') === v));
       b.onclick = () => { setThemePref('maata_theme_mode', v); [...seg.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); syncPrev(); };
       seg.append(b);
     }
@@ -6107,6 +6130,52 @@ function openThemes() {
 }
 
 $('#setThemes').onclick = openThemes;
+// ================= Conference calls ("Add call" during a call, like a normal phone) =================
+function pickPersonToAdd(exclude, onPick) {
+  sheet('➕ Add to call', (list) => {
+    const box = el('div'); box.style.padding = '8px 10px';
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; q.className = 'search'; q.style.width = '100%'; q.style.marginBottom = '8px';
+    const res = el('div'); box.append(q, res); list.append(box);
+    const draw = () => {
+      res.innerHTML = '';
+      const t = q.value.trim().toLowerCase();
+      const people = users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && u.inContacts && !exclude.includes(u.id) && (!t || nameOf(u).toLowerCase().includes(t) || (u.phone || '').includes(t)))
+        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0) || nameOf(a).localeCompare(nameOf(b)));
+      if (!people.length) res.append(el('p', 'info-note', 'No contacts found.'));
+      for (const u of people) {
+        const r = el('button', 'mem-row'); r.append(avatar(u, 'sm'));
+        const tx = el('div', 'txt'); tx.append(el('b', null, nameOf(u)), el('small', null, u.online ? '🟢 Online' : '+91 ' + u.phone)); r.append(tx);
+        r.onclick = () => { closeSheet('moreSheet'); onPick(u); };
+        res.append(r);
+      }
+    };
+    q.oninput = draw; draw();
+  });
+}
+// 1-to-1 call → conference: both of us move into a new conference call and the new person is rung
+function addCallFromOneToOne() {
+  if (!call || !['connected', 'connecting'].includes(call.state)) return toast('You can add people once the call is connected.');
+  pickPersonToAdd([call.peerId], (u) => {
+    if (!call) return;
+    socket.emit('conf:create', { invite: [call.peerId, u.id], kind: call.kind, move: call.peerId }, (r) => {
+      if (!r || r.error) return toast((r && r.error) || 'Could not add. Try again.');
+      if (!call) return;
+      const stream = call.local, kind = call.kind; call.local = null; // keep the microphone/camera running for the conference
+      endCall('Merging into a conference call…', true);
+      GC.local = stream; GC.kind = kind; GC.gid = r.gid; GC.conf = true; GC.names = r.names || {};
+      gcShow('Calling ' + nameOf(u) + '…');
+      socket.emit('gcall:join', { gid: r.gid, callId: r.callId });
+      if (r.offline && r.offline.length) toast(r.offline.join(', ') + ' is not online right now.');
+    });
+  });
+}
+async function addToConference() {
+  if (!GC.id) return;
+  const inCall = [...(GC.peers ? GC.peers.keys() : []), me.id];
+  pickPersonToAdd(inCall, (u) => socket.emit('conf:invite', { callId: GC.id, userId: u.id }, (r) => toast(r && r.error ? r.error : '📞 Calling ' + nameOf(u) + '…')));
+}
+
+$('#addCallBtn').onclick = addCallFromOneToOne;
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
