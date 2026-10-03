@@ -697,6 +697,38 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
 .ph-wrap input{border:0!important;outline:0;flex:1;min-width:0;letter-spacing:1px}
 .ph-hint{display:block;min-height:18px;font-size:12.5px;margin-top:4px;color:var(--muted)}
 .ph-hint.bad{color:var(--chili)}
+.forgot-link{display:block;margin:-4px 0 6px auto;color:var(--peacock);font-weight:600;font-size:14px;padding:4px 0}
+@media (prefers-color-scheme:dark){.forgot-link{color:#7CC4D4}}
+/* ---------- Contact profile page ---------- */
+.ci{position:fixed;inset:0;z-index:30;background:var(--paper);overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.ci-top{position:sticky;top:0;display:flex;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 8px 8px;background:var(--paper);z-index:2}
+.ci-top .grow{flex:1}
+.ci-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 16px 18px;max-width:640px;margin:0 auto}
+.ci-av{width:132px;height:132px;font-size:46px;margin-bottom:12px}
+.ci-hero h2{margin:0;font-size:24px;font-weight:700}
+.ci-phone{font-size:17px;color:var(--muted);margin-top:4px;letter-spacing:.3px}
+.ci-sub{font-size:14px;color:var(--muted);min-height:18px;margin-top:2px}.ci-sub.on{color:var(--leaf);font-weight:600}
+.ci-acts{display:flex;gap:12px;justify-content:center;margin-top:16px;width:100%}
+.ci-act{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:16px;border:1px solid var(--line);background:var(--panel);font-size:14px;font-weight:600;color:var(--ink)}
+.ci-act svg{width:24px;height:24px;fill:none;stroke:var(--leaf);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ci-body{max-width:640px;margin:0 auto;padding:0 10px;display:flex;flex-direction:column;gap:10px}
+.ci-card{background:var(--panel);border-radius:16px;padding:6px 0;overflow:hidden}
+.ci-label{font-size:13.5px;color:var(--muted);padding:10px 16px 2px}
+.ci-about{padding:2px 16px 12px;font-size:16px}
+.ci-row{display:flex;align-items:center;gap:16px;width:100%;padding:12px 16px;text-align:left;font-size:16px;color:var(--ink);background:none}
+.ci-row:hover{background:var(--paper)}
+.ci-row.info{cursor:default}.ci-row.info:hover{background:none}
+.ci-row .ci-ic{width:26px;text-align:center;font-size:19px;flex:none}
+.ci-row .ci-rt{flex:1;min-width:0;display:flex;flex-direction:column}
+.ci-row .ci-rt small{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.35}
+.ci-row .ci-cnt{color:var(--muted);font-size:14px}
+.ci-row.danger{color:var(--chili)}
+.ci-media{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 12px;scrollbar-width:none}
+.ci-thumb{flex:none;width:88px;height:88px;border-radius:12px;background:var(--paper) center/cover no-repeat;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:22px;color:var(--ink);padding:6px;overflow:hidden}
+.ci-thumb.vid{background:#1C2230;color:#fff}
+.ci-thumb small{font-size:10.5px;color:var(--muted);word-break:break-all;line-height:1.2;text-align:center}
+.ci-photo{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.92);display:grid;place-items:center;cursor:zoom-out}
+.ci-photo img{max-width:94vw;max-height:88vh;border-radius:12px}
 /* ---------- Mobile ---------- */
 /* ================= Mobile app layout (WhatsApp-style): big header, pill search, bottom tab bar, floating button ================= */
 .bnav,.fab,.side-head .cam-btn,.side-head .page-title{display:none}
@@ -813,7 +845,9 @@ input[type=range].vol{flex:1;accent-color:var(--peacock)}
     <p class="tagline" id="authTagline" data-t="tagline">Free voice calls, video calls and messages with anyone on Maata. Just internet, no call charges.</p>
     <label class="field" id="nameField" hidden><span data-t="name">Your name</span><input id="name" autocomplete="name" maxlength="40"></label>
     <label class="field"><span data-t="mobile">Mobile number</span><div class="ph-wrap"><span class="ph-cc" aria-hidden="true">🇮🇳 +91</span><input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="10-digit mobile number" aria-describedby="phoneHint"></div><small class="ph-hint" id="phoneHint"></small></label>
+    <label class="field" id="emailField" hidden><span>Email</span><input id="email" type="email" autocomplete="email" maxlength="120" placeholder="you@gmail.com"><small class="ph-hint">Used only if you forget your password</small></label>
     <label class="field"><span data-t="password">Password</span><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters"></label>
+    <button type="button" class="forgot-link" id="forgotBtn">Forgot password?</button>
     <p class="error" id="authError" role="alert"></p>
     <button class="primary" id="authSubmit" type="submit">Log in</button>
     <p class="switch"><span id="switchText">New to Maata?</span> <button type="button" id="switchMode">Create account</button></p>
@@ -1246,6 +1280,7 @@ let mode = 'login';
 function setMode(m) {
   mode = m;
   $('#nameField').hidden = m === 'login';
+  $('#emailField').hidden = m === 'login'; $('#forgotBtn').hidden = m !== 'login';
   $('#authSubmit').textContent = m === 'login' ? i18n('login') : i18n('create');
   $('#switchText').textContent = m === 'login' ? i18n('newTo') : i18n('haveAcc');
   $('#switchMode').textContent = m === 'login' ? i18n('create') : i18n('login');
@@ -1263,7 +1298,10 @@ $('#authForm').onsubmit = async (e) => {
       const mobile = cleanMobileInput($('#phone').value);
       if (!/^[6-9]\d{9}$/.test(mobile)) throw new Error('Enter your 10-digit mobile number (without +91 or 0).');
       const body = { phone: mobile, password: $('#password').value };
-      if (mode === 'register') body.name = $('#name').value;
+      if (mode === 'register') {
+        body.name = $('#name').value; body.email = $('#email').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(body.email)) throw new Error('Enter a valid email address. It is used if you forget your password.');
+      }
       r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
       if (r.needPin) { showPinStep(r); return; }
     }
@@ -2205,6 +2243,7 @@ $('#moreBtn').onclick = () => {
   const u = userById(activeId); if (!u) return;
   if (u.isGroup) return openGroupInfo(u.id);
   if (u.isAI) return aiChatMenu();
+  if (!u.isGroup && !u.isAI) { const vc = el('button', 'sheet-btn', '👤  View contact'); vc.onclick = () => { closeSheet('moreSheet'); openContactInfo(u.id); }; setTimeout(() => { const l = $('#moreList'); if (l && !l.querySelector('.vc-btn')) { vc.classList.add('vc-btn'); l.prepend(vc); } }, 0); }
   $('#moreTitle').textContent = nameOf(u);
   const list = $('#moreList'); list.innerHTML = '';
   const add = (label, fn, warn) => { const b = document.createElement('button'); b.className = 'sheet-btn' + (warn ? ' warn' : ''); b.textContent = label; b.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(b); };
@@ -5700,6 +5739,10 @@ function openProfileEdit() {
     for (const p of ABOUT_PRESETS) { const c = el('button', null, p); c.type = 'button'; c.onclick = () => (ai.value = p); chips.append(c); }
     box.append(chips);
     const ph = el('label'); ph.append(el('span', null, 'Phone')); const pi = el('input'); pi.value = me.phone; pi.disabled = true; ph.append(pi); box.append(ph);
+    const acc = el('div', 'set-group'); acc.style.margin = '6px 0 14px';
+    const er = el('button', 'sheet-btn', '✉️  Email: ' + (me.email || 'add an email (for forgot password)')); er.type = 'button'; er.onclick = openEmailEdit;
+    const pr = el('button', 'sheet-btn', '🔒  Change password'); pr.type = 'button'; pr.onclick = openPasswordChange;
+    acc.append(er, pr); box.append(acc);
     const save2 = el('button', 'primary', 'Save');
     save2.onclick = async () => {
       if (ni.value.trim().length < 2) return toast('Name must be at least 2 letters.');
@@ -5791,6 +5834,164 @@ function cleanMobileInput(v) {
   ph.addEventListener('input', () => { const c = cleanMobileInput(ph.value); if (c !== ph.value) ph.value = c; check(); });
   ph.addEventListener('paste', (e) => { e.preventDefault(); ph.value = cleanMobileInput((e.clipboardData || window.clipboardData).getData('text')); check(); });
 })();
+// ================= Forgot password (code by email) =================
+function openForgot() {
+  const pre = cleanMobileInput($('#phone').value);
+  sheet('🔑 Forgot password', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Enter your mobile number or email. We will email you a 6-digit code to set a new password.'));
+    const l1 = el('label'); l1.append(el('span', null, 'Mobile number or email')); const idI = el('input'); idI.value = pre; idI.autocomplete = 'username'; l1.append(idI);
+    const send = el('button', 'primary', 'Send code');
+    const step2 = el('div'); step2.hidden = true;
+    const info = el('p', 'info-note');
+    const l2 = el('label'); l2.append(el('span', null, '6-digit code from the email')); const codeI = el('input'); codeI.inputMode = 'numeric'; codeI.maxLength = 6; codeI.autocomplete = 'one-time-code'; codeI.style.letterSpacing = '6px'; l2.append(codeI);
+    const l3 = el('label'); l3.append(el('span', null, 'New password')); const pw1 = el('input'); pw1.type = 'password'; pw1.autocomplete = 'new-password'; pw1.placeholder = 'At least 6 characters'; l3.append(pw1);
+    const l4 = el('label'); l4.append(el('span', null, 'New password again')); const pw2 = el('input'); pw2.type = 'password'; pw2.autocomplete = 'new-password'; l4.append(pw2);
+    const reset = el('button', 'primary', 'Set new password & log in');
+    const again = el('button', 'linkbtn', 'Send the code again');
+    step2.append(info, l2, l3, l4, reset, again);
+    const idVal = () => { const v = idI.value.trim(); return v.includes('@') ? v : cleanMobileInput(v); };
+    send.onclick = async () => {
+      if (!idI.value.trim()) return toast('Enter your mobile number or email.');
+      send.disabled = true; again.disabled = true;
+      try { const r = await api('/api/password/forgot', { method: 'POST', body: JSON.stringify({ id: idVal() }) }); info.textContent = '📧 We sent a code to ' + r.sentTo + '. Check your inbox (and Spam folder).'; step2.hidden = false; send.hidden = true; idI.disabled = true; codeI.focus(); }
+      catch (e) { toast(e.message); }
+      send.disabled = false; setTimeout(() => (again.disabled = false), 60000);
+    };
+    again.onclick = () => { send.hidden = false; send.click(); };
+    reset.onclick = async () => {
+      if (codeI.value.replace(/\D/g, '').length !== 6) return toast('Enter the 6-digit code.');
+      if (pw1.value.length < 6) return toast('Password must be at least 6 characters.');
+      if (pw1.value !== pw2.value) return toast('The two passwords do not match.');
+      reset.disabled = true;
+      try {
+        const r = await api('/api/password/reset', { method: 'POST', body: JSON.stringify({ id: idVal(), code: codeI.value, password: pw1.value }) });
+        token = r.token; store.set('maata_token', token); closeSheet('moreSheet'); toast('Password changed ✓'); start();
+      } catch (e) { toast(e.message); reset.disabled = false; }
+    };
+    box.append(l1, send, step2); list.append(box); idI.focus();
+  });
+}
+$('#forgotBtn').onclick = openForgot;
+
+// ----- in My profile: email & change password -----
+function openEmailEdit() {
+  sheet('✉️ Email', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Used only to send you a code if you forget your password. Other people never see it.'));
+    const a = el('label'); a.append(el('span', null, 'Email')); const ei = el('input'); ei.type = 'email'; ei.value = me.email || ''; ei.autocomplete = 'email'; a.append(ei);
+    const b = el('label'); b.append(el('span', null, 'Your Maata password (to confirm)')); const pi = el('input'); pi.type = 'password'; pi.autocomplete = 'current-password'; b.append(pi);
+    const go = el('button', 'primary', 'Save email');
+    go.onclick = async () => { try { me = await api('/api/me/email', { method: 'PUT', body: JSON.stringify({ email: ei.value, password: pi.value }) }); toast('Email saved ✓'); openProfileEdit(); } catch (e) { toast(e.message); } };
+    box.append(a, b, go); list.append(box); ei.focus();
+  });
+}
+function openPasswordChange() {
+  sheet('🔒 Change password', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const f = (label, ac) => { const l = el('label'); l.append(el('span', null, label)); const i = el('input'); i.type = 'password'; i.autocomplete = ac; l.append(i); box.append(l); return i; };
+    const cur = f('Current password', 'current-password'), n1 = f('New password', 'new-password'), n2 = f('New password again', 'new-password');
+    const go = el('button', 'primary', 'Change password');
+    go.onclick = async () => {
+      if (n1.value.length < 6) return toast('New password must be at least 6 characters.');
+      if (n1.value !== n2.value) return toast('The two passwords do not match.');
+      try { const r = await api('/api/me/password', { method: 'POST', body: JSON.stringify({ current: cur.value, password: n1.value }) }); token = r.token; store.set('maata_token', token); closeSheet('moreSheet'); toast('Password changed ✓ Other devices were logged out.'); if (socket) { socket.disconnect(); connectSocket(); } }
+      catch (e) { toast(e.message); }
+    };
+    box.append(el('p', 'info-note', 'Changing your password logs Maata out on your other phones and computers.'), go); list.append(box); cur.focus();
+  });
+}
+
+// ================= Contact profile page (tap the name at the top of a chat) =================
+function openContactInfo(uid) {
+  const u = userById(uid); if (!u || u.isGroup || u.isAI) return;
+  closeMsgMenu();
+  let v = $('#ciView'); if (v) v.remove();
+  v = el('section', 'ci'); v.id = 'ciView'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-label', 'Contact info');
+  const top = el('div', 'ci-top');
+  const back = el('button', 'icon-btn'); back.setAttribute('aria-label', 'Back'); back.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'; back.onclick = () => v.remove();
+  const more = el('button', 'icon-btn'); more.setAttribute('aria-label', 'More options'); more.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>';
+  more.onclick = () => sheet(nameOf(u), (list) => {
+    const b = (t, fn, warn) => { const x = el('button', 'sheet-btn' + (warn ? ' warn' : ''), t); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
+    b('↪  Share contact', () => { v.remove(); aiForward('👤 ' + nameOf(u) + ' · +91 ' + u.phone + ' · on Maata'); });
+    if (u.inContacts) b('✏️  Edit name', () => saveContact(u)); else b('➕  Save to contacts', () => saveContact(u));
+    b('📋  Add to list', () => pickListFor([u.id]));
+  });
+  top.append(back, el('span', 'grow'), more);
+  const hero = el('div', 'ci-hero');
+  const av = avatar(u); av.classList.add('ci-av');
+  if (u.photo) { av.style.cursor = 'zoom-in'; av.onclick = () => { const o = el('div', 'ci-photo'); const im = el('img'); im.src = userPhotoUrl(u); im.alt = nameOf(u); o.append(im); o.onclick = () => o.remove(); document.body.append(o); }; }
+  const saved = nameOf(u), real = u.name && u.name !== saved ? '~' + u.name : '';
+  hero.append(av, el('h2', null, saved), el('div', 'ci-phone', '+91 ' + u.phone.replace(/(\d{5})(\d{5})/, '$1 $2')));
+  if (real) hero.append(el('div', 'ci-sub', real));
+  hero.append(el('div', 'ci-sub' + (u.online ? ' on' : ''), u.blocked ? 'Blocked' : u.online ? 'Online' : ''));
+  const acts = el('div', 'ci-acts');
+  const act = (icon, label, fn) => { const b = el('button', 'ci-act'); b.innerHTML = icon; b.append(el('span', null, label)); b.onclick = fn; acts.append(b); };
+  act('<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>', 'Voice', () => { v.remove(); activeId = u.id; startCall('voice'); });
+  act('<svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>', 'Video', () => { v.remove(); activeId = u.id; startCall('video'); });
+  act('<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>', 'Search', () => { v.remove(); openChat(u.id).then(() => openChatSearch()); });
+  hero.append(acts);
+  const body = el('div', 'ci-body');
+  // About
+  const ab = el('div', 'ci-card'); ab.append(el('div', 'ci-label', 'About'), el('div', 'ci-about', u.about || 'Hey there! I am using Maata.'));
+  body.append(ab);
+  // Media, links and docs
+  const msgs = (messagesCache[u.id] || []).filter((m) => !m.deleted && !m.uploading && !m.viewOnce);
+  const media = msgs.filter((m) => (m.type === 'image' && !(m.file && m.file.sticker)) || m.type === 'video' || m.type === 'file' || (isText(m) && /https?:\/\//.test(m.text || '')));
+  const mc = el('div', 'ci-card');
+  const mh = el('button', 'ci-row'); mh.append(el('span', 'ci-rt', 'Media, links, and docs'), el('span', 'ci-cnt', String(media.length) + ' ›'));
+  mh.onclick = () => { v.remove(); openChat(u.id); };
+  mc.append(mh);
+  if (media.length) {
+    const strip = el('div', 'ci-media');
+    for (const m of media.slice().reverse().slice(0, 12)) {
+      const t = el('button', 'ci-thumb');
+      if (m.type === 'image') { t.style.backgroundImage = 'url("' + fileUrl(m.file) + '")'; t.onclick = () => { v.remove(); openChat(u.id).then(() => openMediaView(m.id)); }; }
+      else if (m.type === 'video') { t.textContent = '▶'; t.classList.add('vid'); t.onclick = () => { v.remove(); openChat(u.id).then(() => openMediaView(m.id)); }; }
+      else if (m.type === 'file') { t.append(el('b', null, fileIcon(m.file.mime, m.file.name)), el('small', null, m.file.name.slice(0, 18))); t.classList.add('doc'); t.onclick = () => window.open(fileUrl(m.file, true), '_blank'); }
+      else { t.append(el('b', null, '🔗'), el('small', null, (m.text.match(/https?:\/\/[^\s]+/) || [''])[0].replace(/^https?:\/\//, '').slice(0, 18))); t.classList.add('doc'); t.onclick = () => window.open((m.text.match(/https?:\/\/[^\s]+/) || ['#'])[0], '_blank', 'noopener'); }
+      strip.append(t);
+    }
+    mc.append(strip);
+  }
+  body.append(mc);
+  // Settings for this chat
+  const sc = el('div', 'ci-card');
+  const row = (icon, title, sub, fn, cls) => { const r = el('button', 'ci-row ' + (cls || '')); r.append(el('span', 'ci-ic', icon)); const t = el('span', 'ci-rt'); t.append(document.createTextNode(title)); if (sub) t.append(el('small', null, sub)); r.append(t); if (fn) r.onclick = fn; sc.append(r); return r; };
+  const isMuted = (prefs.muted || []).includes(u.id);
+  row('🔔', 'Notifications', isMuted ? 'Muted' : 'On', async () => { await savePrefs({ muted: isMuted ? prefs.muted.filter((x) => x !== u.id) : [...(prefs.muted || []), u.id] }); toast(isMuted ? 'Notifications on 🔔' : 'Muted 🔕'); openContactInfo(u.id); });
+  row('⏱️', 'Disappearing messages', (chatSettings[u.id] || {}).disappearing ? 'On' : 'Off', () => { v.remove(); openChat(u.id).then(() => openDisappearing(u.id)); });
+  row('⭐', 'Starred messages', '', () => { v.remove(); openStarred(); });
+  row(prefs.favs.includes(u.id) ? '★' : '☆', prefs.favs.includes(u.id) ? 'Remove from favourites' : 'Add to favourites', '', async () => { await savePrefs({ favs: prefs.favs.includes(u.id) ? prefs.favs.filter((f) => f !== u.id) : [...prefs.favs, u.id] }); openContactInfo(u.id); });
+  if (u.biz) row('🏪', 'Business profile & catalogue', u.biz.name, () => { v.remove(); viewBusiness(u.id); });
+  row('🔒', 'Security', 'Messages and calls travel over a secure (HTTPS) connection. Maata is not end-to-end encrypted.', null, 'info');
+  body.append(sc);
+  // Groups in common
+  const common = users.filter((g) => g.isGroup && (g.members || []).some((x) => x.id === u.id));
+  if (common.length) {
+    const gc = el('div', 'ci-card'); gc.append(el('div', 'ci-label', common.length + ' group' + (common.length > 1 ? 's' : '') + ' in common'));
+    for (const g of common) { const r = el('button', 'ci-row'); r.append(avatar(g, 'sm')); const t = el('span', 'ci-rt'); t.append(document.createTextNode(g.name)); t.append(el('small', null, g.memberCount + ' members')); r.append(t); r.onclick = () => { v.remove(); openChat(g.id); }; gc.append(r); }
+    body.append(gc);
+  }
+  // Block / report
+  const dz = el('div', 'ci-card');
+  const bl = el('button', 'ci-row danger'); bl.append(el('span', 'ci-ic', u.blocked ? '✅' : '🚫'), el('span', 'ci-rt', (u.blocked ? 'Unblock ' : 'Block ') + nameOf(u)));
+  bl.onclick = () => { v.remove(); setBlocked(u, !u.blocked); };
+  const rp = el('button', 'ci-row danger'); rp.append(el('span', 'ci-ic', '🚩'), el('span', 'ci-rt', 'Report ' + nameOf(u)));
+  rp.onclick = () => { v.remove(); reportUser(u); };
+  dz.append(bl, rp); body.append(dz);
+  v.append(top, hero, body); document.body.append(v);
+  back.focus();
+}
+// open it by tapping the photo or name at the top of a chat (like WhatsApp)
+for (const sel of ['#chatAvatar', '#chatHead .who']) {
+  const e2 = $(sel); if (!e2) continue;
+  e2.style.cursor = 'pointer'; e2.setAttribute('role', 'button'); e2.tabIndex = 0;
+  e2.addEventListener('click', () => { const u = userById(activeId); if (!u) return; if (u.isGroup) openGroupInfo(u.id); else if (u.isAI) aiChatMenu(); else openContactInfo(u.id); });
+  e2.addEventListener('keydown', (e) => { if (e.key === 'Enter') e2.click(); });
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#ciView') && $('#moreSheet').hidden) $('#ciView').remove(); });
+
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

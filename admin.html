@@ -525,6 +525,9 @@ async function openCustomer(id) {
   $('#aBlock') && ($('#aBlock').onclick = () => { const note = prompt('Block ' + u.name + '? They will be logged out and cannot log in. Reason (optional):'); if (note === null) return; act(() => api(`/admin/api/users/${id}/block`, { method: 'POST', body: JSON.stringify({ blocked: true, note }) }), u.name + ' is blocked.'); });
   $('#aUnblock') && ($('#aUnblock').onclick = () => act(() => api(`/admin/api/users/${id}/block`, { method: 'POST', body: JSON.stringify({ blocked: false }) }), u.name + ' is unblocked.'));
   $('#aLogout').onclick = () => { if (confirm('Log ' + u.name + ' out of every device?')) act(() => api(`/admin/api/users/${id}/logout`, { method: 'POST' }), u.name + ' was logged out.'); };
+  { const rb = document.createElement('button'); rb.className = 'btn'; rb.textContent = '🔑 Reset password'; $('#aLogout').after(rb);
+    rb.onclick = async () => { if (!confirm('Give ' + u.name + ' a new temporary password? They will be logged out everywhere.')) return;
+      try { const r = await api(`/admin/api/users/${id}/reset-password`, { method: 'POST' }); prompt('Tell ' + u.name + ' (' + u.phone + ') this temporary password. Ask them to change it in Settings → My profile:', r.tempPassword); } catch (e) { toast(e.message); } }; }
   $('#aDelete').onclick = async () => {
     if (prompt('This permanently deletes ' + u.name + ' and their chats. Type DELETE to confirm.') !== 'DELETE') return;
     try { await api('/admin/api/users/' + id, { method: 'DELETE' }); toast(u.name + ' was deleted.'); closeDrawer(); loadCustomers(); } catch (e) { toast(e.message); }
@@ -646,7 +649,7 @@ $('#annSend').onclick = async () => {
 $('#annEnd').onclick = async () => { try { await api('/admin/api/announcements/active', { method: 'DELETE' }); toast('Banner removed from customer apps.'); loadAnnouncements(); } catch (e) { toast(e.message); } };
 
 // ---------- audit ----------
-const actionName = { login: 'Admin login', block: 'Blocked customer', unblock: 'Unblocked customer', 'force-logout': 'Logged out customer', delete: 'Deleted customer', announce: 'Sent announcement', 'end-announcement': 'Removed announcement', 'resolve-report': 'Resolved complaint' };
+const actionName = { login: 'Admin login', block: 'Blocked customer', unblock: 'Unblocked customer', 'force-logout': 'Logged out customer', 'reset-password': 'Reset customer password', 'password-reset': 'Customer reset password (email)', 'password-reset-requested': 'Password reset code sent', delete: 'Deleted customer', announce: 'Sent announcement', 'end-announcement': 'Removed announcement', 'resolve-report': 'Resolved complaint' };
 async function loadAudit() {
   const list = await api('/admin/api/audit');
   $('#auditBody').innerHTML = list.length ? list.map((a) => `<tr><td>${dt(a.ts)}</td><td>${esc(a.admin)}</td><td>${esc(actionName[a.action] || a.action)}</td><td>${esc(a.target)}</td><td class="muted" style="white-space:normal;min-width:180px">${esc(a.detail)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No admin actions yet.</td></tr>';

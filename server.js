@@ -431,15 +431,81 @@ function cleanMobile(raw) {
   return /^[6-9]\d{9}$/.test(d) ? d : null;
 }
 const findByMobile = (m) => db.users.find((x) => cleanMobile(x.phone) === m);
+// ---------- Email (for forgot password) ----------
+// Works with any SMTP: Gmail (smtp.gmail.com, port 465, an "App password"), Brevo, Zoho, etc.
+const nodemailer = require('nodemailer');
+const SMTP = { host: (process.env.SMTP_HOST || '').trim(), port: Number(process.env.SMTP_PORT || 465), user: (process.env.SMTP_USER || '').trim(), pass: (process.env.SMTP_PASS || '').replace(/\s+/g, '') };
+const MAIL_ON = !!(SMTP.host && SMTP.user && SMTP.pass);
+const mailer = MAIL_ON ? nodemailer.createTransport({ host: SMTP.host, port: SMTP.port, secure: SMTP.port === 465, auth: { user: SMTP.user, pass: SMTP.pass } }) : null;
+console.log(MAIL_ON ? '[mail] Email on (' + SMTP.host + ' as ' + SMTP.user + ')' : '[mail] Email off: add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS to send password reset codes');
+const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); return /^[^\s@]{1,64}@[^\s@]+\.[a-z]{2,}$/.test(v) && v.length <= 120 ? v : null; };
+const maskEmail = (e) => { const [a, d] = String(e).split('@'); return a.slice(0, 2) + '•'.repeat(Math.max(2, a.length - 2)) + '@' + d; };
+async function sendMail(to, subject, html, text) {
+  if (!mailer) throw new Error('mail-off');
+  await mailer.sendMail({ from: process.env.MAIL_FROM || ('Maata <' + SMTP.user + '>'), to, subject, html, text });
+}
+const resetCodes = new Map(); // userId -> { hash, until, tries, sentAt }
+app.post('/api/password/forgot', rateLimit, async (req, res) => {
+  const id = String(req.body?.id || '').trim();
+  const u = id.includes('@') ? db.users.find((x) => x.email === cleanEmail(id)) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
+  if (!u) return res.status(404).json({ error: 'No Maata account found with this mobile number or email.' });
+  if (!u.email) return res.status(400).json({ error: 'This account has no email address. Please contact Maata support to reset your password.' });
+  if (!MAIL_ON) return res.status(503).json({ error: 'Password reset by email is not switched on yet. Please contact Maata support.' });
+  const prev = resetCodes.get(u.id);
+  if (prev && now() - prev.sentAt < 60000) return res.status(429).json({ error: 'Please wait a minute before asking for another code.' });
+  const code = String(crypto.randomInt(100000, 1000000));
+  resetCodes.set(u.id, { hash: crypto.createHash('sha256').update(code + u.id).digest('hex'), until: now() + 15 * 60000, tries: 0, sentAt: now() });
+  try {
+    await sendMail(u.email, 'Your Maata password reset code: ' + code,
+      `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:16px"><h2 style="color:#0F4C5C;margin:0 0 8px">🦜 Maata</h2><p>Hi ${String(u.name).replace(/[<>&]/g, '')},</p><p>Use this code to reset your Maata password:</p><p style="font-size:34px;font-weight:700;letter-spacing:8px;color:#0F4C5C;margin:18px 0">${code}</p><p style="color:#555">The code works for 15 minutes. If you did not ask for this, ignore this email — your password stays the same.</p></div>`,
+      'Your Maata password reset code is ' + code + '. It works for 15 minutes. If you did not ask for this, ignore this email.');
+  } catch (e) { console.error('[mail]', e.message); resetCodes.delete(u.id); return res.status(502).json({ error: 'Could not send the email right now. Try again later.' }); }
+  audit('customer:' + u.phone, 'password-reset-requested', u.name);
+  res.json({ ok: true, sentTo: maskEmail(u.email) });
+});
+app.post('/api/password/reset', rateLimit, async (req, res) => {
+  const id = String(req.body?.id || '').trim(), code = String(req.body?.code || '').replace(/\D/g, ''), pw = String(req.body?.password || '');
+  const u = id.includes('@') ? db.users.find((x) => x.email === cleanEmail(id)) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
+  const r = u && resetCodes.get(u.id);
+  if (!r || r.until < now()) return res.status(400).json({ error: 'The code expired. Ask for a new code.' });
+  if (r.tries >= 5) { resetCodes.delete(u.id); return res.status(429).json({ error: 'Too many wrong codes. Ask for a new code.' }); }
+  if (crypto.createHash('sha256').update(code + u.id).digest('hex') !== r.hash) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
+  if (pw.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  resetCodes.delete(u.id);
+  u.passHash = await bcrypt.hash(pw, 10); u.tokenVersion = (u.tokenVersion || 0) + 1; // logs out every other device
+  kick(u.id, 'Your password was changed. Please log in again.');
+  recordLogin(u, req, 'password-reset'); save();
+  audit('customer:' + u.phone, 'password-reset', u.name);
+  res.json({ token: sign(u), user: publicUser(u) });
+});
+app.put('/api/me/email', auth, async (req, res) => {
+  if (!(await bcrypt.compare(String(req.body?.password || ''), req.user.passHash || ''))) return res.status(400).json({ error: 'Wrong password.' });
+  const e = String(req.body?.email || '').trim() ? cleanEmail(req.body.email) : '';
+  if (e === null) return res.status(400).json({ error: 'Enter a valid email address.' });
+  if (e && db.users.some((x) => x !== req.user && x.email === e)) return res.status(409).json({ error: 'This email is already used by another Maata account.' });
+  if (e) req.user.email = e; else delete req.user.email;
+  save(); res.json({ ...publicUser(req.user), email: req.user.email || '' });
+});
+app.post('/api/me/password', auth, rateLimit, async (req, res) => {
+  if (!(await bcrypt.compare(String(req.body?.current || ''), req.user.passHash || ''))) return res.status(400).json({ error: 'Your current password is wrong.' });
+  const pw = String(req.body?.password || ''); if (pw.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  req.user.passHash = await bcrypt.hash(pw, 10); req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+  kick(req.user.id, 'Your password was changed. Please log in again.'); save();
+  res.json({ token: sign(req.user), user: publicUser(req.user) });
+});
+
 app.post('/api/register', rateLimit, async (req, res) => {
   const name = String(req.body?.name || '').trim().slice(0, 40);
   const phone = cleanMobile(req.body?.phone);
   const password = String(req.body?.password || '');
   if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters.' });
   if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number (without +91 or 0).' });
+  const email = cleanEmail(req.body?.email);
+  if (!email) return res.status(400).json({ error: 'Enter a valid email address. It is used if you forget your password.' });
+  if (db.users.some((x) => x.email === email)) return res.status(409).json({ error: 'This email is already used by another Maata account.' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   if (findByMobile(phone)) return res.status(409).json({ error: 'This number is already registered. Log in instead.' });
-  const u = { id: newId(), name, phone, passHash: await bcrypt.hash(password, 10), createdAt: now(), status: 'active', tokenVersion: 0 };
+  const u = { id: newId(), name, phone, email, passHash: await bcrypt.hash(password, 10), createdAt: now(), status: 'active', tokenVersion: 0 };
   db.users.push(u);
   recordLogin(u, req, 'signup');
   save();
@@ -459,7 +525,7 @@ app.post('/api/login', rateLimit, async (req, res) => {
   res.json({ token: sign(u), user: publicUser(u) });
 });
 
-app.get('/api/me', auth, (req, res) => res.json(publicUser(req.user)));
+app.get('/api/me', auth, (req, res) => res.json({ ...publicUser(req.user), email: req.user.email || '' }));
 
 // ---------- My profile: name, about, photo ----------
 app.put('/api/me/profile', auth, (req, res) => {
@@ -2153,7 +2219,7 @@ app.get('/admin/api/users', adminAuth, (req, res) => {
   const t0 = startOfToday();
   let list = db.users.map((u) => ({
     ...publicUser(u), status: u.status || 'active', createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null,
-    lastSeenAt: isOnline(u.id) ? now() : u.lastSeenAt || null, online: isOnline(u.id), duplicate: !!u.duplicateOf,
+    lastSeenAt: isOnline(u.id) ? now() : u.lastSeenAt || null, online: isOnline(u.id), duplicate: !!u.duplicateOf, email: u.email || '',
     ...(agg[u.id] || { logins: 0, calls: 0, talkSec: 0, sent: 0 }),
   }));
   if (q) list = list.filter((u) => u.name.toLowerCase().includes(q) || u.phone.includes(q));
@@ -2206,6 +2272,15 @@ app.post('/admin/api/users/:id/block', adminAuth, (req, res) => {
   audit(req.admin, block ? 'block' : 'unblock', u.name + ' (' + u.phone + ')', String(req.body?.note || ''));
   save(); pushLive();
   res.json({ ok: true, status: u.status });
+});
+// For customers without an email: admin gives them a temporary password (they should change it after logging in)
+app.post('/admin/api/users/:id/reset-password', adminAuth, async (req, res) => {
+  const u = userById(req.params.id); if (!u) return res.status(404).json({ error: 'Customer not found.' });
+  const temp = 'maata' + crypto.randomInt(1000, 10000);
+  u.passHash = await bcrypt.hash(temp, 10); u.tokenVersion = (u.tokenVersion || 0) + 1;
+  kick(u.id, 'Your password was reset by Maata support. Log in with the new password.'); save();
+  audit(req.admin, 'reset-password', u.name + ' (' + u.phone + ')');
+  res.json({ ok: true, tempPassword: temp });
 });
 app.post('/admin/api/users/:id/logout', adminAuth, (req, res) => {
   const u = userById(req.params.id);
