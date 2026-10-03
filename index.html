@@ -108,8 +108,8 @@ html.dark .brand{color:#7CC4D4}
 .chat-empty strong{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
 .chat-head{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
 .chat-head .who{flex:1;min-width:0}
-.chat-head .name{font-weight:600}
-.chat-head .status{font-size:13px;color:var(--muted)}
+.chat-head .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.chat-head .status{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
 .chat-head .status.on{color:var(--leaf)}
 .call-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--peacock);background:var(--peacock-soft)}
 html.dark .call-btn{color:#7CC4D4}
@@ -781,6 +781,19 @@ html.dark .forgot-link{color:#7CC4D4}
   .add-row .search{flex:1;width:100%}
   .contact .badge{background:var(--wa-green);color:#fff;min-width:22px;height:22px;border-radius:11px;font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 6px}
   .contact:has(.badge) .c-time{color:var(--wa-green);font-weight:600}
+  /* chat header like WhatsApp: one-line name, full number, plain icons */
+  .chat-head{gap:4px;padding:8px 4px 8px 0;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+  .chat-head .back{width:40px;height:44px;flex:none}
+  #chatAvatar{flex:none}
+  #chatAvatar .avatar{width:42px;height:42px;font-size:16px}
+  .chat-head .who{padding-left:6px}
+  .chat-head .name{font-size:17.5px}
+  .chat-head .name .biz-tag{font-size:10px}
+  .chat-head .name.long{font-size:15px}
+  .chat-head .status{font-size:13.5px}
+  .chat-head .call-btn{width:42px;height:44px;background:transparent;border-radius:12px;flex:none;color:var(--ink)}
+  .chat-head .call-btn svg{width:23px;height:23px}
+  .chat-head #chatSearchBtn{display:none}
   .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:8px 4px calc(10px + env(safe-area-inset-bottom,0px));justify-content:space-around}
   .app.in-chat ~ .bnav,.app[hidden] ~ .bnav,.app[hidden] ~ .fab,.bnav.away{display:none}
   .bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13.5px;font-weight:600;color:var(--ink);position:relative;background:none}
@@ -1563,7 +1576,10 @@ function renderChatHead() {
     if (u.activeCall && !GC.id) { jb = el('button', 'gcall-join'); jb.id = 'gJoinBtn'; jb.textContent = (u.activeCall.kind === 'video' ? '🎥' : '📞') + ' Join call · ' + u.activeCall.count; jb.onclick = () => joinGroupCall(u.id, u.activeCall.id, u.activeCall.kind); $('#voiceBtn').before(jb); }
     return;
   }
-  const s = $('#chatStatus'); s.textContent = (u.online ? 'Online' : u.phone) + (u.lang && LANGS[u.lang] ? ' · ' + LANGS[u.lang].native : ''); s.classList.toggle('on', !!u.online);
+  { const n0 = $('#chatName'); n0.classList.remove('long'); requestAnimationFrame(() => { if (n0.scrollWidth > n0.clientWidth) n0.classList.add('long'); }); n0.title = nameOf(u); }
+  const s = $('#chatStatus'); const ph = u.phone ? '+91 ' + u.phone : '';
+  s.textContent = u.online ? 'Online' + (ph ? ' · ' + ph : '') : ph; s.classList.toggle('on', !!u.online);
+  s.title = ph + (u.lang && LANGS[u.lang] ? ' · speaks ' + LANGS[u.lang].native : '');
 }
 function renderMessages() {
   const box = $('#messages');
@@ -6009,6 +6025,7 @@ function openContactInfo(uid) {
   const saved = nameOf(u), real = u.name && u.name !== saved ? '~' + u.name : '';
   hero.append(av, el('h2', null, saved), el('div', 'ci-phone', '+91 ' + u.phone.replace(/(\d{5})(\d{5})/, '$1 $2')));
   if (real) hero.append(el('div', 'ci-sub', real));
+  if (u.lang && LANGS[u.lang]) hero.append(el('div', 'ci-sub', '🌐 Speaks ' + LANGS[u.lang].native));
   hero.append(el('div', 'ci-sub' + (u.online ? ' on' : ''), u.blocked ? 'Blocked' : u.online ? 'Online' : ''));
   const acts = el('div', 'ci-acts');
   const act = (icon, label, fn) => { const b = el('button', 'ci-act'); b.innerHTML = icon; b.append(el('span', null, label)); b.onclick = fn; acts.append(b); };
