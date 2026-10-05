@@ -1602,14 +1602,43 @@ app.get('/api/ai/status', auth, (req, res) => res.json({ enabled: !!GEMINI_KEY, 
 // 1) Maata AI chat (history is private to each customer)
 app.get('/api/ai/history', auth, (req, res) => res.json(db.aichats.filter((m) => m.userId === req.user.id).slice(-100)));
 app.delete('/api/ai/history', auth, (req, res) => { db.aichats = db.aichats.filter((m) => m.userId !== req.user.id); save(); res.json({ ok: true }); });
+// Maata AI answers in English unless the person asks for another language. The server remembers the choice
+// (per person) and tells Gemini the exact language with EVERY question — old Telugu-style replies in the chat
+// history, or a Telugu name, can no longer pull the answers away from English.
+const AI_LANGS = {
+  English: ['english', 'ఇంగ్లీష్', 'अंग्रेज़ी', 'अंग्रेजी'], Telugu: ['telugu', 'తెలుగు'], Hindi: ['hindi', 'हिंदी', 'हिन्दी'], Tamil: ['tamil', 'தமிழ்'],
+  Kannada: ['kannada', 'ಕನ್ನಡ'], Malayalam: ['malayalam', 'മലയാളം'], Bengali: ['bengali', 'bangla', 'বাংলা'], Marathi: ['marathi', 'मराठी'],
+  Gujarati: ['gujarati', 'ગુજરાતી'], Punjabi: ['punjabi', 'ਪੰਜਾਬੀ'], Urdu: ['urdu', 'اردو'], Odia: ['odia', 'oriya', 'ଓଡ଼ିଆ'],
+};
+const LANG_SCRIPT = { Telugu: 'Telugu script (తెలుగు లిపి)', Hindi: 'Devanagari script (हिन्दी)', Tamil: 'Tamil script (தமிழ்)', Kannada: 'Kannada script (ಕನ್ನಡ)', Malayalam: 'Malayalam script (മലയാളം)', Bengali: 'Bengali script (বাংলা)', Marathi: 'Devanagari script (मराठी)', Gujarati: 'Gujarati script (ગુજરાતી)', Punjabi: 'Gurmukhi script (ਪੰਜਾਬੀ)', Urdu: 'Urdu script (اردو)', Odia: 'Odia script (ଓଡ଼ିଆ)' };
+// "reply in Telugu", "telugu lo cheppu", "Tamil la sollu", "Hindi mein batao", "తెలుగులో చెప్పు", "speak English" …
+function askedLanguage(text) {
+  const t = String(text || '').toLowerCase();
+  const trigger = /(reply|answer|respond|speak|talk|write|say|tell|explain|switch|change|language|bhasha|bhaasha|lo |lo$|lone|mein|me |la |alli|il |లో|में|மொழி|ல்|ನಲ್ಲಿ|ഇൽ|ഭാഷ|plz|please)/;
+  for (const [lang, words] of Object.entries(AI_LANGS)) {
+    for (const w of words) {
+      const i = t.indexOf(w); if (i < 0) continue;
+      const around = t.slice(Math.max(0, i - 25), i + w.length + 25);
+      if (trigger.test(around) || t.trim() === w || /^[^a-z]*$/.test(w)) return lang;
+    }
+  }
+  return null;
+}
 app.post('/api/ai/chat', auth, async (req, res) => {
   const text = String(req.body?.text || '').trim().slice(0, 2000);
   if (!text) return res.status(400).json({ error: 'Type a question.' });
   if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
   const mine = { id: newId(), userId: req.user.id, role: 'user', text, ts: now() };
-  const past = db.aichats.filter((m) => m.userId === req.user.id).slice(-12);
-  const r = await gemini('You are Maata AI, a helpful assistant inside the Maata chat app, made in India. The person chatting with you is ' + req.user.name + '. ' + AI_CHAT_LANG + ' Never claim to be a human. For medical, legal or money decisions, give general information and suggest asking an expert.',
-    [...past.map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.text }] })), { role: 'user', parts: [{ text }] }]);
+  const asked = askedLanguage(text);
+  if (asked && asked !== (req.user.aiLang || 'English')) { req.user.aiLang = asked; save(); }
+  const lang = req.user.aiLang || 'English';
+  const langRule = lang === 'English'
+    ? 'Reply ONLY in proper English (English words and grammar). Never write Telugu, Hindi or any Indian language, not even typed in English letters (no "Nenu", "meeku", "cheppandi", "kya", "aap", etc.), even if the person writes that way or earlier replies did. If the person wants another language, they will ask for it.'
+    : 'Reply ONLY in ' + lang + ', written in ' + LANG_SCRIPT[lang] + ' — not in English letters. Keep using ' + lang + ' until the person asks for a different language.';
+  const past = db.aichats.filter((m) => m.userId === req.user.id).slice(-10);
+  const r = await gemini('You are Maata AI, a helpful assistant inside the Maata chat app, made in India. The person chatting with you is ' + req.user.name + '. LANGUAGE: ' + langRule + ' Keep replies short and friendly for a phone chat. Use plain text, no markdown symbols like ** or #. Never claim to be a human. For medical, legal or money decisions, give general information and suggest asking an expert.',
+    [...past.map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.text }] })),
+      { role: 'user', parts: [{ text: text + '\n\n[Instruction for Maata AI, not written by the person: answer in ' + lang + (lang === 'English' ? ' only' : ' using ' + LANG_SCRIPT[lang]) + '.]' }] }]);
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] + (r.error === 'service' && aiLastError ? ' (' + aiLastError + ')' : '') });
   const ai = { id: newId(), userId: req.user.id, role: 'ai', text: plain(r.text).slice(0, 4000), ts: now() };
   db.aichats.push(mine, ai);
