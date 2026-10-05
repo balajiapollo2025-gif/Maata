@@ -52,6 +52,9 @@ class MainActivity : Activity() {
             allowFileAccess = false
             setGeolocationEnabled(true)
             userAgentString = "$userAgentString MaataAndroid/${BuildConfig.VERSION_NAME}"
+            // Follow the phone's font size like WhatsApp does, but within limits, so a very large
+            // system font does not blow up the whole app (Maata's own Settings → Text size still works)
+            textZoom = (this@MainActivity.resources.configuration.fontScale.coerceIn(0.9f, 1.15f) * 100).toInt()
         }
         CookieManager.getInstance().setAcceptCookie(true)
         web.addJavascriptInterface(Bridge(), "MaataAndroid")
@@ -179,22 +182,35 @@ class MainActivity : Activity() {
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
         /** The web app tells us a call started/ended, so the mic keeps working when the phone locks. */
         @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
-        @JavascriptInterface fun callEnded() { CallService.stop(this@MainActivity) }
-        /** Loudspeaker on/off during a call. Off = earpiece (or a connected headset / Bluetooth). */
+        @JavascriptInterface fun callEnded() { CallService.stop(this@MainActivity); runOnUiThread { volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE } }
+        /** Loudspeaker on/off during a call. Off = phone earpiece (or a connected headset / Bluetooth), like a normal call. */
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean = try {
             val am = getSystemService(AudioManager::class.java)
             if (am.mode != AudioManager.MODE_IN_COMMUNICATION) am.mode = AudioManager.MODE_IN_COMMUNICATION
+            var ok = false
             if (Build.VERSION.SDK_INT >= 31) {
                 val devs = am.availableCommunicationDevices
                 val pick = if (on) devs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                 else listOf(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADSET,
                     AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
                     .firstNotNullOfOrNull { t -> devs.firstOrNull { it.type == t } }
-                if (pick != null) am.setCommunicationDevice(pick) else { am.clearCommunicationDevice(); false }
+                if (pick != null) ok = am.setCommunicationDevice(pick)
+                // some phones ignore the new way: check it really switched, else use the older switch
+                val now = am.communicationDevice?.type
+                if (!ok || (on && now != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) || (!on && now == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)) {
+                    am.isSpeakerphoneOn = on; ok = true
+                }
             } else {
-                am.isSpeakerphoneOn = on // deprecated on new Android, still right for old ones
-                true
+                am.isSpeakerphoneOn = on // older Android
+                ok = true
             }
+            // the earpiece is quiet by design (it is held to the ear): make sure call volume is not too low
+            val stream = AudioManager.STREAM_VOICE_CALL
+            val max = am.getStreamMaxVolume(stream)
+            try { if (am.getStreamVolume(stream) < max * 0.6) am.setStreamVolume(stream, (max * 0.8).toInt().coerceAtLeast(1), 0) } catch (_: Exception) { } // not allowed in Do Not Disturb
+            // phone volume buttons now change the call volume (not music)
+            runOnUiThread { volumeControlStream = stream }
+            ok
         } catch (e: Exception) { false }
         @JavascriptInterface fun openNotificationSettings() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }

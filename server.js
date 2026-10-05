@@ -628,8 +628,9 @@ setInterval(() => { for (const [k, q] of qrSessions) if (q.until < now() - 60000
 app.post('/api/qr/new', rateLimit, async (req, res) => {
   const id = newId(), secret = crypto.randomBytes(18).toString('hex');
   qrSessions.set(id, { secret, ua: String(req.headers['user-agent'] || ''), until: now() + 120000, status: 'waiting' });
-  const svg = await QRCode.toString('maata-link:' + id + ':' + secret, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0F4C5C', light: '#FFFFFF' } });
-  res.json({ id, secret, svg, expiresIn: 120 });
+  // a picture (PNG), so no page styling can change the squares; dark on white scans best
+  const png = await QRCode.toDataURL('maata-link:' + id + ':' + secret, { margin: 2, width: 480, errorCorrectionLevel: 'M', color: { dark: '#0A2E36', light: '#FFFFFF' } });
+  res.json({ id, secret, png, expiresIn: 120 });
 });
 app.get('/api/qr/:id', (req, res) => {
   const q = qrSessions.get(req.params.id);
@@ -1589,6 +1590,11 @@ function aiQuota(u, n = 1) {
   if (used + n > 60) return false;
   aiUse.set(u.id, { day, n: used + n }); return true;
 }
+// Maata AI chat: English unless the person asks for another language, then stay in that language
+const AI_CHAT_LANG = 'LANGUAGE RULE: Reply in simple, clear English by default — even if the person writes in Telugu, Hindi or another language, or in Telugu/Hindi typed with English letters. ' +
+  'Switch to another language ONLY when the person clearly asks for it, for example "reply in Telugu", "Telugu lo cheppu", "Tamil la sollu", "Hindi mein batao", "Kannada alli heli". ' +
+  'Then write in that language using its own script (Telugu లిపి, Tamil தமிழ், Hindi हिन्दी, etc.) and keep using it for the rest of the chat, until the person asks for a different language or for English again. ' +
+  'Keep replies short and friendly, suitable for a phone chat. Use plain text, no markdown symbols like ** or #.';
 const LANG_HINT = 'Reply in the same language and script the person used. If they write Telugu in English letters (like "ela unnav"), reply the same way. Keep replies short and friendly, suitable for a phone chat. Use plain text, no markdown symbols like ** or #.';
 const plain = (t) => String(t || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/^#+\s*/gm, '').replace(/^\s*[-*]\s+/gm, '• ').trim();
 app.get('/api/ai/status', auth, (req, res) => res.json({ enabled: !!GEMINI_KEY, model: geminiModelOk, lastError: aiLastError }));
@@ -1602,7 +1608,7 @@ app.post('/api/ai/chat', auth, async (req, res) => {
   if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
   const mine = { id: newId(), userId: req.user.id, role: 'user', text, ts: now() };
   const past = db.aichats.filter((m) => m.userId === req.user.id).slice(-12);
-  const r = await gemini('You are Maata AI, a helpful assistant inside the Maata chat app, made in India. The person chatting with you is ' + req.user.name + '. ' + LANG_HINT + ' Never claim to be a human. For medical, legal or money decisions, give general information and suggest asking an expert.',
+  const r = await gemini('You are Maata AI, a helpful assistant inside the Maata chat app, made in India. The person chatting with you is ' + req.user.name + '. ' + AI_CHAT_LANG + ' Never claim to be a human. For medical, legal or money decisions, give general information and suggest asking an expert.',
     [...past.map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.text }] })), { role: 'user', parts: [{ text }] }]);
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] + (r.error === 'service' && aiLastError ? ' (' + aiLastError + ')' : '') });
   const ai = { id: newId(), userId: req.user.id, role: 'ai', text: plain(r.text).slice(0, 4000), ts: now() };

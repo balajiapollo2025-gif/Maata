@@ -754,30 +754,34 @@ html.dark .forgot-link{color:#7CC4D4}
 @media (max-width:760px){
   :root{--wa-green:#1DAA61;--wa-pill:#D8FDD2;--wa-pill-ink:#0A3A21}
   html.dark{--wa-green:#21C063;--wa-pill:#103629;--wa-pill-ink:#D8FDD2}
-  .side{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-  .side-head{padding:14px 16px 6px;gap:6px}
-  .side-head .brand-row .mini{width:34px;height:34px}
-  .side-head .brand{font-size:28px;font-weight:800;letter-spacing:-.3px}
-  .side-head .icon-btn{width:46px;height:46px}
-  .side-head .icon-btn svg{width:25px;height:25px}
+  .side{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+  :root{font-family:Roboto,"Noto Sans","Noto Sans Telugu",system-ui,-apple-system,"Segoe UI",sans-serif}
+  .side-head{padding:10px 6px 4px 16px;gap:2px;justify-content:flex-start}
+  .side-head{justify-content:flex-start;padding:12px 8px 4px 16px}
+  .side-head .brand-row .mini{width:28px;height:28px}
+  .side-head .brand{font-size:25px;font-weight:700;letter-spacing:-.2px}
+  .side-head .icon-btn{width:42px;height:42px}
+  .side-head .icon-btn svg{width:22px;height:22px}
+  .side-head .cam-btn{margin-left:auto!important}
+  .side-head #mainMenuBtn{margin-left:2px!important}
   .side-head .cam-btn{display:grid}
   #logoutBtn{display:none}
   #meBox{display:none}
   .side[data-tab]:not([data-tab="chats"]) .side-head .brand-row{display:none}
-  .side[data-tab]:not([data-tab="chats"]) .side-head .page-title{display:block;font-size:26px;font-weight:700}
-  .add-row{padding:6px 16px 10px;gap:0}
-  .add-row .search{height:50px;border-radius:999px;border:0;background:var(--line);padding:0 20px 0 52px;font-size:17px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667781' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:18px center;background-size:22px}
+  .side[data-tab]:not([data-tab="chats"]) .side-head .page-title{display:block;font-size:22px;font-weight:700;margin:0}
+  .add-row{padding:4px 0 8px;margin:0 14px 2px;gap:0}
+  .add-row .search{height:46px;border-radius:999px;border:0;background:var(--line);padding:0 18px 0 48px;font-size:16px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667781' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:16px center;background-size:20px}
   .add-row .add-btn{display:none}
   .tabs{display:none!important}
-  .chips-row{padding:2px 16px 10px;gap:8px}
-  .fchip{padding:8px 16px;font-size:15px;font-weight:500;border-color:var(--line);color:var(--muted)}
+  .chips-row{padding:2px 14px 6px;gap:8px}
+  .fchip{padding:6px 14px;font-size:14px;font-weight:500;border-color:var(--line);color:var(--muted)}
   .fchip[aria-pressed="true"]{background:var(--wa-pill);color:var(--wa-pill-ink);border-color:transparent;font-weight:600}
   .contacts{padding:0 6px}
-  .contact{padding:12px 10px;gap:14px;border-radius:14px}
-  .contact .avatar{width:54px;height:54px;font-size:20px;flex:none}
-  .c-name{font-size:17px;font-weight:600}
+  .contact{padding:11px 10px;gap:14px;border-radius:12px}
+  .contact .avatar{width:52px;height:52px;font-size:19px;flex:none}
+  .c-name{font-size:17px;font-weight:500}
   .c-last{font-size:15px;margin-top:3px}
-  .c-time{font-size:13px}
+  .c-time{font-size:12.5px}
   .add-row .search{flex:1;width:100%}
   .contact .badge{background:var(--wa-green);color:#fff;min-width:22px;height:22px;border-radius:11px;font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 6px}
   .contact:has(.badge) .c-time{color:var(--wa-green);font-weight:600}
@@ -796,15 +800,15 @@ html.dark .forgot-link{color:#7CC4D4}
   .chat-head #chatSearchBtn{display:none}
   .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:8px 4px calc(10px + env(safe-area-inset-bottom,0px));justify-content:space-around}
   .app.in-chat ~ .bnav,.app[hidden] ~ .bnav,.app[hidden] ~ .fab,.bnav.away{display:none}
-  .bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13.5px;font-weight:600;color:var(--ink);position:relative;background:none}
-  .bnav .ic{width:64px;height:34px;border-radius:999px;display:grid;place-items:center;transition:background .15s}
-  .bnav .ic svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .bnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;font-weight:600;color:var(--ink);position:relative;background:none}
+  .bnav .ic{width:58px;height:32px;border-radius:999px;display:grid;place-items:center;transition:background .15s}
+  .bnav .ic svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .bnav button[aria-selected="true"] .ic{background:var(--wa-pill);color:var(--wa-pill-ink)}
   .bnav button[aria-selected="true"]{font-weight:700}
   .bnav .bb{position:absolute;top:-2px;left:calc(50% + 10px);min-width:20px;height:20px;border-radius:10px;background:var(--wa-green);color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center;padding:0 5px}
   .bnav .bdot{position:absolute;top:2px;left:calc(50% + 14px);width:10px;height:10px;border-radius:50%;background:var(--wa-green)}
-  .fab{display:grid;position:fixed;right:18px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:21;width:60px;height:60px;border-radius:18px;background:var(--wa-green);color:#fff;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.25)}
-  .fab svg{width:26px;height:26px}
+  .fab{display:grid;position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:21;width:56px;height:56px;border-radius:16px;background:var(--wa-green);color:#fff;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+  .fab svg{width:24px;height:24px}
   .fab[hidden],.app.in-chat ~ .fab{display:none}
   #commPane .comm-row{display:flex;align-items:center;gap:14px;padding:12px 10px;border-radius:14px;width:100%;text-align:left}
   #commPane .comm-row .avatar{width:54px;height:54px;border-radius:16px;font-size:20px}
@@ -894,7 +898,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .qr-wrap{padding:8px 16px 18px;display:flex;flex-direction:column;align-items:center}
 .qr-steps{align-self:stretch;margin:0 0 12px;padding-left:22px;line-height:1.8;font-size:15px}
 .qr-img{width:250px;height:250px;display:grid;place-items:center;background:#fff;border-radius:18px;padding:12px;box-shadow:0 2px 12px rgba(0,0,0,.12);color:#555}
-.qr-img svg{width:100%;height:100%}
+.qr-img img{width:100%;height:100%;image-rendering:pixelated;display:block}
 .qr-scan{position:fixed;inset:0;z-index:45;background:#000;display:grid;place-items:center}
 .qr-scan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .qr-frame{position:relative;width:min(70vw,300px);aspect-ratio:1;border-radius:24px;box-shadow:0 0 0 2000px rgba(0,0,0,.55);border:3px solid #21C063}
@@ -1563,7 +1567,7 @@ function renderContacts() {
     const time = document.createElement('span'); time.className = 'c-time'; time.textContent = u.lastMessage ? fmtTime(u.lastMessage.ts) : '';
     top.append(name, time);
     const last = document.createElement('div'); last.className = 'c-last';
-    last.textContent = u.isAI ? (u.lastMessage ? u.lastMessage.text.slice(0, 80) : 'Ask me anything · Telugu, English, Hindi') : u.lastMessage ? (u.lastMessage.type === 'system' ? u.lastMessage.text : (u.lastMessage.from === me.id ? 'You: ' : u.isGroup ? memberName(u, u.lastMessage.from) + ': ' : '') + previewText(u.lastMessage)) : (u.isGroup ? u.memberCount + ' members' : u.online ? 'Online' : u.phone);
+    last.textContent = u.isAI ? (u.lastMessage ? u.lastMessage.text.slice(0, 80) : 'Ask me anything') : u.lastMessage ? (u.lastMessage.type === 'system' ? u.lastMessage.text : (u.lastMessage.from === me.id ? 'You: ' : u.isGroup ? memberName(u, u.lastMessage.from) + ': ' : '') + previewText(u.lastMessage)) : (u.isGroup ? u.memberCount + ' members' : u.online ? 'Online' : u.phone);
     if (u.isGroup && muted(u.id)) name.append(el('span', 'fav-star', '🔕'));
     body.append(top, last);
     b.append(avatar(u, '', true), body);
@@ -4897,7 +4901,7 @@ async function loadAiChat() {
   let h = []; try { h = await api('/api/ai/history'); } catch {}
   messagesCache[AI_ID] = h.map(aiMsg);
   if (!messagesCache[AI_ID].length) messagesCache[AI_ID].push({ id: 'ai-hello', from: AI_ID, to: me.id, ts: Date.now(), type: 'text', status: 'read',
-    text: 'నమస్కారం ' + me.name + '! 🦜 నేను Maata AI. ఏదైనా అడగండి: ప్రశ్నలు, మెసేజ్ రాయించడం, అనువాదం, ఐడియాలు.\nNamaskaram! Ask me anything in Telugu, English or Hindi.' });
+    text: 'Hi ' + me.name + '! 🦜 I am Maata AI. Ask me anything: questions, writing messages, translation, ideas.\nI reply in English. Want another language? Just say "reply in Telugu" (or Hindi, Tamil, Kannada…).' });
 }
 async function aiSend(text) {
   const list = messagesCache[AI_ID] = messagesCache[AI_ID] || [];
@@ -6339,7 +6343,7 @@ async function openQrLogin() {
     const load = async () => {
       clearInterval(qrPoll); qr.innerHTML = 'Loading…';
       let q; try { q = await api('/api/qr/new', { method: 'POST' }); } catch (e) { qr.textContent = e.message; return; }
-      qr.innerHTML = q.svg; const until = Date.now() + q.expiresIn * 1000;
+      qr.innerHTML = ''; const im = el('img'); im.src = q.png; im.alt = 'QR code to link this computer'; im.width = 240; im.height = 240; qr.append(im); const until = Date.now() + q.expiresIn * 1000;
       qrPoll = setInterval(async () => {
         if ($('#moreSheet').hidden) return clearInterval(qrPoll);
         if (Date.now() > until) { clearInterval(qrPoll); qr.innerHTML = ''; const rb = el('button', 'primary', '↻ Reload QR code'); rb.onclick = load; qr.append(rb); return; }
@@ -6471,7 +6475,7 @@ function setSpeaker(on, quiet) {
   try { if (A && A.setSpeaker) ok = A.setSpeaker(speakerOn); } catch { ok = false; }
   document.querySelectorAll('#spkBtn,#gcSpk').forEach((b) => { b.setAttribute('aria-pressed', String(speakerOn)); b.title = speakerOn ? 'Speaker on' : 'Speaker off'; });
   if (!quiet) {
-    if (ok) toast(speakerOn ? '🔊 Loudspeaker on' : '🔈 Loudspeaker off');
+    if (ok) toast(speakerOn ? '🔊 Loudspeaker on' : '🔈 Earpiece: hold the phone to your ear (like a normal call)');
     else if (!A) toast('Speaker switch works in the Maata Android app. In the browser, use your phone\u2019s volume buttons.');
   }
 }
