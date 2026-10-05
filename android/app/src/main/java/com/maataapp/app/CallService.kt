@@ -94,7 +94,11 @@ class CallService : Service() {
         try { cpuLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) { }
         try { earLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) { }
         try { wifiLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) { }
-        try { getSystemService(AudioManager::class.java).mode = oldAudioMode } catch (_: Exception) { }
+        try {
+            val am = getSystemService(AudioManager::class.java)
+            if (Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice() else am.isSpeakerphoneOn = false // deprecated on new Android, still right for old ones
+            am.mode = oldAudioMode
+        } catch (_: Exception) { }
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else @Suppress("DEPRECATION") stopForeground(true)
         super.onDestroy()
     }

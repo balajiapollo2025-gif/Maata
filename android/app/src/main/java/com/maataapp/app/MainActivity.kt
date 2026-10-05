@@ -9,6 +9,8 @@ import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -178,6 +180,22 @@ class MainActivity : Activity() {
         /** The web app tells us a call started/ended, so the mic keeps working when the phone locks. */
         @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
         @JavascriptInterface fun callEnded() { CallService.stop(this@MainActivity) }
+        /** Loudspeaker on/off during a call. Off = earpiece (or a connected headset / Bluetooth). */
+        @JavascriptInterface fun setSpeaker(on: Boolean): Boolean = try {
+            val am = getSystemService(AudioManager::class.java)
+            if (am.mode != AudioManager.MODE_IN_COMMUNICATION) am.mode = AudioManager.MODE_IN_COMMUNICATION
+            if (Build.VERSION.SDK_INT >= 31) {
+                val devs = am.availableCommunicationDevices
+                val pick = if (on) devs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                else listOf(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                    AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
+                    .firstNotNullOfOrNull { t -> devs.firstOrNull { it.type == t } }
+                if (pick != null) am.setCommunicationDevice(pick) else { am.clearCommunicationDevice(); false }
+            } else {
+                am.isSpeakerphoneOn = on // deprecated on new Android, still right for old ones
+                true
+            }
+        } catch (e: Exception) { false }
         @JavascriptInterface fun openNotificationSettings() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
         }

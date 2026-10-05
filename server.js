@@ -178,8 +178,13 @@ function findUserByToken(token) {
   if (!p.sub) return null;
   const u = userById(p.sub);
   if (!u || u.status === 'blocked' || (u.tokenVersion || 0) !== (p.tv || 0)) return null;
+  if (p.did) { // a linked computer: works only while the phone keeps it in "Linked devices"
+    const d = (u.devices || []).find((x) => x.id === p.did); if (!d) return null;
+    if (now() - (d.lastAt || 0) > 600000) { d.lastAt = now(); save(); }
+  }
   return u;
 }
+const tokenDevice = (token) => { try { return jwt.decode(token)?.did || null; } catch { return null; } };
 function csv(rows) {
   const esc = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   return rows.map((r) => r.map(esc).join(',')).join('\n');
@@ -610,6 +615,51 @@ app.get('/api/config', auth, (req, res) => res.json({
 const TTS_LANG = { te: 'te-IN', hi: 'hi-IN', en: 'en-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', or: 'or-IN' };
 const ttsCache = new Map();
 const ttsHits = new Map();
+// ---------- Linked devices: log in on a computer by scanning a QR code with the phone (like WhatsApp Web) ----------
+const QRCode = require('qrcode');
+const qrSessions = new Map(); // id -> { secret, ua, until, status, token, user }
+function deviceName(ua) {
+  ua = String(ua || '');
+  const b = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const o = /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iPhone' : /Linux/.test(ua) ? 'Linux' : 'computer';
+  return b + ' on ' + o;
+}
+setInterval(() => { for (const [k, q] of qrSessions) if (q.until < now() - 60000) qrSessions.delete(k); }, 60000);
+app.post('/api/qr/new', rateLimit, async (req, res) => {
+  const id = newId(), secret = crypto.randomBytes(18).toString('hex');
+  qrSessions.set(id, { secret, ua: String(req.headers['user-agent'] || ''), until: now() + 120000, status: 'waiting' });
+  const svg = await QRCode.toString('maata-link:' + id + ':' + secret, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0F4C5C', light: '#FFFFFF' } });
+  res.json({ id, secret, svg, expiresIn: 120 });
+});
+app.get('/api/qr/:id', (req, res) => {
+  const q = qrSessions.get(req.params.id);
+  if (!q || q.secret !== String(req.query.s || '')) return res.status(404).json({ status: 'expired' });
+  if (q.status === 'approved') { qrSessions.delete(req.params.id); return res.json({ status: 'approved', token: q.token, user: q.user }); }
+  if (q.until < now()) return res.json({ status: 'expired' });
+  res.json({ status: q.status });
+});
+function qrFromCode(code) {
+  const m = /^maata-link:([\w-]+):([0-9a-f]{36})$/.exec(String(code || '').trim()); if (!m) return null;
+  const q = qrSessions.get(m[1]); return q && q.secret === m[2] && q.until > now() && q.status === 'waiting' ? [m[1], q] : null;
+}
+app.post('/api/qr/peek', auth, (req, res) => { const f = qrFromCode(req.body?.code); if (!f) return res.status(400).json({ error: 'This QR code expired. Reload it on the computer and scan again.' }); res.json({ device: deviceName(f[1].ua) }); });
+app.post('/api/qr/approve', auth, (req, res) => {
+  const f = qrFromCode(req.body?.code); if (!f) return res.status(400).json({ error: 'This QR code expired. Reload it on the computer and scan again.' });
+  const [id, q] = f, u = req.user;
+  u.devices = (u.devices || []).slice(-4); // up to 5 linked devices
+  const d = { id: newId(), name: deviceName(q.ua), linkedAt: now(), lastAt: now() };
+  u.devices.push(d); save();
+  Object.assign(q, { status: 'approved', token: jwt.sign({ sub: u.id, tv: u.tokenVersion || 0, did: d.id }, JWT_SECRET, { expiresIn: '30d' }), user: publicUser(u) });
+  audit('customer:' + u.phone, 'device-linked', d.name);
+  res.json({ ok: true, device: d });
+});
+app.get('/api/devices', auth, (req, res) => res.json((req.user.devices || []).map((d) => ({ ...d, online: [...io.sockets.sockets.values()].some((s) => s.did === d.id) }))));
+app.delete('/api/devices/:id', auth, async (req, res) => {
+  const u = req.user; u.devices = (u.devices || []).filter((d) => d.id !== req.params.id); save();
+  for (const s of await io.in('user:' + u.id).fetchSockets()) if (s.did === req.params.id) { s.emit('force-logout', { reason: 'This device was logged out from your phone.' }); s.disconnect(true); }
+  res.json({ ok: true });
+});
+
 app.post('/api/tts', auth, async (req, res) => {
   if (!TTS_KEY) return res.status(501).json({ error: 'Server voice is not set up.' });
   const list = (ttsHits.get(req.user.id) || []).filter((t) => now() - t < 60_000);
@@ -2459,7 +2509,7 @@ io.use((socket, next) => {
       if (p.typ !== 'admin') throw new Error('not admin');
       socket.isAdmin = true; return next();
     }
-    const u = findUserByToken(a.token || '');
+    const u = findUserByToken(a.token || ''); socket.did = tokenDevice(a.token || '');
     if (!u) return next(new Error('unauthorized'));
     socket.user = u; next();
   } catch { next(new Error('unauthorized')); }

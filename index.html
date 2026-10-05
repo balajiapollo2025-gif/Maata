@@ -861,6 +861,45 @@ html[data-font="large"] .c-name{font-size:18px}html[data-font="large"] .c-last{f
 .th-prev{border-radius:16px;border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}
 .th-prev .bubble{max-width:80%}
 .th-title{font-size:13.5px;font-weight:700;color:var(--muted);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.4px}
+/* ---------- ticks (3 colours) ---------- */
+.tk{display:inline-flex;align-items:center;margin-left:3px;vertical-align:-1px}
+.tk svg{height:12px;width:auto;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.tk-pending svg{height:11px;stroke-width:1.8}
+.bubble.mine{--tk-sent:#AEB9C2;--tk-delivered:#FFFFFF;--tk-read:#5BD0FF}
+.tk-pending,.tk-sent{color:var(--tk-sent)}
+.tk-delivered{color:var(--tk-delivered)}
+.tk-read{color:var(--tk-read)}
+html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-delivered:#3B4A54;--tk-read:#0A84C8}
+/* ---------- Maata Translate ---------- */
+.mt-row{margin-top:6px;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);padding-top:5px}
+.mt-btn{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--leaf);background:none;padding:2px 0}
+.bubble.mine .mt-btn{color:inherit;opacity:.9}
+.mt-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+.mt-car{font-size:11px}
+.mt-box{margin:6px -4px 0;padding:9px 11px 6px;border-radius:12px;background:color-mix(in srgb,var(--leaf) 13%,var(--theirs));color:var(--ink);white-space:pre-wrap}
+.bubble.mine .mt-box{background:rgba(255,255,255,.14);color:inherit}
+.mt-text{font-size:1.02em;line-height:1.5}
+.mt-ft{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:11.5px;opacity:.75;margin-top:2px}
+.mt-copy{background:none;color:inherit;padding:2px}.mt-copy svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.mt-lang{display:flex;align-items:center;gap:14px;width:100%;padding:12px 16px;border-radius:12px;background:none;text-align:left;color:var(--ink)}
+.mt-lang[aria-pressed="true"]{background:var(--peacock-soft)}
+.mt-lang .txt{flex:1;display:flex;flex-direction:column}.mt-lang .txt b{font-weight:600}.mt-lang .txt small{color:var(--muted)}
+.mt-flag{font-size:22px}
+.mt-radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted)}
+.mt-lang[aria-pressed="true"] .mt-radio{border-color:var(--leaf);background:radial-gradient(var(--leaf) 45%,transparent 50%)}
+.mt-opt{display:flex;align-items:center;gap:16px}.mt-opt svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;flex:none}
+.mt-cancel{display:block;width:calc(100% - 24px);margin:10px 12px 4px;padding:13px;border-radius:14px;background:var(--paper);font-weight:600;color:var(--ink)}
+.qr-login{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:12px;border-radius:14px;border:1.5px dashed var(--line);background:none;color:var(--ink);font-weight:600;font-size:14.5px}
+.qr-login svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+.qr-wrap{padding:8px 16px 18px;display:flex;flex-direction:column;align-items:center}
+.qr-steps{align-self:stretch;margin:0 0 12px;padding-left:22px;line-height:1.8;font-size:15px}
+.qr-img{width:250px;height:250px;display:grid;place-items:center;background:#fff;border-radius:18px;padding:12px;box-shadow:0 2px 12px rgba(0,0,0,.12);color:#555}
+.qr-img svg{width:100%;height:100%}
+.qr-scan{position:fixed;inset:0;z-index:45;background:#000;display:grid;place-items:center}
+.qr-scan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.qr-frame{position:relative;width:min(70vw,300px);aspect-ratio:1;border-radius:24px;box-shadow:0 0 0 2000px rgba(0,0,0,.55);border:3px solid #21C063}
+.qr-tip{position:absolute;bottom:calc(60px + env(safe-area-inset-bottom,0px));left:20px;right:20px;text-align:center;color:#fff;font-size:16px}
+.qr-close{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;color:#fff;background:rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
@@ -926,6 +965,7 @@ html[data-font="large"] .c-name{font-size:18px}html[data-font="large"] .c-last{f
     <p class="error" id="authError" role="alert"></p>
     <button class="primary" id="authSubmit" type="submit">Log in</button>
     <p class="switch"><span id="switchText">New to Maata?</span> <button type="button" id="switchMode">Create account</button></p>
+    <button type="button" class="qr-login" id="qrLoginBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h7v-4M17 21v.01"/></svg>On a computer? Log in with QR code</button>
   </form>
 </section>
 
@@ -1057,6 +1097,7 @@ html[data-font="large"] .c-name{font-size:18px}html[data-font="large"] .c-last{f
     <button class="round tr" id="trBtn" aria-pressed="false" aria-label="Live translation" title="Live translation">
       <svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
     </button>
+    <button class="round" id="spkBtn" aria-pressed="false" aria-label="Loudspeaker" title="Speaker off"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></button>
     <button class="round" id="muteBtn" aria-pressed="false" aria-label="Mute microphone">
       <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
     </button>
@@ -1206,6 +1247,7 @@ html[data-font="large"] .c-name{font-size:18px}html[data-font="large"] .c-last{f
     <div class="pf-card" id="setProfile"></div>
 
     <div id="setNotifBox"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCallQ">🎧 Call quality <span style="margin-left:auto;color:var(--muted)" id="setCallQName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setThemes">🎨 Theme &amp; colours <span style="margin-left:auto;color:var(--muted)" id="setThemeName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setAppLang">🌐 <span data-t="appLang">App language</span> <span id="setAppLangName" style="margin-left:auto;color:var(--muted)"></span></button></div>
     <div class="set-title">Language &amp; translation</div>
@@ -1765,6 +1807,7 @@ function toneLabel(kind) {
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
+  $('#setCallQName').textContent = callQ().label;
   { const m = store.get('maata_theme_mode') || 'system', a = (ACCENTS.find((x) => x[0] === (store.get('maata_accent') || 'teal')) || ACCENTS[0])[2]; $('#setThemeName').textContent = ({ system: 'System', light: 'Light', dark: 'Dark', black: 'Black', midnight: 'Midnight', forest: 'Forest', sepia: 'Sepia' })[m] + ' · ' + a; }
   renderProfileCard();
   const nb = $('#setNotifBox'); if (nb) { nb.innerHTML = ''; nb.append(notifSettingsRow()); }
@@ -1863,10 +1906,14 @@ function showCallScreen(status) {
 function setCallStatus(s) { $('#callStatus').textContent = s; callEl.classList.toggle('ringing', /Calling|Ringing|Connecting/.test(s)); }
 
 async function getMedia(kind, facing = 'user') {
-  return navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    video: kind === 'video' ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+  const q = callQ();
+  const s = await navigator.mediaDevices.getUserMedia({
+    audio: HD_AUDIO,
+    video: kind === 'video' ? { facingMode: facing, width: { ideal: q.w }, height: { ideal: q.h }, frameRate: { ideal: q.fps, max: 30 } } : false,
   });
+  const vt = s.getVideoTracks()[0]; if (vt && 'contentHint' in vt) vt.contentHint = 'motion';
+  const at = s.getAudioTracks()[0]; if (at && 'contentHint' in at) at.contentHint = 'speech';
+  return s;
 }
 function mediaError(e) {
   if (e && e.name === 'NotAllowedError') return 'Allow microphone' + (call?.kind === 'video' ? ' and camera' : '') + ' access in your browser settings to make calls.';
@@ -1921,13 +1968,14 @@ async function startCall(kind) {
   const u = userById(activeId); if (!u) return;
   // The server decides if the other person is reachable (online status is only shown for saved contacts).
   call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: nameOf(u), peerLang: u.lang, kind, role: 'caller', state: 'calling', pendingIce: [] };
-  showCallScreen('Calling…'); nativeCall(true, kind, call.peerName);
+  showCallScreen('Calling…'); nativeCall(true, kind, call.peerName); setTimeout(() => setSpeaker(kind === 'video', true), 700);
   try { call.local = await getMedia(kind); }
   catch (e) { const msg = mediaError(e); endCall(msg); return; }
   if (!call) { return; }
   call.pc = createPeer(); attachLocal();
   const offer = await call.pc.createOffer();
-  await call.pc.setLocalDescription(offer);
+  offer.sdp = hdSdp(offer.sdp);
+  await call.pc.setLocalDescription(offer); tuneSenders(call.pc);
   socket.emit('call:offer', { to: call.peerId, callId: call.id, kind, sdp: call.pc.localDescription });
   setCallStatus('Ringing…'); ring('outgoing');
   call.timeout = setTimeout(() => { if (call && !call.startedAt) endCall(call.peerName + ' did not answer.', true); }, 45000);
@@ -1953,14 +2001,15 @@ $('#acceptBtn').onclick = async () => {
   if (!call || call.state !== 'incoming') return;
   stopRing(); clearTimeout(call.timeout);
   call.state = 'connecting'; $('#incoming').hidden = true;
-  showCallScreen('Connecting…'); nativeCall(true, call.kind, call.peerName);
+  showCallScreen('Connecting…'); nativeCall(true, call.kind, call.peerName); setTimeout(() => call && setSpeaker(call.kind === 'video', true), 700);
   try { call.local = await getMedia(call.kind); }
   catch (e) { const msg = mediaError(e); socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(msg); return; }
   call.pc = createPeer();
   await call.pc.setRemoteDescription(call.offer);
   attachLocal();
   const answer = await call.pc.createAnswer();
-  await call.pc.setLocalDescription(answer);
+  answer.sdp = hdSdp(answer.sdp);
+  await call.pc.setLocalDescription(answer); tuneSenders(call.pc);
   socket.emit('call:answer', { to: call.peerId, callId: call.id, sdp: call.pc.localDescription });
   await flushIce();
 };
@@ -2771,7 +2820,7 @@ function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.
 const bubbleCache = new Map();
 function buildBubble(m) {
   const mine = m.from === me.id;
-  const key = JSON.stringify([m.status, m.poll && m.poll.votes, m.event && m.event.rsvp, m.location, !!m.uploading, trMsg.get(m.id), settings.chatTranslate, m.reactions, m.pinned, m.deleted, starred.has(m.id), m.text, m.editedAt, m.openedBy]);
+  const key = JSON.stringify([m.status, m.poll && m.poll.votes, m.event && m.event.rsvp, m.location, !!m.uploading, trMsg.get(m.id), settings.chatTranslate, m.reactions, m.pinned, m.deleted, starred.has(m.id), m.text, m.editedAt, m.openedBy, mtKey(m.id)]);
   const c = bubbleCache.get(m.id);
   if (c && c.key === key) return c.el;
   if (m.type === 'system') { const sm = el('div', 'sysmsg', m.text); bubbleCache.set(m.id, { key, el: sm }); return sm; }
@@ -2800,10 +2849,10 @@ function buildBubble(m) {
   if (starred.has(m.id)) meta.append(el('span', 'mk', '⭐'));
   meta.append(document.createTextNode(fmtTime(m.ts)));
   if (mine) {
-    const t = document.createElement('span'); t.className = 'tick' + (m.status === 'read' ? ' read' : '');
-    t.textContent = m.status === 'pending' ? '🕓' : m.status === 'sent' ? '✓' : '✓✓'; t.title = m.status; meta.append(t);
+    meta.append(tickEl(m.status));
   }
   b.append(meta);
+  if (!m.uploading) mtAttach(b, m, mine);
   if (!m.uploading && !m.deleted && m.file && !m.viewOnce) {
     const fq = el('button', 'fwd-quick'); fq.setAttribute('aria-label', 'Forward'); fq.title = 'Forward';
     fq.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>';
@@ -3720,6 +3769,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  linked: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="1.5"/><path d="M6 18h6M9 14v4"/><rect x="17" y="8" width="5" height="12" rx="1"/></svg>',
   install: '<svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 7v8M9 12l3 3 3-3"/></svg>',
   community: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
   channel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>',
@@ -3759,6 +3809,7 @@ function openMainMenu(btn) {
   item('lists', i18n('lists'), openLists);
   item('read', i18n('markRead'), markAllRead);
   list.append(el('hr'));
+  item('linked', 'Linked devices', openLinkedDevices);
   item('lock', i18n('appLock'), openLockSettings);
   item('settings', i18n('settings'), openSettings);
   if (!inApp()) item('install', 'Install Maata app', installApp);
@@ -4522,7 +4573,7 @@ async function joinGroupCall(gid, callId, kind) {
   socket.emit('gcall:join', { gid, callId });
 }
 async function gcMedia(kind) {
-  try { GC.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false }); return true; }
+  try { GC.local = await navigator.mediaDevices.getUserMedia({ audio: HD_AUDIO, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 } } : false }); setTimeout(() => setSpeaker(kind === 'video' || GC.peers.size > 0, true), 700); return true; }
   catch { toast('Allow microphone' + (kind === 'video' ? ' and camera' : '') + ' to join the call.'); return false; }
 }
 function gcShow(status) {
@@ -4537,6 +4588,7 @@ function gcShow(status) {
     const mic = mk('gcMute', 'Mute', '<svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>');
     const cam = mk('gcCam', 'Camera off', '<svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>');
     const add = mk('gcAdd', 'Add people', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg>');
+    const spk = mk('gcSpk', 'Loudspeaker', SPK_SVG); spk.onclick = () => setSpeaker(!speakerOn);
     const end = mk('gcEnd', 'Leave call', '<svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>', 'end');
     mic.onclick = () => { const t = GC.local && GC.local.getAudioTracks()[0]; if (!t) return; t.enabled = !t.enabled; mic.setAttribute('aria-pressed', String(!t.enabled)); };
     cam.onclick = () => { const t = GC.local && GC.local.getVideoTracks()[0]; if (!t) return toast('This is a voice call.'); t.enabled = !t.enabled; cam.setAttribute('aria-pressed', String(!t.enabled)); };
@@ -4573,7 +4625,7 @@ function gcPeer(uid, initiator) {
   pc.ontrack = (e) => { const t = gcTile(uid, e.streams[0]); t.classList.remove('connecting'); };
   pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') gcTile(uid).classList.remove('connecting'); if (pc.connectionState === 'failed') gcDrop(uid); };
   gcTile(uid, null);
-  if (initiator) (async () => { const o = await pc.createOffer(); await pc.setLocalDescription(o); socket.emit('gcall:signal', { callId: GC.id, to: uid, data: { sdp: pc.localDescription } }); })();
+  if (initiator) (async () => { const o = await pc.createOffer(); o.sdp = hdSdp(o.sdp, 64000); await pc.setLocalDescription(o); tuneSenders(pc, true); socket.emit('gcall:signal', { callId: GC.id, to: uid, data: { sdp: pc.localDescription } }); })();
   return peer;
 }
 function gcDrop(uid) { const p = GC.peers.get(uid); if (p) { p.pc.close(); GC.peers.delete(uid); } const t = $('#gcGrid') && $('#gcGrid').querySelector('[data-uid="' + uid + '"]'); if (t) t.remove(); gcCount(); }
@@ -4610,7 +4662,7 @@ socket_ready_hooks.push(() => {
     try {
       if (d.sdp) {
         await pc.setRemoteDescription(d.sdp);
-        if (d.sdp.type === 'offer') { const a = await pc.createAnswer(); await pc.setLocalDescription(a); socket.emit('gcall:signal', { callId: GC.id, to: p.from, data: { sdp: pc.localDescription } }); }
+        if (d.sdp.type === 'offer') { const a = await pc.createAnswer(); a.sdp = hdSdp(a.sdp, 64000); await pc.setLocalDescription(a); tuneSenders(pc, true); socket.emit('gcall:signal', { callId: GC.id, to: p.from, data: { sdp: pc.localDescription } }); }
         for (const c of peer.pending.splice(0)) await pc.addIceCandidate(c).catch(() => {});
       } else if (d.candidate) { if (pc.remoteDescription) await pc.addIceCandidate(d.candidate).catch(() => {}); else peer.pending.push(d.candidate); }
     } catch {}
@@ -6193,6 +6245,291 @@ async function addToConference() {
 }
 
 $('#addCallBtn').onclick = addCallFromOneToOne;
+// ================= Message ticks: ✓ sent · ✓✓ delivered · ✓✓ seen (three colours) =================
+const TICK_SVG = {
+  sent: '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M2 6.5l3.6 3.6L13 2.5"/></svg>',
+  double: '<svg viewBox="0 0 22 12" aria-hidden="true"><path d="M1.5 6.5l3.6 3.6L12.5 2.5"/><path d="M8.6 9.6l.5.5L16.5 2.5"/></svg>',
+  pending: '<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.2l2 1.3"/></svg>',
+};
+function tickEl(status) {
+  const t = document.createElement('span');
+  const st = status === 'read' ? 'read' : status === 'delivered' ? 'delivered' : status === 'pending' ? 'pending' : 'sent';
+  t.className = 'tk tk-' + st;
+  t.innerHTML = st === 'pending' ? TICK_SVG.pending : st === 'sent' ? TICK_SVG.sent : TICK_SVG.double;
+  t.title = { pending: 'Sending…', sent: 'Sent (not delivered yet)', delivered: 'Delivered', read: 'Seen' }[st];
+  t.setAttribute('aria-label', t.title);
+  return t;
+}
+
+// ================= Maata Translate under every message =================
+const MT_LANGS = [['te', 'Telugu', 'తెలుగు'], ['en', 'English', 'English'], ['hi', 'Hindi', 'हिन्दी'], ['ta', 'Tamil', 'தமிழ்'], ['kn', 'Kannada', 'ಕನ್ನಡ'], ['ml', 'Malayalam', 'മലയാളം'], ['bn', 'Bengali', 'বাংলা'], ['mr', 'Marathi', 'मराठी'], ['gu', 'Gujarati', 'ગુજરાતી'], ['pa', 'Punjabi', 'ਪੰਜਾਬੀ'], ['ur', 'Urdu', 'اردو'], ['or', 'Odia', 'ଓଡ଼ିଆ']];
+const SPEECH_LANG = { te: 'te-IN', en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', or: 'or-IN' };
+let mtState = {}; try { mtState = JSON.parse(store.get('maata_mt') || '{}'); } catch { mtState = {}; }
+function mtSave() { const ks = Object.keys(mtState); if (ks.length > 400) for (const k of ks.slice(0, ks.length - 400)) delete mtState[k]; store.set('maata_mt', JSON.stringify(mtState)); }
+const mtName = (code) => (MT_LANGS.find((x) => x[0] === code) || [code, code])[1];
+function mtKey(id) { const s2 = mtState[id]; return s2 ? s2.lang + (s2.hidden ? 'h' : '') + (s2.text ? s2.text.length : 0) : ''; }
+function mtRedraw(id) { bubbleCache.delete(id); const old = document.querySelector('#messages [data-mid="' + CSS.escape(id) + '"]'); const m = (messagesCache[activeId] || []).find((x) => x.id === id); if (old && m) old.replaceWith(buildBubble(m)); else if (activeId) renderMessages(); }
+function mtAttach(b, m, mine) {
+  if (mine || !m.text || m.deleted || m.type === 'system' || !(isText(m) || m.text)) return;
+  const st = mtState[m.id];
+  const btn = el('button', 'mt-btn'); btn.type = 'button';
+  btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
+  btn.append(el('span', null, 'Maata Translate' + (st && st.text ? ' · ' + mtName(st.lang) : '')), el('span', 'mt-car', st && st.text && !st.hidden ? '▴' : '▾'));
+  btn.onclick = (e) => { e.stopPropagation(); if (st && st.text) mtOptions(m); else mtPickLang(m); };
+  const row = el('div', 'mt-row'); row.append(btn); b.append(row);
+  if (st && st.text && !st.hidden) {
+    const box = el('div', 'mt-box'); box.dir = st.lang === 'ur' ? 'rtl' : 'auto';
+    box.append(el('div', 'mt-text', st.text));
+    const ft = el('div', 'mt-ft'); ft.append(document.createTextNode(fmtTime(m.ts)));
+    const cp = el('button', 'mt-copy'); cp.type = 'button'; cp.setAttribute('aria-label', 'Copy translation'); cp.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    cp.onclick = (e) => { e.stopPropagation(); copyText(st.text); };
+    ft.append(cp); box.append(ft);
+    b.append(box);
+  }
+}
+function mtPickLang(m) {
+  const cur = (mtState[m.id] || {}).lang || store.get('maata_mt_last') || (me.lang && SPEECH_LANG[me.lang] ? me.lang : 'te');
+  sheet('Translate to', (list) => {
+    for (const [code, name, native] of MT_LANGS) {
+      const r = el('button', 'mt-lang'); r.setAttribute('aria-pressed', String(code === cur));
+      const t = el('span', 'txt'); t.append(el('b', null, name)); if (native !== name) t.append(el('small', null, native));
+      r.append(el('span', 'mt-flag', code === 'en' ? '🇬🇧' : '🇮🇳'), t, el('span', 'mt-radio'));
+      r.onclick = async () => {
+        closeSheet('moreSheet'); store.set('maata_mt_last', code);
+        mtState[m.id] = { lang: code, text: '', hidden: false }; mtRedraw(m.id);
+        try { const r2 = await api('/api/translate', { method: 'POST', body: JSON.stringify({ text: m.text, to: code }) }); mtState[m.id] = { lang: code, text: r2.translated, hidden: false }; mtSave(); }
+        catch (e) { delete mtState[m.id]; toast(e.message); }
+        mtRedraw(m.id);
+      };
+      list.append(r);
+    }
+  });
+}
+async function mtListen(text, lang) {
+  try {
+    const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 400), lang, gender: settings.voiceGender === 'MALE' ? 'MALE' : 'FEMALE' }) });
+    const a = new Audio('data:audio/mp3;base64,' + r.audio); await a.play(); return;
+  } catch { /* fall back to the phone's own voice */ }
+  if (!('speechSynthesis' in window)) return toast('Listening is not available on this device.');
+  const u2 = new SpeechSynthesisUtterance(text); u2.lang = SPEECH_LANG[lang] || 'en-IN'; speechSynthesis.cancel(); speechSynthesis.speak(u2);
+}
+function mtOptions(m) {
+  const st = mtState[m.id]; if (!st) return mtPickLang(m);
+  sheet('Maata Translate · ' + mtName(st.lang), (list) => {
+    const b = (icon, label, fn, cls) => { const x = el('button', 'sheet-btn mt-opt' + (cls ? ' ' + cls : '')); x.innerHTML = icon; x.append(el('span', null, label)); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
+    b('<svg viewBox="0 0 24 24"><path d="M17 3l4 4-4 4M21 7H9M7 21l-4-4 4-4M3 17h12"/></svg>', 'Change language  ›', () => mtPickLang(m));
+    b('<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>', 'Copy translation', () => copyText(st.text));
+    b('<svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>', 'Listen', () => mtListen(st.text, st.lang));
+    b(st.hidden ? '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-11-8-11-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.2 3.2M1 1l22 22"/></svg>', st.hidden ? 'Show translation' : 'Hide translation', () => { st.hidden = !st.hidden; mtSave(); mtRedraw(m.id); });
+    b('<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>', 'Remove translation', () => { delete mtState[m.id]; mtSave(); mtRedraw(m.id); }, 'warn');
+    const c = el('button', 'mt-cancel', 'Cancel'); c.onclick = () => closeSheet('moreSheet'); list.append(c);
+  });
+}
+
+// ================= Log in on a computer with a QR code (scan it with Maata on the phone) =================
+let qrPoll = null;
+async function openQrLogin() {
+  sheet('💻 Log in with your phone', (list) => {
+    const box = el('div', 'qr-wrap');
+    const steps = el('ol', 'qr-steps');
+    for (const t of ['Open Maata on your phone', 'Tap ⋮ Menu → Linked devices', 'Tap "Link a device" and point the phone at this QR code']) steps.append(el('li', null, t));
+    const qr = el('div', 'qr-img'); qr.textContent = 'Loading…';
+    const note = el('p', 'info-note', '🔒 The code works for 2 minutes and only once. Your phone must approve it.');
+    box.append(steps, qr, note); list.append(box);
+    const load = async () => {
+      clearInterval(qrPoll); qr.innerHTML = 'Loading…';
+      let q; try { q = await api('/api/qr/new', { method: 'POST' }); } catch (e) { qr.textContent = e.message; return; }
+      qr.innerHTML = q.svg; const until = Date.now() + q.expiresIn * 1000;
+      qrPoll = setInterval(async () => {
+        if ($('#moreSheet').hidden) return clearInterval(qrPoll);
+        if (Date.now() > until) { clearInterval(qrPoll); qr.innerHTML = ''; const rb = el('button', 'primary', '↻ Reload QR code'); rb.onclick = load; qr.append(rb); return; }
+        try {
+          const r = await fetch('/api/qr/' + q.id + '?s=' + q.secret).then((x) => x.json());
+          if (r.status === 'approved') { clearInterval(qrPoll); token = r.token; store.set('maata_token', token); closeSheet('moreSheet'); toast('Linked ✓ Welcome ' + r.user.name); start(); }
+          else if (r.status === 'expired') { clearInterval(qrPoll); qr.innerHTML = ''; const rb = el('button', 'primary', '↻ Reload QR code'); rb.onclick = load; qr.append(rb); }
+        } catch { /* keep trying */ }
+      }, 2000);
+    };
+    load();
+  });
+}
+$('#qrLoginBtn').onclick = openQrLogin;
+
+// ----- phone: Linked devices + scanner -----
+async function openLinkedDevices() {
+  let list0 = []; try { list0 = await api('/api/devices'); } catch {}
+  sheet('💻 Linked devices', (list) => {
+    const box = el('div'); box.style.padding = '12px';
+    box.append(el('p', 'info-note', 'Use Maata on a computer: open maataapp.com there, choose "Log in with QR code", then scan it here.'));
+    const go = el('button', 'primary', '📷 Link a device'); go.onclick = () => { closeSheet('moreSheet'); scanQr(); }; box.append(go);
+    if (list0.length) box.append(el('div', 'th-title', 'Logged in on'));
+    for (const d of list0) {
+      const r = el('div', 'ci-row'); r.append(el('span', 'ci-ic', '💻'));
+      const t = el('span', 'ci-rt'); t.append(document.createTextNode(d.name)); t.append(el('small', null, d.online ? '🟢 Active now' : 'Last active ' + new Date(d.lastAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
+      const out = el('button', 'linkbtn', 'Log out'); out.style.color = 'var(--chili)';
+      out.onclick = async () => { if (!confirm('Log out ' + d.name + '?')) return; await api('/api/devices/' + d.id, { method: 'DELETE' }).catch((e) => toast(e.message)); toast('Logged out ' + d.name); openLinkedDevices(); };
+      r.append(t, out); box.append(r);
+    }
+    if (!list0.length) box.append(el('p', 'info-note', 'No computers are linked.'));
+    list.append(box);
+  });
+}
+let jsqrLoading = null;
+function loadJsQR() { if (window.jsQR) return Promise.resolve(); if (!jsqrLoading) jsqrLoading = new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'; sc.onload = ok; sc.onerror = () => { jsqrLoading = null; bad(new Error('Scanner could not load. Check your internet.')); }; document.head.append(sc); }); return jsqrLoading; }
+async function scanQr() {
+  const ov = el('section', 'qr-scan'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Scan QR code');
+  const v = el('video'); v.playsInline = true; v.muted = true;
+  const frame = el('div', 'qr-frame'), tip = el('p', 'qr-tip', 'Point your camera at the QR code on the computer');
+  const close = el('button', 'icon-btn qr-close'); close.setAttribute('aria-label', 'Close'); close.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  ov.append(v, frame, tip, close); document.body.append(ov);
+  let stream, done = false, timer;
+  const stop = () => { done = true; clearTimeout(timer); if (stream) stream.getTracks().forEach((t) => t.stop()); ov.remove(); };
+  close.onclick = stop;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false }); v.srcObject = stream; await v.play(); }
+  catch { stop(); return toast('Allow camera access to scan.'); }
+  let detector = null;
+  if ('BarcodeDetector' in window) { try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch { detector = null; } }
+  if (!detector) { try { await loadJsQR(); } catch (e) { stop(); return toast(e.message); } }
+  const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+  const tick = async () => {
+    if (done) return;
+    let code = null;
+    try {
+      if (v.readyState >= 2) {
+        if (detector) { const r = await detector.detect(v); code = r[0] && r[0].rawValue; }
+        else { cv.width = v.videoWidth; cv.height = v.videoHeight; cx.drawImage(v, 0, 0); const img = cx.getImageData(0, 0, cv.width, cv.height); const r = window.jsQR(img.data, img.width, img.height); code = r && r.data; }
+      }
+    } catch { /* keep scanning */ }
+    if (code && code.startsWith('maata-link:')) {
+      done = true; stop();
+      try {
+        const p = await api('/api/qr/peek', { method: 'POST', body: JSON.stringify({ code }) });
+        if (!confirm('Log in to Maata on "' + p.device + '"?\n\nOnly continue if this is YOUR computer in front of you.')) return;
+        await api('/api/qr/approve', { method: 'POST', body: JSON.stringify({ code }) });
+        toast('💻 ' + p.device + ' is linked ✓');
+      } catch (e) { toast(e.message); }
+      return;
+    }
+    if (code) tip.textContent = 'That is not a Maata QR code. Open maataapp.com on the computer.';
+    timer = setTimeout(tick, 250);
+  };
+  tick();
+}
+
+// ================= Call quality: HD voice + Full HD video =================
+const CALL_Q = {
+  saver: { label: 'Data saver', w: 640, h: 360, fps: 24, vbr: 600000, abr: 32000 },
+  hd: { label: 'HD 720p', w: 1280, h: 720, fps: 30, vbr: 1800000, abr: 64000 },
+  fhd: { label: 'Full HD 1080p', w: 1920, h: 1080, fps: 30, vbr: 3500000, abr: 96000 },
+};
+const callQ = () => CALL_Q[store.get('maata_callq') || 'fhd'] || CALL_Q.fhd;
+const HD_AUDIO = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, sampleSize: { ideal: 16 } };
+// Opus (the voice codec) at a high bit-rate with error correction = clear voice even on shaky networks
+function hdSdp(sdp, abr) {
+  try {
+    const m = /a=rtpmap:(\d+) opus\/48000\/2/i.exec(sdp); if (!m) return sdp;
+    const pt = m[1], want = { maxaveragebitrate: abr || callQ().abr, useinbandfec: 1, usedtx: 0, stereo: 0, maxplaybackrate: 48000 };
+    const re = new RegExp('a=fmtp:' + pt + ' ([^\\r\\n]*)');
+    if (re.test(sdp)) return sdp.replace(re, (all, params) => { const p = Object.fromEntries(params.split(';').map((x) => x.trim()).filter(Boolean).map((x) => x.split('='))); Object.assign(p, want); return 'a=fmtp:' + pt + ' ' + Object.entries(p).map(([k, v]) => k + '=' + v).join(';'); });
+    return sdp.replace(m[0], m[0] + '\r\na=fmtp:' + pt + ' ' + Object.entries(want).map(([k, v]) => k + '=' + v).join(';'));
+  } catch { return sdp; }
+}
+function tuneSenders(pc, group) {
+  const q = callQ();
+  for (const s of pc.getSenders()) {
+    if (!s.track || !s.getParameters) continue;
+    try {
+      const p = s.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}];
+      if (s.track.kind === 'video') { p.encodings[0].maxBitrate = group ? Math.min(q.vbr, 900000) : q.vbr; p.encodings[0].maxFramerate = q.fps; p.degradationPreference = 'balanced'; }
+      else { p.encodings[0].maxBitrate = q.abr; p.encodings[0].priority = 'high'; p.encodings[0].networkPriority = 'high'; }
+      s.setParameters(p).catch(() => {});
+    } catch { /* older browsers */ }
+  }
+}
+function openCallQuality() {
+  closeSettings();
+  sheet('🎧 Call quality', (list) => {
+    const box = el('div'); box.style.padding = '8px 14px 20px';
+    box.append(el('p', 'info-note', 'Voice is always HD (clear, noise-free). Choose video sharpness. Higher quality uses more internet data; Maata lowers it by itself when the network is weak, so calls do not drop.'));
+    const cur = store.get('maata_callq') || 'fhd';
+    for (const [k, q] of Object.entries(CALL_Q)) {
+      const r = el('button', 'mt-lang'); r.setAttribute('aria-pressed', String(k === cur));
+      const t = el('span', 'txt'); t.append(el('b', null, q.label), el('small', null, k === 'saver' ? 'Uses the least data' : k === 'hd' ? 'Sharp video, normal data' : 'Sharpest video · best on Wi-Fi / 5G'));
+      r.append(el('span', 'mt-flag', k === 'saver' ? '🍃' : k === 'hd' ? '📺' : '✨'), t, el('span', 'mt-radio'));
+      r.onclick = () => { store.set('maata_callq', k); toast('Call quality: ' + q.label); closeSheet('moreSheet'); };
+      box.append(r);
+    }
+    list.append(box);
+  });
+}
+
+// ================= Loudspeaker on / off =================
+let speakerOn = false;
+function setSpeaker(on, quiet) {
+  speakerOn = !!on;
+  const A = window.MaataAndroid; let ok = false;
+  try { if (A && A.setSpeaker) ok = A.setSpeaker(speakerOn); } catch { ok = false; }
+  document.querySelectorAll('#spkBtn,#gcSpk').forEach((b) => { b.setAttribute('aria-pressed', String(speakerOn)); b.title = speakerOn ? 'Speaker on' : 'Speaker off'; });
+  if (!quiet) {
+    if (ok) toast(speakerOn ? '🔊 Loudspeaker on' : '🔈 Loudspeaker off');
+    else if (!A) toast('Speaker switch works in the Maata Android app. In the browser, use your phone\u2019s volume buttons.');
+  }
+}
+const SPK_SVG = '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
+
+$('#spkBtn').onclick = () => setSpeaker(!speakerOn);
+$('#setCallQ').onclick = openCallQuality;
+// ================= Phone "Back" button: go back one screen instead of closing the app =================
+// Every screen that opens (chat, settings, menus, viewers, other tabs) leaves a "back step" in the history;
+// pressing Back closes the top-most screen. Only on the Chats home screen does Back leave the app.
+const BACK = { guard: false, skipNext: false };
+const shown = (sel) => { const e = document.querySelector(sel); if (!e || e.hidden) return false; const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && (e.offsetParent !== null || cs.position === 'fixed'); };
+const inCallNow = () => shown('#callScreen') || !!$('#gcView');
+const isMobileLayout = () => matchMedia('(max-width:760px)').matches;
+// the screens, top-most first, each with how to close it
+const BACK_LAYERS = [
+  ['.qr-scan', () => { const b = document.querySelector('.qr-scan .qr-close'); if (b) b.click(); }],
+  ['.ci-photo', () => document.querySelector('.ci-photo').remove()],
+  ['.menu-shade', () => closeMsgMenu()],
+  ['#mediaView', () => closeMediaView()],
+  ['section.mv[aria-label="View once"]', () => { const b = document.querySelector('section.mv[aria-label="View once"] button'); if (b) b.click(); }],
+  ['#stViewer', () => closeViewer()],
+  ['#camView', () => closeCamera()],
+  ['#stCompose', () => { const b = $('#stComposeClose'); if (b) b.click(); }],
+  ['#emojiPanel', () => toggleEmojiPanel(false)],
+  ['#attachSheet', () => closeSheet('attachSheet')],
+  ['#addSheet', () => closeSheet('addSheet')],
+  ['#moreSheet', () => closeSheet('moreSheet')],
+  ['#settingsSheet', () => closeSettings()],
+
+  ['#ciView', () => $('#ciView').remove()],
+  ['#chView', () => closeChannel()],
+];
+function topLayer() { for (const [sel, close] of BACK_LAYERS) if (shown(sel)) return close; return null; }
+function atHome() {
+  if (inCallNow() || topLayer()) return false;
+  if (isMobileLayout() && $('#app').classList.contains('in-chat')) return false;
+  return tab === 'chats';
+}
+function backGuard() { // keep exactly one extra history step while we are away from home
+  if (!$('#app') || $('#app').hidden) return;
+  if (!atHome() && !BACK.guard) { history.pushState({ maataBack: 1 }, ''); BACK.guard = true; }
+  else if (atHome() && BACK.guard) { BACK.skipNext = true; BACK.guard = false; history.back(); } // closed with an on-screen ✕: remove the spare step
+}
+window.addEventListener('popstate', () => {
+  if (BACK.skipNext) { BACK.skipNext = false; return; }
+  BACK.guard = false;
+  if (inCallNow()) { setTimeout(backGuard, 0); toast('You are on a call. Tap the red button to end it.'); return; } // Back never ends a call
+  const close = topLayer();
+  if (close) { try { close(); } catch {} }
+  else if (isMobileLayout() && $('#app').classList.contains('in-chat')) closeActiveChat();
+  else if (tab !== 'chats') setTab('chats');
+  setTimeout(backGuard, 0);
+});
+// re-check after anything the person taps or after screens change
+document.addEventListener('click', () => setTimeout(backGuard, 30), true);
+new MutationObserver(() => { clearTimeout(BACK.t); BACK.t = setTimeout(backGuard, 60); }).observe(document.body, { childList: true, subtree: false, attributes: true, attributeFilter: ['hidden'] });
+
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
