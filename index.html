@@ -1095,6 +1095,30 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .ng-head{list-style:none;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:10px 4px 4px}
 .ng-inv{display:flex;align-items:center;gap:10px;padding:6px 4px}.ng-inv .c-body{flex:1;min-width:0}
 @media (max-width:760px){.dev-foot{display:none}}
+.ng-total{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--peacock-soft);margin-bottom:8px}
+.ng-total b{font-size:16px}.ng-total span{font-size:13px;color:var(--muted)}
+.ng-sel{font-size:13.5px;font-weight:600;color:var(--leaf);margin:8px 2px}
+.ng-list{max-height:52vh;overflow-y:auto}
+.ng-item{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:12px;cursor:pointer;list-style:none}
+.ng-item:hover{background:var(--paper)}
+.ng-item.on{background:color-mix(in srgb,var(--leaf) 16%,transparent)}
+.ng-item .c-body{flex:1;min-width:0}
+.ng-item.off .c-name{opacity:.75}
+.ng-tag{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.ng-tag.yes{background:color-mix(in srgb,var(--leaf) 18%,transparent);color:var(--leaf)}
+.ng-item.on .ng-tag.yes{background:var(--leaf);color:#fff}
+.ng-tag.no{background:var(--line);color:var(--muted)}
+.ng-inv-btn{padding:5px 12px;border-radius:999px;background:#0095F6;color:#fff;font-weight:700;font-size:12.5px}
+.ng-item.shake{animation:ngshake .4s}
+@keyframes ngshake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+.ng-list li.ng-row{list-style:none}
+.ng-row label{display:flex;align-items:center;gap:10px;padding:8px 4px}
+.ng-row .c-body{flex:1;min-width:0}
+.ng-tag{font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.ng-tag.on{color:var(--leaf)}
+.ng-msg{margin:-2px 4px 8px 38px;padding:8px 10px;border-radius:10px;background:#FDECEA;color:#8A1C14;font-size:13px}
+html.dark .ng-msg{background:#3A1A18;color:#F5B7B1}
+.ng-letter{list-style:none;font-size:12px;font-weight:800;color:var(--leaf);padding:8px 4px 2px;border-bottom:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -4662,60 +4686,69 @@ function closeActiveChat() { activeId = null; $('#app').classList.remove('in-cha
 // ----- new group: pick members → name & photo -----
 function openNewGroup() {
   const pick = new Set();
-  sheet('👥 New group', (list) => {
+  sheet('👥 New group', async (list) => {
     const box = el('div', 'formcol'); box.style.padding = '12px';
-    box.append(el('p', 'info-note', 'Add people from your phone contacts who are on Maata. Up to 1,024 members.'));
-    const load = el('button', 'st-ai', phoneBook.length ? '📱 Refresh my phone contacts (' + phoneBook.length + ')' : '📱 Show all my phone contacts');
-    load.onclick = async () => { load.disabled = true; load.textContent = '⏳ Reading your contacts…'; await syncFromPhone(); load.disabled = false; load.textContent = '📱 Refresh my phone contacts (' + phoneBook.length + ')'; draw(); };
+    const sum = el('p', 'info-note', ''); box.append(sum);
+    const load = el('button', 'st-ai', '📱 Load my phone contacts');
+    load.onclick = async () => { load.disabled = true; load.textContent = '⏳ Reading your contacts…'; await syncFromPhone(); load.disabled = false; draw(); };
     box.append(load);
-    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or 10-digit number'; box.append(q);
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q);
     const sel = el('div', 'row2'); sel.style.cssText = 'display:flex;gap:8px;margin:8px 0;align-items:center';
-    const all = el('button', 'linkbtn', 'Select all'), cnt = el('span', 'muted', ''); cnt.style.marginLeft = 'auto'; sel.append(all, cnt); box.append(sel);
-    const ul = el('ul', 'fwd-list'); box.append(ul);
-    const bookNames = new Map(phoneBook.map((c) => [c.n, c.name]));
-    // everyone on Maata I can reach: saved contacts, phone contacts found on Maata, people I chat with
-    const people = () => {
-      const t = q.value.trim().toLowerCase(), digits = t.replace(/\D/g, '');
-      return users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && (u.inContacts || bookNames.has(l10(u.phone)) || u.lastMessage))
-        .filter((u) => !t || nameOf(u).toLowerCase().includes(t) || (digits && u.phone.includes(digits)))
-        .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
-    };
+    const all = el('button', 'linkbtn', 'Select all on Maata'), cnt = el('span', 'muted', ''); cnt.style.marginLeft = 'auto'; sel.append(all, cnt); box.append(sel);
+    const ul = el('ul', 'fwd-list ng-list'); box.append(ul);
     const next = el('button', 'primary', 'Next →');
     const count = () => { cnt.textContent = pick.size + ' selected'; next.disabled = !pick.size; };
-    let lookupT = 0;
+    const notOn = new Set(); // numbers we checked and found not registered
+    // one list: every phone contact + every Maata person I already know, each once
+    const entries = () => {
+      const byPhone = new Map(users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && u.phone).map((u) => [l10(u.phone), u]));
+      const out = new Map();
+      for (const c of phoneBook) out.set(c.n, { n: c.n, name: c.name, phone: c.phone, user: byPhone.get(c.n) || null });
+      for (const [n, u] of byPhone) if (!out.has(n) && (u.inContacts || u.lastMessage)) out.set(n, { n, name: nameOf(u), phone: '+91 ' + u.phone, user: u });
+      return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
+    };
     const draw = () => {
-      ul.innerHTML = ''; const ps = people();
-      if (ps.length) ul.append(el('li', 'ng-head', '✅ On Maata · ' + ps.length));
-      for (const u of ps) {
-        const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id);
-        cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); count(); };
-        const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', '+91 ' + u.phone + (u.about ? ' · ' + u.about : '')));
-        lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li);
+      const es = entries(), t = q.value.trim().toLowerCase(), digits = t.replace(/\D/g, '');
+      const onMaata = es.filter((e) => e.user).length;
+      sum.textContent = '📒 Total contacts: ' + es.length + '  ·  ✅ On Maata: ' + onMaata + '  ·  ' + (es.length - onMaata) + ' not on Maata';
+      load.textContent = phoneBook.length ? '📱 Refresh phone contacts' : '📱 Load my phone contacts';
+      ul.innerHTML = '';
+      const shown = es.filter((e) => !t || e.name.toLowerCase().includes(t) || (digits && e.n.includes(digits)));
+      if (digits.length === 10 && !shown.some((e) => e.n === digits)) shown.unshift({ n: digits, name: '+91 ' + digits, phone: '+91 ' + digits, user: null, typed: true });
+      let letter = '';
+      for (const e of shown.slice(0, 800)) {
+        const L = (e.name[0] || '#').toUpperCase(); if (L !== letter && !t) { letter = L; ul.append(el('li', 'ng-letter', /[A-Z]/.test(L) ? L : '#')); }
+        const li = el('li', 'ng-row'), lab = el('label'), cb = el('input'); cb.type = 'checkbox';
+        cb.checked = !!(e.user && pick.has(e.user.id)); cb.setAttribute('aria-label', 'Select ' + e.name);
+        const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', e.user && e.user.phone ? e.name : e.name), el('div', 'c-last', e.phone));
+        const tag = el('span', e.user ? 'ng-tag on' : 'ng-tag', e.user ? '✅ On Maata' : notOn.has(e.n) ? 'Not registered' : '');
+        const msg = el('div', 'ng-msg'); msg.hidden = true;
+        cb.onchange = async () => {
+          if (!cb.checked) { if (e.user) pick.delete(e.user.id); count(); return; }
+          if (e.user) { pick.add(e.user.id); count(); return; }
+          // not known yet: check if this number is on Maata
+          cb.checked = false; cb.disabled = true; tag.textContent = '⏳ Checking…';
+          let found = null; try { const r = await api('/api/lookup?phone=' + e.n); found = r.user || null; } catch {}
+          cb.disabled = false;
+          if (found) { upsertUser(found); e.user = userById(found.id) || found; pick.add(e.user.id); cb.checked = true; tag.textContent = '✅ On Maata'; tag.className = 'ng-tag on'; count(); toast('✅ ' + e.name + ' added'); return; }
+          notOn.add(e.n); tag.textContent = 'Not registered';
+          msg.hidden = false; msg.innerHTML = '';
+          const inv = el('button', 'linkbtn', '📨 Invite to Maata'); inv.onclick = (ev) => { ev.preventDefault(); inviteToMaata(e); };
+          msg.append(el('span', null, '❌ ' + e.name + ' is not registered on Maata, so they cannot be added. '), inv);
+          toast('❌ ' + e.name + ' is not registered on Maata');
+        };
+        lab.append(cb, avatar(e.user || { id: e.n, name: e.name }, 'sm'), tx, tag); li.append(lab, msg); ul.append(li);
       }
-      // a number typed in the search box: check if it is on Maata
-      const digits = q.value.replace(/\D/g, '');
-      if (digits.length === 10 && !ps.some((u) => u.phone === digits)) {
-        clearTimeout(lookupT); lookupT = setTimeout(async () => { try { const r = await api('/api/lookup?phone=' + digits); if (r.user) { upsertUser(r.user); draw(); } } catch {} }, 400);
-      }
-      // phone contacts who are not on Maata yet: invite them
-      const onMaata = new Set(users.map((u) => l10(u.phone)));
-      const t = q.value.trim().toLowerCase();
-      const others = phoneBook.filter((c) => !onMaata.has(c.n) && (!t || c.name.toLowerCase().includes(t) || c.n.includes(t.replace(/\D/g, '') || '#'))).slice(0, 300);
-      if (others.length) {
-        ul.append(el('li', 'ng-head', '📨 Not on Maata yet · invite them'));
-        for (const c of others) {
-          const li = el('li', 'ng-inv'); const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', c.name), el('div', 'c-last', c.phone));
-          const inv = el('button', 'linkbtn', 'Invite'); inv.onclick = () => inviteToMaata(c);
-          li.append(avatar({ id: c.n, name: c.name }, 'sm'), tx, inv); ul.append(li);
-        }
-      }
-      if (!ps.length && !others.length) ul.append(el('li', 'empty-list', phoneBook.length ? 'No one found.' : 'Tap "📱 Show all my phone contacts" to see everyone from your phone.'));
+      if (shown.length > 800) ul.append(el('li', 'empty-list', 'Showing 800 of ' + shown.length + ' — type a name to find others.'));
+      if (!shown.length) ul.append(el('li', 'empty-list', phoneBook.length ? 'No one found.' : 'Tap "📱 Load my phone contacts" to see all your contacts.'));
       count();
     };
     q.oninput = draw;
-    all.onclick = () => { const ps = people(); const allOn = ps.every((u) => pick.has(u.id)); ps.forEach((u) => (allOn ? pick.delete(u.id) : pick.add(u.id))); draw(); };
+    all.onclick = () => { const es = entries().filter((e) => e.user); const allOn = es.every((e) => pick.has(e.user.id)); es.forEach((e) => (allOn ? pick.delete(e.user.id) : pick.add(e.user.id))); draw(); };
     next.onclick = () => groupDetailsStep([...pick]);
     box.append(next); list.append(box); draw();
+    // inside the Android app, read the phone's contacts straight away
+    if (!phoneBook.length && window.MaataAndroid && window.MaataAndroid.getContacts) { load.click(); }
   });
 }
 function inviteToMaata(c) {
