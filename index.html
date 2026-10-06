@@ -907,7 +907,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 /* ================= Reels ================= */
 #reelsPane{position:fixed;inset:0;z-index:19;background:#000;color:#fff;display:flex;flex-direction:column}
 #reelsPane[hidden]{display:none}
-.rl-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:6px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px 10px;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+.rl-top{position:absolute;top:0;left:0;right:0;z-index:3;color:#fff;display:flex;align-items:center;gap:6px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px 10px;background:linear-gradient(rgba(0,0,0,.55),transparent)}
 .rl-top .ttl{font-size:21px;font-weight:700;margin-right:6px}
 #rlTabs{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
 #rlTabs button{padding:6px 12px;border-radius:999px;color:rgba(255,255,255,.75);font-weight:600;font-size:14px;white-space:nowrap;background:none}
@@ -951,7 +951,71 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .rm-play{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:22px}
 .rm-by{font-weight:700;font-size:13.5px}.rm-cap{font-size:13.5px;opacity:.85;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media (min-width:761px){#reelsPane{left:50%;transform:translateX(-50%);width:min(460px,100vw);box-shadow:0 0 0 100vw rgba(0,0,0,.85)}}
-@media (max-width:760px){#reelsPane{bottom:calc(64px + env(safe-area-inset-bottom,0px))}#rlClose{display:none}.bnav.rl-dark{background:#000;border-top-color:#222}.bnav.rl-dark button{color:#fff}}
+@media (max-width:760px){#reelsPane{bottom:calc(64px + env(safe-area-inset-bottom,0px))}.bnav.rl-dark{background:#000;border-top-color:#222}.bnav.rl-dark button{color:#fff}}
+/* ================= Reels: Instagram-style home, explore, profile ================= */
+#reelsPane{background:var(--paper);color:var(--ink)}
+.ig-view{position:absolute;inset:0;display:flex;flex-direction:column}
+.ig-view[hidden]{display:none}
+#rlReelsView{background:#000;color:#fff}
+.ig-head{display:flex;align-items:center;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 0}
+.ig-title{flex:1;text-align:center;font-family:"Sora",system-ui,sans-serif;font-size:24px;font-weight:700;letter-spacing:-.4px}
+.ig-title span{background:linear-gradient(90deg,#F58529,#DD2A7B,#8134AF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ig-ib{position:relative;width:44px;height:44px;display:grid;place-items:center;background:none;color:var(--ink);border-radius:50%}
+.ig-ib svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ig-dot{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:#FF3040;border:2px solid var(--paper)}
+.ig-nav{display:flex;justify-content:space-around;padding:2px 10px 6px;border-bottom:1px solid var(--line)}
+.ig-nav button{width:56px;height:38px;display:grid;place-items:center;background:none;color:var(--muted);border-radius:12px}
+.ig-nav button svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ig-nav button[aria-pressed="true"]{color:var(--ink);background:var(--peacock-soft)}
+.ig-scroll{flex:1;overflow-y:auto;overscroll-behavior:contain}
+.ig-stories{display:flex;gap:14px;overflow-x:auto;padding:12px 12px 10px;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.ig-stories::-webkit-scrollbar{display:none}
+.ig-story{flex:none;width:78px;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;color:var(--ink);font-size:12.5px}
+.ig-story .ring{width:74px;height:74px;border-radius:50%;padding:3px;background:conic-gradient(#FEDA75,#FA7E1E,#D62976,#962FBF,#4F5BD5,#FEDA75);display:grid;place-items:center}
+.ig-story .ring.seen{background:var(--line)}
+.ig-story .ring.none{background:none}
+.ig-story .ring .avatar{width:66px!important;height:66px!important;border:3px solid var(--paper);font-size:22px}
+.ig-story .nm{max-width:78px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ig-story .plus{position:absolute;right:-2px;bottom:-2px;z-index:1;width:24px;height:24px;border-radius:50%;background:#0095F6;color:#fff;border:3px solid var(--paper);display:grid;place-items:center;font-size:16px;font-weight:700;line-height:1}
+.ig-story .wrap{position:relative}
+.ig-post{border-bottom:1px solid var(--line);padding-bottom:10px}
+.ig-ph{display:flex;align-items:center;gap:10px;padding:10px 10px 8px 12px}
+.ig-ph .who{flex:1;min-width:0;display:flex;flex-direction:column;background:none;text-align:left;color:var(--ink);padding:0}
+.ig-ph .who b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ig-ph .who small{font-size:12.5px;color:var(--muted)}
+.ig-follow{padding:6px 16px;border-radius:9px;border:1.5px solid var(--line);background:none;color:var(--ink);font-weight:700;font-size:13.5px}
+.ig-follow.blue{background:#0095F6;border-color:#0095F6;color:#fff}
+.ig-media{position:relative;background:#000;aspect-ratio:4/5;max-height:72vh;width:100%;overflow:hidden}
+.ig-media video{width:100%;height:100%;object-fit:cover}
+.ig-mute{position:absolute;right:10px;bottom:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center;font-size:14px}
+.ig-full{position:absolute;right:10px;top:10px;padding:5px 10px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:12.5px;font-weight:600}
+.ig-acts{display:flex;align-items:center;gap:4px;padding:6px 6px 0}
+.ig-acts button{display:flex;align-items:center;gap:5px;background:none;color:var(--ink);padding:6px;font-weight:600;font-size:14px}
+.ig-acts svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ig-acts .on svg{fill:#FF3040;stroke:#FF3040}
+.ig-cap{padding:2px 12px;font-size:14.5px;line-height:1.4;white-space:pre-wrap}
+.ig-sub{padding:2px 12px;font-size:13.5px;color:var(--muted);background:none;display:block;text-align:left}
+.ig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.ig-cell{position:relative;aspect-ratio:9/16;background:#111 center/cover no-repeat;border:0;padding:0}
+.ig-cell span{position:absolute;left:6px;bottom:5px;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.ig-search{margin:10px 12px;display:flex}
+.ig-search input{flex:1;height:40px;border-radius:12px;border:0;background:var(--line);padding:0 14px;font:inherit;color:var(--ink)}
+.ig-prof{padding:14px 16px 10px}
+.ig-prof .top{display:flex;align-items:center;gap:18px}
+.ig-prof .top .avatar{width:86px!important;height:86px!important;font-size:30px}
+.ig-stats{flex:1;display:flex;justify-content:space-around;text-align:center}
+.ig-stats b{display:block;font-size:18px}.ig-stats small{font-size:13px;color:var(--muted)}
+.ig-prof h3{margin:10px 0 2px;font-size:15px}.ig-prof p{margin:0;font-size:14px;white-space:pre-wrap}
+.ig-pbtns{display:flex;gap:8px;margin:12px 0 4px}
+.ig-pbtns button{flex:1;padding:8px;border-radius:9px;background:var(--line);color:var(--ink);font-weight:700;font-size:14px}
+.ig-pbtns button.blue{background:#0095F6;color:#fff}
+.ig-act{display:flex;align-items:center;gap:12px;padding:10px 14px;width:100%;background:none;color:var(--ink);text-align:left}
+.ig-act.unseen{background:var(--peacock-soft)}
+.ig-act .txt{flex:1;font-size:14px;line-height:1.35}.ig-act .txt small{color:var(--muted)}
+.ig-act .th{width:44px;height:56px;border-radius:6px;background:#111 center/cover no-repeat;flex:none}
+.as-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 12px}
+.as-tiles button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px;border-radius:16px;background:var(--line);color:var(--ink);font-weight:600;font-size:14px}
+.as-tiles .ic{font-size:30px}
+.collage-prev{width:100%;max-height:52vh;object-fit:contain;border-radius:14px;background:#000}
 </style>
 </head>
 <body>
@@ -1124,14 +1188,34 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
   </main>
 </div>
 <section id="reelsPane" hidden aria-label="Reels">
-  <div class="rl-top">
-    <span class="ttl">Reels</span>
-    <div id="rlTabs" role="tablist"><button data-rt="foryou" aria-pressed="true">For you</button><button data-rt="friends" aria-pressed="false">Friends</button><button data-rt="mine" aria-pressed="false">Mine</button><button id="rlUserTab" hidden aria-pressed="false"></button></div>
-    <button class="rl-ib" id="rlSound" aria-label="Mute"></button>
-    <button class="rl-ib" id="rlCreate" aria-label="Create a reel"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8.5 9.5v5M6 12h5"/></svg></button>
-    <button class="rl-ib" id="rlClose" aria-label="Close reels"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  <div class="ig-view" id="igHomeView">
+    <header class="ig-head">
+      <button class="ig-ib" id="igPlus" aria-label="Create"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="ig-title">Maata <span>Reels</span></div>
+      <button class="ig-ib" id="igHeart" aria-label="Activity"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8 3.2 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.8 0 6.1 4 4.6 7.7C19.5 16.4 12 21 12 21z"/></svg><i class="ig-dot" id="igDot" hidden></i></button>
+    </header>
+    <nav class="ig-nav" aria-label="Reels sections">
+      <button data-v="home" aria-pressed="true" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></button>
+      <button data-v="reels" aria-pressed="false" aria-label="Reels"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 9v6l5-3z"/></svg></button>
+      <button data-v="explore" aria-pressed="false" aria-label="Explore"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      <button data-v="profile" aria-pressed="false" aria-label="My profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+    </nav>
+    <div class="ig-scroll" id="igScroll">
+      <div class="ig-stories" id="igStories"></div>
+      <div id="igFeed"></div>
+      <div id="igExplore" hidden></div>
+      <div id="igProfile" hidden></div>
+    </div>
   </div>
-  <div id="rlFeed"></div>
+  <div class="ig-view" id="rlReelsView" hidden>
+    <div class="rl-top">
+      <button class="rl-ib" id="rlHome" aria-label="Back to home"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div id="rlTabs" role="tablist"><button data-rt="foryou" aria-pressed="true">For you</button><button data-rt="following" aria-pressed="false">Following</button><button id="rlUserTab" hidden aria-pressed="false"></button></div>
+      <button class="rl-ib" id="rlSound" aria-label="Mute"></button>
+      <button class="rl-ib" id="rlCreate" aria-label="Create a reel"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8.5 9.5v5M6 12h5"/></svg></button>
+    </div>
+    <div id="rlFeed"></div>
+  </div>
 </section>
 <nav class="bnav" id="bnav" aria-label="Main">
   <button data-go="chats" aria-selected="true"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/><path d="M8 11h8M8 14.5h5"/></svg></span><span data-t="chats">Chats</span><span class="bb" id="bnChats" hidden></span></button>
@@ -1309,6 +1393,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
     <div class="settings-head"><h2 id="setTitle">Settings</h2><button class="icon-btn" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="pf-card" id="setProfile"></div>
 
+    <div class="set-group" style="margin-top:4px"><div class="set-row" id="setRunning"></div></div>
     <div id="setNotifBox"></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCallQ">🎧 Call quality <span style="margin-left:auto;color:var(--muted)" id="setCallQName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setThemes">🎨 Theme &amp; colours <span style="margin-left:auto;color:var(--muted)" id="setThemeName"></span></button></div>
@@ -1573,6 +1658,7 @@ function connectSocket() {
   });
   socket.on('call:log', onCallLog);
   socket.on('msg:update', refreshBubble);
+  socket.on('activity:new', () => { const d = $('#igDot'); if (d) d.hidden = false; });
   socket.on('user:profile', () => { reloadUsers(); });
   socket.on('msg:expired', ({ ids }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => !ids.includes(m.id)); if (activeId) renderMessages(); });
   socket.on('msg:hidden', ({ id }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => m.id !== id); if (activeId) renderMessages(); });
@@ -1786,10 +1872,12 @@ const TONES = {
   ding:    { name: 'Ding Dong', every: 2500, decay: true, notes: [[659, 0, 1], [523, .55, 1.3]] },
 };
 const OUTGOING = { every: 3000, notes: [[425, 0, 1]] };
-const defaults = { voiceTone: 'classic', videoTone: 'marimba', volume: 70, vibrate: true, msgSound: true, liveTranslate: true, speakTranslation: true, duckOriginal: true, chatTranslate: true, showSubs: true, voiceGender: 'FEMALE' };
+const defaults = { voiceTone: 'phone', videoTone: 'phone', volume: 70, vibrate: true, msgSound: true, liveTranslate: true, speakTranslation: true, duckOriginal: true, chatTranslate: true, showSubs: true, voiceGender: 'FEMALE' };
 let settings = { ...defaults };
 try { settings = { ...defaults, ...JSON.parse(store.get('maata_settings') || '{}') }; } catch {}
 const saveSettings = () => store.set('maata_settings', JSON.stringify(settings));
+// one time: everyone moves to the phone's own ringtone (they can pick a Maata tune again in Settings → Ringtones)
+if (!settings.toneV2) { if (settings.voiceTone !== 'custom') settings.voiceTone = 'phone'; if (settings.videoTone !== 'custom') settings.videoTone = 'phone'; settings.toneV2 = 1; saveSettings(); }
 
 // Custom ringtone files (IndexedDB)
 const idb = {
@@ -1841,7 +1929,13 @@ function playPattern(t) {
     }
   }
 }
+const hasPhoneRing = () => !!(window.MaataAndroid && window.MaataAndroid.startPhoneRingtone);
+let phoneRinging = false;
 function startTone(toneId, kind) {
+  if (toneId === 'phone' || (toneId === undefined && hasPhoneRing())) {
+    if (hasPhoneRing()) { try { if (window.MaataAndroid.startPhoneRingtone(!!settings.vibrate)) { phoneRinging = true; return; } } catch {} }
+    toneId = 'classic'; // browser: the phone's ringtone is not reachable, use Maata's
+  }
   if (toneId === 'custom' && customTone[kind]) {
     ringAudio = new Audio(customTone[kind].url);
     ringAudio.loop = true; ringAudio.volume = settings.volume / 100;
@@ -1858,7 +1952,7 @@ function ring(type, kind = 'voice') {
     return;
   }
   startTone(kind === 'video' ? settings.videoTone : settings.voiceTone, kind);
-  if (settings.vibrate && navigator.vibrate) {
+  if (settings.vibrate && navigator.vibrate && !phoneRinging) {
     navigator.vibrate([500, 300, 500, 300, 500]);
     ringVibe = setInterval(() => navigator.vibrate([500, 300, 500, 300, 500]), 2500);
   }
@@ -1869,6 +1963,7 @@ function messageSound() {
   try { playPattern({ decay: true, notes: [[988, 0, .18], [1319, .09, .28]] }); } catch {}
 }
 function stopRing() {
+  if (phoneRinging) { phoneRinging = false; try { window.MaataAndroid.stopPhoneRingtone(); } catch {} }
   clearInterval(ringTimer); ringTimer = null;
   clearInterval(ringVibe); ringVibe = null;
   if (ringAudio) { ringAudio.pause(); ringAudio = null; }
@@ -1880,6 +1975,7 @@ function stopRing() {
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 function fillToneSelect(sel, kind, value) {
   sel.innerHTML = '';
+  sel.add(new Option(hasPhoneRing() ? '📱 Phone ringtone' : '📱 Phone ringtone (Android app only)', 'phone'));
   for (const [id, t] of Object.entries(TONES)) sel.add(new Option(t.name, id));
   sel.add(new Option(customTone[kind] ? '🎵 ' + customTone[kind].name : '🎵 My own tone…', 'custom'));
   if (customTone[kind]) sel.add(new Option('Choose another file…', 'upload'));
@@ -1887,9 +1983,19 @@ function fillToneSelect(sel, kind, value) {
 }
 function toneLabel(kind) {
   const v = kind === 'video' ? settings.videoTone : settings.voiceTone;
+  if (v === 'phone') return hasPhoneRing() ? 'Your phone\u2019s ringtone' : 'Phone ringtone works in the Android app';
   return v === 'custom' && customTone[kind] ? customTone[kind].name : (TONES[v] || TONES.classic).name;
 }
 function renderSettings() {
+  { // which Maata is this? (the Android app can switch speaker/earpiece and keeps calls working when locked; the browser cannot)
+    const box = $('#setRunning'); if (box) {
+      const av = (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1];
+      box.innerHTML = '';
+      const t = el('div', 'txt'); t.append(el('b', null, av ? '📱 Running in: Maata Android app v' + av : '🌐 Running in: browser (' + (inApp() ? 'installed from Chrome' : 'Chrome tab') + ')'),
+        el('small', null, av ? 'All call features work: loudspeaker switch, voice when the phone is locked, full-screen incoming calls.' : 'Loudspeaker switch, voice when the phone is locked and full-screen calls need the Maata Android app (APK).'));
+      box.append(t);
+    }
+  }
   $('#setCallQName').textContent = callQ().label;
   { const m = store.get('maata_theme_mode') || 'system', a = (ACCENTS.find((x) => x[0] === (store.get('maata_accent') || 'teal')) || ACCENTS[0])[2]; $('#setThemeName').textContent = ({ system: 'System', light: 'Light', dark: 'Dark', black: 'Black', midnight: 'Midnight', forest: 'Forest', sepia: 'Sepia' })[m] + ' · ' + a; }
   renderProfileCard();
@@ -2014,7 +2120,7 @@ function createPeer() {
   pc.onconnectionstatechange = () => {
     if (!call || call.pc !== pc) return;
     const s = pc.connectionState;
-    if (s === 'connected') onConnected();
+    if (s === 'connected') { onConnected(); reapplySpeaker(); }
     else if (s === 'disconnected') setCallStatus('Reconnecting…');
     else if (s === 'failed') endCall('Call dropped. The connection could not be kept.', true);
   };
@@ -2051,7 +2157,7 @@ async function startCall(kind) {
   const u = userById(activeId); if (!u) return;
   // The server decides if the other person is reachable (online status is only shown for saved contacts).
   call = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), peerId: u.id, peerName: nameOf(u), peerLang: u.lang, kind, role: 'caller', state: 'calling', pendingIce: [] };
-  showCallScreen('Calling…'); nativeCall(true, kind, call.peerName); setTimeout(() => setSpeaker(kind === 'video', true), 700);
+  showCallScreen('Calling…'); nativeCall(true, kind, call.peerName); setTimeout(() => setSpeaker(false, true), 700);
   try { call.local = await getMedia(kind); }
   catch (e) { const msg = mediaError(e); endCall(msg); return; }
   if (!call) { return; }
@@ -2084,7 +2190,7 @@ $('#acceptBtn').onclick = async () => {
   if (!call || call.state !== 'incoming') return;
   stopRing(); clearTimeout(call.timeout);
   call.state = 'connecting'; $('#incoming').hidden = true;
-  showCallScreen('Connecting…'); nativeCall(true, call.kind, call.peerName); setTimeout(() => call && setSpeaker(call.kind === 'video', true), 700);
+  showCallScreen('Connecting…'); nativeCall(true, call.kind, call.peerName); setTimeout(() => call && setSpeaker(false, true), 700);
   try { call.local = await getMedia(call.kind); }
   catch (e) { const msg = mediaError(e); socket.emit('call:reject', { to: call.peerId, callId: call.id }); endCall(msg); return; }
   call.pc = createPeer();
@@ -4661,7 +4767,7 @@ async function joinGroupCall(gid, callId, kind) {
   socket.emit('gcall:join', { gid, callId });
 }
 async function gcMedia(kind) {
-  try { GC.local = await navigator.mediaDevices.getUserMedia({ audio: HD_AUDIO, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 } } : false }); setTimeout(() => setSpeaker(kind === 'video' || GC.peers.size > 0, true), 700); return true; }
+  try { GC.local = await navigator.mediaDevices.getUserMedia({ audio: HD_AUDIO, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 540 }, frameRate: { ideal: 24, max: 30 } } : false }); setTimeout(() => setSpeaker(false, true), 700); return true; }
   catch { toast('Allow microphone' + (kind === 'video' ? ' and camera' : '') + ' to join the call.'); return false; }
 }
 function gcShow(status) {
@@ -4711,7 +4817,7 @@ function gcPeer(uid, initiator) {
   GC.local.getTracks().forEach((t) => pc.addTrack(t, GC.local));
   pc.onicecandidate = (e) => { if (e.candidate) socket.emit('gcall:signal', { callId: GC.id, to: uid, data: { candidate: e.candidate } }); };
   pc.ontrack = (e) => { const t = gcTile(uid, e.streams[0]); t.classList.remove('connecting'); };
-  pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') gcTile(uid).classList.remove('connecting'); if (pc.connectionState === 'failed') gcDrop(uid); };
+  pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') { gcTile(uid).classList.remove('connecting'); reapplySpeaker(); } if (pc.connectionState === 'failed') gcDrop(uid); };
   gcTile(uid, null);
   if (initiator) (async () => { const o = await pc.createOffer(); o.sdp = hdSdp(o.sdp, 64000); await pc.setLocalDescription(o); tuneSenders(pc, true); socket.emit('gcall:signal', { callId: GC.id, to: uid, data: { sdp: pc.localDescription } }); })();
   return peer;
@@ -6561,9 +6667,12 @@ function setSpeaker(on, quiet) {
   document.querySelectorAll('#spkBtn,#gcSpk').forEach((b) => { b.setAttribute('aria-pressed', String(speakerOn)); b.title = speakerOn ? 'Speaker on' : 'Speaker off'; });
   if (!quiet) {
     if (ok) toast(speakerOn ? '🔊 Loudspeaker on' : '🔈 Earpiece: hold the phone to your ear (like a normal call)');
-    else if (!A) toast('Speaker switch works in the Maata Android app. In the browser, use your phone\u2019s volume buttons.');
+    else if (!A) toast('🔊 Loudspeaker switch needs the Maata Android app (APK). You are using Maata in the browser right now — see Settings → "Running in".');
   }
 }
+// When the call's sound starts, the phone's web engine switches to the loudspeaker by itself.
+// Apply the person's choice again right after connecting (the Android app also guards it for the whole call).
+function reapplySpeaker() { for (const t of [300, 1500, 3500, 7000]) setTimeout(() => { if (call || (GC && GC.id)) setSpeaker(speakerOn, true); }, t); }
 const SPK_SVG = '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
 
 $('#spkBtn').onclick = () => setSpeaker(!speakerOn);
@@ -6612,6 +6721,7 @@ window.addEventListener('popstate', () => {
   const close = topLayer();
   if (close) { try { close(); } catch {} }
   else if (isMobileLayout() && $('#app').classList.contains('in-chat')) closeActiveChat();
+  else if (tab === 'reels' && typeof IG !== 'undefined' && IG.view !== 'home') igSetView('home');
   else if (tab !== 'chats') setTab('chats');
   setTimeout(backGuard, 0);
 });
@@ -6634,12 +6744,12 @@ const RL_ICONS = {
   muted: '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>',
   cam: '<svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8.5 9.5v5M6 12h5"/></svg>',
 };
-function openReels(first) { RL.first = first || null; if (tab !== 'reels') setTab('reels'); else reelsLoad(true); }
+function openReels(first) { RL.first = first || null; RL.tab = 'foryou'; if (tab !== 'reels') { IG.pendingView = 'reels'; setTab('reels'); } else igSetView('reels'); }
 function reelsShow(on) {
   const p = $('#reelsPane'); if (!p) return;
   p.hidden = !on;
   if (!on) { p.querySelectorAll('video').forEach((v) => v.pause()); return; }
-  reelsLoad(true);
+  const v = IG.pendingView || 'home'; IG.pendingView = null; igSetView(v); igActivityDot();
 }
 async function reelsLoad(reset) {
   if (RL.loading) return;
@@ -6657,7 +6767,7 @@ async function reelsLoad(reset) {
 }
 function reelsEmpty() {
   const e = el('div', 'rl-empty');
-  e.append(el('div', 'rl-empty-ic', '🎬'), el('b', null, RL.tab === 'friends' ? 'No reels from your contacts yet' : RL.tab === 'mine' ? 'You have not posted a reel yet' : 'No reels yet'), el('p', null, 'Share a short video (up to 60 seconds) with everyone on Maata.'));
+  e.append(el('div', 'rl-empty-ic', '🎬'), el('b', null, RL.tab === 'following' ? 'No reels from people you follow yet' : RL.tab === 'user:' + me.id ? 'You have not posted a reel yet' : 'No reels yet'), el('p', null, 'Share a short video (up to 60 seconds) with everyone on Maata.'));
   const b = el('button', 'primary', '📷 Create a reel'); b.onclick = reelCreate; e.append(b);
   $('#rlFeed').append(e);
 }
@@ -6685,7 +6795,7 @@ function reelCard(r) {
   const info = el('div', 'rl-info');
   const who = el('button', 'rl-who'); who.append(avatar({ id: r.by.id, name: r.by.name, photo: r.by.photo, photoV: r.by.photoV }, 'sm'), el('b', null, r.by.name));
   if (r.by.biz) who.append(el('span', 'rl-biz', '🏪'));
-  who.onclick = (e) => { e.stopPropagation(); RL.tab = 'user:' + r.by.id; reelsTabs(); reelsLoad(true); };
+  who.onclick = (e) => { e.stopPropagation(); igSetView('profile', { id: r.by.id }); };
   info.append(who);
   if (r.caption) { const cap = el('div', 'rl-cap', r.caption); cap.onclick = (e) => { e.stopPropagation(); cap.classList.toggle('open'); }; info.append(cap); }
   info.append(el('div', 'rl-meta', '👁 ' + fmtCount(r.views) + ' views' + (r.hidden ? ' · ⏳ under review' : '')));
@@ -6763,7 +6873,7 @@ function reelShare(r) {
 function reelMore(r, c) {
   sheet(r.mine ? 'My reel' : 'Reel', (list) => {
     const b = (label, fn, warn) => { const x = el('button', 'sheet-btn' + (warn ? ' warn' : ''), label); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
-    b('👤  More reels from ' + r.by.name, () => { RL.tab = 'user:' + r.by.id; reelsTabs(); reelsLoad(true); });
+    b('👤  ' + (r.mine ? 'My profile' : r.by.name + '\u2019s profile'), () => igSetView('profile', { id: r.by.id }));
     if (!r.mine && !r.by.biz) b('💬  Message ' + r.by.name, async () => { await ensureUser(r.by.id); setTab('chats'); openChat(r.by.id); });
     if (r.by.biz) b('🏪  Visit shop', () => viewBusiness(r.by.id));
     if (r.mine) b('🗑  Delete this reel', async () => { if (!confirm('Delete this reel?')) return; try { await api('/api/reels/' + r.id, { method: 'DELETE' }); c.remove(); toast('Reel deleted'); } catch (e) { toast(e.message); } }, true);
@@ -6773,7 +6883,7 @@ function reelMore(r, c) {
 function reelsTabs() {
   document.querySelectorAll('#rlTabs [data-rt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === RL.tab)));
   const ut = $('#rlUserTab'); ut.hidden = !RL.tab.startsWith('user:');
-  if (RL.tab.startsWith('user:')) { const id = RL.tab.slice(5), u = userById(id), r0 = RL.list.find((x) => x.by.id === id); ut.textContent = '👤 ' + (u ? nameOf(u) : r0 ? r0.by.name : 'Reels'); ut.setAttribute('aria-pressed', 'true'); }
+  if (RL.tab.startsWith('user:')) { const id = RL.tab.slice(5), u = id === me.id ? me : userById(id), r0 = RL.list.find((x) => x.by.id === id); ut.textContent = '👤 ' + (id === me.id ? 'My reels' : u ? nameOf(u) : r0 ? r0.by.name : 'Reels'); ut.setAttribute('aria-pressed', 'true'); }
 }
 function reelsSoundBtn() { const b = $('#rlSound'); if (b) { b.innerHTML = RL.muted ? RL_ICONS.muted : RL_ICONS.sound; b.setAttribute('aria-label', RL.muted ? 'Turn sound on' : 'Mute'); } }
 
@@ -6835,7 +6945,7 @@ async function reelPrepare(file) {
           x.onerror = () => bad(new Error('Upload failed. Check your internet.')); x.send(up);
         });
         if (thumb) await fetch('/api/reels/' + r.id + '/thumb', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: thumb }).catch(() => {});
-        closeSheet('moreSheet'); toast('🎬 Your reel is live!'); RL.tab = 'mine'; reelsTabs(); openReels(r.id);
+        closeSheet('moreSheet'); toast('🎬 Your reel is live!'); RL.tab = 'user:' + me.id; RL.first = r.id; if (tab !== 'reels') { IG.pendingView = 'reels'; setTab('reels'); } else igSetView('reels'); reelsTabs();
       } catch (e) { toast(e.message); go.disabled = false; prog.hidden = true; }
     };
     box.append(pv, l, ai, prog, go); list.append(box);
@@ -6853,8 +6963,233 @@ function renderReelCard(b, m) {
   document.querySelectorAll('#rlTabs [data-rt]').forEach((b) => (b.onclick = () => { RL.tab = b.dataset.rt; reelsTabs(); reelsLoad(true); }));
   $('#rlCreate').onclick = reelCreate;
   $('#rlSound').onclick = () => { RL.muted = !RL.muted; reelsSoundBtn(); document.querySelectorAll('#rlFeed video').forEach((v) => (v.muted = RL.muted)); };
-  $('#rlClose').onclick = () => setTab('chats');
   reelsSoundBtn(); reelsObserver();
+})();
+
+// ================= Maata Reels: home feed, stories, explore, profile, activity, add to story =================
+const IG = { view: 'home', profileId: null, skip: 0, done: false, loading: false, io: null, muted: true };
+const IG_HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8 3.2 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.8 0 6.1 4 4.6 7.7C19.5 16.4 12 21 12 21z"/></svg>';
+function igSetView(v, opts = {}) {
+  IG.view = v;
+  const reels = v === 'reels';
+  $('#igHomeView').hidden = reels; $('#rlReelsView').hidden = !reels;
+  document.querySelectorAll('.ig-nav [data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v || (v === 'profile' && b.dataset.v === 'profile' && IG.profileId === me.id))));
+  if (reels) { reelsTabs(); reelsLoad(true); return; }
+  document.querySelectorAll('#rlFeed video, #igFeed video').forEach((x) => x.pause());
+  $('#igStories').hidden = v !== 'home'; $('#igFeed').hidden = v !== 'home'; $('#igExplore').hidden = v !== 'explore'; $('#igProfile').hidden = v !== 'profile';
+  $('#igScroll').scrollTop = 0;
+  if (v === 'home') { igStories(); igFeedLoad(true); }
+  else if (v === 'explore') igExplore();
+  else if (v === 'profile') igProfile(opts.id || IG.profileId || me.id);
+}
+// ----- stories row (uses Maata status) -----
+async function igStories() {
+  const box = $('#igStories'); box.innerHTML = '';
+  try { statusData = await api('/api/status'); } catch {}
+  const mineBtn = el('button', 'ig-story'); const w = el('div', 'wrap'); const ring = el('span', 'ring ' + (statusData.mine.length ? '' : 'none')); ring.append(avatar(me)); w.append(ring);
+  if (!statusData.mine.length) w.append(el('span', 'plus', '+'));
+  mineBtn.append(w, el('span', 'nm', 'Your story'));
+  mineBtn.onclick = () => (statusData.mine.length ? openViewer([{ user: me, statuses: statusData.mine, mine: true }], 0) : openAddStory());
+  box.append(mineBtn);
+  statusData.users.forEach((g, i) => {
+    const b = el('button', 'ig-story'); const r2 = el('span', 'ring' + (g.allViewed ? ' seen' : '')); r2.append(avatar(g.user)); b.append(r2, el('span', 'nm', nameOf(g.user)));
+    b.onclick = () => openViewer(statusData.users, i); box.append(b);
+  });
+}
+// ----- home feed (posts) -----
+async function igFeedLoad(reset) {
+  if (IG.loading) return;
+  if (reset) { IG.skip = 0; IG.done = false; $('#igFeed').innerHTML = ''; }
+  if (IG.done) return;
+  IG.loading = true;
+  try {
+    const items = await api('/api/reels?tab=home&skip=' + IG.skip);
+    IG.skip += items.length; if (items.length < 15) IG.done = true;
+    for (const r of items) $('#igFeed').append(igPost(r));
+    if (!$('#igFeed').children.length) { const e = el('div', 'rl-empty'); e.style.color = 'var(--ink)'; e.append(el('div', 'rl-empty-ic', '🎬'), el('b', null, 'No posts yet'), el('p', null, 'Follow people or post your first reel.')); const b = el('button', 'primary', '＋ Create a reel'); b.onclick = reelCreate; e.append(b); $('#igFeed').append(e); }
+  } catch (e) { toast(e.message); }
+  IG.loading = false;
+}
+function igFollowBtn(uid, followed, onChange) {
+  const b = el('button', 'ig-follow' + (followed ? '' : ' blue'), followed ? 'Following' : 'Follow');
+  b.onclick = async (e) => { e.stopPropagation(); try { const r = await api('/api/follow/' + uid, { method: 'POST', body: JSON.stringify({ follow: b.textContent !== 'Following' }) }); b.textContent = r.following ? 'Following' : 'Follow'; b.classList.toggle('blue', !r.following); onChange && onChange(r); } catch (er) { toast(er.message); } };
+  return b;
+}
+function timeAgo(ts) { const m = Math.floor((Date.now() - ts) / 60000); if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60); if (h < 24) return h + 'h'; const d = Math.floor(h / 24); return d < 7 ? d + 'd' : new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); }
+function igPost(r) {
+  const post = el('article', 'ig-post'); post.dataset.id = r.id;
+  const ph = el('div', 'ig-ph'); const av = avatar({ id: r.by.id, name: r.by.name, photo: r.by.photo, photoV: r.by.photoV }, 'sm');
+  const who = el('button', 'who'); who.append(el('b', null, r.by.name + (r.by.biz ? ' 🏪' : '')), el('small', null, '🎬 Reel · ' + timeAgo(r.createdAt)));
+  const toProf = () => igSetView('profile', { id: r.by.id }); av.onclick = toProf; who.onclick = toProf; av.style.cursor = 'pointer';
+  ph.append(av, who); if (!r.mine && !r.by.followed) ph.append(igFollowBtn(r.by.id, false));
+  const more = el('button', 'ig-ib'); more.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>'; more.setAttribute('aria-label', 'More'); more.onclick = () => reelMore(r, post); ph.append(more);
+  const media = el('div', 'ig-media'); const v = el('video'); v.playsInline = true; v.loop = true; v.muted = IG.muted; v.preload = 'none'; v.dataset.src = reelUrl(r.id); if (r.hasThumb) v.poster = reelThumb(r.id);
+  const mute = el('button', 'ig-mute', IG.muted ? '🔇' : '🔊'); mute.setAttribute('aria-label', 'Sound');
+  const full = el('button', 'ig-full', '⤢ Full screen'); full.onclick = (e) => { e.stopPropagation(); RL.tab = 'foryou'; RL.first = r.id; igSetView('reels'); };
+  const heart = el('div', 'rl-pop', '❤️');
+  let last = 0;
+  media.onclick = () => { const t = Date.now(); if (t - last < 300) { if (!r.liked) igLike(r, post); heart.classList.remove('go'); void heart.offsetWidth; heart.classList.add('go'); last = 0; return; } last = t; setTimeout(() => { if (last === t) { IG.muted = !IG.muted; document.querySelectorAll('#igFeed video').forEach((x) => (x.muted = IG.muted)); document.querySelectorAll('#igFeed .ig-mute').forEach((x) => (x.textContent = IG.muted ? '🔇' : '🔊')); } }, 280); };
+  media.append(v, heart, mute, full);
+  const acts = el('div', 'ig-acts');
+  const like = el('button', r.liked ? 'on' : ''); like.innerHTML = IG_HEART; like.append(el('span', null, fmtCount(r.likes))); like.setAttribute('aria-label', 'Like'); like.onclick = () => igLike(r, post);
+  const cm = el('button'); cm.innerHTML = RL_ICONS.comment; cm.append(el('span', null, fmtCount(r.comments))); cm.setAttribute('aria-label', 'Comments'); cm.onclick = () => reelComments(r, post);
+  const sh = el('button'); sh.innerHTML = RL_ICONS.share; sh.setAttribute('aria-label', 'Share'); sh.onclick = () => reelShare(r);
+  acts.append(like, cm, sh);
+  post.append(ph, media, acts);
+  if (r.caption) { const c = el('div', 'ig-cap'); c.append(el('b', null, r.by.name + ' '), document.createTextNode(r.caption)); post.append(c); }
+  if (r.comments) { const vc = el('button', 'ig-sub', 'View all ' + r.comments + ' comments'); vc.onclick = () => reelComments(r, post); post.append(vc); }
+  post.append(el('div', 'ig-sub', '👁 ' + fmtCount(r.views) + ' views'));
+  igObserver(); IG.io.observe(post);
+  return post;
+}
+async function igLike(r, post) {
+  try {
+    const x = await api('/api/reels/' + r.id + '/like', { method: 'POST' }); r.liked = x.liked; r.likes = x.likes;
+    const b = post.querySelector('.ig-acts button'); b.classList.toggle('on', r.liked); b.querySelector('span').textContent = fmtCount(r.likes);
+    const rb = post.querySelector('.rl-btn.like'); if (rb) { rb.classList.toggle('on', r.liked); rb.querySelector('span').textContent = fmtCount(r.likes); }
+  } catch (e) { toast(e.message); }
+}
+function igObserver() {
+  if (IG.io) return;
+  IG.io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      const v = en.target.querySelector('video'); if (!v) continue;
+      if (en.isIntersecting && en.intersectionRatio > 0.65 && IG.view === 'home' && !$('#reelsPane').hidden) {
+        if (!v.src) v.src = v.dataset.src; v.muted = IG.muted; v.play().catch(() => {});
+        const id = en.target.dataset.id; if (!RL.viewed.has(id)) { RL.viewed.add(id); setTimeout(() => api('/api/reels/' + id + '/view', { method: 'POST' }).catch(() => {}), 1500); }
+        if (en.target === $('#igFeed').lastElementChild) igFeedLoad(false);
+      } else v.pause();
+    }
+  }, { root: $('#igScroll'), threshold: [0, 0.65] });
+}
+// ----- explore -----
+async function igExplore() {
+  const box = $('#igExplore'); box.innerHTML = '';
+  const sb = el('div', 'ig-search'); const q = el('input'); q.type = 'search'; q.placeholder = '🔍 Search people who post reels'; sb.append(q); box.append(sb);
+  const people = el('div'); const grid = el('div', 'ig-grid'); box.append(people, grid);
+  let t = 0;
+  q.oninput = () => { clearTimeout(t); t = setTimeout(async () => {
+    people.innerHTML = ''; if (!q.value.trim()) return;
+    const list = await api('/api/reels-creators?q=' + encodeURIComponent(q.value.trim())).catch(() => []);
+    if (!list.length) people.append(el('p', 'info-note', 'No one found.'));
+    for (const u of list) { const r = el('button', 'ig-act'); r.append(avatar(u, 'sm')); const tx = el('div', 'txt'); tx.append(el('b', null, u.name), el('small', null, ' · ' + fmtCount(u.followers) + ' followers')); r.append(tx); r.onclick = () => igSetView('profile', { id: u.id }); people.append(r); }
+  }, 300); };
+  const items = await api('/api/reels?tab=explore').catch(() => []);
+  if (!items.length) grid.append(el('p', 'info-note', 'No reels yet.'));
+  for (const r of items) grid.append(igCell(r, 'foryou'));
+}
+function igCell(r, tabForFull) {
+  const c = el('button', 'ig-cell'); c.setAttribute('aria-label', 'Reel by ' + r.by.name); if (r.hasThumb) c.style.backgroundImage = 'url("' + reelThumb(r.id) + '")';
+  c.append(el('span', null, '▶ ' + fmtCount(r.views)));
+  c.onclick = () => { RL.tab = tabForFull; RL.first = r.id; igSetView('reels'); };
+  return c;
+}
+// ----- profile -----
+async function igProfile(id) {
+  IG.profileId = id;
+  document.querySelectorAll('.ig-nav [data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === 'profile' && id === me.id)));
+  const box = $('#igProfile'); box.innerHTML = '';
+  let p; try { p = await api('/api/profile/' + id); } catch (e) { return toast(e.message); }
+  const head = el('div', 'ig-prof'); const top = el('div', 'top'); top.append(avatar({ id: p.id, name: p.name, photo: p.photo, photoV: p.photoV }));
+  const stats = el('div', 'ig-stats'); const stat = (n, l) => { const d = el('div'); d.append(el('b', null, fmtCount(n)), el('small', null, l)); return d; };
+  const fol = stat(p.followers, 'Followers'); stats.append(stat(p.posts, 'Posts'), fol, stat(p.following, 'Following')); top.append(stats); head.append(top);
+  head.append(el('h3', null, p.name + (p.biz ? ' 🏪' : ''))); if (p.about) head.append(el('p', null, p.about));
+  head.append(el('p', null, '❤️ ' + fmtCount(p.likes) + ' likes on reels'));
+  const btns = el('div', 'ig-pbtns');
+  if (p.isMe) {
+    const e1 = el('button', null, 'Edit profile'); e1.onclick = openProfileEdit;
+    const e2 = el('button', null, '＋ New reel'); e2.onclick = reelCreate;
+    btns.append(e1, e2);
+  } else {
+    const f = igFollowBtn(p.id, p.isFollowing, (r) => { fol.querySelector('b').textContent = fmtCount(r.followers); }); f.className = p.isFollowing ? '' : 'blue';
+    f.onclick = async () => { try { const r = await api('/api/follow/' + p.id, { method: 'POST', body: JSON.stringify({ follow: !p.isFollowing }) }); p.isFollowing = r.following; f.textContent = r.following ? 'Following' : 'Follow'; f.className = r.following ? '' : 'blue'; fol.querySelector('b').textContent = fmtCount(r.followers); } catch (e) { toast(e.message); } };
+    const m = el('button', null, 'Message'); m.onclick = async () => { await ensureUser(p.id); setTab('chats'); openChat(p.id); };
+    btns.append(f, m);
+    if (p.biz) { const s2 = el('button', null, '🏪 Shop'); s2.onclick = () => viewBusiness(p.id); btns.append(s2); }
+  }
+  head.append(btns); box.append(head);
+  const grid = el('div', 'ig-grid'); box.append(grid);
+  const items = await api('/api/reels?tab=user:' + id).catch(() => []);
+  if (!items.length) { const e = el('p', 'info-note', p.isMe ? 'Your reels will show here. Tap "＋ New reel".' : 'No reels yet.'); e.style.padding = '20px'; box.append(e); }
+  for (const r of items) grid.append(igCell(r, 'user:' + id));
+}
+// ----- activity (♡) -----
+async function igActivity() {
+  let list = []; try { list = await api('/api/activity'); } catch (e) { return toast(e.message); }
+  api('/api/activity/seen', { method: 'POST' }).catch(() => {}); $('#igDot').hidden = true;
+  sheet('♡ Activity', (box) => {
+    if (!list.length) box.append(el('p', 'info-note', 'When people like or comment on your reels, or follow you, you will see it here.'));
+    for (const a of list) {
+      const r = el('div', 'ig-act' + (a.unseen ? ' unseen' : ''));
+      const av = avatar(a.by, 'sm'); av.style.cursor = 'pointer'; av.onclick = () => { closeSheet('moreSheet'); igSetView('profile', { id: a.by.id }); };
+      const tx = el('div', 'txt'); tx.append(el('b', null, a.by.name + ' '), document.createTextNode(a.type === 'like' ? 'liked your reel.' : a.type === 'comment' ? 'commented: ' + a.text : 'started following you.'), el('small', null, ' ' + timeAgo(a.ts)));
+      r.append(av, tx);
+      if (a.type === 'follow' && !a.iFollow) { const fb = igFollowBtn(a.by.id, false); fb.textContent = 'Follow back'; r.append(fb); }
+      else if (a.reelId) { const th = el('button', 'th'); if (a.reelThumb) th.style.backgroundImage = 'url("' + reelThumb(a.reelId) + '")'; th.onclick = () => { closeSheet('moreSheet'); RL.tab = 'user:' + me.id; RL.first = a.reelId; igSetView('reels'); }; r.append(th); }
+      box.append(r);
+    }
+  });
+}
+async function igActivityDot() { try { const r = await api('/api/activity/count'); $('#igDot').hidden = !r.unseen; } catch {} }
+// ----- ＋ create, add to story -----
+function igCreateMenu() {
+  sheet('Create', (list) => {
+    const b = (label, fn) => { const x = el('button', 'sheet-btn', label); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
+    b('🎬  Reel', reelCreate); b('⭕  Story', openAddStory);
+  });
+}
+async function postStatusBlob(blob, caption) {
+  const r = await fetch('/api/status/media?caption=' + encodeURIComponent(caption || ''), { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': blob.type || 'image/jpeg' }, body: blob });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Could not post.'); return d;
+}
+function pickFiles(accept, multiple, capture) {
+  return new Promise((ok) => { const fi = el('input'); fi.type = 'file'; fi.accept = accept; fi.multiple = !!multiple; if (capture) fi.setAttribute('capture', capture); fi.hidden = true; document.body.append(fi); fi.onchange = () => { const f = [...fi.files]; fi.remove(); ok(f); }; fi.click(); });
+}
+function openAddStory() {
+  sheet('Add to story', (list) => {
+    const tiles = el('div', 'as-tiles');
+    const t = (ic, label, fn) => { const b = el('button'); b.append(el('span', 'ic', ic), el('span', null, label)); b.onclick = () => { closeSheet('moreSheet'); fn(); }; tiles.append(b); };
+    t('✏️', 'Text', openTextStatus);
+    t('📷', 'Camera', () => { $('#stFile').setAttribute('capture', 'environment'); $('#stFile').value = ''; $('#stFile').click(); setTimeout(() => $('#stFile').removeAttribute('capture'), 1000); });
+    t('🎞️', 'Collage', makeCollage);
+    list.append(tiles);
+    const g = el('button', 'primary', '🖼️ Gallery — choose photos & videos (many at once)'); g.style.cssText = 'width:calc(100% - 24px);margin:4px 12px 8px';
+    g.onclick = async () => {
+      closeSheet('moreSheet');
+      const files = (await pickFiles('image/*,video/*', true)).slice(0, 10); if (!files.length) return;
+      if (files.length === 1) { const dt = new DataTransfer(); dt.items.add(files[0]); $('#stFile').files = dt.files; $('#stFile').dispatchEvent(new Event('change')); return; }
+      let ok = 0;
+      for (const [i, f] of files.entries()) {
+        toast('Posting ' + (i + 1) + ' of ' + files.length + '…');
+        try { const blob = f.type.startsWith('image/') ? await compressImage(f) : f; if (blob.size > 16 * 1024 * 1024) continue; await postStatusBlob(blob, ''); ok++; } catch {}
+      }
+      toast('⭕ ' + ok + ' added to your story'); loadStatus(); if (IG.view === 'home') igStories();
+    };
+    list.append(g, el('p', 'info-note', 'Up to 10 at once. Your story disappears after 24 hours and follows your status privacy (Status → 🔒).'));
+  });
+}
+async function makeCollage() {
+  const files = (await pickFiles('image/*', true)).filter((f) => f.type.startsWith('image/')).slice(0, 4);
+  if (files.length < 2) return toast('Choose 2 to 4 photos for a collage.');
+  const imgs = await Promise.all(files.map((f) => createImageBitmap(f)));
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  x.fillStyle = '#111'; x.fillRect(0, 0, W, H);
+  const cells = imgs.length === 2 ? [[0, 0, W, H / 2], [0, H / 2, W, H / 2]] : imgs.length === 3 ? [[0, 0, W, H / 2], [0, H / 2, W / 2, H / 2], [W / 2, H / 2, W / 2, H / 2]] : [[0, 0, W / 2, H / 2], [W / 2, 0, W / 2, H / 2], [0, H / 2, W / 2, H / 2], [W / 2, H / 2, W / 2, H / 2]];
+  imgs.forEach((im, i) => { const [cx, cy, cw, ch] = cells[i], g = 6; const s2 = Math.max(cw / im.width, ch / im.height), sw = cw / s2, sh = ch / s2; x.drawImage(im, (im.width - sw) / 2, (im.height - sh) / 2, sw, sh, cx + g, cy + g, cw - 2 * g, ch - 2 * g); });
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
+  sheet('🎞️ Collage', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const im = el('img', 'collage-prev'); im.src = URL.createObjectURL(blob); im.alt = 'Collage preview';
+    const cap = el('input'); cap.placeholder = 'Add a caption (optional)'; cap.maxLength = 200;
+    const go = el('button', 'primary', 'Share to your story');
+    go.onclick = async () => { go.disabled = true; try { await postStatusBlob(blob, cap.value); closeSheet('moreSheet'); toast('⭕ Collage added to your story'); loadStatus(); if (IG.view === 'home') igStories(); } catch (e) { toast(e.message); go.disabled = false; } };
+    box.append(im, cap, go); list.append(box);
+  });
+}
+(function igInit() {
+  document.querySelectorAll('.ig-nav [data-v]').forEach((b) => (b.onclick = () => igSetView(b.dataset.v, b.dataset.v === 'profile' ? { id: me.id } : {})));
+  $('#igPlus').onclick = igCreateMenu; $('#igHeart').onclick = igActivity;
+  $('#rlHome').onclick = () => igSetView('home');
 })();
 
 // ---------------- go ----------------

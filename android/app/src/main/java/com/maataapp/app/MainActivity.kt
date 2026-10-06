@@ -9,7 +9,13 @@ import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -168,7 +174,85 @@ class MainActivity : Activity() {
         catch (e: Exception) { Toast.makeText(this, "No app can open this link", Toast.LENGTH_SHORT).show() }
     }
 
-    override fun onDestroy() { CallService.stop(this); super.onDestroy() }
+    // ---------- incoming call while Maata is open: ring with the phone's own ringtone ----------
+    @Volatile private var ringer: Ringtone? = null
+    private fun vibrator(): Vibrator? = try {
+        if (Build.VERSION.SDK_INT >= 31) getSystemService(VibratorManager::class.java)?.defaultVibrator
+        else getSystemService(Vibrator::class.java)
+    } catch (_: Exception) { null }
+    fun startPhoneRing(vibrate: Boolean): Boolean = try {
+        stopPhoneRing()
+        val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        ringer = RingtoneManager.getRingtone(this, uri)?.apply {
+            // "ringtone" sound: follows the phone's silent / vibrate mode and ringtone volume, exactly like a normal call
+            audioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+            if (Build.VERSION.SDK_INT >= 28) isLooping = true
+            play()
+        }
+        val am = getSystemService(AudioManager::class.java)
+        if (vibrate && am.ringerMode != AudioManager.RINGER_MODE_SILENT)
+            vibrator()?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 900, 700), 0)) // repeat until answered
+        ringer != null
+    } catch (e: Exception) { false }
+    fun stopPhoneRing() {
+        try { ringer?.stop() } catch (_: Exception) { }
+        ringer = null
+        try { vibrator()?.cancel() } catch (_: Exception) { }
+    }
+
+    // ---------- call sound: loudspeaker or earpiece ----------
+    @Volatile private var wantSpeaker: Boolean? = null   // what the person chose for this call (null = no call)
+    private var routeGuard: Any? = null
+    private var reapplies = 0
+    private fun applyRoute(on: Boolean): Boolean = try {
+        val am = getSystemService(AudioManager::class.java)
+        if (am.mode != AudioManager.MODE_IN_COMMUNICATION) am.mode = AudioManager.MODE_IN_COMMUNICATION
+        var ok = false
+        if (Build.VERSION.SDK_INT >= 31) {
+            val devs = am.availableCommunicationDevices
+            val pick = if (on) devs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            else listOf(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
+                .firstNotNullOfOrNull { t -> devs.firstOrNull { it.type == t } }
+            if (pick != null) ok = am.setCommunicationDevice(pick)
+            val now = am.communicationDevice?.type
+            if (!ok || (on && now != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) || (!on && now == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)) {
+                am.isSpeakerphoneOn = on; ok = true
+            }
+        } else {
+            am.isSpeakerphoneOn = on // older Android
+            ok = true
+        }
+        val stream = AudioManager.STREAM_VOICE_CALL
+        val max = am.getStreamMaxVolume(stream)
+        try { if (am.getStreamVolume(stream) < max * 0.6) am.setStreamVolume(stream, (max * 0.8).toInt().coerceAtLeast(1), 0) } catch (_: Exception) { }
+        runOnUiThread { volumeControlStream = stream }
+        ok
+    } catch (e: Exception) { false }
+
+    /** The web engine inside the app switches to the loudspeaker by itself when call audio starts.
+     *  While a call is on, watch for that and put back what the person chose. */
+    private fun guardRoute() {
+        if (Build.VERSION.SDK_INT < 31 || routeGuard != null) return
+        val am = getSystemService(AudioManager::class.java)
+        val l = AudioManager.OnCommunicationDeviceChangedListener { dev ->
+            val want = wantSpeaker ?: return@OnCommunicationDeviceChangedListener
+            val isSpeaker = dev?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+            if (isSpeaker != want && reapplies < 30) { reapplies++; web.postDelayed({ wantSpeaker?.let { applyRoute(it) } }, 250) }
+        }
+        try { am.addOnCommunicationDeviceChangedListener(mainExecutor, l); routeGuard = l } catch (_: Exception) { }
+    }
+    private fun stopRouteGuard() {
+        wantSpeaker = null; reapplies = 0
+        if (Build.VERSION.SDK_INT >= 31) (routeGuard as? AudioManager.OnCommunicationDeviceChangedListener)?.let {
+            try { getSystemService(AudioManager::class.java).removeOnCommunicationDeviceChangedListener(it) } catch (_: Exception) { }
+        }
+        routeGuard = null
+    }
+
+    override fun onDestroy() { stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
@@ -182,36 +266,11 @@ class MainActivity : Activity() {
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
         /** The web app tells us a call started/ended, so the mic keeps working when the phone locks. */
         @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
-        @JavascriptInterface fun callEnded() { CallService.stop(this@MainActivity); runOnUiThread { volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE } }
+        @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity) }
         /** Loudspeaker on/off during a call. Off = phone earpiece (or a connected headset / Bluetooth), like a normal call. */
-        @JavascriptInterface fun setSpeaker(on: Boolean): Boolean = try {
-            val am = getSystemService(AudioManager::class.java)
-            if (am.mode != AudioManager.MODE_IN_COMMUNICATION) am.mode = AudioManager.MODE_IN_COMMUNICATION
-            var ok = false
-            if (Build.VERSION.SDK_INT >= 31) {
-                val devs = am.availableCommunicationDevices
-                val pick = if (on) devs.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                else listOf(AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADSET,
-                    AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
-                    .firstNotNullOfOrNull { t -> devs.firstOrNull { it.type == t } }
-                if (pick != null) ok = am.setCommunicationDevice(pick)
-                // some phones ignore the new way: check it really switched, else use the older switch
-                val now = am.communicationDevice?.type
-                if (!ok || (on && now != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) || (!on && now == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)) {
-                    am.isSpeakerphoneOn = on; ok = true
-                }
-            } else {
-                am.isSpeakerphoneOn = on // older Android
-                ok = true
-            }
-            // the earpiece is quiet by design (it is held to the ear): make sure call volume is not too low
-            val stream = AudioManager.STREAM_VOICE_CALL
-            val max = am.getStreamMaxVolume(stream)
-            try { if (am.getStreamVolume(stream) < max * 0.6) am.setStreamVolume(stream, (max * 0.8).toInt().coerceAtLeast(1), 0) } catch (_: Exception) { } // not allowed in Do Not Disturb
-            // phone volume buttons now change the call volume (not music)
-            runOnUiThread { volumeControlStream = stream }
-            ok
-        } catch (e: Exception) { false }
+        @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
+        @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
+        @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }
         @JavascriptInterface fun openNotificationSettings() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
         }

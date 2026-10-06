@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2162,6 +2162,49 @@ app.post('/api/channels/:id/report', auth, (req, res) => {
   save(); io.to('admins').emit('feed', { kind: 'report', text: 'Channel reported: ' + c.name, ts: now() }); res.json({ ok: true });
 });
 
+// ---------- Reels social: follow, profile, activity (likes / comments / new followers) ----------
+const followersOf = (uid) => db.users.reduce((n, u) => n + ((u.following || []).includes(uid) ? 1 : 0), 0);
+function addActivity(to, from, type, reelId, text) {
+  if (!to || to === from.id) return;
+  db.activity.push({ id: newId(), to, from: from.id, type, reelId: reelId || null, text: text ? String(text).slice(0, 120) : '', ts: now() });
+  const mine = db.activity.filter((a) => a.to === to); if (mine.length > 200) { const cut = new Set(mine.slice(0, mine.length - 200).map((a) => a.id)); db.activity = db.activity.filter((a) => !cut.has(a.id)); }
+  io.to('user:' + to).emit('activity:new', { type });
+}
+app.post('/api/follow/:id', auth, (req, res) => {
+  const t = userById(req.params.id);
+  if (!t || t.id === req.user.id || blockedOf(t).includes(req.user.id)) return res.status(404).json({ error: 'Not found.' });
+  const f = new Set(req.user.following || []);
+  const on = req.body?.follow !== false && !(req.body?.follow === undefined && f.has(t.id));
+  if (on) { if (f.size >= 2000) return res.status(400).json({ error: 'You can follow up to 2000 people.' }); if (!f.has(t.id)) addActivity(t.id, req.user, 'follow'); f.add(t.id); } else f.delete(t.id);
+  req.user.following = [...f]; save();
+  res.json({ following: on, followers: followersOf(t.id) });
+});
+app.get('/api/profile/:id', auth, (req, res) => {
+  const u = userById(req.params.id);
+  if (!u || u.status === 'blocked' || blockedOf(u).includes(req.user.id)) return res.status(404).json({ error: 'Not found.' });
+  const saved = contactsOf(req.user).find((c) => c.id === u.id);
+  res.json({ id: u.id, name: (saved && saved.name) || u.name, about: u.about || '', photo: !!u.photo, photoV: u.photoV || 0, biz: u.business ? u.business.name : null,
+    posts: db.reels.filter((r) => r.by === u.id && !r.removed).length, followers: followersOf(u.id), following: (u.following || []).length,
+    isFollowing: (req.user.following || []).includes(u.id), isMe: u.id === req.user.id, inContacts: !!saved,
+    likes: db.reels.filter((r) => r.by === u.id && !r.removed).reduce((n, r) => n + (r.likes || []).length, 0) });
+});
+app.get('/api/reels-creators', auth, (req, res) => {
+  const q = clip(req.query.q, 40).toLowerCase(); if (!q) return res.json([]);
+  const ids = [...new Set(db.reels.filter((r) => !r.removed).map((r) => r.by))];
+  res.json(ids.map((id) => userById(id)).filter((u) => u && u.status !== 'blocked' && !blockedOf(u).includes(req.user.id) && u.name.toLowerCase().includes(q)).slice(0, 20)
+    .map((u) => ({ id: u.id, name: u.name, photo: !!u.photo, photoV: u.photoV || 0, followers: followersOf(u.id) })));
+});
+app.get('/api/activity', auth, (req, res) => {
+  const seen = req.user.activitySeen || 0;
+  const list = db.activity.filter((a) => a.to === req.user.id).slice(-60).reverse().map((a) => {
+    const u = userById(a.from) || {}, r = a.reelId && db.reels.find((x) => x.id === a.reelId);
+    return { id: a.id, type: a.type, text: a.text, ts: a.ts, unseen: a.ts > seen, reelId: r ? r.id : null, reelThumb: !!(r && r.thumb), by: { id: a.from, name: u.name || 'Maata user', photo: !!u.photo, photoV: u.photoV || 0 }, iFollow: (req.user.following || []).includes(a.from) };
+  });
+  res.json(list);
+});
+app.get('/api/activity/count', auth, (req, res) => { const seen = req.user.activitySeen || 0; res.json({ unseen: db.activity.filter((a) => a.to === req.user.id && a.ts > seen).length }); });
+app.post('/api/activity/seen', auth, (req, res) => { req.user.activitySeen = now(); save(); res.json({ ok: true }); });
+
 // ---------- Reels (short videos, up to 60 s) ----------
 // Videos go to Cloudflare R2 when it is set up (free downloads, lots of space), otherwise to the database.
 const REEL_MAX = 16 * 1024 * 1024, REEL_DAY_LIMIT = 20;
@@ -2189,7 +2232,7 @@ function reelView(viewer, r) {
   const o = userById(r.by) || {}, saved = contactsOf(viewer).find((c) => c.id === r.by);
   return { id: r.id, caption: r.caption, dur: r.dur || 0, createdAt: r.createdAt, likes: (r.likes || []).length, liked: (r.likes || []).includes(viewer.id), views: r.viewCount || 0,
     comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, mine: r.by === viewer.id, hidden: !!r.hidden,
-    by: { id: r.by, name: (saved && saved.name) || o.name || 'Maata user', photo: !!o.photo, photoV: o.photoV || 0, biz: o.business ? o.business.name : null } };
+    by: { id: r.by, name: (saved && saved.name) || o.name || 'Maata user', photo: !!o.photo, photoV: o.photoV || 0, biz: o.business ? o.business.name : null, followed: (viewer.following || []).includes(r.by) } };
 }
 app.post('/api/reels', auth, express.raw({ type: ['video/*'], limit: '17mb' }), async (req, res) => {
   const day = (reelHits.get(req.user.id) || []).filter((t) => now() - t < 86400000);
@@ -2224,11 +2267,16 @@ app.get('/api/reels/thumb/:id', (req, res) => {
 app.get('/api/reels', auth, (req, res) => {
   const tab = String(req.query.tab || 'foryou'), me2 = req.user, contacts = new Set(contactsOf(me2).map((c) => c.id));
   let list = db.reels.filter((r) => !r.removed && canSeeReel(me2, r));
-  if (tab === 'friends') list = list.filter((r) => contacts.has(r.by));
+  const follows = new Set(me2.following || []);
+  if (tab === 'home') { const mineFeed = list.filter((r) => follows.has(r.by) || contacts.has(r.by) || r.by === me2.id); list = mineFeed.length >= 3 ? mineFeed : list.filter((r) => !r.hidden); }
+  else if (tab === 'following') list = list.filter((r) => follows.has(r.by));
+  else if (tab === 'friends') list = list.filter((r) => contacts.has(r.by));
   else if (tab === 'mine') list = list.filter((r) => r.by === me2.id);
   else if (tab.startsWith('user:')) list = list.filter((r) => r.by === tab.slice(5));
   else list = list.filter((r) => !r.hidden);
-  if (tab === 'foryou') { // simple ranking: fresh + liked + watched, friends a little higher, unseen first
+  if (tab === 'explore') list.sort((a, b) => ((b.likes || []).length * 3 + (b.viewCount || 0)) - ((a.likes || []).length * 3 + (a.viewCount || 0)));
+  else if (tab === 'home') list.sort((a, b) => b.createdAt - a.createdAt);
+  else if (tab === 'foryou') { // simple ranking: fresh + liked + watched, friends a little higher, unseen first
     const score = (r) => { const ageH = (now() - r.createdAt) / 3600000; return ((r.likes || []).length * 3 + (r.viewCount || 0) * 0.3 + (contacts.has(r.by) ? 8 : 0) + 5) / Math.pow(ageH + 2, 1.2) - ((r.viewers || []).includes(me2.id) ? 1000 : 0); };
     list.sort((a, b) => score(b) - score(a));
   } else list.sort((a, b) => b.createdAt - a.createdAt);
@@ -2245,7 +2293,7 @@ app.post('/api/reels/:id/view', auth, (req, res) => {
 app.post('/api/reels/:id/like', auth, (req, res) => {
   const r = reelById(req.params.id); if (!r || !canSeeReel(req.user, r)) return res.status(404).json({ error: 'Reel not found.' });
   r.likes = r.likes || []; const i = r.likes.indexOf(req.user.id);
-  if (i >= 0) r.likes.splice(i, 1); else r.likes.push(req.user.id);
+  if (i >= 0) r.likes.splice(i, 1); else { r.likes.push(req.user.id); addActivity(r.by, req.user, 'like', r.id); }
   save(); res.json({ likes: r.likes.length, liked: i < 0 });
 });
 app.get('/api/reels/:id/comments', auth, (req, res) => {
@@ -2258,7 +2306,7 @@ app.post('/api/reels/:id/comments', auth, (req, res) => {
   const text = clip(req.body?.text, 500); if (!text) return res.status(400).json({ error: 'Write a comment.' });
   const hits = (commentHits.get(req.user.id) || []).filter((t) => now() - t < 60000); if (hits.length >= 20) return res.status(429).json({ error: 'Slow down a little.' });
   hits.push(now()); commentHits.set(req.user.id, hits);
-  const c = { id: newId(), reelId: r.id, by: req.user.id, text, ts: now() }; db.reelComments.push(c); save();
+  const c = { id: newId(), reelId: r.id, by: req.user.id, text, ts: now() }; db.reelComments.push(c); addActivity(r.by, req.user, 'comment', r.id, text); save();
   res.json({ id: c.id, text, ts: c.ts, by: { id: req.user.id, name: req.user.name, photo: !!req.user.photo, photoV: req.user.photoV || 0 }, mine: true, canDelete: true });
 });
 app.delete('/api/reels/comments/:cid', auth, (req, res) => {
@@ -2539,6 +2587,7 @@ function deleteAccountData(u, why) {
   db.logins = db.logins.filter((x) => x.userId !== u.id);
   for (const r of db.reels.filter((x) => x.by === u.id)) { deleteChatFile(r.file.id); if (r.thumb) deleteChatFile(r.thumb.id); }
   db.reels = db.reels.filter((x) => x.by !== u.id); db.reelComments = db.reelComments.filter((c) => c.by !== u.id);
+  db.activity = db.activity.filter((a) => a.to !== u.id && a.from !== u.id); for (const x of db.users) if (x.following) x.following = x.following.filter((f) => f !== u.id);
   save();
   for (const w of removedWatchers) io.to('user:' + w).emit('user:removed', { id: u.id });
 }
