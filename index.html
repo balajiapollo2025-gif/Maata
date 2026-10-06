@@ -1017,6 +1017,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .as-tiles .ic{font-size:30px}
 .collage-prev{width:100%;max-height:52vh;object-fit:contain;border-radius:14px;background:#000}
 /* ================= Maata Studio ================= */
+.st-src{position:absolute;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none}
 .studio{position:fixed;inset:0;z-index:31;background:#0B0F14;color:#fff;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .st-top{display:flex;align-items:center;gap:8px;padding:8px 10px}
 .st-top b{flex:1;font-size:17px}
@@ -7251,7 +7252,8 @@ const STF = { none: ['Normal', ''], vivid: ['Vivid', 'saturate(1.5) contrast(1.0
 const ST_FONTS = { bold: ['Bold', (s) => '800 ' + s + 'px Roboto, "Noto Sans Telugu", system-ui, sans-serif'], serif: ['Elegant', (s) => 'italic 600 ' + s + 'px Georgia, "Noto Serif Telugu", serif'], hand: ['Hand', (s) => '700 ' + s + 'px "Comic Sans MS", "Segoe Print", cursive'], mono: ['Type', (s) => '700 ' + s + 'px "Courier New", monospace'] };
 const ST_COLORS = ['#FFFFFF', '#111111', '#FFD60A', '#FF3B5C', '#21C063', '#3D8BDB', '#FF7A3D', '#B388FF'];
 let ST = null;
-const stRange = () => Math.max(0.5, ST.trimE - ST.trimS);
+const stEnd = () => (ST.video && ST.video.duration ? Math.min(ST.trimE, ST.video.duration - 0.06) : ST.trimE);
+const stRange = () => Math.max(0.5, stEnd() - ST.trimS);
 const stFmt = (x) => { x = Math.max(0, Math.round(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
 function stCover(w, h) { const s = Math.max(SW / w, SH / h); const dw = w * s, dh = h * s; return [(SW - dw) / 2, (SH - dh) / 2, dw, dh]; }
 function stFilterStr() { const f = STF[ST.filter][1], a = ST.adj; return (f + ` brightness(${a.b / 100}) contrast(${a.c / 100}) saturate(${a.s / 100})`).trim(); }
@@ -7268,6 +7270,7 @@ async function openStudio(files) {
     const v = document.createElement('video'); v.src = URL.createObjectURL(ST.file); v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
     await new Promise((ok, bad) => { v.onloadedmetadata = ok; v.onerror = () => bad(new Error('This video cannot be opened on this phone.')); }).catch((e) => { toast(e.message); ST = null; });
     if (!ST) return;
+    v.className = 'st-src'; v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
     ST.video = v; ST.dur = v.duration || 0; ST.trimE = Math.min(ST.dur, 60);
     if (ST.dur > 60) toast('✂️ Video is ' + Math.round(ST.dur) + ' s — choose the best 60 seconds with Trim.');
   } else {
@@ -7294,7 +7297,7 @@ function stBuildUI() {
   const T = [['trim', '✂️', 'Trim'], ['filter', '🎨', 'Filters'], ['adjust', '✨', 'Enhance'], ['text', '🔤', 'Text'], ['sticker', '😀', 'Stickers'], ['music', '🎵', 'Music'], ['bg', '🖼️', 'AI Background'], ['subs', '💬', 'AI Subtitles'], ['voice', '🗣️', 'AI Voice'], ['cover', '🎯', 'Cover']];
   for (const [id, ic, label] of T) { const b = el('button'); b.dataset.tool = id; b.append(el('span', 'i', ic), el('span', null, label)); b.onclick = () => stTool(id); tools.append(b); }
   const panel = el('div', 'st-panel'); ST.panel = panel;
-  ov.append(top, stage, tl, tools, panel); document.body.append(ov);
+  ov.append(top, stage, tl, tools, panel); if (ST.video) stage.append(ST.video); document.body.append(ov);
   // drag text / stickers on the picture
   const pos = (e) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * SW / r.width, (e.clientY - r.top) * SH / r.height]; };
   c.addEventListener('pointerdown', (e) => {
@@ -7318,7 +7321,7 @@ function stSeek(t) {
 async function stPlay() {
   if (ST.playing) return;
   const a = stAudio(); if (a.ac.state === 'suspended') await a.ac.resume().catch(() => {});
-  if (ST.t >= ST.trimE - 0.05) stSeek(ST.trimS);
+  if (ST.t >= stEnd() - 0.05 || (ST.video && ST.video.ended)) stSeek(ST.trimS);
   ST.playing = true; ST.ppBtn.textContent = '❚❚'; ST.ppBtn.classList.add('on');
   if (ST.video) { ST.video.muted = false; await ST.video.play().catch(() => {}); }
   ST.last = performance.now(); stMusicRestart(); stVoiceSync(true);
@@ -7327,8 +7330,8 @@ async function stPlay() {
     const now = performance.now();
     if (ST.video) ST.t = ST.video.currentTime; else ST.t += (now - ST.last) / 1000;
     ST.last = now;
-    if (ST.t >= ST.trimE) {
-      if (ST.exporting) { ST.onEnd && ST.onEnd(); return; }
+    if (ST.t >= stEnd() - 0.02 || (ST.video && ST.video.ended)) {
+      if (ST.exporting) { ST.onEnd && ST.onEnd(); return; } // finished: stop here, never start again from the beginning
       stSeek(ST.trimS);
     }
     stVoiceSync(false); stDraw(); ST.raf = requestAnimationFrame(loop);
@@ -7449,13 +7452,13 @@ function stDrawWithBackground(ctx, t, filt) {
 function stAudio() {
   if (ST.audio) return ST.audio;
   const ac = new (window.AudioContext || window.webkitAudioContext)();
-  const master = ac.createGain(), dest = ac.createMediaStreamDestination();
-  master.connect(ac.destination); master.connect(dest);
+  const master = ac.createGain(), dest = ac.createMediaStreamDestination(), spk = ac.createGain();
+  master.connect(spk); spk.connect(ac.destination); master.connect(dest);
   const orig = ac.createGain(), music = ac.createGain(), voice = ac.createGain();
   orig.gain.value = ST.origVol; music.gain.value = ST.music.vol; voice.gain.value = ST.voice ? ST.voice.vol : 1;
   orig.connect(master); music.connect(master); voice.connect(master);
   if (ST.video) { try { ac.createMediaElementSource(ST.video).connect(orig); } catch {} }
-  ST.audio = { ac, master, dest, orig, music, voice, sess: null, timer: null };
+  ST.audio = { ac, master, dest, spk, orig, music, voice, sess: null, timer: null };
   return ST.audio;
 }
 // Original music made by Maata itself (so there is no copyright problem)
@@ -7703,19 +7706,37 @@ async function stAiSubtitles(lang) {
 // ---------- render the final reel ----------
 async function stExport(onProgress) {
   stPause(); ST.sel = null; ST.exporting = true; stSeek(ST.trimS);
+  try { ST.wake = await navigator.wakeLock?.request('screen'); } catch {}
   if (ST.video) await new Promise((r) => { ST.video.onseeked = r; setTimeout(r, 800); });
   const a = stAudio(); if (a.ac.state === 'suspended') await a.ac.resume().catch(() => {});
-  try { a.master.disconnect(a.ac.destination); } catch {} // render quietly
+  a.spk.gain.value = 0.0001; // render (almost) quietly — the sound keeps flowing into the video
   const vs = ST.canvas.captureStream(30), stream = new MediaStream([...vs.getVideoTracks(), ...a.dest.stream.getAudioTracks()]);
   const type = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
   const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 1800000, audioBitsPerSecond: 128000 }); const parts = [];
   rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
   const done = new Promise((r) => (rec.onstop = r));
   const prog = setInterval(() => onProgress && onProgress(Math.min(99, Math.round((ST.t - ST.trimS) / stRange() * 100))), 300);
-  await new Promise((resolve) => { ST.onEnd = resolve; rec.start(1000); stPlay(); });
+  let lastT = -1, still = 0, failed = null;
+  await new Promise((resolve) => {
+    let ended = false; ST.onEnd = () => { if (!ended) { ended = true; resolve(); } }; rec.start(1000);
+    if (ST.video) ST.video.onended = () => { if (ST && ST.exporting) ST.onEnd(); };
+    stPlay();
+    ST.watch = setInterval(() => {
+      if (!ST || !ST.exporting) return;
+      if (ST.video && (ST.video.ended || ST.t >= stEnd() - 0.1)) { ST.onEnd && ST.onEnd(); return; }
+      if (Math.abs(ST.t - lastT) < 0.05) { still++; if (ST.video) { ST.video.muted = false; ST.video.play().catch(() => {}); } if (!ST.playing) stPlay(); }
+      else still = 0;
+      lastT = ST.t;
+      if (still >= 12) { failed = new Error('The video stopped playing while it was being made. Keep the screen on and Maata open, then try again.'); resolve(); }
+      if (document.hidden) { failed = new Error('Maata went to the background, so the video could not be made. Keep Maata open on screen and try again.'); resolve(); }
+    }, 1000);
+  });
+  clearInterval(ST.watch); if (ST.video) ST.video.onended = null;
   stPause(); rec.stop(); await done; clearInterval(prog);
-  try { a.master.connect(a.ac.destination); } catch {}
-  ST.exporting = false;
+  if (ST.cancelled) { ST.cancelled = false; failed = new Error('Cancelled. Your edits are still here.'); }
+  if (failed) { a.spk.gain.value = 1; ST.exporting = false; try { ST.wake && ST.wake.release(); } catch {} throw failed; }
+  a.spk.gain.value = 1;
+  ST.exporting = false; try { ST.wake && ST.wake.release(); } catch {}
   return new Blob(parts, { type: (type || 'video/webm').split(';')[0] });
 }
 async function stNext() {
@@ -7727,12 +7748,14 @@ async function stNext() {
     const ai = el('button', 'linkbtn', '✨ Write caption & hashtags with AI');
     ai.onclick = async () => { ai.disabled = true; const about = (ST.layers.map((x) => x.text).join(' ') + ' ' + (ST.voice ? ST.voice.text : '') + ' ' + ST.subs.segs.map((x) => x.text).join(' ')).trim(); try { const r = await api('/api/ai/write', { method: 'POST', body: JSON.stringify({ task: 'write', text: 'A short catchy caption (max 20 words) with 3 relevant hashtags for a short video reel about: ' + (cap.value || about || 'my day') }) }); cap.value = r.text.slice(0, 300); } catch (e) { toast(e.message); } ai.disabled = false; };
     const prog = el('div', 'rl-prog'); prog.hidden = true;
+    const cancel = el('button', 'linkbtn', 'Cancel'); cancel.hidden = true; cancel.onclick = () => { if (ST) { ST.cancelled = true; ST.onEnd && ST.onEnd(); } };
     const go = el('button', 'primary', 'Make video & post');
     go.onclick = async () => {
-      go.disabled = true; prog.hidden = false; prog.textContent = '🎬 Making your video… 0% (keep this screen open)';
+      go.disabled = true; prog.hidden = false; cancel.hidden = false; prog.textContent = '🎬 Making your video… 0% (keep this screen open)';
       try {
         if (!ST.thumb) { stSeek(ST.trimS + Math.min(1, stRange() / 3)); if (ST.video) await new Promise((r) => { ST.video.onseeked = r; setTimeout(r, 800); }); ST.thumb = await stSnap(); }
         const blob = await stExport((p2) => (prog.textContent = '🎬 Making your video… ' + p2 + '% (keep this screen open)'));
+        cancel.hidden = true; if (!blob.size) throw new Error('Cancelled.');
         if (blob.size > 16 * 1024 * 1024) throw new Error('The video came out too big. Make it shorter with Trim.');
         const r = await new Promise((ok, bad) => {
           const x = new XMLHttpRequest(); x.open('POST', '/api/reels?caption=' + encodeURIComponent(cap.value.trim()) + '&dur=' + dur);
@@ -7744,9 +7767,9 @@ async function stNext() {
         if (ST.thumb) await fetch('/api/reels/' + r.id + '/thumb', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: ST.thumb }).catch(() => {});
         closeSheet('moreSheet'); stClose(); toast('🎬 Your reel is live!');
         RL.tab = 'user:' + me.id; RL.first = r.id; if (tab !== 'reels') { IG.pendingView = 'reels'; setTab('reels'); } else igSetView('reels');
-      } catch (e) { toast(e.message); go.disabled = false; prog.hidden = true; if (ST) ST.exporting = false; }
+      } catch (e) { toast(e.message); go.disabled = false; prog.hidden = true; cancel.hidden = true; if (ST) ST.exporting = false; }
     };
-    box.append(l, ai, prog, go); list.append(box); cap.focus();
+    box.append(l, ai, prog, go, cancel); list.append(box); cap.focus();
   });
 }
 
