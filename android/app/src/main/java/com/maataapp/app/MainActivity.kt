@@ -268,6 +268,27 @@ class MainActivity : Activity() {
         @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
         @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity) }
         /** Loudspeaker on/off during a call. Off = phone earpiece (or a connected headset / Bluetooth), like a normal call. */
+        /** Phone contacts for "New group" and the Contacts tab: JSON [{name, phones:[...]}], or "PERMISSION" while asking. */
+        @JavascriptInterface fun getContacts(): String {
+            if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+                runOnUiThread { requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS), 77) }
+                return "PERMISSION"
+            }
+            val byName = LinkedHashMap<String, MutableSet<String>>()
+            try {
+                contentResolver.query(android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+                    null, null, android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC")?.use { c ->
+                    while (c.moveToNext() && byName.size < 5000) {
+                        val name = c.getString(0) ?: ""; val num = c.getString(1) ?: continue
+                        byName.getOrPut(name.ifBlank { num }) { LinkedHashSet() }.add(num)
+                    }
+                }
+            } catch (e: Exception) { return "[]" }
+            val arr = org.json.JSONArray()
+            for ((name, nums) in byName) arr.put(org.json.JSONObject().put("name", name).put("phones", org.json.JSONArray(nums.toList())))
+            return arr.toString()
+        }
         @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }

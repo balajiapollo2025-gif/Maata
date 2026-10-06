@@ -1045,7 +1045,7 @@ async function saveChatFile(id, buf, mime) {
   if (chatBucket) await new Promise((res, rej) => { const up = chatBucket.openUploadStreamWithId(id, id, { contentType: mime }); up.on('error', rej).on('finish', res); up.end(buf); });
   else { fs.mkdirSync(CHAT_DIR, { recursive: true }); fs.writeFileSync(path.join(CHAT_DIR, id), buf); }
 }
-async function deleteChatFile(id) { if (isR2(id)) return r2Delete(id); try { if (chatBucket) await chatBucket.delete(id); else fs.unlinkSync(path.join(CHAT_DIR, id)); } catch { /* gone */ } }
+async function deleteChatFile(id) { if (typeof memFiles !== 'undefined' && memFiles.has(id)) { memBytes -= memFiles.get(id).length; memFiles.delete(id); } if (isR2(id)) return r2Delete(id); try { if (chatBucket) await chatBucket.delete(id); else fs.unlinkSync(path.join(CHAT_DIR, id)); } catch { /* gone */ } }
 const chatFileStream = (id, start, end) => (chatBucket ? chatBucket.openDownloadStream(id, { start, end: end + 1 }) : fs.createReadStream(path.join(CHAT_DIR, id), { start, end }));
 
 // Checks both people and the blocks; returns an error text or null
@@ -2254,13 +2254,27 @@ async function storeReelFile(buf, mime) {
   }
   const id = newId(); await saveChatFile(id, buf, mime); return id;
 }
+// Recently watched reels are kept in memory (up to ~140 MB), so the next person gets them instantly
+// instead of the server reading them from the database again.
+const memFiles = new Map(); let memBytes = 0; const MEM_MAX = 140 * 1024 * 1024;
+async function memFile(fileId, size) {
+  if (memFiles.has(fileId)) { const b = memFiles.get(fileId); memFiles.delete(fileId); memFiles.set(fileId, b); return b; }
+  if (size > 20 * 1024 * 1024) return null;
+  const chunks = []; await new Promise((ok, bad) => { const st = chatFileStream(fileId, 0, size - 1); st.on('data', (c) => chunks.push(c)); st.on('end', ok); st.on('error', bad); });
+  const buf = Buffer.concat(chunks); memFiles.set(fileId, buf); memBytes += buf.length;
+  while (memBytes > MEM_MAX && memFiles.size > 1) { const [k, v] = memFiles.entries().next().value; memFiles.delete(k); memBytes -= v.length; }
+  return buf;
+}
 function streamStored(fileId, mime, size, req, res) {
-  if (isR2(fileId)) { res.setHeader('Cache-Control', 'private, max-age=300'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime })); }
+  if (isR2(fileId)) { res.setHeader('Cache-Control', 'private, max-age=3000'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime, 'response-cache-control': 'private, max-age=2592000, immutable' })); }
   let start = 0, end = size - 1, code = 200;
   const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
   if (r) { if (r[1]) { start = parseInt(r[1], 10); end = r[2] ? Math.min(parseInt(r[2], 10), size - 1) : size - 1; } else if (r[2]) start = Math.max(0, size - parseInt(r[2], 10)); if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); } code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`); }
-  res.status(code); res.setHeader('Content-Type', mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=604800');
-  const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res);
+  res.status(code); res.setHeader('Content-Type', mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1);
+  res.setHeader('Cache-Control', 'private, max-age=2592000, immutable'); res.setHeader('ETag', '"' + fileId + '"'); // a reel never changes: phones keep it
+  if (req.headers['if-none-match'] === '"' + fileId + '"') return res.status(304).end();
+  memFile(fileId, size).then((buf) => { if (buf) res.end(buf.subarray(start, end + 1)); else { const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res); } })
+    .catch(() => { const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res); });
 }
 const reelById = (id) => db.reels.find((r) => r.id === id && !r.removed);
 function canSeeReel(viewer, r) { const o = userById(r.by); return !!o && o.status !== 'blocked' && !blockedOf(o).includes(viewer.id) && !blockedOf(viewer).includes(o.id) && (!r.hidden || r.by === viewer.id); }

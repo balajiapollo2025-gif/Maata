@@ -920,6 +920,8 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .rl-card video{width:100%;height:100%;object-fit:contain;background:#000}
 .rl-tap{position:absolute;inset:0;z-index:1}
 .rl-card.paused::after{content:"▶";position:absolute;z-index:1;font-size:64px;color:rgba(255,255,255,.85);pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.rl-card.buf::before{content:'';position:absolute;z-index:2;width:44px;height:44px;border-radius:50%;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;animation:rlspin .8s linear infinite}
+@keyframes rlspin{to{transform:rotate(360deg)}}
 .rl-pop{position:absolute;z-index:2;font-size:96px;opacity:0;pointer-events:none}
 .rl-pop.go{animation:rlpop .8s ease-out}
 @keyframes rlpop{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.15)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.3)}}
@@ -1083,6 +1085,16 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .post-opts label{display:flex;align-items:center;gap:10px;font-size:14px}
 .post-prods{display:flex;gap:6px;flex-wrap:wrap}.post-prods button{padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font-size:13px}
 .post-prods button[aria-pressed="true"]{background:var(--leaf);color:#fff;border-color:var(--leaf)}
+.brand-txt{display:flex;flex-direction:column;line-height:1.05}
+.tagline{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.2px;margin-top:3px;white-space:nowrap}
+.dev-foot{display:flex;align-items:center;gap:10px;margin:6px 10px 10px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--leaf);background:var(--peacock-soft)}
+.dev-ic{width:34px;height:34px;border-radius:50%;background:var(--leaf);color:#fff;display:grid;place-items:center;flex:none}
+.dev-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.dev-txt{flex:1;display:flex;flex-direction:column;line-height:1.2}.dev-txt small{font-size:11.5px;color:var(--muted)}.dev-txt b{font-size:14.5px}
+.dev-credit{text-align:center;font-size:12.5px;color:var(--muted);margin:18px 0 6px;line-height:1.6}
+.ng-head{list-style:none;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:10px 4px 4px}
+.ng-inv{display:flex;align-items:center;gap:10px;padding:6px 4px}.ng-inv .c-body{flex:1;min-width:0}
+@media (max-width:760px){.dev-foot{display:none}}
 </style>
 </head>
 <body>
@@ -1156,7 +1168,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 <div id="app" class="app" hidden>
   <aside class="side">
     <header class="side-head">
-      <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand">Maata</div></div>
+      <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand-txt"><div class="brand">Maata</div><div class="tagline">Connect · Chat · Share</div></div></div>
       <h1 class="page-title" id="pageTitle">Maata</h1>
       <button class="icon-btn cam-btn" id="camHeadBtn" title="Camera" aria-label="Camera" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
@@ -1209,6 +1221,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
       <div class="calls-head"><span id="callsCount"></span><button id="clearCalls" data-t="clearHistory">Clear history</button></div>
       <ul class="contacts" id="callList" style="overflow:visible"></ul>
     </div>
+    <div class="dev-foot"><span class="dev-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><div class="dev-txt"><small>Developed by</small><b>Gurram Pavani</b></div><button class="icon-btn" id="devGear" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </aside>
 
   <main class="chat" id="chat">
@@ -1552,6 +1565,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
       <button class="sheet-btn" id="setTwoStep">🔐 Two-step verification</button>
     </div>
     <button class="danger-btn" id="setLogout">Log out</button>
+    <p class="dev-credit">🦜 Maata · Connect · Chat · Share<br>Developed by <b>Gurram Pavani</b></p>
     <button class="linkbtn" id="setDeleteAcc" style="display:block;margin:14px auto 0;color:var(--chili)">Delete my account</button>
     <p class="info-note" style="text-align:center"><a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
     <input type="file" id="toneFile" accept="audio/*" hidden>
@@ -4650,24 +4664,65 @@ function openNewGroup() {
   const pick = new Set();
   sheet('👥 New group', (list) => {
     const box = el('div', 'formcol'); box.style.padding = '12px';
-    box.append(el('p', 'info-note', 'Add members from your contacts. You can add as many people as you like (up to 1,024), and more later.'));
-    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q);
+    box.append(el('p', 'info-note', 'Add people from your phone contacts who are on Maata. Up to 1,024 members.'));
+    const load = el('button', 'st-ai', phoneBook.length ? '📱 Refresh my phone contacts (' + phoneBook.length + ')' : '📱 Show all my phone contacts');
+    load.onclick = async () => { load.disabled = true; load.textContent = '⏳ Reading your contacts…'; await syncFromPhone(); load.disabled = false; load.textContent = '📱 Refresh my phone contacts (' + phoneBook.length + ')'; draw(); };
+    box.append(load);
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or 10-digit number'; box.append(q);
     const sel = el('div', 'row2'); sel.style.cssText = 'display:flex;gap:8px;margin:8px 0;align-items:center';
     const all = el('button', 'linkbtn', 'Select all'), cnt = el('span', 'muted', ''); cnt.style.marginLeft = 'auto'; sel.append(all, cnt); box.append(sel);
     const ul = el('ul', 'fwd-list'); box.append(ul);
-    const people = () => users.filter((u) => !u.isGroup && !u.isAI && u.inContacts && !u.blocked).filter((u) => !q.value.trim() || nameOf(u).toLowerCase().includes(q.value.trim().toLowerCase()) || u.phone.includes(q.value.trim()));
+    const bookNames = new Map(phoneBook.map((c) => [c.n, c.name]));
+    // everyone on Maata I can reach: saved contacts, phone contacts found on Maata, people I chat with
+    const people = () => {
+      const t = q.value.trim().toLowerCase(), digits = t.replace(/\D/g, '');
+      return users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && (u.inContacts || bookNames.has(l10(u.phone)) || u.lastMessage))
+        .filter((u) => !t || nameOf(u).toLowerCase().includes(t) || (digits && u.phone.includes(digits)))
+        .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    };
     const next = el('button', 'primary', 'Next →');
     const count = () => { cnt.textContent = pick.size + ' selected'; next.disabled = !pick.size; };
+    let lookupT = 0;
     const draw = () => {
       ul.innerHTML = ''; const ps = people();
-      if (!ps.length) ul.append(el('li', 'empty-list', 'Save contacts first, then add them to a group.'));
-      for (const u of ps) { const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id); cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); count(); }; const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone)); lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li); }
+      if (ps.length) ul.append(el('li', 'ng-head', '✅ On Maata · ' + ps.length));
+      for (const u of ps) {
+        const li = el('li'), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = pick.has(u.id);
+        cb.onchange = () => { cb.checked ? pick.add(u.id) : pick.delete(u.id); count(); };
+        const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', '+91 ' + u.phone + (u.about ? ' · ' + u.about : '')));
+        lab.append(cb, avatar(u, 'sm'), tx); li.append(lab); ul.append(li);
+      }
+      // a number typed in the search box: check if it is on Maata
+      const digits = q.value.replace(/\D/g, '');
+      if (digits.length === 10 && !ps.some((u) => u.phone === digits)) {
+        clearTimeout(lookupT); lookupT = setTimeout(async () => { try { const r = await api('/api/lookup?phone=' + digits); if (r.user) { upsertUser(r.user); draw(); } } catch {} }, 400);
+      }
+      // phone contacts who are not on Maata yet: invite them
+      const onMaata = new Set(users.map((u) => l10(u.phone)));
+      const t = q.value.trim().toLowerCase();
+      const others = phoneBook.filter((c) => !onMaata.has(c.n) && (!t || c.name.toLowerCase().includes(t) || c.n.includes(t.replace(/\D/g, '') || '#'))).slice(0, 300);
+      if (others.length) {
+        ul.append(el('li', 'ng-head', '📨 Not on Maata yet · invite them'));
+        for (const c of others) {
+          const li = el('li', 'ng-inv'); const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', c.name), el('div', 'c-last', c.phone));
+          const inv = el('button', 'linkbtn', 'Invite'); inv.onclick = () => inviteToMaata(c);
+          li.append(avatar({ id: c.n, name: c.name }, 'sm'), tx, inv); ul.append(li);
+        }
+      }
+      if (!ps.length && !others.length) ul.append(el('li', 'empty-list', phoneBook.length ? 'No one found.' : 'Tap "📱 Show all my phone contacts" to see everyone from your phone.'));
+      count();
     };
-    all.onclick = () => { people().forEach((u) => pick.add(u.id)); draw(); count(); };
-    q.oninput = draw; draw(); count();
+    q.oninput = draw;
+    all.onclick = () => { const ps = people(); const allOn = ps.every((u) => pick.has(u.id)); ps.forEach((u) => (allOn ? pick.delete(u.id) : pick.add(u.id))); draw(); };
     next.onclick = () => groupDetailsStep([...pick]);
-    box.append(next); list.append(box); q.focus();
+    box.append(next); list.append(box); draw();
   });
+}
+function inviteToMaata(c) {
+  const text = 'Hi ' + (c.name || '') + '! I use Maata for free calls, video calls and chat. Join me: ' + location.origin;
+  const num = '91' + c.n;
+  if (navigator.share) navigator.share({ text }).catch(() => {});
+  else window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
 }
 function groupDetailsStep(ids) {
   let photo = null;
@@ -4989,6 +5044,13 @@ async function importContacts(list, source) {
   renderPhoneContacts(); toast(found + ' of your contacts are on Maata ✓');
 }
 async function syncFromPhone() {
+  const A = window.MaataAndroid;
+  if (A && A.getContacts) {
+    let raw = ''; try { raw = A.getContacts(); } catch {}
+    if (raw === 'PERMISSION') { toast('📱 Allow Maata to read contacts, then tap again.'); await new Promise((r) => setTimeout(r, 2500)); try { raw = A.getContacts(); } catch {} }
+    if (raw && raw !== 'PERMISSION') { let list = []; try { list = JSON.parse(raw); } catch {} if (list.length) return importContacts(list, 'your phone'); }
+    if (raw === 'PERMISSION') return;
+  }
   if (!('contacts' in navigator && 'ContactsManager' in window)) return toast('Phone contacts can be picked in Chrome on Android. On a computer, use "Import contacts file".');
   try { const picked = await navigator.contacts.select(['name', 'tel'], { multiple: true }); importContacts(picked.map((c) => ({ name: (c.name && c.name[0]) || '', phones: c.tel || [] })), 'your selection'); } catch {}
 }
@@ -6846,7 +6908,7 @@ function reelCard(r) {
   const v = el('video'); v.playsInline = true; v.loop = true; v.preload = 'metadata'; v.muted = RL.muted;
   v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
   if (r.hasThumb) v.poster = reelThumb(r.id);
-  v.dataset.src = reelUrl(r.id);
+  v.dataset.src = reelUrl(r.id); if (RL.list.length <= 1) { v.preload = 'auto'; v.src = v.dataset.src; }
   const heart = el('div', 'rl-pop', '❤️');
   const tapLayer = el('div', 'rl-tap');
   let lastTap = 0;
@@ -6871,6 +6933,7 @@ function reelCard(r) {
   info.append(el('div', 'rl-meta', '👁 ' + fmtCount(r.views) + ' views' + (r.hidden ? ' · ⏳ under review' : '')));
   const bar = el('div', 'rl-bar'); const fill = el('i'); bar.append(fill);
   v.ontimeupdate = () => { if (v.duration) fill.style.width = (v.currentTime / v.duration * 100) + '%'; };
+  v.addEventListener('waiting', () => c.classList.add('buf')); v.addEventListener('playing', () => c.classList.remove('buf')); v.addEventListener('canplay', () => c.classList.remove('buf'));
   c.append(v, tapLayer, heart, side, info, bar);
   RL.io && RL.io.observe(c);
   return c;
@@ -6888,7 +6951,7 @@ function reelsObserver() {
         { const rr = RL.list.find((q) => q.id === c.dataset.id); if (rr) reelDecorate(c, rr); }
         const id = c.dataset.id;
         clearTimeout(c._vt); c._vt = setTimeout(() => { if (!RL.viewed.has(id)) { RL.viewed.add(id); api('/api/reels/' + id + '/view', { method: 'POST' }).catch(() => {}); } }, 1500);
-        const nx = c.nextElementSibling; if (nx && !slowNet()) { const nv = nx.querySelector('video'); if (nv && !nv.src) { nv.preload = 'auto'; nv.src = nv.dataset.src; } } // on slow / data-saver connections, do not pre-load
+        if (!slowNet()) { let nx = c.nextElementSibling; for (let k = 0; k < 2 && nx; k++, nx = nx.nextElementSibling) { const nv = nx.querySelector('video'); if (nv && !nv.src) { nv.preload = k ? 'metadata' : 'auto'; nv.src = nv.dataset.src; } } } // on slow / data-saver connections, do not pre-load
         const idx = [...$('#rlFeed').children].indexOf(c); if (idx >= RL.list.length - 3) reelsLoad(false);
       } else { v.pause(); clearTimeout(c._vt); reelWatchEnd(c); }
     }
@@ -7962,6 +8025,7 @@ async function openInsights() {
   });
 }
 
+$('#devGear').onclick = () => openSettings();
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
