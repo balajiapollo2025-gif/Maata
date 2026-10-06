@@ -1062,6 +1062,27 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .st-subs div{display:flex;gap:6px}.st-subs .tm{padding:6px 8px;border-radius:8px;background:#1C2530;color:#9fe3bf;font-size:12px}
 .st-subs input{flex:1;padding:7px 10px;border-radius:8px;background:#1C2530;color:#fff;border:1px solid #2A3644;font:inherit}
 .st-thumb{width:110px;border-radius:10px;margin:6px 0}
+.rl-subs{position:absolute;left:12px;right:70px;bottom:205px;z-index:2;text-align:center;font-size:19px;font-weight:700;line-height:1.35;color:#fff;text-shadow:0 0 3px #000,0 2px 6px #000;pointer-events:none}
+.rl-subs:empty{display:none}
+.rl-subs:not(:empty){background:rgba(0,0,0,.45);border-radius:10px;padding:6px 10px}
+.rl-btn .ccb{display:grid;place-items:center;width:34px;height:30px;border:2.2px solid #fff;border-radius:7px;font-size:13px;font-weight:800;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.rl-btn.dub .ccb{border:0;font-size:24px}
+.rl-btn.cc.on .ccb{background:#fff;color:#000}
+.rl-btn.dub.on .ccb{background:#21C063;border-radius:50%;width:38px;height:38px}
+.rl-btn.busy{opacity:.6}
+.rl-shop{display:inline-flex;margin:6px 0 2px;padding:7px 14px;border-radius:999px;background:#fff;color:#111;font-weight:700;font-size:13.5px}
+.rl-chip{display:inline-block;margin-bottom:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;font-size:12.5px;font-weight:600}
+.in-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.in-cards div{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px}
+.in-cards b{display:block;font-size:20px}.in-cards small{color:var(--muted);font-size:12px}
+.in-chart{width:100%;height:auto}.in-chart rect{fill:var(--leaf)}.in-chart text{font-size:9px;fill:var(--muted)}
+.in-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.in-row .th{width:48px;height:80px;border-radius:8px;background:#111 center/cover no-repeat;flex:none}
+.in-row .txt{display:flex;flex-direction:column;gap:2px;font-size:13.5px}.in-row small{color:var(--muted)}
+.post-opts{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.post-opts label{display:flex;align-items:center;gap:10px;font-size:14px}
+.post-prods{display:flex;gap:6px;flex-wrap:wrap}.post-prods button{padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font-size:13px}
+.post-prods button[aria-pressed="true"]{background:var(--leaf);color:#fff;border-color:var(--leaf)}
 </style>
 </head>
 <body>
@@ -1256,7 +1277,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
   <div class="ig-view" id="rlReelsView" hidden>
     <div class="rl-top">
       <button class="rl-ib" id="rlHome" aria-label="Back to home"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <div id="rlTabs" role="tablist"><button data-rt="foryou" aria-pressed="true">For you</button><button data-rt="following" aria-pressed="false">Following</button><button id="rlUserTab" hidden aria-pressed="false"></button></div>
+      <div id="rlTabs" role="tablist"><button data-rt="foryou" aria-pressed="true">For you</button><button data-rt="following" aria-pressed="false">Following</button><button data-rt="nearby" aria-pressed="false">Nearby</button><button id="rlUserTab" hidden aria-pressed="false"></button></div>
       <button class="rl-ib" id="rlSound" aria-label="Mute"></button>
       <button class="rl-ib" id="rlCreate" aria-label="Create a reel"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8.5 9.5v5M6 12h5"/></svg></button>
     </div>
@@ -1704,6 +1725,7 @@ function connectSocket() {
   });
   socket.on('call:log', onCallLog);
   socket.on('msg:update', refreshBubble);
+  socket.on('reel:review', () => toast('🛡️ Your new reel is being checked by the Maata team before everyone can see it.'));
   socket.on('activity:new', () => { const d = $('#igDot'); if (d) d.hidden = false; });
   socket.on('user:profile', () => { reloadUsers(); });
   socket.on('msg:expired', ({ ids }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => !ids.includes(m.id)); if (activeId) renderMessages(); });
@@ -6804,7 +6826,8 @@ async function reelsLoad(reset) {
   if (RL.done) return;
   RL.loading = true;
   try {
-    const q = '/api/reels?tab=' + encodeURIComponent(RL.tab) + '&skip=' + RL.skip + (reset && RL.first ? '&first=' + RL.first : '');
+    if (RL.tab === 'nearby') { try { await getGeo(); } catch (e) { toast(e.message); RL.loading = false; RL.tab = 'foryou'; reelsTabs(); return reelsLoad(true); } }
+    const q = '/api/reels?tab=' + encodeURIComponent(RL.tab) + '&skip=' + RL.skip + (reset && RL.first ? '&first=' + RL.first : '') + (RL.tab === 'nearby' ? '&lat=' + myGeo.lat + '&lng=' + myGeo.lng : '');
     const items = await api(q); if (reset) RL.first = null;
     RL.skip += items.length; if (items.length < 15) RL.done = true;
     for (const r of items) { RL.list.push(r); $('#rlFeed').append(reelCard(r)); }
@@ -6814,7 +6837,7 @@ async function reelsLoad(reset) {
 }
 function reelsEmpty() {
   const e = el('div', 'rl-empty');
-  e.append(el('div', 'rl-empty-ic', '🎬'), el('b', null, RL.tab === 'following' ? 'No reels from people you follow yet' : RL.tab === 'user:' + me.id ? 'You have not posted a reel yet' : 'No reels yet'), el('p', null, 'Share a short video (up to 60 seconds) with everyone on Maata.'));
+  e.append(el('div', 'rl-empty-ic', '🎬'), el('b', null, RL.tab === 'nearby' ? 'No reels near you yet — be the first! Tick "Show in Nearby" when you post.' : RL.tab === 'following' ? 'No reels from people you follow yet' : RL.tab === 'user:' + me.id ? 'You have not posted a reel yet' : 'No reels yet'), el('p', null, 'Share a short video (up to 60 seconds) with everyone on Maata.'));
   const b = el('button', 'primary', '📷 Create a reel'); b.onclick = reelCreate; e.append(b);
   $('#rlFeed').append(e);
 }
@@ -6861,12 +6884,13 @@ function reelsObserver() {
         if (!v.src) v.src = v.dataset.src;
         v.muted = RL.muted;
         v.play().catch(() => { RL.muted = true; v.muted = true; v.play().catch(() => {}); reelsSoundBtn(); toast('🔇 Tap the speaker button (top right) for sound'); });
-        c.classList.remove('paused');
+        c.classList.remove('paused'); reelWatchStart(c);
+        { const rr = RL.list.find((q) => q.id === c.dataset.id); if (rr) reelDecorate(c, rr); }
         const id = c.dataset.id;
         clearTimeout(c._vt); c._vt = setTimeout(() => { if (!RL.viewed.has(id)) { RL.viewed.add(id); api('/api/reels/' + id + '/view', { method: 'POST' }).catch(() => {}); } }, 1500);
-        const nx = c.nextElementSibling; if (nx) { const nv = nx.querySelector('video'); if (nv && !nv.src) { nv.preload = 'auto'; nv.src = nv.dataset.src; } }
+        const nx = c.nextElementSibling; if (nx && !slowNet()) { const nv = nx.querySelector('video'); if (nv && !nv.src) { nv.preload = 'auto'; nv.src = nv.dataset.src; } } // on slow / data-saver connections, do not pre-load
         const idx = [...$('#rlFeed').children].indexOf(c); if (idx >= RL.list.length - 3) reelsLoad(false);
-      } else { v.pause(); clearTimeout(c._vt); }
+      } else { v.pause(); clearTimeout(c._vt); reelWatchEnd(c); }
     }
   }, { root: $('#rlFeed'), threshold: [0, 0.6, 1] });
 }
@@ -6910,7 +6934,7 @@ function reelShare(r) {
     b('💬  Send in a chat', () => sheet('Send reel to', (l2) => {
       for (const u of users.filter((x) => !x.isAI && !x.blocked && (x.inContacts || x.isGroup || x.lastMessage))) {
         const it = el('button', 'mem-row'); it.append(avatar(u, 'sm'), el('b', null, nameOf(u)));
-        it.onclick = () => { closeSheet('moreSheet'); socket.emit('msg:send', { to: u.id, type: 'reel', reel: { id: r.id } }, (res) => toast(res && res.error ? res.error : '🎬 Sent to ' + nameOf(u))); };
+        it.onclick = () => { closeSheet('moreSheet'); api('/api/reels/' + r.id + '/shared', { method: 'POST' }).catch(() => {}); socket.emit('msg:send', { to: u.id, type: 'reel', reel: { id: r.id } }, (res) => toast(res && res.error ? res.error : '🎬 Sent to ' + nameOf(u))); };
         l2.append(it);
       }
     }));
@@ -6923,6 +6947,8 @@ function reelMore(r, c) {
     b('👤  ' + (r.mine ? 'My profile' : r.by.name + '\u2019s profile'), () => igSetView('profile', { id: r.by.id }));
     if (!r.mine && !r.by.biz) b('💬  Message ' + r.by.name, async () => { await ensureUser(r.by.id); setTab('chats'); openChat(r.by.id); });
     if (r.by.biz) b('🏪  Visit shop', () => viewBusiness(r.by.id));
+    b('🎭  Remix this reel', () => reelRemix(r, false));
+    b('👯  Duet (side by side with your video)', () => reelRemix(r, true));
     if (r.mine) b('🗑  Delete this reel', async () => { if (!confirm('Delete this reel?')) return; try { await api('/api/reels/' + r.id, { method: 'DELETE' }); c.remove(); toast('Reel deleted'); } catch (e) { toast(e.message); } }, true);
     else b('🚩  Report', async () => { const why = prompt('What is wrong with this reel? (nudity, violence, hate, scam, copyright…)'); if (why === null) return; await api('/api/reels/' + r.id + '/report', { method: 'POST', body: JSON.stringify({ reason: why }) }).catch(() => {}); c.remove(); toast('Reported. Thank you — our team will check it.'); }, true);
   });
@@ -7150,7 +7176,8 @@ async function igProfile(id) {
   if (p.isMe) {
     const e1 = el('button', null, 'Edit profile'); e1.onclick = openProfileEdit;
     const e2 = el('button', null, '＋ New reel'); e2.onclick = reelCreate;
-    btns.append(e1, e2);
+    const e3 = el('button', null, '📊 Insights'); e3.onclick = openInsights;
+    btns.append(e1, e2, e3);
   } else {
     const f = igFollowBtn(p.id, p.isFollowing, (r) => { fol.querySelector('b').textContent = fmtCount(r.followers); }); f.className = p.isFollowing ? '' : 'blue';
     f.onclick = async () => { try { const r = await api('/api/follow/' + p.id, { method: 'POST', body: JSON.stringify({ follow: !p.isFollowing }) }); p.isFollowing = r.following; f.textContent = r.following ? 'Following' : 'Follow'; f.className = r.following ? '' : 'blue'; fol.querySelector('b').textContent = fmtCount(r.followers); } catch (e) { toast(e.message); } };
@@ -7266,7 +7293,7 @@ async function openStudio(files) {
   if (!vids.length && !imgs.length) return toast('Choose a video or photos.');
   ST = { src: vids.length ? 'video' : 'slides', file: vids[0] || null, video: null, slides: [], dur: 0, trimS: 0, trimE: 0, t: 0, playing: false, last: 0,
     fit: 'fit', filter: 'none', adj: { b: 100, c: 100, s: 100 }, layers: [], sel: null, drag: null, music: { style: null, el: null, vol: 0.55, name: '' }, origVol: 1, voice: null,
-    bg: { mode: 'none', color: '#0F4C5C', img: null }, subs: { segs: [], style: 'box', on: true }, seg: null, mask: null, maskReady: false, watermark: true,
+    bg: { mode: 'none', color: '#0F4C5C', img: null }, subs: { segs: [], style: 'box', on: true, smart: true, lang: '' }, seg: null, mask: null, maskReady: false, watermark: true,
     audio: null, exporting: false, thumb: null, tool: 'trim' };
   if (ST.src === 'video') {
     const v = document.createElement('video'); v.src = URL.createObjectURL(ST.file); v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
@@ -7317,6 +7344,7 @@ function stClose() { stPause(); try { ST.audio && ST.audio.ac.close(); } catch {
 function stSeek(t) {
   ST.t = Math.max(ST.trimS, Math.min(ST.trimE, t));
   if (ST.video) ST.video.currentTime = ST.t;
+  if (ST.duet) ST.duet.currentTime = Math.min(ST.t, (ST.duet.duration || 1e9) - 0.05);
   if (ST.playing) { stMusicRestart(); stVoiceSync(true); }
   stDraw();
 }
@@ -7326,6 +7354,7 @@ async function stPlay() {
   if (ST.t >= stEnd() - 0.05 || (ST.video && ST.video.ended)) stSeek(ST.trimS);
   ST.playing = true; ST.ppBtn.textContent = '❚❚'; ST.ppBtn.classList.add('on');
   if (ST.video) { ST.video.muted = false; await ST.video.play().catch(() => {}); }
+  if (ST.duet) { ST.duet.muted = false; ST.duet.currentTime = ST.t; ST.duet.play().catch(() => {}); }
   ST.last = performance.now(); stMusicRestart(); stVoiceSync(true);
   const loop = () => {
     if (!ST || !ST.playing) return;
@@ -7342,14 +7371,17 @@ async function stPlay() {
 }
 function stPause() {
   if (!ST) return; ST.playing = false; cancelAnimationFrame(ST.raf);
-  if (ST.video) ST.video.pause(); stMusicStop(); if (ST.voice && ST.voice.el) ST.voice.el.pause();
+  if (ST.video) ST.video.pause(); if (ST.duet) ST.duet.pause(); stMusicStop(); if (ST.voice && ST.voice.el) ST.voice.el.pause();
   if (ST.ppBtn) { ST.ppBtn.textContent = '▶'; ST.ppBtn.classList.remove('on'); }
 }
 
 // ---------- drawing one frame ----------
 function stSourceFrame(ctx, t, filt) {
   ctx.save(); ctx.filter = filt || 'none';
-  if (ST.video) {
+  if (ST.duet && ST.video) {
+    const half = (src, ry) => { const w0 = src.videoWidth, h0 = src.videoHeight; if (!w0) return; const s3 = Math.max(SW / w0, SH / 2 / h0), dw = w0 * s3, dh = h0 * s3; ctx.save(); ctx.beginPath(); ctx.rect(0, ry, SW, SH / 2); ctx.clip(); ctx.drawImage(src, (SW - dw) / 2, ry + (SH / 2 - dh) / 2, dw, dh); ctx.restore(); };
+    half(ST.video, 0); half(ST.duet, SH / 2); ctx.fillStyle = '#fff'; ctx.fillRect(0, SH / 2 - 2, SW, 4);
+  } else if (ST.video) {
     const v = ST.video; if (v.videoWidth) {
       const vw = v.videoWidth, vh = v.videoHeight;
       if (ST.fit === 'fit' && stNeedsFit(vw, vh)) {
@@ -7380,7 +7412,7 @@ function stDraw() {
   if (ST.bg.mode !== 'none' && ST.seg) stDrawWithBackground(ctx, t, filt); else stSourceFrame(ctx, t, filt);
   const rel = t - ST.trimS;
   for (const l of ST.layers) stDrawLayer(ctx, l, rel);
-  if (ST.subs.on && ST.subs.segs.length) stDrawSub(ctx, t);
+  if (ST.subs.on && ST.subs.segs.length && !(ST.exporting && ST.subs.smart)) stDrawSub(ctx, t);
   if (ST.watermark) { ctx.save(); ctx.globalAlpha = 0.55; ctx.font = '700 26px Roboto, sans-serif'; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.textAlign = 'right'; ctx.fillText('🦜 Maata', SW - 24, SH - 30); ctx.restore(); }
   if (ST.sel && ST.sel._box && !ST.exporting) { const b = ST.sel._box; ctx.save(); ctx.strokeStyle = '#21C063'; ctx.lineWidth = 3; ctx.setLineDash([10, 8]); ctx.strokeRect(b[0] - 10, b[1] - 10, b[2] + 20, b[3] + 20); ctx.restore(); }
   if (ST.head && !ST.exporting) { ST.head.value = String(Math.round((t - ST.trimS) / stRange() * 1000)); ST.timeEl.textContent = stFmt(rel) + ' / ' + stFmt(stRange()); }
@@ -7622,13 +7654,15 @@ function stTool(id) {
     note('💬 AI listens to your video and writes subtitles — in the spoken language, or translated.');
     const sel = el('select'); sel.add(new Option('Same as spoken', '')); for (const [c, n] of MT_LANGS) sel.add(new Option(n, c)); row('Language', sel);
     const go = el('button', 'st-ai', ST.subs.segs.length ? '↻ Make subtitles again' : '✨ Make subtitles with AI');
-    go.onclick = async () => { go.disabled = true; go.textContent = '⏳ Listening to your video…'; try { ST.subs.segs = await stAiSubtitles(sel.value); ST.subs.on = true; toast(ST.subs.segs.length ? '💬 ' + ST.subs.segs.length + ' subtitle lines added' : 'No speech found in this part of the video.'); } catch (e) { toast(e.message); } stTool('subs'); stDraw(); };
+    go.onclick = async () => { go.disabled = true; go.textContent = '⏳ Listening to your video…'; try { ST.subs.lang = sel.value; ST.subs.segs = await stAiSubtitles(sel.value); ST.subs.on = true; toast(ST.subs.segs.length ? '💬 ' + ST.subs.segs.length + ' subtitle lines added' : 'No speech found in this part of the video.'); } catch (e) { toast(e.message); } stTool('subs'); stDraw(); };
     p.append(go);
     if (ST.subs.segs.length) {
       chips([['box', 'Box'], ['yellow', 'Yellow'], ['karaoke', 'Karaoke'], ['neon', 'Neon']], ST.subs.style, (v) => { ST.subs.style = v; stDraw(); });
       const list = el('div', 'st-subs');
       ST.subs.segs.forEach((s2) => { const r = el('div'); const tm = el('button', 'tm', stFmt(s2.start - ST.trimS)); tm.onclick = () => stSeek(s2.start); const inp = el('input'); inp.value = s2.text; inp.oninput = () => { s2.text = inp.value; stDraw(); }; r.append(tm, inp); list.append(r); });
       p.append(list);
+      const sm = el('label', 'st-row'); const smc = el('input'); smc.type = 'checkbox'; smc.checked = ST.subs.smart; smc.onchange = () => (ST.subs.smart = smc.checked);
+      sm.append(el('span', null, '🌐 Smart subtitles — every viewer reads them in THEIR language (and can hear AI dubbing). Untick to print them on the video.'), smc); p.append(sm);
       const off = el('button', 'st-ai', ST.subs.on ? 'Hide subtitles' : 'Show subtitles'); off.onclick = () => { ST.subs.on = !ST.subs.on; stTool('subs'); stDraw(); }; p.append(off);
     }
   } else if (id === 'voice') {
@@ -7765,6 +7799,9 @@ async function stNext() {
     const l = el('label'); l.append(el('span', null, 'Caption')); const cap = el('textarea'); cap.maxLength = 300; cap.placeholder = 'Say something about your reel… #maata'; l.append(cap);
     const ai = el('button', 'linkbtn', '✨ Write caption & hashtags with AI');
     ai.onclick = async () => { ai.disabled = true; const about = (ST.layers.map((x) => x.text).join(' ') + ' ' + (ST.voice ? ST.voice.text : '') + ' ' + ST.subs.segs.map((x) => x.text).join(' ')).trim(); try { const r = await api('/api/ai/write', { method: 'POST', body: JSON.stringify({ task: 'write', text: 'A short catchy caption (max 20 words) with 3 relevant hashtags for a short video reel about: ' + (cap.value || about || 'my day') }) }); cap.value = r.text.slice(0, 300); } catch (e) { toast(e.message); } ai.disabled = false; };
+    const opts = el('div', 'post-opts'); const tagged = new Set();
+    if (myBiz) { api('/api/catalogue/' + me.id).then((items) => { if (!items.length) return; opts.prepend(el('span', null, '🛍️ Tag products (people can ask the price from your reel)')); const pr = el('div', 'post-prods'); for (const it of items.filter((q) => q.available).slice(0, 20)) { const b = el('button', null, it.name + (it.price !== null ? ' · ' + rupee(it.price) : '')); b.type = 'button'; b.setAttribute('aria-pressed', 'false'); b.onclick = () => { if (tagged.has(it.id)) tagged.delete(it.id); else if (tagged.size < 5) tagged.add(it.id); b.setAttribute('aria-pressed', String(tagged.has(it.id))); }; pr.append(b); } opts.insertBefore(pr, opts.children[1] || null); }).catch(() => {}); }
+    const nb = el('label'); const nbc = el('input'); nbc.type = 'checkbox'; nb.append(nbc, el('span', null, '📍 Show in Nearby (only your area, about 1 km — never your exact spot)')); opts.append(nb);
     const prog = el('div', 'rl-prog'); prog.hidden = true;
     const cancel = el('button', 'linkbtn', 'Cancel'); cancel.hidden = true; cancel.onclick = () => { if (ST) { ST.cancelled = true; ST.onEnd && ST.onEnd(); } };
     const go = el('button', 'primary', 'Make video & post');
@@ -7783,11 +7820,145 @@ async function stNext() {
           x.onerror = () => bad(new Error('Upload failed. Check your internet.')); x.send(blob);
         });
         if (ST.thumb) await fetch('/api/reels/' + r.id + '/thumb', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: ST.thumb }).catch(() => {});
+        const det = {};
+        if (tagged.size) det.products = [...tagged];
+        if (ST.subs.smart && ST.subs.segs.length) { det.subs = ST.subs.segs.map((q) => ({ start: q.start - ST.trimS, end: q.end - ST.trimS, text: q.text })).filter((q) => q.end > 0); det.subLang = ST.subs.lang || ''; }
+        if (ST.remixOf) det.remixOf = ST.remixOf;
+        if (nbc.checked) { try { const g = await getGeo(); const gr = await api('/api/geo/reverse?lat=' + g.lat + '&lng=' + g.lng).catch(() => ({})); det.loc = { lat: g.lat, lng: g.lng, place: (gr.title || '').split(',').slice(0, 2).join(',').trim() || 'Near you' }; } catch (e) { toast(e.message); } }
+        if (Object.keys(det).length) await api('/api/reels/' + r.id + '/details', { method: 'POST', body: JSON.stringify(det) }).catch(() => {});
         closeSheet('moreSheet'); stClose(); toast('🎬 Your reel is live!');
         RL.tab = 'user:' + me.id; RL.first = r.id; if (tab !== 'reels') { IG.pendingView = 'reels'; setTab('reels'); } else igSetView('reels');
       } catch (e) { toast(e.message); go.disabled = false; prog.hidden = true; cancel.hidden = true; if (ST) ST.exporting = false; }
     };
-    box.append(l, ai, prog, go, cancel); list.append(box); cap.focus();
+    box.append(l, ai, opts, prog, go, cancel); list.append(box); cap.focus();
+  });
+}
+
+// ======================= Reels phase 2 & 3 (viewer + posting extras) =======================
+const RX = { extra: new Map(), subs: new Map(), dub: null, cc: store.get('maata_cc') !== '0', lang: null };
+const viewerLang = () => (me && me.lang && SPEECH_LANG[me.lang] ? me.lang : (store.get('maata_app_lang') || 'en').slice(0, 2));
+const slowNet = () => { const c = navigator.connection; return !!(c && (c.saveData || /(^|-)2g|3g/.test(c.effectiveType || ''))); };
+let myGeo = null;
+function getGeo() {
+  if (myGeo) return Promise.resolve(myGeo);
+  return new Promise((ok, bad) => navigator.geolocation ? navigator.geolocation.getCurrentPosition((p) => ok(myGeo = { lat: p.coords.latitude, lng: p.coords.longitude }), () => bad(new Error('Allow location to see reels near you.')), { timeout: 12000, maximumAge: 600000 }) : bad(new Error('Location is not available on this device.')));
+}
+async function reelExtra(r) {
+  if (!(r.shop || r.place || r.smart || r.remix)) return null;
+  if (RX.extra.has(r.id)) return RX.extra.get(r.id);
+  const q = myGeo ? '?lat=' + myGeo.lat + '&lng=' + myGeo.lng : '';
+  const x = await api('/api/reels/' + r.id + '/extra' + q).catch(() => null); RX.extra.set(r.id, x); return x;
+}
+// add shop / place / remix / CC / dub controls to a reel card when it comes on screen
+async function reelDecorate(c, r) {
+  if (c._decorated) return; c._decorated = true;
+  const x = await reelExtra(r); if (!x) return;
+  const info = c.querySelector('.rl-info'), side = c.querySelector('.rl-side');
+  if (x.remixOf) { const rm = el('button', 'rl-chip', '🎭 Remix of ' + x.remixOf.by); rm.onclick = (e) => { e.stopPropagation(); RL.first = x.remixOf.id; RL.tab = 'foryou'; reelsLoad(true); }; info.prepend(rm); }
+  if (x.loc) info.querySelector('.rl-meta').append(document.createTextNode(' · 📍 ' + x.loc.place + (x.loc.km !== null ? ' · ' + x.loc.km + ' km' : '')));
+  if (x.products.length) {
+    const sh = el('button', 'rl-shop', '🛍️ Shop · ' + x.products.length + ' item' + (x.products.length > 1 ? 's' : ''));
+    sh.onclick = (e) => { e.stopPropagation(); api('/api/reels/' + r.id + '/product-tap', { method: 'POST' }).catch(() => {}); reelShopSheet(r, x.products); };
+    info.insertBefore(sh, info.querySelector('.rl-meta'));
+  }
+  if (x.subs.length) {
+    const ov = el('div', 'rl-subs'); c.append(ov); c._subsEl = ov;
+    const cc = el('button', 'rl-btn cc' + (RX.cc ? ' on' : '')); cc.innerHTML = '<b class="ccb">CC</b>'; cc.append(el('span', null, LANGS_SHORT(viewerLang()))); cc.setAttribute('aria-label', 'Subtitles');
+    cc.onclick = (e) => { e.stopPropagation(); RX.cc = !RX.cc; store.set('maata_cc', RX.cc ? '1' : '0'); document.querySelectorAll('.rl-btn.cc').forEach((b) => b.classList.toggle('on', RX.cc)); if (!RX.cc) document.querySelectorAll('.rl-subs').forEach((o) => (o.textContent = '')); };
+    side.prepend(cc);
+    if (x.voiceOn) { const db2 = el('button', 'rl-btn dub'); db2.innerHTML = '<b class="ccb">🗣️</b>'; db2.append(el('span', null, 'Dub')); db2.setAttribute('aria-label', 'AI dubbing in my language'); db2.onclick = (e) => { e.stopPropagation(); reelDubToggle(c, r, db2); }; side.prepend(db2); }
+    const v = c.querySelector('video'), lang = viewerLang();
+    const key = r.id + '|' + lang;
+    const load = RX.subs.has(key) ? Promise.resolve(RX.subs.get(key)) : api('/api/reels/' + r.id + '/subs', { method: 'POST', body: JSON.stringify({ lang }) }).then((d) => { RX.subs.set(key, d.subs); return d.subs; }).catch(() => x.subs);
+    load.then((subs) => { const tick = () => { if (!RX.cc || (RX.dub && RX.dub.card === c)) { ov.textContent = RX.dub && RX.dub.card === c && RX.cc ? ov.textContent : ''; return; } const s2 = subs.find((q) => v.currentTime >= q.start && v.currentTime < q.end); ov.textContent = s2 ? s2.text : ''; }; v.addEventListener('timeupdate', tick); });
+  }
+}
+const LANGS_SHORT = (c) => ({ te: 'తెలుగు', hi: 'हिंदी', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', en: 'EN', bn: 'বাংলা', mr: 'मराठी', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ', ur: 'اردو', or: 'ଓଡ଼ିଆ' })[c] || 'EN';
+function reelShopSheet(r, products) {
+  sheet('🛍️ Shop this reel', (list) => {
+    const grid = el('div', 'prod-grid'); grid.style.padding = '12px';
+    for (const p of products) grid.append(productTile(p, () => viewProduct(p, null)));
+    list.append(grid);
+    const ask = el('button', 'primary', '💬 Ask ' + r.by.name + ' about these'); ask.style.cssText = 'width:calc(100% - 24px);margin:0 12px 12px';
+    ask.onclick = async () => { closeSheet('moreSheet'); await ensureUser(r.by.id); setTab('chats'); await openChat(r.by.id); sendRich({ type: 'product', product: { id: products[0].id }, text: 'Hi, I saw your reel. Is this available? What is the price?' }); };
+    list.append(ask);
+  });
+}
+// AI dubbing: translated speech, in time, original sound turned down
+async function reelDubToggle(c, r, btn) {
+  const v = c.querySelector('video');
+  if (RX.dub && RX.dub.card === c) { reelDubStop(); return; }
+  reelDubStop(); btn.classList.add('busy'); btn.querySelector('span').textContent = '…';
+  try {
+    const d = await api('/api/reels/' + r.id + '/dub', { method: 'POST', body: JSON.stringify({ lang: viewerLang(), gender: settings.voiceGender === 'MALE' ? 'MALE' : 'FEMALE' }) });
+    const lines = d.lines.filter((l) => l.audio).map((l) => ({ ...l, a: new Audio('data:audio/mp3;base64,' + l.audio) }));
+    if (!lines.length) throw new Error('Dubbing is not available for this language yet.');
+    RX.dub = { card: c, lines, btn, last: -1 };
+    v.volume = 0.12; btn.classList.add('on'); btn.classList.remove('busy'); btn.querySelector('span').textContent = LANGS_SHORT(viewerLang());
+    const ov = c._subsEl;
+    RX.dub.tick = () => {
+      const t = v.currentTime, i = lines.findIndex((l) => t >= l.start && t < l.end);
+      if (ov && RX.cc) ov.textContent = i >= 0 ? lines[i].text : '';
+      if (i >= 0 && i !== RX.dub.last) { RX.dub.last = i; lines.forEach((l) => l.a.pause()); const a = lines[i].a; a.currentTime = 0; a.play().catch(() => {}); }
+      if (t < 0.3) RX.dub.last = -1;
+    };
+    v.addEventListener('timeupdate', RX.dub.tick); v.addEventListener('pause', reelDubPause);
+    toast('🗣️ AI dubbing: ' + (MT_LANGS.find((m) => m[0] === viewerLang()) || ['', 'English'])[1]);
+  } catch (e) { btn.classList.remove('busy'); btn.querySelector('span').textContent = 'Dub'; toast(e.message); }
+}
+function reelDubPause() { if (RX.dub) RX.dub.lines.forEach((l) => l.a.pause()); }
+function reelDubStop() {
+  if (!RX.dub) return; const { card, lines, btn, tick } = RX.dub; const v = card.querySelector('video');
+  lines.forEach((l) => l.a.pause()); v.volume = 1; v.removeEventListener('timeupdate', tick); v.removeEventListener('pause', reelDubPause);
+  btn.classList.remove('on'); btn.querySelector('span').textContent = 'Dub'; RX.dub = null;
+}
+// watch time for creator insights
+function reelWatchStart(c) { c._watchFrom = Date.now(); }
+function reelWatchEnd(c) {
+  if (!c._watchFrom) return; const v = c.querySelector('video'), sec = (Date.now() - c._watchFrom) / 1000; c._watchFrom = 0;
+  if (RX.dub && RX.dub.card === c) reelDubStop();
+  if (sec < 1 || c.querySelector('.rl-tap') === null) return;
+  api('/api/reels/' + c.dataset.id + '/watch', { method: 'POST', body: JSON.stringify({ sec, pct: v && v.duration ? Math.min(1, sec / v.duration) : 0 }) }).catch(() => {});
+}
+
+// ----- Remix & Duet -----
+async function reelRemix(r, duet) {
+  toast('⏳ Getting the reel…');
+  let blob; try { blob = await fetch(reelUrl(r.id)).then((x) => { if (!x.ok) throw 0; return x.blob(); }); } catch { return toast('Could not open this reel. Try again.'); }
+  const orig = new File([blob], 'remix.' + (blob.type.includes('mp4') ? 'mp4' : 'webm'), { type: blob.type || 'video/mp4' });
+  if (!duet) { await openStudio([orig]); if (ST) { ST.remixOf = r.id; ST.layers.push({ kind: 'text', text: '🎭 Remix · ' + r.by.name, x: SW / 2, y: 90, size: 34, color: '#FFFFFF', bg: true, font: 'bold', anim: 'fade' }); stDraw(); } return; }
+  const mine = (await pickFiles('video/*', false, null))[0]; if (!mine) return;
+  await openStudio([orig]); if (!ST) return;
+  const v2 = document.createElement('video'); v2.src = URL.createObjectURL(mine); v2.playsInline = true; v2.className = 'st-src'; v2.preload = 'auto';
+  await new Promise((ok) => { v2.onloadedmetadata = ok; v2.onerror = ok; });
+  $('#studio .st-stage').append(v2);
+  ST.duet = v2; ST.remixOf = r.id; ST.fit = 'fill'; ST.trimE = Math.min(ST.trimE, v2.duration || ST.trimE, 60);
+  try { const a = stAudio(); a.ac.createMediaElementSource(v2).connect(a.orig); } catch {}
+  ST.layers.push({ kind: 'text', text: '🎭 Duet with ' + r.by.name, x: SW / 2, y: 70, size: 32, color: '#FFFFFF', bg: true, font: 'bold', anim: 'fade' });
+  stDraw(); toast('🎭 Duet: their reel on top, yours below');
+}
+
+// ----- Creator insights -----
+async function openInsights() {
+  let d; try { d = await api('/api/insights'); } catch (e) { return toast(e.message); }
+  sheet('📊 Insights', (list) => {
+    const box = el('div'); box.style.padding = '10px 14px 18px';
+    const t = d.totals, cards = el('div', 'in-cards');
+    for (const [n, l] of [[t.views, '👁 Views'], [t.likes, '❤️ Likes'], [t.comments, '💬 Comments'], [t.shares, '↪ Shares'], [t.followers, '👥 Followers'], [t.productTaps, '🛍️ Shop taps']]) { const cd = el('div'); cd.append(el('b', null, fmtCount(n)), el('small', null, l)); cards.append(cd); }
+    box.append(cards, el('div', 'th-title', 'Views — last 14 days'));
+    const max = Math.max(1, ...d.perDay), W2 = 320, H2 = 110, bw = W2 / d.perDay.length;
+    const svg = '<svg viewBox="0 0 ' + W2 + ' ' + (H2 + 18) + '" class="in-chart" role="img" aria-label="Views per day">' + d.perDay.map((v, i) => { const h = Math.max(2, v / max * H2); return '<rect x="' + (i * bw + 3) + '" y="' + (H2 - h) + '" width="' + (bw - 6) + '" height="' + h + '" rx="3"></rect>' + (i % 3 === 0 ? '<text x="' + (i * bw + bw / 2) + '" y="' + (H2 + 14) + '" text-anchor="middle">' + d.days[i].slice(8) + '/' + d.days[i].slice(5, 7) + '</text>' : ''); }).join('') + '</svg>';
+    const ch = el('div'); ch.innerHTML = svg; box.append(ch);
+    box.append(el('div', 'th-title', 'Your reels'));
+    if (!d.reels.length) box.append(el('p', 'info-note', 'Post a reel to see how people watch it.'));
+    for (const r of d.reels) {
+      const row = el('div', 'in-row'); const th = el('div', 'th'); if (r.hasThumb) th.style.backgroundImage = 'url("' + reelThumb(r.id) + '")';
+      const tx = el('div', 'txt'); tx.append(el('b', null, (r.caption || 'Reel').slice(0, 50)), el('small', null, '👁 ' + fmtCount(r.views) + ' · ❤️ ' + r.likes + ' · 💬 ' + r.comments + ' · ↪ ' + r.shares + (r.productTaps ? ' · 🛍️ ' + r.productTaps : '')),
+        el('small', null, '⏱ avg ' + r.avgWatch + ' s of ' + r.dur + ' s · ✅ ' + r.completion + '% watched to the end'));
+      row.append(th, tx); box.append(row);
+    }
+    box.append(el('p', 'info-note', 'Tip: reels people watch to the end are shown to more people in For you.'));
+    list.append(box);
   });
 }
 

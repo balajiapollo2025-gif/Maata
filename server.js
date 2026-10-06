@@ -2268,6 +2268,7 @@ function reelView(viewer, r) {
   const o = userById(r.by) || {}, saved = contactsOf(viewer).find((c) => c.id === r.by);
   return { id: r.id, caption: r.caption, dur: r.dur || 0, createdAt: r.createdAt, likes: (r.likes || []).length, liked: (r.likes || []).includes(viewer.id), views: r.viewCount || 0,
     comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, mine: r.by === viewer.id, hidden: !!r.hidden,
+    shop: (r.products || []).length, place: r.loc ? r.loc.place : '', smart: !!(r.subs && r.subs.length), remix: !!r.remixOf,
     by: { id: r.by, name: (saved && saved.name) || o.name || 'Maata user', photo: !!o.photo, photoV: o.photoV || 0, biz: o.business ? o.business.name : null, followed: (viewer.following || []).includes(r.by) } };
 }
 app.post('/api/reels', auth, express.raw({ type: ['video/*'], limit: '17mb' }), async (req, res) => {
@@ -2288,6 +2289,7 @@ app.post('/api/reels/:id/thumb', auth, express.raw({ type: ['image/*'], limit: '
   const r = db.reels.find((x) => x.id === req.params.id && x.by === req.user.id); if (!r) return res.status(404).json({ error: 'Not found.' });
   if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'No picture.' });
   const id = newId(); await saveChatFile(id, req.body, 'image/jpeg'); r.thumb = { id, size: req.body.length }; save(); res.json({ ok: true });
+  aiModerate(r, req.body).catch(() => {});
 });
 const viewerFromQuery = (req) => { try { return findUserByToken(String(req.query.t || '')); } catch { return null; } };
 app.get('/api/reels/file/:id', (req, res) => {
@@ -2304,7 +2306,8 @@ app.get('/api/reels', auth, (req, res) => {
   const tab = String(req.query.tab || 'foryou'), me2 = req.user, contacts = new Set(contactsOf(me2).map((c) => c.id));
   let list = db.reels.filter((r) => !r.removed && canSeeReel(me2, r));
   const follows = new Set(me2.following || []);
-  if (tab === 'home') { const mineFeed = list.filter((r) => follows.has(r.by) || contacts.has(r.by) || r.by === me2.id); list = mineFeed.length >= 3 ? mineFeed : list.filter((r) => !r.hidden); }
+  if (tab === 'nearby') { const me3 = { lat: +req.query.lat, lng: +req.query.lng }; if (!isFinite(me3.lat)) return res.json([]); list = list.filter((r) => r.loc && !r.hidden && geoKm(r.loc, me3) <= 25).sort((a, b) => geoKm(a.loc, me3) - geoKm(b.loc, me3)); }
+  else if (tab === 'home') { const mineFeed = list.filter((r) => follows.has(r.by) || contacts.has(r.by) || r.by === me2.id); list = mineFeed.length >= 3 ? mineFeed : list.filter((r) => !r.hidden); }
   else if (tab === 'following') list = list.filter((r) => follows.has(r.by));
   else if (tab === 'friends') list = list.filter((r) => contacts.has(r.by));
   else if (tab === 'mine') list = list.filter((r) => r.by === me2.id);
@@ -2315,7 +2318,7 @@ app.get('/api/reels', auth, (req, res) => {
   else if (tab === 'foryou') { // simple ranking: fresh + liked + watched, friends a little higher, unseen first
     const score = (r) => { const ageH = (now() - r.createdAt) / 3600000; return ((r.likes || []).length * 3 + (r.viewCount || 0) * 0.3 + (contacts.has(r.by) ? 8 : 0) + 5) / Math.pow(ageH + 2, 1.2) - ((r.viewers || []).includes(me2.id) ? 1000 : 0); };
     list.sort((a, b) => score(b) - score(a));
-  } else list.sort((a, b) => b.createdAt - a.createdAt);
+  } else if (tab !== 'nearby') list.sort((a, b) => b.createdAt - a.createdAt);
   const first = String(req.query.first || '');
   if (first) { const f = db.reels.find((r) => r.id === first && !r.removed && canSeeReel(me2, r)); if (f) list = [f, ...list.filter((r) => r.id !== first)]; }
   const skip = Math.max(0, Number(req.query.skip) || 0);
@@ -2504,6 +2507,93 @@ app.post('/admin/api/channels/:id/remove', adminAuth, (req, res) => {
   if (c.removed) io.to('ch:' + c.id).emit('channel:removed', { id: c.id });
   res.json({ removed: c.removed });
 });
+
+// ---------- Reels phase 2 & 3: shop the reel, nearby, smart subtitles, AI dubbing, insights, AI moderation ----------
+async function ttsLine(text, lang2, gender) { // Google voice for one line → base64 MP3 (cached)
+  const lang = TTS_LANG[lang2]; if (!TTS_KEY || !lang || !text) return null;
+  const key = lang + '|' + gender + '|' + text; if (ttsCache.has(key)) return ttsCache.get(key);
+  try {
+    const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(TTS_KEY), { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: { text }, voice: { languageCode: lang, ssmlGender: gender }, audioConfig: { audioEncoding: 'MP3', speakingRate: 1.08 } }), signal: AbortSignal.timeout(9000) });
+    const d = await r.json(); if (!d.audioContent) return null;
+    ttsCache.set(key, d.audioContent); if (ttsCache.size > 600) ttsCache.delete(ttsCache.keys().next().value);
+    return d.audioContent;
+  } catch { return null; }
+}
+async function trLine(text, to) { let out = LANGS.includes(to) ? await translate(text, '', to) : null; if ((!out || out.trim().toLowerCase() === text.toLowerCase()) && GEMINI_KEY) out = (await aiTranslate(text, to)) || out; return out || text; }
+const geoKm = (a, b) => { const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180, x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+// extra details saved with a reel: tagged products, place, smart subtitles, remix credit
+app.post('/api/reels/:id/details', auth, (req, res) => {
+  const r = db.reels.find((x) => x.id === req.params.id && x.by === req.user.id); if (!r) return res.status(404).json({ error: 'Not found.' });
+  const b = req.body || {};
+  if (Array.isArray(b.products)) r.products = b.products.map(String).filter((id) => db.products.some((p) => p.id === id && p.ownerId === req.user.id)).slice(0, 5);
+  if (b.loc && isFinite(b.loc.lat) && isFinite(b.loc.lng)) r.loc = { lat: Math.round(Number(b.loc.lat) * 100) / 100, lng: Math.round(Number(b.loc.lng) * 100) / 100, place: clip(b.loc.place, 60) }; // ~1 km accuracy only (privacy)
+  if (Array.isArray(b.subs)) { r.subs = b.subs.slice(0, 150).map((x) => ({ start: Math.max(0, +x.start || 0), end: Math.max(0, +x.end || 0), text: clip(x.text, 90) })).filter((x) => x.text && x.end > x.start); r.subLang = clip(b.subLang, 5); }
+  if (b.remixOf) { const o = db.reels.find((x) => x.id === String(b.remixOf)); if (o) { r.remixOf = o.id; addActivity(o.by, req.user, 'remix', r.id); } }
+  save(); res.json(reelView(req.user, r));
+});
+app.get('/api/reels/:id/extra', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r || !canSeeReel(req.user, r)) return res.status(404).json({ error: 'Reel not found.' });
+  const o = r.remixOf && db.reels.find((x) => x.id === r.remixOf), ou = o && userById(o.by);
+  res.json({ products: (r.products || []).map((id) => db.products.find((p) => p.id === id && p.available)).filter(Boolean).map(productOut),
+    subs: r.subs || [], subLang: r.subLang || '', loc: r.loc ? { place: r.loc.place, km: req.query.lat ? Math.round(geoKm(r.loc, { lat: +req.query.lat, lng: +req.query.lng }) * 10) / 10 : null } : null,
+    remixOf: o ? { id: o.id, by: ou ? ou.name : 'Maata user' } : null, canDub: !!(r.subs && r.subs.length), voiceOn: !!TTS_KEY });
+});
+// smart subtitles in the viewer's language
+const dubCache = new Map();
+app.post('/api/reels/:id/subs', auth, async (req, res) => {
+  const r = reelById(req.params.id); if (!r || !r.subs || !r.subs.length) return res.status(404).json({ error: 'No subtitles.' });
+  const to = String(req.body?.lang || 'en'); const ck = r.id + '|s|' + to;
+  if (dubCache.has(ck)) return res.json({ subs: dubCache.get(ck) });
+  const out = []; for (const s2 of r.subs) out.push({ ...s2, text: r.subLang === to ? s2.text : await trLine(s2.text, to) });
+  dubCache.set(ck, out); if (dubCache.size > 400) dubCache.delete(dubCache.keys().next().value);
+  res.json({ subs: out });
+});
+// AI dubbing: the reel's words, translated and spoken in the viewer's language (line by line, in time)
+app.post('/api/reels/:id/dub', auth, async (req, res) => {
+  const r = reelById(req.params.id); if (!r || !r.subs || !r.subs.length) return res.status(404).json({ error: 'This reel has no speech to dub.' });
+  if (!TTS_KEY) return res.status(501).json({ error: 'AI dubbing needs the Google voice key on the server.' });
+  const to = String(req.body?.lang || 'en'), gender = req.body?.gender === 'MALE' ? 'MALE' : 'FEMALE', ck = r.id + '|d|' + to + gender;
+  if (dubCache.has(ck)) return res.json({ lines: dubCache.get(ck) });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const lines = [];
+  for (const s2 of r.subs.slice(0, 60)) { const text = r.subLang === to ? s2.text : await trLine(s2.text, to); lines.push({ start: s2.start, end: s2.end, text, audio: await ttsLine(text, to, gender) }); }
+  dubCache.set(ck, lines); res.json({ lines });
+});
+// watch time (for creator insights) — sent when someone moves past a reel
+app.post('/api/reels/:id/watch', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r || r.by === req.user.id) return res.json({ ok: true });
+  const sec = Math.max(0, Math.min(65, Number(req.body?.sec) || 0)), pct = Math.max(0, Math.min(1, Number(req.body?.pct) || 0));
+  r.watchSec = (r.watchSec || 0) + sec; r.watchN = (r.watchN || 0) + 1; if (pct >= 0.9) r.completes = (r.completes || 0) + 1;
+  const day = new Date().toISOString().slice(0, 10); r.daily = r.daily || {}; r.daily[day] = (r.daily[day] || 0) + 1;
+  const ks = Object.keys(r.daily); if (ks.length > 40) delete r.daily[ks.sort()[0]];
+  save(); res.json({ ok: true });
+});
+app.post('/api/reels/:id/shared', auth, (req, res) => { const r = reelById(req.params.id); if (r) { r.shares = (r.shares || 0) + 1; save(); } res.json({ ok: true }); });
+app.post('/api/reels/:id/product-tap', auth, (req, res) => { const r = reelById(req.params.id); if (r && r.by !== req.user.id) { r.productTaps = (r.productTaps || 0) + 1; save(); } res.json({ ok: true }); });
+app.get('/api/insights', auth, (req, res) => {
+  const mine = db.reels.filter((r) => r.by === req.user.id && !r.removed);
+  const days = []; for (let i = 13; i >= 0; i--) days.push(new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
+  const perDay = days.map((d) => mine.reduce((n, r) => n + ((r.daily || {})[d] || 0), 0));
+  const reels = mine.map((r) => ({ id: r.id, caption: r.caption, hasThumb: !!r.thumb, createdAt: r.createdAt, views: r.viewCount || 0, likes: (r.likes || []).length,
+    comments: db.reelComments.filter((c) => c.reelId === r.id).length, shares: r.shares || 0, productTaps: r.productTaps || 0,
+    avgWatch: r.watchN ? Math.round((r.watchSec || 0) / r.watchN * 10) / 10 : 0, completion: r.watchN ? Math.round((r.completes || 0) / r.watchN * 100) : 0, dur: r.dur || 0 }))
+    .sort((a, b) => b.views - a.views);
+  const sum = (k) => reels.reduce((n, r) => n + r[k], 0);
+  res.json({ days, perDay, totals: { reels: reels.length, views: sum('views'), likes: sum('likes'), comments: sum('comments'), shares: sum('shares'), productTaps: sum('productTaps'), followers: followersOf(req.user.id) }, reels });
+});
+// AI auto-moderation: Gemini looks at the cover picture + caption of every new reel
+async function aiModerate(r, jpegBuf) {
+  if (!GEMINI_KEY || !r) return;
+  const parts = []; if (jpegBuf) parts.push({ inline_data: { mime_type: 'image/jpeg', data: jpegBuf.toString('base64') } });
+  parts.push({ text: 'Caption: ' + (r.caption || '(none)') + '\nIs this short-video post safe for a family chat app in India? Return ONLY JSON {"safe":true|false,"reason":"nudity|sexual|violence|gore|hate|weapons|drugs|scam|child-safety|ok"}.' });
+  const out = await gemini('You are a strict but fair content safety checker.', [{ role: 'user', parts }], { json: true, maxTokens: 80, temperature: 0 });
+  if (out.error) return;
+  let v; try { v = JSON.parse(out.text.replace(/^```json|```$/g, '').trim()); } catch { return; }
+  r.aiCheck = { safe: !!v.safe, reason: String(v.reason || ''), at: now() };
+  if (v.safe === false) { r.hidden = true; r.reports = r.reports || []; r.reports.push({ by: 'maata-ai', reason: 'AI check: ' + v.reason, ts: now() }); io.to('admins').emit('feed', { kind: 'report', text: 'AI flagged a reel (' + v.reason + ')', ts: now() }); io.to('user:' + r.by).emit('reel:review', { id: r.id }); }
+  save();
+}
 
 // Reels moderation
 app.get('/admin/api/reels', adminAuth, (req, res) => res.json(db.reels.slice().sort((a, b) => (b.reports || []).length - (a.reports || []).length || b.createdAt - a.createdAt).slice(0, 200).map((r) => { const u = userById(r.by) || {}; return { id: r.id, caption: r.caption, ownerName: u.name || 'Deleted user', ownerPhone: u.phone || '', createdAt: r.createdAt, likes: (r.likes || []).length, views: r.viewCount || 0, reports: (r.reports || []).map((x) => x.reason || 'reported'), removed: !!r.removed, hidden: !!r.hidden, hasThumb: !!r.thumb }; })));

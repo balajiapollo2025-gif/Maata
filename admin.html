@@ -536,7 +536,8 @@ async function openCustomer(id) {
     rb.onclick = async () => { if (!confirm('Give ' + u.name + ' a new temporary password? They will be logged out everywhere.')) return;
       try { const r = await api(`/admin/api/users/${id}/reset-password`, { method: 'POST' }); prompt('Tell ' + u.name + ' (' + u.phone + ') this temporary password. Ask them to change it in Settings → My profile:', r.tempPassword); } catch (e) { toast(e.message); } }; }
   $('#aDelete').onclick = async () => {
-    if (prompt('This permanently deletes ' + u.name + ' and their chats. Type DELETE to confirm.') !== 'DELETE') return;
+    const typed = prompt('This permanently deletes ' + u.name + ' and their chats. Type DELETE to confirm.'); if (typed === null) return;
+    if (typed.trim().toUpperCase() !== 'DELETE') return toast('Not deleted: please type the word DELETE to confirm.');
     try { await api('/admin/api/users/' + id, { method: 'DELETE' }); toast(u.name + ' was deleted.'); closeDrawer(); loadCustomers(); } catch (e) { toast(e.message); }
   };
 }
