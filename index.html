@@ -904,6 +904,54 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .qr-frame{position:relative;width:min(70vw,300px);aspect-ratio:1;border-radius:24px;box-shadow:0 0 0 2000px rgba(0,0,0,.55);border:3px solid #21C063}
 .qr-tip{position:absolute;bottom:calc(60px + env(safe-area-inset-bottom,0px));left:20px;right:20px;text-align:center;color:#fff;font-size:16px}
 .qr-close{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;color:#fff;background:rgba(0,0,0,.4)}
+/* ================= Reels ================= */
+#reelsPane{position:fixed;inset:0;z-index:19;background:#000;color:#fff;display:flex;flex-direction:column}
+#reelsPane[hidden]{display:none}
+.rl-top{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:6px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px 10px;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+.rl-top .ttl{font-size:21px;font-weight:700;margin-right:6px}
+#rlTabs{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
+#rlTabs button{padding:6px 12px;border-radius:999px;color:rgba(255,255,255,.75);font-weight:600;font-size:14px;white-space:nowrap;background:none}
+#rlTabs button[aria-pressed="true"]{color:#fff;background:rgba(255,255,255,.18)}
+.rl-ib{width:42px;height:42px;display:grid;place-items:center;color:#fff;background:none;border-radius:50%;flex:none}
+.rl-ib svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#rlFeed{flex:1;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain}
+#rlFeed::-webkit-scrollbar{display:none}
+.rl-card{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;place-items:center;overflow:hidden;background:#000}
+.rl-card video{width:100%;height:100%;object-fit:contain;background:#000}
+.rl-tap{position:absolute;inset:0;z-index:1}
+.rl-card.paused::after{content:"▶";position:absolute;z-index:1;font-size:64px;color:rgba(255,255,255,.85);pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.rl-pop{position:absolute;z-index:2;font-size:96px;opacity:0;pointer-events:none}
+.rl-pop.go{animation:rlpop .8s ease-out}
+@keyframes rlpop{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.15)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.3)}}
+.rl-side{position:absolute;right:8px;bottom:110px;z-index:2;display:flex;flex-direction:column;gap:18px;align-items:center}
+.rl-btn{display:flex;flex-direction:column;align-items:center;gap:3px;color:#fff;background:none;font-size:12.5px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.rl-btn svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.rl-btn.like.on svg{fill:#FF3B5C;stroke:#FF3B5C}
+.rl-info{position:absolute;left:12px;right:70px;bottom:34px;z-index:2;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+.rl-who{display:flex;align-items:center;gap:10px;color:#fff;background:none;font-size:15.5px;padding:0;margin-bottom:6px}
+.rl-who .avatar{border:2px solid #fff}
+.rl-biz{font-size:13px}
+.rl-cap{font-size:14.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;white-space:pre-wrap}
+.rl-cap.open{-webkit-line-clamp:unset;max-height:40vh;overflow-y:auto}
+.rl-meta{font-size:12.5px;opacity:.8;margin-top:4px}
+.rl-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.2);z-index:2}
+.rl-bar i{display:block;height:100%;width:0;background:#fff}
+.rl-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;text-align:center}
+.rl-empty-ic{font-size:64px}.rl-empty p{opacity:.75;margin:0 0 8px}
+.rl-prev{width:100%;max-height:46vh;border-radius:14px;background:#000;margin-bottom:12px}
+.rl-prog{font-weight:600;color:var(--leaf);margin:6px 0}
+.rl-cmts{max-height:55vh;overflow-y:auto;padding:4px 12px}
+.rl-cmt{display:flex;gap:10px;padding:8px 0;align-items:flex-start}
+.rl-cmt .txt{flex:1;font-size:14.5px;line-height:1.4}.rl-cmt .txt small{display:block;color:var(--muted);font-size:12px}
+.rl-cin{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.rl-cin input{flex:1;border:1.5px solid var(--line);border-radius:999px;padding:10px 14px;font:inherit;background:var(--paper);color:var(--ink)}
+.rl-cin .primary{width:auto;padding:10px 18px}
+.reel-msg{width:200px;cursor:pointer}
+.rm-thumb{position:relative;height:250px;border-radius:12px;background:#111 center/cover no-repeat;display:grid;place-items:center;margin-bottom:6px}
+.rm-play{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:22px}
+.rm-by{font-weight:700;font-size:13.5px}.rm-cap{font-size:13.5px;opacity:.85;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (min-width:761px){#reelsPane{left:50%;transform:translateX(-50%);width:min(460px,100vw);box-shadow:0 0 0 100vw rgba(0,0,0,.85)}}
+@media (max-width:760px){#reelsPane{bottom:calc(64px + env(safe-area-inset-bottom,0px))}#rlClose{display:none}.bnav.rl-dark{background:#000;border-top-color:#222}.bnav.rl-dark button{color:#fff}}
 </style>
 </head>
 <body>
@@ -1075,9 +1123,20 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
     </form>
   </main>
 </div>
+<section id="reelsPane" hidden aria-label="Reels">
+  <div class="rl-top">
+    <span class="ttl">Reels</span>
+    <div id="rlTabs" role="tablist"><button data-rt="foryou" aria-pressed="true">For you</button><button data-rt="friends" aria-pressed="false">Friends</button><button data-rt="mine" aria-pressed="false">Mine</button><button id="rlUserTab" hidden aria-pressed="false"></button></div>
+    <button class="rl-ib" id="rlSound" aria-label="Mute"></button>
+    <button class="rl-ib" id="rlCreate" aria-label="Create a reel"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8.5 9.5v5M6 12h5"/></svg></button>
+    <button class="rl-ib" id="rlClose" aria-label="Close reels"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div id="rlFeed"></div>
+</section>
 <nav class="bnav" id="bnav" aria-label="Main">
   <button data-go="chats" aria-selected="true"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/><path d="M8 11h8M8 14.5h5"/></svg></span><span data-t="chats">Chats</span><span class="bb" id="bnChats" hidden></span></button>
   <button data-go="status" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3a9 9 0 0 1 9 9M21 12a9 9 0 0 1-9 9M12 21a9 9 0 0 1-9-9" /><path d="M3 12a9 9 0 0 1 9-9" stroke-dasharray="2 3"/></svg></span><span>Updates</span><span class="bdot" id="bnUpd" hidden></span></button>
+  <button data-go="reels" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="M10 12v5l4.5-2.5z"/></svg></span><span>Reels</span></button>
   <button data-go="communities" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><circle cx="5" cy="10" r="2.4"/><circle cx="19" cy="10" r="2.4"/><path d="M6.5 19a5.5 5.5 0 0 1 11 0"/><path d="M1.5 18a3.6 3.6 0 0 1 4.6-3.4M22.5 18a3.6 3.6 0 0 0-4.6-3.4"/></svg></span><span>Communities</span></button>
   <button data-go="calls" aria-selected="false"><span class="ic"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span><span data-t="calls">Calls</span><span class="bb" id="bnCalls" hidden></span></button>
 </nav>
@@ -1434,11 +1493,31 @@ $('#authForm').onsubmit = async (e) => {
   } catch (err) { $('#authError').textContent = err.message; }
   finally { btn.disabled = false; }
 };
-function logout() {
+let loggingOut = false;
+async function logout() {
+  if (loggingOut) return; loggingOut = true;
+  const t0 = token;
+  if (call) { try { endCall('', true); } catch {} }
+  try { if (GC && GC.id) gcLeave(); } catch {}
+  // 1) tell the server to stop notifications/calls to this device (best effort, max 2.5 s)
+  if (t0) {
+    let endpoint = '', fcm = '';
+    try { const reg = await navigator.serviceWorker?.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) { endpoint = sub.endpoint; sub.unsubscribe().catch(() => {}); } } catch {}
+    try { fcm = (window.MaataAndroid && window.MaataAndroid.getFcmToken && window.MaataAndroid.getFcmToken()) || ''; } catch {}
+    try { await Promise.race([fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t0 }, body: JSON.stringify({ endpoint, fcm }) }), new Promise((r) => setTimeout(r, 2500))]); } catch {}
+  }
+  // 2) forget the login on this device
   token = null; store.del('maata_token');
-  if (socket) socket.disconnect();
-  if (call) endCall('', true);
-  location.reload();
+  try { if (socket) { socket.removeAllListeners(); socket.disconnect(); } } catch {}
+  try { window.MaataAndroid && window.MaataAndroid.callEnded && window.MaataAndroid.callEnded(); } catch {}
+  // 3) show the login screen right away (inside the Android app a page reload can be skipped, so do not rely on it)
+  document.querySelectorAll('.ci,.chv,.qr-scan,.menu-shade,.main-menu,#emojiPanel').forEach((e) => e.remove());
+  for (const id of ['moreSheet', 'attachSheet', 'addSheet', 'settingsSheet', 'mediaView', 'stViewer', 'camView', 'stCompose', 'callScreen']) { const e = document.getElementById(id); if (e) e.hidden = true; }
+  $('#app').hidden = true; $('#app').classList.remove('in-chat'); $('#auth').hidden = false;
+  try { $('#password').value = ''; $('#authError').textContent = ''; } catch {}
+  toast('Logged out');
+  // 4) then start completely fresh (clears everything from memory)
+  setTimeout(() => { try { location.replace(location.pathname + '?loggedout=' + Date.now()); } catch { location.reload(); } }, 900);
 }
 $('#logoutBtn').onclick = logout;
 
@@ -2434,6 +2513,7 @@ function setTab(t) {
   $('#callsPane').hidden = t !== 'calls';
   $('#statusPane').hidden = t !== 'status';
   $('#commPane').hidden = t !== 'communities'; if (t === 'communities') renderCommunitiesPane();
+  reelsShow(t === 'reels'); $('#bnav').classList.toggle('rl-dark', t === 'reels');
   $('.add-row').hidden = t === 'communities';
   $('#tabContacts').setAttribute('aria-selected', String(t === 'contacts')); $('#contactsPane').hidden = t !== 'contacts'; if (t === 'contacts') renderPhoneContacts();
   $('#chatFilters').hidden = t !== 'chats'; if (t !== 'chats' && chatSel) endChatSelect();
@@ -2806,6 +2886,7 @@ function previewText(m) {
     case 'gif': return '🎞️ GIF';
     case 'sticker': return '💟 Sticker';
     case 'product': return '🛍️ ' + (m.product ? m.product.name : 'Product');
+    case 'reel': return '🎬 Reel';
     case 'video': return '🎥 Video' + (m.text ? ': ' + m.text : '');
     case 'audio': return m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio';
     case 'file': return '📄 ' + (m.file ? m.file.name : 'Document');
@@ -2894,6 +2975,7 @@ function renderRich(b, m, mine) {
   }
   const f = m.file;
   if (m.type === 'product') return renderProductCard(b, m, mine);
+  if (m.type === 'reel' && m.reel) return renderReelCard(b, m);
   if (m.type === 'sticker') { b.classList.add('stk'); const w = el('div', 'stkwrap'); w.innerHTML = stickerSvg(m.sticker.id) || '💟'; b.append(w); return; }
   if (m.type === 'gif') {
     b.classList.add('media'); const box = el('div', 'gifbox'); const im = el('img'); im.loading = 'lazy'; im.alt = 'GIF'; im.src = m.gif.url;
@@ -3773,6 +3855,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  reels: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="M10 12v5l4.5-2.5z"/></svg>',
   linked: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="1.5"/><path d="M6 18h6M9 14v4"/><rect x="17" y="8" width="5" height="12" rx="1"/></svg>',
   install: '<svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 7v8M9 12l3 3 3-3"/></svg>',
   community: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
@@ -3802,6 +3885,7 @@ function openMainMenu(btn) {
   const list = el('div', 'menu-list');
   const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = MI[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
   item('group', i18n('newGroup'), openNewGroup);
+  item('reels', 'Reels', () => openReels());
   item('community', 'Communities', openCommunities);
   item('channel', 'Channels', () => { setTab('status'); findChannels(); });
   item('biz', 'Business tools', openBusinessTools);
@@ -5806,7 +5890,8 @@ async function installApp() {
 }
 function handleAppLink(url) {
   const h = (url.split('#')[1] || '');
-  const m = /^(chat|answer|tab)=(.+)$/.exec(h); if (!m) return;
+  const m = /^(chat|answer|tab|reel)=(.+)$/.exec(h); if (!m) return;
+  if (m[1] === 'reel') { history.replaceState(null, '', location.pathname); openReels(m[2]); return; }
   history.replaceState(null, '', location.pathname);
   if (m[1] === 'chat') { setTab('chats'); if (userById(m[2])) openChat(m[2]); else setTimeout(() => userById(m[2]) && openChat(m[2]), 1500); }
   else if (m[1] === 'tab') setTab(m[2]);
@@ -5922,14 +6007,14 @@ const FAB_ICONS = {
   calls: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/><path d="M15 3h6v6M21 3l-6 6"/>',
   contacts: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/>',
 };
-const PAGE_TITLES = { status: 'Updates', communities: 'Communities', calls: 'Calls', contacts: 'Select contact' };
+const PAGE_TITLES = { status: 'Updates', reels: 'Reels', communities: 'Communities', calls: 'Calls', contacts: 'Select contact' };
 function syncMobileChrome() {
   const side = $('.side'); if (side) side.dataset.tab = tab;
   const pt = $('#pageTitle'); if (pt) pt.textContent = PAGE_TITLES[tab] || 'Maata';
   document.querySelectorAll('#bnav [data-go]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.go === (tab === 'contacts' ? 'chats' : tab))));
   const fab = $('#fab');
   if (fab) {
-    const kind = tab === 'communities' ? null : tab === 'contacts' ? 'contacts' : tab;
+    const kind = tab === 'communities' || tab === 'reels' ? null : tab === 'contacts' ? 'contacts' : tab;
     fab.hidden = !kind;
     if (kind) { fab.querySelector('svg').innerHTML = FAB_ICONS[kind]; fab.setAttribute('aria-label', { chats: 'New chat', status: 'New status', calls: 'New call', contacts: 'New contact' }[kind]); }
   }
@@ -6533,6 +6618,244 @@ window.addEventListener('popstate', () => {
 // re-check after anything the person taps or after screens change
 document.addEventListener('click', () => setTimeout(backGuard, 30), true);
 new MutationObserver(() => { clearTimeout(BACK.t); BACK.t = setTimeout(backGuard, 60); }).observe(document.body, { childList: true, subtree: false, attributes: true, attributeFilter: ['hidden'] });
+
+if (/[?&]loggedout=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
+// ================= 🎬 Reels =================
+const RL = { tab: 'foryou', list: [], skip: 0, loading: false, done: false, muted: false, viewed: new Set(), io: null, first: null };
+const reelUrl = (id) => '/api/reels/file/' + id + '?t=' + encodeURIComponent(token);
+const reelThumb = (id) => '/api/reels/thumb/' + id + '?t=' + encodeURIComponent(token);
+const fmtCount = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K' : String(n || 0));
+const RL_ICONS = {
+  heart: '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8 3.2 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.8 0 6.1 4 4.6 7.7C19.5 16.4 12 21 12 21z"/></svg>',
+  comment: '<svg viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/></svg>',
+  share: '<svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg>',
+  sound: '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>',
+  muted: '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>',
+  cam: '<svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/><path d="M8.5 9.5v5M6 12h5"/></svg>',
+};
+function openReels(first) { RL.first = first || null; if (tab !== 'reels') setTab('reels'); else reelsLoad(true); }
+function reelsShow(on) {
+  const p = $('#reelsPane'); if (!p) return;
+  p.hidden = !on;
+  if (!on) { p.querySelectorAll('video').forEach((v) => v.pause()); return; }
+  reelsLoad(true);
+}
+async function reelsLoad(reset) {
+  if (RL.loading) return;
+  if (reset) { RL.list = []; RL.skip = 0; RL.done = false; $('#rlFeed').innerHTML = ''; $('#rlFeed').scrollTop = 0; }
+  if (RL.done) return;
+  RL.loading = true;
+  try {
+    const q = '/api/reels?tab=' + encodeURIComponent(RL.tab) + '&skip=' + RL.skip + (reset && RL.first ? '&first=' + RL.first : '');
+    const items = await api(q); if (reset) RL.first = null;
+    RL.skip += items.length; if (items.length < 15) RL.done = true;
+    for (const r of items) { RL.list.push(r); $('#rlFeed').append(reelCard(r)); }
+    if (!RL.list.length) reelsEmpty();
+  } catch (e) { toast(e.message); }
+  RL.loading = false;
+}
+function reelsEmpty() {
+  const e = el('div', 'rl-empty');
+  e.append(el('div', 'rl-empty-ic', '🎬'), el('b', null, RL.tab === 'friends' ? 'No reels from your contacts yet' : RL.tab === 'mine' ? 'You have not posted a reel yet' : 'No reels yet'), el('p', null, 'Share a short video (up to 60 seconds) with everyone on Maata.'));
+  const b = el('button', 'primary', '📷 Create a reel'); b.onclick = reelCreate; e.append(b);
+  $('#rlFeed').append(e);
+}
+function reelCard(r) {
+  const c = el('section', 'rl-card'); c.dataset.id = r.id;
+  const v = el('video'); v.playsInline = true; v.loop = true; v.preload = 'metadata'; v.muted = RL.muted;
+  v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+  if (r.hasThumb) v.poster = reelThumb(r.id);
+  v.dataset.src = reelUrl(r.id);
+  const heart = el('div', 'rl-pop', '❤️');
+  const tapLayer = el('div', 'rl-tap');
+  let lastTap = 0;
+  tapLayer.onclick = (e) => {
+    const t = Date.now();
+    if (t - lastTap < 300) { if (!r.liked) reelLike(r, c); heart.classList.remove('go'); void heart.offsetWidth; heart.classList.add('go'); lastTap = 0; return; }
+    lastTap = t;
+    setTimeout(() => { if (lastTap === t) { if (v.paused) { v.play().catch(() => {}); c.classList.remove('paused'); } else { v.pause(); c.classList.add('paused'); } } }, 280);
+  };
+  const side = el('div', 'rl-side');
+  const sb = (cls, icon, label, fn) => { const b = el('button', 'rl-btn ' + cls); b.innerHTML = icon; const s2 = el('span', null, label); b.append(s2); b.onclick = (e) => { e.stopPropagation(); fn(b); }; side.append(b); return b; };
+  sb('like' + (r.liked ? ' on' : ''), RL_ICONS.heart, fmtCount(r.likes), () => reelLike(r, c)).setAttribute('aria-label', 'Like');
+  sb('cm', RL_ICONS.comment, fmtCount(r.comments), () => reelComments(r, c)).setAttribute('aria-label', 'Comments');
+  sb('sh', RL_ICONS.share, 'Share', () => reelShare(r)).setAttribute('aria-label', 'Share');
+  sb('mo', RL_ICONS.more, '', () => reelMore(r, c)).setAttribute('aria-label', 'More options');
+  const info = el('div', 'rl-info');
+  const who = el('button', 'rl-who'); who.append(avatar({ id: r.by.id, name: r.by.name, photo: r.by.photo, photoV: r.by.photoV }, 'sm'), el('b', null, r.by.name));
+  if (r.by.biz) who.append(el('span', 'rl-biz', '🏪'));
+  who.onclick = (e) => { e.stopPropagation(); RL.tab = 'user:' + r.by.id; reelsTabs(); reelsLoad(true); };
+  info.append(who);
+  if (r.caption) { const cap = el('div', 'rl-cap', r.caption); cap.onclick = (e) => { e.stopPropagation(); cap.classList.toggle('open'); }; info.append(cap); }
+  info.append(el('div', 'rl-meta', '👁 ' + fmtCount(r.views) + ' views' + (r.hidden ? ' · ⏳ under review' : '')));
+  const bar = el('div', 'rl-bar'); const fill = el('i'); bar.append(fill);
+  v.ontimeupdate = () => { if (v.duration) fill.style.width = (v.currentTime / v.duration * 100) + '%'; };
+  c.append(v, tapLayer, heart, side, info, bar);
+  RL.io && RL.io.observe(c);
+  return c;
+}
+function reelsObserver() {
+  if (RL.io) return;
+  RL.io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      const c = en.target, v = c.querySelector('video'); if (!v) continue;
+      if (en.isIntersecting && en.intersectionRatio > 0.6 && !$('#reelsPane').hidden) {
+        if (!v.src) v.src = v.dataset.src;
+        v.muted = RL.muted;
+        v.play().catch(() => { RL.muted = true; v.muted = true; v.play().catch(() => {}); reelsSoundBtn(); toast('🔇 Tap the speaker button (top right) for sound'); });
+        c.classList.remove('paused');
+        const id = c.dataset.id;
+        clearTimeout(c._vt); c._vt = setTimeout(() => { if (!RL.viewed.has(id)) { RL.viewed.add(id); api('/api/reels/' + id + '/view', { method: 'POST' }).catch(() => {}); } }, 1500);
+        const nx = c.nextElementSibling; if (nx) { const nv = nx.querySelector('video'); if (nv && !nv.src) { nv.preload = 'auto'; nv.src = nv.dataset.src; } }
+        const idx = [...$('#rlFeed').children].indexOf(c); if (idx >= RL.list.length - 3) reelsLoad(false);
+      } else { v.pause(); clearTimeout(c._vt); }
+    }
+  }, { root: $('#rlFeed'), threshold: [0, 0.6, 1] });
+}
+async function reelLike(r, c) {
+  try {
+    const x = await api('/api/reels/' + r.id + '/like', { method: 'POST' }); r.liked = x.liked; r.likes = x.likes;
+    const b = c.querySelector('.rl-btn.like'); b.classList.toggle('on', r.liked); b.querySelector('span').textContent = fmtCount(r.likes);
+  } catch (e) { toast(e.message); }
+}
+function reelComments(r, c) {
+  sheet('💬 Comments', async (list) => {
+    const box = el('div', 'rl-cmts'); const listEl = el('div'); box.append(listEl);
+    const row = el('div', 'rl-cin'); const inp = el('input'); inp.placeholder = 'Add a comment…'; inp.maxLength = 500; const send = el('button', 'primary', 'Post'); row.append(inp, send);
+    list.append(box, row);
+    const draw = async () => {
+      let items = []; try { items = await api('/api/reels/' + r.id + '/comments'); } catch (e) { return toast(e.message); }
+      listEl.innerHTML = ''; if (!items.length) listEl.append(el('p', 'info-note', 'No comments yet. Say something nice!'));
+      for (const it of items) {
+        const d = el('div', 'rl-cmt'); d.append(avatar(it.by, 'sm'));
+        const t = el('div', 'txt'); t.append(el('b', null, it.by.name + ' '), el('span', null, it.text), el('small', null, fmtTime(it.ts)));
+        d.append(t);
+        if (it.canDelete) { const x = el('button', 'linkbtn', 'Delete'); x.onclick = async () => { await api('/api/reels/comments/' + it.id, { method: 'DELETE' }).catch(() => {}); r.comments = Math.max(0, r.comments - 1); c.querySelector('.rl-btn.cm span').textContent = fmtCount(r.comments); draw(); }; d.append(x); }
+        listEl.append(d);
+      }
+      listEl.scrollTop = listEl.scrollHeight;
+    };
+    send.onclick = async () => {
+      const t = inp.value.trim(); if (!t) return;
+      send.disabled = true;
+      try { await api('/api/reels/' + r.id + '/comments', { method: 'POST', body: JSON.stringify({ text: t }) }); inp.value = ''; r.comments++; c.querySelector('.rl-btn.cm span').textContent = fmtCount(r.comments); draw(); }
+      catch (e) { toast(e.message); }
+      send.disabled = false;
+    };
+    inp.onkeydown = (e) => { if (e.key === 'Enter') send.click(); };
+    draw();
+  });
+}
+function reelShare(r) {
+  sheet('↪ Share reel', (list) => {
+    const b = (label, fn) => { const x = el('button', 'sheet-btn', label); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
+    b('💬  Send in a chat', () => sheet('Send reel to', (l2) => {
+      for (const u of users.filter((x) => !x.isAI && !x.blocked && (x.inContacts || x.isGroup || x.lastMessage))) {
+        const it = el('button', 'mem-row'); it.append(avatar(u, 'sm'), el('b', null, nameOf(u)));
+        it.onclick = () => { closeSheet('moreSheet'); socket.emit('msg:send', { to: u.id, type: 'reel', reel: { id: r.id } }, (res) => toast(res && res.error ? res.error : '🎬 Sent to ' + nameOf(u))); };
+        l2.append(it);
+      }
+    }));
+    b('🔗  Copy link', () => copyText((r.caption ? r.caption + '\n' : '') + '🎬 Watch on Maata: ' + location.origin + '/#reel=' + r.id));
+  });
+}
+function reelMore(r, c) {
+  sheet(r.mine ? 'My reel' : 'Reel', (list) => {
+    const b = (label, fn, warn) => { const x = el('button', 'sheet-btn' + (warn ? ' warn' : ''), label); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
+    b('👤  More reels from ' + r.by.name, () => { RL.tab = 'user:' + r.by.id; reelsTabs(); reelsLoad(true); });
+    if (!r.mine && !r.by.biz) b('💬  Message ' + r.by.name, async () => { await ensureUser(r.by.id); setTab('chats'); openChat(r.by.id); });
+    if (r.by.biz) b('🏪  Visit shop', () => viewBusiness(r.by.id));
+    if (r.mine) b('🗑  Delete this reel', async () => { if (!confirm('Delete this reel?')) return; try { await api('/api/reels/' + r.id, { method: 'DELETE' }); c.remove(); toast('Reel deleted'); } catch (e) { toast(e.message); } }, true);
+    else b('🚩  Report', async () => { const why = prompt('What is wrong with this reel? (nudity, violence, hate, scam, copyright…)'); if (why === null) return; await api('/api/reels/' + r.id + '/report', { method: 'POST', body: JSON.stringify({ reason: why }) }).catch(() => {}); c.remove(); toast('Reported. Thank you — our team will check it.'); }, true);
+  });
+}
+function reelsTabs() {
+  document.querySelectorAll('#rlTabs [data-rt]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === RL.tab)));
+  const ut = $('#rlUserTab'); ut.hidden = !RL.tab.startsWith('user:');
+  if (RL.tab.startsWith('user:')) { const id = RL.tab.slice(5), u = userById(id), r0 = RL.list.find((x) => x.by.id === id); ut.textContent = '👤 ' + (u ? nameOf(u) : r0 ? r0.by.name : 'Reels'); ut.setAttribute('aria-pressed', 'true'); }
+}
+function reelsSoundBtn() { const b = $('#rlSound'); if (b) { b.innerHTML = RL.muted ? RL_ICONS.muted : RL_ICONS.sound; b.setAttribute('aria-label', RL.muted ? 'Turn sound on' : 'Mute'); } }
+
+// ----- create a reel -----
+function reelCreate() {
+  sheet('🎬 New reel', (list) => {
+    const pick = (label, capture) => {
+      const b = el('button', 'sheet-btn', label);
+      b.onclick = () => { const fi = el('input'); fi.type = 'file'; fi.accept = 'video/*'; if (capture) fi.setAttribute('capture', 'user'); fi.hidden = true; document.body.append(fi); fi.onchange = () => { const f = fi.files[0]; fi.remove(); if (f) reelPrepare(f); }; fi.click(); };
+      list.append(b);
+    };
+    pick('🎥  Record a video', true); pick('🖼️  Choose from gallery', false);
+    list.append(el('p', 'info-note', 'Up to 60 seconds. Please share only your own videos — no film songs or clips you do not own, nothing violent, adult or hateful.'));
+  });
+}
+function videoMeta(file) {
+  return new Promise((ok, bad) => { const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file); v.onloadedmetadata = () => ok(v); v.onerror = () => bad(new Error('This video cannot be opened.')); });
+}
+async function makeThumb(v) {
+  try { v.currentTime = Math.min(0.5, (v.duration || 1) / 2); await new Promise((r) => { v.onseeked = r; setTimeout(r, 1500); }); const w = Math.min(540, v.videoWidth || 540), h = Math.round(w * (v.videoHeight || 960) / (v.videoWidth || 540)); const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(v, 0, 0, w, h); return await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.8)); } catch { return null; }
+}
+// Re-encode big videos smaller on the phone (plays the video once, so it takes as long as the video)
+async function shrinkVideo(file, onProgress) {
+  const v = await videoMeta(file); v.muted = false; v.volume = 0.0001;
+  const stream = v.captureStream ? v.captureStream() : v.mozCaptureStream ? v.mozCaptureStream() : null;
+  if (!stream || !window.MediaRecorder) throw new Error('This video is too big (16 MB max). Please choose a shorter one.');
+  const type = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 1400000, audioBitsPerSecond: 96000 });
+  const parts = []; rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
+  const done = new Promise((r) => (rec.onstop = r));
+  v.ontimeupdate = () => onProgress && v.duration && onProgress(Math.round(v.currentTime / v.duration * 100));
+  rec.start(1000); await v.play(); await new Promise((r) => (v.onended = r)); rec.stop(); await done;
+  return new File(parts, 'reel.' + (type.includes('mp4') ? 'mp4' : 'webm'), { type: (type || 'video/webm').split(';')[0] });
+}
+async function reelPrepare(file) {
+  let v; try { v = await videoMeta(file); } catch (e) { return toast(e.message); }
+  if (v.duration > 61) return toast('Reels can be up to 60 seconds. This video is ' + Math.round(v.duration) + ' s.');
+  const dur = Math.round(v.duration || 0);
+  sheet('🎬 New reel', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const pv = el('video'); pv.src = URL.createObjectURL(file); pv.muted = true; pv.autoplay = true; pv.loop = true; pv.playsInline = true; pv.className = 'rl-prev';
+    const l = el('label'); l.append(el('span', null, 'Caption')); const cap = el('textarea'); cap.maxLength = 300; cap.placeholder = 'Say something about your reel… #maata'; l.append(cap);
+    const ai = el('button', 'linkbtn', '✨ Write a caption with AI');
+    ai.onclick = async () => { ai.disabled = true; try { const r = await api('/api/ai/write', { method: 'POST', body: JSON.stringify({ task: 'write', text: 'A short catchy caption (max 20 words) with 3 hashtags for a short video reel about: ' + (cap.value || 'my day') }) }); cap.value = r.text.slice(0, 300); } catch (e) { toast(e.message); } ai.disabled = false; };
+    const prog = el('div', 'rl-prog'); prog.hidden = true;
+    const go = el('button', 'primary', 'Post reel');
+    go.onclick = async () => {
+      go.disabled = true; prog.hidden = false;
+      let up = file;
+      try {
+        if (file.size > 15.5 * 1024 * 1024) { prog.textContent = 'Making the video smaller… 0%'; up = await shrinkVideo(file, (p) => (prog.textContent = 'Making the video smaller… ' + p + '%')); }
+        if (up.size > 16 * 1024 * 1024) throw new Error('Still too big. Please choose a shorter video.');
+        const thumb = await makeThumb(await videoMeta(up).catch(() => v));
+        const r = await new Promise((ok, bad) => {
+          const x = new XMLHttpRequest(); x.open('POST', '/api/reels?caption=' + encodeURIComponent(cap.value.trim()) + '&dur=' + dur);
+          x.setRequestHeader('Authorization', 'Bearer ' + token); x.setRequestHeader('Content-Type', up.type || 'video/mp4');
+          x.upload.onprogress = (e) => { if (e.lengthComputable) prog.textContent = 'Uploading… ' + Math.round(e.loaded / e.total * 100) + '%'; };
+          x.onload = () => { let d = {}; try { d = JSON.parse(x.responseText); } catch {} x.status < 300 ? ok(d) : bad(new Error(d.error || 'Upload failed.')); };
+          x.onerror = () => bad(new Error('Upload failed. Check your internet.')); x.send(up);
+        });
+        if (thumb) await fetch('/api/reels/' + r.id + '/thumb', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: thumb }).catch(() => {});
+        closeSheet('moreSheet'); toast('🎬 Your reel is live!'); RL.tab = 'mine'; reelsTabs(); openReels(r.id);
+      } catch (e) { toast(e.message); go.disabled = false; prog.hidden = true; }
+    };
+    box.append(pv, l, ai, prog, go); list.append(box);
+  });
+}
+// reel cards inside chats
+function renderReelCard(b, m) {
+  const R = m.reel, card = el('div', 'card-x reel-msg');
+  const t = el('div', 'rm-thumb'); if (R.hasThumb) t.style.backgroundImage = 'url("' + reelThumb(R.id) + '")'; t.append(el('span', 'rm-play', '▶'));
+  card.append(t, el('div', 'rm-by', '🎬 Reel · ' + R.byName)); if (R.caption) card.append(el('div', 'rm-cap', R.caption));
+  card.onclick = (e) => { e.stopPropagation(); openReels(R.id); };
+  b.classList.add('media'); b.append(card); if (m.text) b.append(el('div', 'cap', m.text));
+}
+(function reelsInit() {
+  document.querySelectorAll('#rlTabs [data-rt]').forEach((b) => (b.onclick = () => { RL.tab = b.dataset.rt; reelsTabs(); reelsLoad(true); }));
+  $('#rlCreate').onclick = reelCreate;
+  $('#rlSound').onclick = () => { RL.muted = !RL.muted; reelsSoundBtn(); document.querySelectorAll('#rlFeed video').forEach((v) => (v.muted = RL.muted)); };
+  $('#rlClose').onclick = () => setTab('chats');
+  reelsSoundBtn(); reelsObserver();
+})();
 
 // ---------------- go ----------------
 applyAppLang();

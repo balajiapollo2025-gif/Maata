@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -238,6 +238,13 @@ app.post('/api/push/subscribe', auth, (req, res) => {
   req.user.pushSubs = list.slice(-5); save(); res.json({ ok: true });
 });
 app.post('/api/push/unsubscribe', auth, (req, res) => { req.user.pushSubs = (req.user.pushSubs || []).filter((x) => x.endpoint !== String(req.body?.endpoint || '')); save(); res.json({ ok: true }); });
+// Logging out on a device: stop its notifications and calls (web push and/or Android app)
+app.post('/api/logout', auth, (req, res) => {
+  const ep = String(req.body?.endpoint || ''), ft = String(req.body?.fcm || '');
+  if (ep) req.user.pushSubs = (req.user.pushSubs || []).filter((x) => x.endpoint !== ep);
+  if (ft) req.user.fcmTokens = (req.user.fcmTokens || []).filter((x) => x.token !== ft);
+  save(); res.json({ ok: true });
+});
 app.post('/api/push/test', auth, async (req, res) => res.json({ sent: await pushTo(req.user, { type: 'test', title: 'Maata 🦜', body: 'Notifications are working!', url: '/' }) }));
 
 // ---------- Native Android app: Firebase Cloud Messaging (full-screen incoming calls, like WhatsApp) ----------
@@ -302,7 +309,7 @@ app.post('/api/push/decline', (req, res) => {
 // Message notifications for people who are not online right now
 function previewOf(m) {
   if (m.type === 'text') return m.text.slice(0, 120);
-  return ({ image: '📷 Photo', video: '🎥 Video', audio: m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio', file: '📄 Document', contact: '👤 Contact', poll: '📊 Poll', event: '📅 Event', location: '📍 Location', gif: '🎞️ GIF', sticker: '💟 Sticker', product: '🛍️ Product' })[m.type] || 'New message';
+  return ({ image: '📷 Photo', video: '🎥 Video', audio: m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio', file: '📄 Document', contact: '👤 Contact', poll: '📊 Poll', event: '📅 Event', location: '📍 Location', gif: '🎞️ GIF', sticker: '💟 Sticker', product: '🛍️ Product', reel: '🎬 Reel' })[m.type] || 'New message';
 }
 function notifyOffline(fromUser, m) {
   if (!VAPID || m.type === 'system' || m.viewOnce) return;
@@ -2155,6 +2162,123 @@ app.post('/api/channels/:id/report', auth, (req, res) => {
   save(); io.to('admins').emit('feed', { kind: 'report', text: 'Channel reported: ' + c.name, ts: now() }); res.json({ ok: true });
 });
 
+// ---------- Reels (short videos, up to 60 s) ----------
+// Videos go to Cloudflare R2 when it is set up (free downloads, lots of space), otherwise to the database.
+const REEL_MAX = 16 * 1024 * 1024, REEL_DAY_LIMIT = 20;
+const reelHits = new Map();
+async function storeReelFile(buf, mime) {
+  if (R2_ON) {
+    const id = 'r2-' + newId();
+    const r = await fetch(r2Url('PUT', id, 600), { method: 'PUT', body: buf, headers: { 'Content-Type': mime }, signal: AbortSignal.timeout(60000) });
+    if (!r.ok) throw new Error('R2 upload failed ' + r.status);
+    return id;
+  }
+  const id = newId(); await saveChatFile(id, buf, mime); return id;
+}
+function streamStored(fileId, mime, size, req, res) {
+  if (isR2(fileId)) { res.setHeader('Cache-Control', 'private, max-age=300'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime })); }
+  let start = 0, end = size - 1, code = 200;
+  const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+  if (r) { if (r[1]) { start = parseInt(r[1], 10); end = r[2] ? Math.min(parseInt(r[2], 10), size - 1) : size - 1; } else if (r[2]) start = Math.max(0, size - parseInt(r[2], 10)); if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); } code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`); }
+  res.status(code); res.setHeader('Content-Type', mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=604800');
+  const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res);
+}
+const reelById = (id) => db.reels.find((r) => r.id === id && !r.removed);
+function canSeeReel(viewer, r) { const o = userById(r.by); return !!o && o.status !== 'blocked' && !blockedOf(o).includes(viewer.id) && !blockedOf(viewer).includes(o.id) && (!r.hidden || r.by === viewer.id); }
+function reelView(viewer, r) {
+  const o = userById(r.by) || {}, saved = contactsOf(viewer).find((c) => c.id === r.by);
+  return { id: r.id, caption: r.caption, dur: r.dur || 0, createdAt: r.createdAt, likes: (r.likes || []).length, liked: (r.likes || []).includes(viewer.id), views: r.viewCount || 0,
+    comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, mine: r.by === viewer.id, hidden: !!r.hidden,
+    by: { id: r.by, name: (saved && saved.name) || o.name || 'Maata user', photo: !!o.photo, photoV: o.photoV || 0, biz: o.business ? o.business.name : null } };
+}
+app.post('/api/reels', auth, express.raw({ type: ['video/*'], limit: '17mb' }), async (req, res) => {
+  const day = (reelHits.get(req.user.id) || []).filter((t) => now() - t < 86400000);
+  if (day.length >= REEL_DAY_LIMIT) return res.status(429).json({ error: 'You can post up to ' + REEL_DAY_LIMIT + ' reels a day.' });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a video.' });
+  if (req.body.length > REEL_MAX) return res.status(413).json({ error: 'The video is too big (16 MB max). Try a shorter video.' });
+  const dur = Math.round(Number(req.query.dur) || 0);
+  if (dur > 62) return res.status(400).json({ error: 'Reels can be up to 60 seconds.' });
+  const mime = String(req.headers['content-type'] || 'video/mp4').split(';')[0];
+  let fid; try { fid = await storeReelFile(req.body, mime); } catch (e) { console.error('[reels]', e.message); return res.status(500).json({ error: 'Could not save the video. Try again.' }); }
+  const r = { id: newId(), by: req.user.id, caption: clip(req.query.caption, 300), file: { id: fid, mime, size: req.body.length }, dur, createdAt: now(), likes: [], viewers: [], viewCount: 0 };
+  db.reels.push(r); day.push(now()); reelHits.set(req.user.id, day); save();
+  feed('reel', req.user.name + ' posted a reel');
+  res.json(reelView(req.user, r));
+});
+app.post('/api/reels/:id/thumb', auth, express.raw({ type: ['image/*'], limit: '1mb' }), async (req, res) => {
+  const r = db.reels.find((x) => x.id === req.params.id && x.by === req.user.id); if (!r) return res.status(404).json({ error: 'Not found.' });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'No picture.' });
+  const id = newId(); await saveChatFile(id, req.body, 'image/jpeg'); r.thumb = { id, size: req.body.length }; save(); res.json({ ok: true });
+});
+const viewerFromQuery = (req) => { try { return findUserByToken(String(req.query.t || '')); } catch { return null; } };
+app.get('/api/reels/file/:id', (req, res) => {
+  const v = viewerFromQuery(req), r = reelById(req.params.id) || (v && db.reels.find((x) => x.id === req.params.id && x.by === v.id));
+  if (!v || !r || !canSeeReel(v, r)) return res.status(404).end();
+  streamStored(r.file.id, r.file.mime, r.file.size, req, res);
+});
+app.get('/api/reels/thumb/:id', (req, res) => {
+  const v = viewerFromQuery(req), r = db.reels.find((x) => x.id === req.params.id);
+  if (!v || !r || !r.thumb || r.removed) return res.status(404).end();
+  streamStored(r.thumb.id, 'image/jpeg', r.thumb.size, req, res);
+});
+app.get('/api/reels', auth, (req, res) => {
+  const tab = String(req.query.tab || 'foryou'), me2 = req.user, contacts = new Set(contactsOf(me2).map((c) => c.id));
+  let list = db.reels.filter((r) => !r.removed && canSeeReel(me2, r));
+  if (tab === 'friends') list = list.filter((r) => contacts.has(r.by));
+  else if (tab === 'mine') list = list.filter((r) => r.by === me2.id);
+  else if (tab.startsWith('user:')) list = list.filter((r) => r.by === tab.slice(5));
+  else list = list.filter((r) => !r.hidden);
+  if (tab === 'foryou') { // simple ranking: fresh + liked + watched, friends a little higher, unseen first
+    const score = (r) => { const ageH = (now() - r.createdAt) / 3600000; return ((r.likes || []).length * 3 + (r.viewCount || 0) * 0.3 + (contacts.has(r.by) ? 8 : 0) + 5) / Math.pow(ageH + 2, 1.2) - ((r.viewers || []).includes(me2.id) ? 1000 : 0); };
+    list.sort((a, b) => score(b) - score(a));
+  } else list.sort((a, b) => b.createdAt - a.createdAt);
+  const first = String(req.query.first || '');
+  if (first) { const f = db.reels.find((r) => r.id === first && !r.removed && canSeeReel(me2, r)); if (f) list = [f, ...list.filter((r) => r.id !== first)]; }
+  const skip = Math.max(0, Number(req.query.skip) || 0);
+  res.json(list.slice(skip, skip + 15).map((r) => reelView(me2, r)));
+});
+app.post('/api/reels/:id/view', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r) return res.status(404).json({});
+  if (!(r.viewers || []).includes(req.user.id)) { (r.viewers = r.viewers || []).push(req.user.id); if (r.viewers.length > 20000) r.viewers = r.viewers.slice(-20000); r.viewCount = (r.viewCount || 0) + 1; save(); }
+  res.json({ views: r.viewCount });
+});
+app.post('/api/reels/:id/like', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r || !canSeeReel(req.user, r)) return res.status(404).json({ error: 'Reel not found.' });
+  r.likes = r.likes || []; const i = r.likes.indexOf(req.user.id);
+  if (i >= 0) r.likes.splice(i, 1); else r.likes.push(req.user.id);
+  save(); res.json({ likes: r.likes.length, liked: i < 0 });
+});
+app.get('/api/reels/:id/comments', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r || !canSeeReel(req.user, r)) return res.status(404).json({ error: 'Reel not found.' });
+  res.json(db.reelComments.filter((c) => c.reelId === r.id).slice(-200).map((c) => { const u = userById(c.by) || {}; return { id: c.id, text: c.text, ts: c.ts, by: { id: c.by, name: u.name || 'Maata user', photo: !!u.photo, photoV: u.photoV || 0 }, mine: c.by === req.user.id, canDelete: c.by === req.user.id || r.by === req.user.id }; }));
+});
+const commentHits = new Map();
+app.post('/api/reels/:id/comments', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r || !canSeeReel(req.user, r)) return res.status(404).json({ error: 'Reel not found.' });
+  const text = clip(req.body?.text, 500); if (!text) return res.status(400).json({ error: 'Write a comment.' });
+  const hits = (commentHits.get(req.user.id) || []).filter((t) => now() - t < 60000); if (hits.length >= 20) return res.status(429).json({ error: 'Slow down a little.' });
+  hits.push(now()); commentHits.set(req.user.id, hits);
+  const c = { id: newId(), reelId: r.id, by: req.user.id, text, ts: now() }; db.reelComments.push(c); save();
+  res.json({ id: c.id, text, ts: c.ts, by: { id: req.user.id, name: req.user.name, photo: !!req.user.photo, photoV: req.user.photoV || 0 }, mine: true, canDelete: true });
+});
+app.delete('/api/reels/comments/:cid', auth, (req, res) => {
+  const c = db.reelComments.find((x) => x.id === req.params.cid); const r = c && db.reels.find((x) => x.id === c.reelId);
+  if (!c || !(c.by === req.user.id || (r && r.by === req.user.id))) return res.status(403).json({ error: 'Not allowed.' });
+  db.reelComments = db.reelComments.filter((x) => x.id !== c.id); save(); res.json({ ok: true });
+});
+app.delete('/api/reels/:id', auth, (req, res) => {
+  const r = db.reels.find((x) => x.id === req.params.id && x.by === req.user.id); if (!r) return res.status(404).json({ error: 'Not found.' });
+  deleteChatFile(r.file.id); if (r.thumb) deleteChatFile(r.thumb.id);
+  db.reels = db.reels.filter((x) => x.id !== r.id); db.reelComments = db.reelComments.filter((c) => c.reelId !== r.id); save(); res.json({ ok: true });
+});
+app.post('/api/reels/:id/report', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r) return res.status(404).json({ error: 'Reel not found.' });
+  r.reports = r.reports || []; if (!r.reports.some((x) => x.by === req.user.id)) r.reports.push({ by: req.user.id, reason: clip(req.body?.reason, 200), ts: now() });
+  if (r.reports.length >= 3 && !r.reviewed) r.hidden = true; // hidden from For You until an admin checks it
+  db.reports.push({ id: newId(), by: req.user.id, reported: r.by, reason: 'Reel: ' + (clip(req.body?.reason, 200) || 'reported') + (r.caption ? ' — "' + r.caption.slice(0, 60) + '"' : ''), ts: now(), status: 'open' });
+  save(); io.to('admins').emit('feed', { kind: 'report', text: 'Reel reported', ts: now() }); res.json({ ok: true });
+});
+
 // ---------- Admin API ----------
 function adminAuth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -2297,6 +2421,24 @@ app.post('/admin/api/channels/:id/remove', adminAuth, (req, res) => {
   res.json({ removed: c.removed });
 });
 
+// Reels moderation
+app.get('/admin/api/reels', adminAuth, (req, res) => res.json(db.reels.slice().sort((a, b) => (b.reports || []).length - (a.reports || []).length || b.createdAt - a.createdAt).slice(0, 200).map((r) => { const u = userById(r.by) || {}; return { id: r.id, caption: r.caption, ownerName: u.name || 'Deleted user', ownerPhone: u.phone || '', createdAt: r.createdAt, likes: (r.likes || []).length, views: r.viewCount || 0, reports: (r.reports || []).map((x) => x.reason || 'reported'), removed: !!r.removed, hidden: !!r.hidden, hasThumb: !!r.thumb }; })));
+app.get('/admin/api/reels/:id/:what', (req, res) => {
+  try { if (jwt.verify(String(req.query.t || ''), JWT_SECRET).typ !== 'admin') throw 0; } catch { return res.status(401).end(); }
+  const r = db.reels.find((x) => x.id === req.params.id); if (!r) return res.status(404).end();
+  if (req.params.what === 'thumb' && r.thumb) return streamStored(r.thumb.id, 'image/jpeg', r.thumb.size, req, res);
+  if (req.params.what === 'video') return streamStored(r.file.id, r.file.mime, r.file.size, req, res);
+  res.status(404).end();
+});
+app.post('/admin/api/reels/:id/:action', adminAuth, (req, res) => {
+  const r = db.reels.find((x) => x.id === req.params.id); if (!r) return res.status(404).json({ error: 'Not found.' });
+  if (req.params.action === 'remove') { r.removed = true; r.hidden = true; }
+  else if (req.params.action === 'restore') { r.removed = false; r.hidden = false; r.reviewed = true; }
+  else if (req.params.action === 'approve') { r.hidden = false; r.reviewed = true; r.reports = []; }
+  else return res.status(400).json({ error: 'Unknown action.' });
+  save(); audit(req.admin, 'reel-' + req.params.action, (r.caption || 'reel').slice(0, 60), ''); res.json({ ok: true });
+});
+
 app.get('/admin/api/users', adminAuth, (req, res) => {
   const q = String(req.query.q || '').toLowerCase().trim();
   const filter = String(req.query.filter || 'all');
@@ -2395,6 +2537,8 @@ function deleteAccountData(u, why) {
   db.aichats = db.aichats.filter((x) => x.userId !== u.id);
   for (const c of db.channels) { if (c.ownerId === u.id) c.removed = true; c.followers = (c.followers || []).filter((x) => x !== u.id); }
   db.logins = db.logins.filter((x) => x.userId !== u.id);
+  for (const r of db.reels.filter((x) => x.by === u.id)) { deleteChatFile(r.file.id); if (r.thumb) deleteChatFile(r.thumb.id); }
+  db.reels = db.reels.filter((x) => x.by !== u.id); db.reelComments = db.reelComments.filter((c) => c.by !== u.id);
   save();
   for (const w of removedWatchers) io.to('user:' + w).emit('user:removed', { id: u.id });
 }
@@ -2600,12 +2744,16 @@ io.on('connection', (socket) => {
     const reply = (x) => typeof ack === 'function' && ack(x);
     const ok = canMessage(socket.user, String(p?.to || ''));
     if (ok.error) return reply({ error: ok.error });
-    const type = ['contact', 'poll', 'event', 'location', 'gif', 'sticker', 'product'].includes(p?.type) ? p.type : 'text';
+    const type = ['contact', 'poll', 'event', 'location', 'gif', 'sticker', 'product', 'reel'].includes(p?.type) ? p.type : 'text';
     const str = (v, n) => String(v ?? '').trim().slice(0, n);
     let fields;
     if (type === 'text') {
       const text = str(p?.text, 4000); if (!text) return reply({ error: 'Message not sent.' });
       fields = { type, text };
+    } else if (type === 'reel') {
+      const rl = db.reels.find((x) => x.id === String(p?.reel?.id || '') && !x.removed);
+      if (!rl) return reply({ error: 'Reel not found.' });
+      fields = { type, reel: { id: rl.id, caption: (rl.caption || '').slice(0, 120), byName: (userById(rl.by) || {}).name || 'Maata user', hasThumb: !!rl.thumb }, text: clip(p?.text, 500) };
     } else if (type === 'product') {
       const pr = db.products.find((x) => x.id === String(p?.product?.id || ''));
       if (!pr) return reply({ error: 'Product not found.' });
@@ -2728,6 +2876,7 @@ io.on('connection', (socket) => {
         if (m.location) f.location = { lat: m.location.lat, lng: m.location.lng, acc: m.location.acc, live: false };
         if (m.gif) f.gif = { ...m.gif };
         if (m.product) f.product = { ...m.product };
+        if (m.reel) f.reel = { ...m.reel };
         if (m.sticker) f.sticker = { ...m.sticker };
         deliverMessage(socket.user, ok.target, f, null); sent++;
       }

@@ -183,6 +183,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="messages"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat report</button>
     <button data-view="logins"><svg class="ico" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>Login report</button>
     <button data-view="ads"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Ads <span class="count" id="adCount" hidden></span></button>
+    <button data-view="reels"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="M10 12v5l4.5-2.5z"/></svg>Reels <span class="count" id="rlCount" hidden></span></button>
     <button data-view="channels"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>Channels</button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
@@ -284,6 +285,12 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="top"><h2>Channels</h2></div>
       <p class="muted" style="margin-top:-6px">Public channels anyone can follow. Remove channels that spread spam, scams, hate or adult content. You can restore them later.</p>
       <div class="card"><table><thead><tr><th>Channel</th><th>Owner</th><th>Followers</th><th>Updates</th><th>Created</th><th></th></tr></thead><tbody id="chTbody"></tbody></table></div>
+    </section>
+
+    <section data-page="reels" hidden>
+      <div class="top"><h2>Reels</h2></div>
+      <p class="muted" style="margin-top:-6px">Reported reels come first. A reel with 3+ reports is hidden from "For you" until you check it. Remove anything with nudity, violence, hate, scams, or someone else's film/music.</p>
+      <div id="rlGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
     </section>
 
     <!-- ANNOUNCEMENTS -->
@@ -403,7 +410,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -603,6 +610,24 @@ async function loadReports() {
     const note = prompt('What action was taken? (optional)'); if (note === null) return;
     try { await api(`/admin/api/reports/${b.dataset.resolve}/resolve`, { method: 'POST', body: JSON.stringify({ note }) }); toast('Complaint resolved.'); loadReports(); } catch (e) { toast(e.message); }
   });
+}
+
+// ---------- reels ----------
+async function loadReelsAdmin() {
+  const list = await api('/admin/api/reels');
+  const n = list.filter((r) => r.reports.length && !r.removed).length; $('#rlCount').textContent = n; $('#rlCount').hidden = !n;
+  const t = encodeURIComponent(token);
+  $('#rlGrid').innerHTML = list.length ? list.map((r) => `<div class="card" style="padding:10px">
+    <a href="/admin/api/reels/${esc(r.id)}/video?t=${t}" target="_blank" rel="noopener" title="Watch"><div style="height:260px;border-radius:10px;background:#111 ${r.hasThumb ? `url('/admin/api/reels/${esc(r.id)}/thumb?t=${t}') center/cover` : ''};display:grid;place-items:center;color:#fff;font-size:30px">▶</div></a>
+    <div style="margin-top:8px"><b>${esc(r.ownerName)}</b> <span class="muted">${esc(r.ownerPhone)}</span></div>
+    <div class="muted" style="font-size:13px">${esc((r.caption || '').slice(0, 90))}</div>
+    <div class="muted" style="font-size:12.5px;margin:4px 0">❤️ ${r.likes} · 👁 ${r.views} · ${dt(r.createdAt)}</div>
+    ${r.reports.length ? `<div style="font-size:12.5px;color:#C8413A;margin-bottom:6px">🚩 ${r.reports.length} report(s): ${esc(r.reports.join(' · ').slice(0, 120))}</div>` : ''}
+    ${r.removed ? '<span class="tag t-red">Removed</span> ' : r.hidden ? '<span class="tag t-amber">Hidden</span> ' : ''}
+    <div class="actions" style="margin:6px 0 0">
+      ${r.removed ? `<button class="btn" data-rl="${esc(r.id)}" data-act="restore">Restore</button>` : `<button class="btn danger" data-rl="${esc(r.id)}" data-act="remove">Remove</button>${r.hidden || r.reports.length ? `<button class="btn ok" data-rl="${esc(r.id)}" data-act="approve">It's OK</button>` : ''}`}
+    </div></div>`).join('') : '<div class="card empty">No reels yet.</div>';
+  $$('[data-rl]').forEach((b) => b.onclick = async () => { try { await api(`/admin/api/reels/${b.dataset.rl}/${b.dataset.act}`, { method: 'POST', body: '{}' }); toast('Done.'); loadReelsAdmin(); } catch (e) { toast(e.message); } });
 }
 
 // ---------- channels ----------
