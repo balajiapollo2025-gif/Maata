@@ -1016,6 +1016,51 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .as-tiles button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px;border-radius:16px;background:var(--line);color:var(--ink);font-weight:600;font-size:14px}
 .as-tiles .ic{font-size:30px}
 .collage-prev{width:100%;max-height:52vh;object-fit:contain;border-radius:14px;background:#000}
+/* ================= Maata Studio ================= */
+.studio{position:fixed;inset:0;z-index:31;background:#0B0F14;color:#fff;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.st-top{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.st-top b{flex:1;font-size:17px}
+.st-ib{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:18px}
+.st-next{padding:9px 18px;border-radius:999px;background:#21C063;color:#fff;font-weight:700}
+.st-stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px;overflow:hidden}
+.st-canvas{width:auto;height:auto;max-height:100%;max-width:100%;border-radius:14px;background:#000;touch-action:none;display:block}
+.st-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:24px}
+.st-play.on{opacity:0;width:100%;height:100%;border-radius:0;background:transparent}
+.st-tl{display:flex;align-items:center;gap:10px;padding:4px 14px}
+.st-tl input{flex:1;accent-color:#21C063}
+.st-time{font-size:12.5px;opacity:.8;min-width:86px;text-align:right}
+.st-tools{display:flex;gap:4px;overflow-x:auto;padding:6px 8px;border-top:1px solid #1E2630;scrollbar-width:none}
+.st-tools::-webkit-scrollbar{display:none}
+.st-tools button{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:12px;background:none;color:#cfd6dc;font-size:11.5px;min-width:64px}
+.st-tools button .i{font-size:21px}
+.st-tools button[aria-pressed="true"]{background:#1C2A36;color:#fff}
+.st-panel{max-height:36vh;overflow-y:auto;padding:8px 14px 12px;background:#121820}
+.st-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:14px}
+.st-row span{min-width:110px;opacity:.85}.st-row input[type=range]{flex:1;accent-color:#21C063}.st-row select{flex:1;padding:8px;border-radius:10px;background:#1C2530;color:#fff;border:1px solid #2A3644}
+.st-note{font-size:13px;opacity:.8;margin:4px 0 8px}
+.st-ai{display:block;width:100%;margin:6px 0;padding:11px;border-radius:12px;background:linear-gradient(90deg,#1DAA61,#1B7A8F);color:#fff;font-weight:700}
+.st-ai:disabled{opacity:.6}
+.st-panel textarea{width:100%;box-sizing:border-box;border-radius:12px;padding:10px;background:#1C2530;color:#fff;border:1px solid #2A3644;font:inherit;font-size:15px}
+.st-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.st-chips button{padding:7px 12px;border-radius:999px;background:#1C2530;color:#dfe5ea;font-size:13px;font-weight:600}
+.st-chips button[aria-pressed="true"]{background:#21C063;color:#fff}
+.st-colors{display:flex;gap:10px;margin:8px 0;flex-wrap:wrap}
+.st-colors button{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.3)}
+.st-colors button[aria-pressed="true"]{outline:3px solid #21C063;outline-offset:2px}
+.st-filters{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.st-filters button{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;color:#dfe5ea;font-size:12px}
+.st-filters .sw{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#F9A826,#E2366B 45%,#1B7A8F)}
+.st-filters button[aria-pressed="true"] .sw{outline:3px solid #21C063;outline-offset:2px}
+.st-emojis{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.st-emojis button{font-size:28px;background:none;padding:4px}
+.st-music{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.st-music button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;background:#1C2530;color:#dfe5ea;font-size:12px;font-weight:600}
+.st-music .i{font-size:24px}
+.st-music button[aria-pressed="true"]{background:#21C063;color:#fff}
+.st-subs{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.st-subs div{display:flex;gap:6px}.st-subs .tm{padding:6px 8px;border-radius:8px;background:#1C2530;color:#9fe3bf;font-size:12px}
+.st-subs input{flex:1;padding:7px 10px;border-radius:8px;background:#1C2530;color:#fff;border:1px solid #2A3644;font:inherit}
+.st-thumb{width:110px;border-radius:10px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -6687,6 +6732,7 @@ const isMobileLayout = () => matchMedia('(max-width:760px)').matches;
 // the screens, top-most first, each with how to close it
 const BACK_LAYERS = [
   ['.qr-scan', () => { const b = document.querySelector('.qr-scan .qr-close'); if (b) b.click(); }],
+  ['#studio', () => { if (!$('#moreSheet').hidden) return closeSheet('moreSheet'); if (confirm('Discard this reel?')) stClose(); }],
   ['.ci-photo', () => document.querySelector('.ci-photo').remove()],
   ['.menu-shade', () => closeMsgMenu()],
   ['#mediaView', () => closeMediaView()],
@@ -6895,8 +6941,12 @@ function reelCreate() {
       b.onclick = () => { const fi = el('input'); fi.type = 'file'; fi.accept = 'video/*'; if (capture) fi.setAttribute('capture', 'user'); fi.hidden = true; document.body.append(fi); fi.onchange = () => { const f = fi.files[0]; fi.remove(); if (f) reelPrepare(f); }; fi.click(); };
       list.append(b);
     };
-    pick('🎥  Record a video', true); pick('🖼️  Choose from gallery', false);
-    list.append(el('p', 'info-note', 'Up to 60 seconds. Please share only your own videos — no film songs or clips you do not own, nothing violent, adult or hateful.'));
+    const studio = (label, accept, multiple, capture) => { const b = el('button', 'sheet-btn', label); b.onclick = async () => { closeSheet('moreSheet'); const f = await pickFiles(accept, multiple, capture); if (f.length) openStudio(f); }; list.append(b); };
+    studio('🎥  Record a video', 'video/*', false, 'user');
+    studio('🖼️  Video from gallery', 'video/*', false);
+    studio('📸  Photo reel (choose up to 15 photos)', 'image/*', true);
+    const q = el('button', 'sheet-btn', '⚡  Quick post (no editing)'); q.onclick = () => { closeSheet('moreSheet'); pickFiles('video/*', false).then((f) => f[0] && reelPrepare(f[0])); }; list.append(q);
+    list.append(el('p', 'info-note', '🎬 Maata Studio: trim, filters, text, stickers, music, AI background, AI subtitles in Indian languages and AI voice. Share only your own videos — nothing violent, adult or hateful.'));
   });
 }
 function videoMeta(file) {
@@ -7191,6 +7241,514 @@ async function makeCollage() {
   $('#igPlus').onclick = igCreateMenu; $('#igHeart').onclick = igActivity;
   $('#rlHome').onclick = () => igSetView('home');
 })();
+
+// ======================================================================================
+// 🎬 MAATA STUDIO — reel editor that runs on the phone: trim, filters, text, stickers,
+// generated music (no copyright), AI background, AI subtitles in Indian languages, AI voice-over
+// ======================================================================================
+const SW = 720, SH = 1280, SLIDE = 3; // output size, seconds per photo in a photo reel
+const STF = { none: ['Normal', ''], vivid: ['Vivid', 'saturate(1.5) contrast(1.08)'], warm: ['Warm', 'sepia(.22) saturate(1.35) brightness(1.03)'], cool: ['Cool', 'hue-rotate(-12deg) saturate(1.1) brightness(1.02)'], bw: ['B&W', 'grayscale(1) contrast(1.18)'], vintage: ['Vintage', 'sepia(.5) contrast(.92) brightness(1.06) saturate(.85)'], cinema: ['Cinema', 'contrast(1.25) saturate(.82) brightness(.94)'], glow: ['Glow', 'brightness(1.14) saturate(1.22) contrast(.95)'], fade: ['Fade', 'contrast(.82) brightness(1.1) saturate(.8)'], drama: ['Drama', 'contrast(1.4) saturate(1.3) brightness(.9)'] };
+const ST_FONTS = { bold: ['Bold', (s) => '800 ' + s + 'px Roboto, "Noto Sans Telugu", system-ui, sans-serif'], serif: ['Elegant', (s) => 'italic 600 ' + s + 'px Georgia, "Noto Serif Telugu", serif'], hand: ['Hand', (s) => '700 ' + s + 'px "Comic Sans MS", "Segoe Print", cursive'], mono: ['Type', (s) => '700 ' + s + 'px "Courier New", monospace'] };
+const ST_COLORS = ['#FFFFFF', '#111111', '#FFD60A', '#FF3B5C', '#21C063', '#3D8BDB', '#FF7A3D', '#B388FF'];
+let ST = null;
+const stRange = () => Math.max(0.5, ST.trimE - ST.trimS);
+const stFmt = (x) => { x = Math.max(0, Math.round(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
+function stCover(w, h) { const s = Math.max(SW / w, SH / h); const dw = w * s, dh = h * s; return [(SW - dw) / 2, (SH - dh) / 2, dw, dh]; }
+function stFilterStr() { const f = STF[ST.filter][1], a = ST.adj; return (f + ` brightness(${a.b / 100}) contrast(${a.c / 100}) saturate(${a.s / 100})`).trim(); }
+
+// ---------- open the studio with a video or photos ----------
+async function openStudio(files) {
+  const vids = files.filter((f) => f.type.startsWith('video/')), imgs = files.filter((f) => f.type.startsWith('image/'));
+  if (!vids.length && !imgs.length) return toast('Choose a video or photos.');
+  ST = { src: vids.length ? 'video' : 'slides', file: vids[0] || null, video: null, slides: [], dur: 0, trimS: 0, trimE: 0, t: 0, playing: false, last: 0,
+    filter: 'none', adj: { b: 100, c: 100, s: 100 }, layers: [], sel: null, drag: null, music: { style: null, el: null, vol: 0.55, name: '' }, origVol: 1, voice: null,
+    bg: { mode: 'none', color: '#0F4C5C', img: null }, subs: { segs: [], style: 'box', on: true }, seg: null, mask: null, maskReady: false, watermark: true,
+    audio: null, exporting: false, thumb: null, tool: 'trim' };
+  if (ST.src === 'video') {
+    const v = document.createElement('video'); v.src = URL.createObjectURL(ST.file); v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
+    await new Promise((ok, bad) => { v.onloadedmetadata = ok; v.onerror = () => bad(new Error('This video cannot be opened on this phone.')); }).catch((e) => { toast(e.message); ST = null; });
+    if (!ST) return;
+    ST.video = v; ST.dur = v.duration || 0; ST.trimE = Math.min(ST.dur, 60);
+    if (ST.dur > 60) toast('✂️ Video is ' + Math.round(ST.dur) + ' s — choose the best 60 seconds with Trim.');
+  } else {
+    for (const f of imgs.slice(0, 15)) { try { ST.slides.push(await createImageBitmap(f)); } catch {} }
+    if (!ST.slides.length) { ST = null; return toast('Could not open those photos.'); }
+    ST.dur = Math.min(60, ST.slides.length * SLIDE); ST.trimE = ST.dur;
+  }
+  stBuildUI(); stDraw(); stTool('trim');
+  if (ST.src === 'video') { ST.video.currentTime = 0.05; ST.video.onseeked = () => { if (!ST.playing) stDraw(); }; }
+}
+function stBuildUI() {
+  const ov = el('section', 'studio'); ov.id = 'studio'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Maata Studio');
+  const top = el('div', 'st-top');
+  const x = el('button', 'st-ib', '✕'); x.setAttribute('aria-label', 'Close'); x.onclick = () => { if (confirm('Discard this reel?')) stClose(); };
+  const nx = el('button', 'st-next', 'Next ›'); nx.onclick = stNext;
+  top.append(x, el('b', null, '🎬 Maata Studio'), nx);
+  const stage = el('div', 'st-stage'); const c = el('canvas'); c.width = SW; c.height = SH; c.className = 'st-canvas'; ST.canvas = c; ST.ctx = c.getContext('2d');
+  const pp = el('button', 'st-play', '▶'); pp.setAttribute('aria-label', 'Play'); pp.onclick = () => (ST.playing ? stPause() : stPlay()); ST.ppBtn = pp;
+  stage.append(c, pp);
+  const tl = el('div', 'st-tl'); const head = el('input'); head.type = 'range'; head.min = 0; head.max = 1000; head.value = 0; head.setAttribute('aria-label', 'Position');
+  head.oninput = () => { stSeek(ST.trimS + stRange() * head.value / 1000); }; ST.head = head;
+  const tm = el('span', 'st-time'); ST.timeEl = tm; tl.append(head, tm);
+  const tools = el('div', 'st-tools');
+  const T = [['trim', '✂️', 'Trim'], ['filter', '🎨', 'Filters'], ['adjust', '✨', 'Enhance'], ['text', '🔤', 'Text'], ['sticker', '😀', 'Stickers'], ['music', '🎵', 'Music'], ['bg', '🖼️', 'AI Background'], ['subs', '💬', 'AI Subtitles'], ['voice', '🗣️', 'AI Voice'], ['cover', '🎯', 'Cover']];
+  for (const [id, ic, label] of T) { const b = el('button'); b.dataset.tool = id; b.append(el('span', 'i', ic), el('span', null, label)); b.onclick = () => stTool(id); tools.append(b); }
+  const panel = el('div', 'st-panel'); ST.panel = panel;
+  ov.append(top, stage, tl, tools, panel); document.body.append(ov);
+  // drag text / stickers on the picture
+  const pos = (e) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * SW / r.width, (e.clientY - r.top) * SH / r.height]; };
+  c.addEventListener('pointerdown', (e) => {
+    const [px, py] = pos(e);
+    const hit = [...ST.layers].reverse().find((l) => l._box && px >= l._box[0] - 20 && px <= l._box[0] + l._box[2] + 20 && py >= l._box[1] - 20 && py <= l._box[1] + l._box[3] + 20);
+    if (!hit) { if (ST.sel) { ST.sel = null; if (ST.tool === 'text') stTool('text'); stDraw(); } return; }
+    ST.sel = hit; ST.drag = [px - hit.x, py - hit.y]; c.setPointerCapture(e.pointerId); stTool(hit.kind === 'sticker' ? 'sticker' : 'text'); stDraw();
+  });
+  c.addEventListener('pointermove', (e) => { if (!ST.drag || !ST.sel) return; const [px, py] = pos(e); ST.sel.x = Math.max(20, Math.min(SW - 20, px - ST.drag[0])); ST.sel.y = Math.max(40, Math.min(SH - 20, py - ST.drag[1])); if (!ST.playing) stDraw(); });
+  c.addEventListener('pointerup', () => (ST.drag = null));
+}
+function stClose() { stPause(); try { ST.audio && ST.audio.ac.close(); } catch {} const o = $('#studio'); if (o) o.remove(); ST = null; }
+
+// ---------- playback clock ----------
+function stSeek(t) {
+  ST.t = Math.max(ST.trimS, Math.min(ST.trimE, t));
+  if (ST.video) ST.video.currentTime = ST.t;
+  if (ST.playing) { stMusicRestart(); stVoiceSync(true); }
+  stDraw();
+}
+async function stPlay() {
+  if (ST.playing) return;
+  const a = stAudio(); if (a.ac.state === 'suspended') await a.ac.resume().catch(() => {});
+  if (ST.t >= ST.trimE - 0.05) stSeek(ST.trimS);
+  ST.playing = true; ST.ppBtn.textContent = '❚❚'; ST.ppBtn.classList.add('on');
+  if (ST.video) { ST.video.muted = false; await ST.video.play().catch(() => {}); }
+  ST.last = performance.now(); stMusicRestart(); stVoiceSync(true);
+  const loop = () => {
+    if (!ST || !ST.playing) return;
+    const now = performance.now();
+    if (ST.video) ST.t = ST.video.currentTime; else ST.t += (now - ST.last) / 1000;
+    ST.last = now;
+    if (ST.t >= ST.trimE) {
+      if (ST.exporting) { ST.onEnd && ST.onEnd(); return; }
+      stSeek(ST.trimS);
+    }
+    stVoiceSync(false); stDraw(); ST.raf = requestAnimationFrame(loop);
+  };
+  ST.raf = requestAnimationFrame(loop);
+}
+function stPause() {
+  if (!ST) return; ST.playing = false; cancelAnimationFrame(ST.raf);
+  if (ST.video) ST.video.pause(); stMusicStop(); if (ST.voice && ST.voice.el) ST.voice.el.pause();
+  if (ST.ppBtn) { ST.ppBtn.textContent = '▶'; ST.ppBtn.classList.remove('on'); }
+}
+
+// ---------- drawing one frame ----------
+function stSourceFrame(ctx, t, filt) {
+  ctx.save(); ctx.filter = filt || 'none';
+  if (ST.video) { const v = ST.video; if (v.videoWidth) { const [x, y, w, h] = stCover(v.videoWidth, v.videoHeight); ctx.drawImage(v, x, y, w, h); } }
+  else {
+    const i = Math.min(ST.slides.length - 1, Math.floor(t / SLIDE)), p = (t % SLIDE) / SLIDE;
+    const drawSlide = (img, prog, alpha, k) => { const z = 1 + 0.12 * prog, [x, y, w, h] = stCover(img.width, img.height); const dx = (k % 2 ? -1 : 1) * 30 * prog; ctx.globalAlpha = alpha; ctx.drawImage(img, x - (w * z - w) / 2 + dx, y - (h * z - h) / 2, w * z, h * z); ctx.globalAlpha = 1; };
+    drawSlide(ST.slides[i], p, 1, i);
+    if (p > 0.83 && i + 1 < ST.slides.length) drawSlide(ST.slides[i + 1], 0, (p - 0.83) / 0.17, i + 1); // cross-fade to the next photo
+  }
+  ctx.restore();
+}
+function stDraw() {
+  if (!ST) return;
+  const ctx = ST.ctx, t = ST.t, filt = stFilterStr();
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, SW, SH);
+  if (ST.bg.mode !== 'none' && ST.seg) stDrawWithBackground(ctx, t, filt); else stSourceFrame(ctx, t, filt);
+  const rel = t - ST.trimS;
+  for (const l of ST.layers) stDrawLayer(ctx, l, rel);
+  if (ST.subs.on && ST.subs.segs.length) stDrawSub(ctx, t);
+  if (ST.watermark) { ctx.save(); ctx.globalAlpha = 0.55; ctx.font = '700 26px Roboto, sans-serif'; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.textAlign = 'right'; ctx.fillText('🦜 Maata', SW - 24, SH - 30); ctx.restore(); }
+  if (ST.sel && ST.sel._box && !ST.exporting) { const b = ST.sel._box; ctx.save(); ctx.strokeStyle = '#21C063'; ctx.lineWidth = 3; ctx.setLineDash([10, 8]); ctx.strokeRect(b[0] - 10, b[1] - 10, b[2] + 20, b[3] + 20); ctx.restore(); }
+  if (ST.head && !ST.exporting) { ST.head.value = String(Math.round((t - ST.trimS) / stRange() * 1000)); ST.timeEl.textContent = stFmt(rel) + ' / ' + stFmt(stRange()); }
+}
+function stDrawLayer(ctx, l, rel) {
+  let alpha = 1, scale = 1, dy = 0, text = l.text;
+  const p = Math.min(1, Math.max(0, rel / 0.6));
+  if (l.anim === 'fade') alpha = p; else if (l.anim === 'pop') scale = p < 1 ? 0.3 + 0.85 * p - 0.15 * Math.sin(p * Math.PI) : 1; else if (l.anim === 'slide') { dy = (1 - p) * 120; alpha = p; }
+  else if (l.anim === 'type') text = l.text.slice(0, Math.ceil(l.text.length * Math.min(1, rel / Math.max(0.8, l.text.length * 0.06))));
+  else if (l.anim === 'pulse') scale = 1 + 0.06 * Math.sin(rel * 6);
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(Math.min(Math.max(l.x, SW / 2 - 40), SW / 2 + 40) === l.x ? l.x : l.x, l.y + dy); ctx.scale(scale, scale);
+  ctx.font = l.kind === 'sticker' ? l.size + 'px "Noto Color Emoji", "Apple Color Emoji", sans-serif' : ST_FONTS[l.font][1](l.size);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let lines = String(text).split('\n'), lh = l.size * 1.22, w = Math.max(...lines.map((s) => ctx.measureText(s).width), 10), h = lh * lines.length;
+  const fit = Math.min(1, (SW - 70) / (w + l.size * 0.7)); if (fit < 1) { ctx.scale(fit, fit); scale *= fit; } // long text shrinks to fit the screen
+  if (l.bg && l.kind !== 'sticker') { ctx.fillStyle = l.color === '#FFFFFF' || l.color === '#FFD60A' ? 'rgba(0,0,0,.62)' : 'rgba(255,255,255,.88)'; const pad = l.size * 0.35; stRound(ctx, -w / 2 - pad, -h / 2 - pad * 0.7, w + pad * 2, h + pad * 1.4, l.size * 0.35); ctx.fill(); }
+  if (l.kind !== 'sticker') { ctx.shadowColor = l.bg ? 'transparent' : 'rgba(0,0,0,.55)'; ctx.shadowBlur = l.bg ? 0 : 8; ctx.fillStyle = l.color; }
+  lines.forEach((s, i) => ctx.fillText(s, 0, -h / 2 + lh * (i + 0.5)));
+  ctx.restore();
+  l._box = [l.x - w * scale / 2, l.y + dy - h * scale / 2, w * scale, h * scale];
+}
+function stRound(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function stDrawSub(ctx, t) {
+  const s = ST.subs.segs.find((x) => t >= x.start && t < x.end); if (!s) return;
+  const st = ST.subs.style; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const size = 44; ctx.font = '800 ' + size + 'px Roboto, "Noto Sans Telugu", "Noto Sans Devanagari", sans-serif';
+  const words = s.text.split(/\s+/), lines = []; let cur = '';
+  for (const w of words) { const tr = cur ? cur + ' ' + w : w; if (ctx.measureText(tr).width > SW - 120 && cur) { lines.push(cur); cur = w; } else cur = tr; }
+  if (cur) lines.push(cur);
+  const y0 = SH * 0.74, lh = size * 1.3;
+  lines.forEach((ln, i) => {
+    const y = y0 + i * lh, w = ctx.measureText(ln).width;
+    if (st === 'box') { ctx.fillStyle = 'rgba(0,0,0,.66)'; stRound(ctx, SW / 2 - w / 2 - 18, y - size * 0.68, w + 36, size * 1.36, 14); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(ln, SW / 2, y); }
+    else if (st === 'yellow') { ctx.lineWidth = 9; ctx.strokeStyle = '#000'; ctx.strokeText(ln, SW / 2, y); ctx.fillStyle = '#FFD60A'; ctx.fillText(ln, SW / 2, y); }
+    else if (st === 'neon') { ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 22; ctx.fillStyle = '#E6FDFF'; ctx.fillText(ln, SW / 2, y); }
+    else { // karaoke: words light up as they are spoken
+      const p = (t - s.start) / (s.end - s.start), all = s.text.split(/\s+/).length, lit = Math.ceil(p * all);
+      let shown = 0; for (let k = 0; k < i; k++) shown += lines[k].split(/\s+/).length;
+      let x = SW / 2 - w / 2; ctx.textAlign = 'left';
+      for (const wd of ln.split(/\s+/)) { shown++; ctx.lineWidth = 8; ctx.strokeStyle = '#000'; ctx.strokeText(wd, x, y); ctx.fillStyle = shown <= lit ? '#FFD60A' : '#fff'; ctx.fillText(wd, x, y); x += ctx.measureText(wd + ' ').width; }
+      ctx.textAlign = 'center';
+    }
+  });
+  ctx.restore();
+}
+
+// ---------- AI background (person cut-out) ----------
+let mpLoading = null;
+async function stLoadSegmenter() {
+  if (ST.seg) return ST.seg;
+  if (!mpLoading) mpLoading = (async () => {
+    const V = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    const vision = await import(V + '/vision_bundle.mjs');
+    const files = await vision.FilesetResolver.forVisionTasks(V + '/wasm');
+    return vision.ImageSegmenter.createFromOptions(files, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite', delegate: 'GPU' }, runningMode: 'VIDEO', outputConfidenceMasks: true, outputCategoryMask: false });
+  })();
+  try { ST.seg = await mpLoading; } catch (e) { mpLoading = null; throw new Error('AI background could not load. Check your internet and try again.'); }
+  return ST.seg;
+}
+function stDrawWithBackground(ctx, t, filt) {
+  const src = ST._src || (ST._src = Object.assign(document.createElement('canvas'), { width: SW, height: SH })), sx = src.getContext('2d');
+  sx.clearRect(0, 0, SW, SH); stSourceFrame(sx, t, filt);
+  try {
+    ST.seg.segmentForVideo(src, performance.now(), (res) => {
+      const m = res.confidenceMasks && res.confidenceMasks[0]; if (!m) return;
+      const w = m.width, h = m.height, conf = m.getAsFloat32Array();
+      const mc = ST._mask || (ST._mask = document.createElement('canvas')); if (mc.width !== w) { mc.width = w; mc.height = h; }
+      const mx = mc.getContext('2d'), id = mx.createImageData(w, h);
+      for (let i = 0; i < conf.length; i++) { const a = conf[i]; id.data[i * 4 + 3] = a > 0.6 ? 255 : a < 0.3 ? 0 : (a - 0.3) / 0.3 * 255; }
+      mx.putImageData(id, 0, 0); ST.maskReady = true;
+    });
+  } catch { /* keep last mask */ }
+  // 1) background
+  if (ST.bg.mode === 'blur') { ctx.save(); ctx.filter = 'blur(22px) brightness(.9)'; ctx.drawImage(src, -40, -40, SW + 80, SH + 80); ctx.restore(); }
+  else if (ST.bg.mode === 'color') { const g = ctx.createLinearGradient(0, 0, 0, SH); g.addColorStop(0, ST.bg.color); g.addColorStop(1, '#000'); ctx.fillStyle = g; ctx.fillRect(0, 0, SW, SH); }
+  else if (ST.bg.mode === 'image' && ST.bg.img) { const [x, y, w, h] = stCover(ST.bg.img.width, ST.bg.img.height); ctx.drawImage(ST.bg.img, x, y, w, h); }
+  // 2) the person on top
+  if (!ST.maskReady) { ctx.drawImage(src, 0, 0); return; }
+  const pc = ST._person || (ST._person = Object.assign(document.createElement('canvas'), { width: SW, height: SH })), px = pc.getContext('2d');
+  px.globalCompositeOperation = 'source-over'; px.clearRect(0, 0, SW, SH); px.drawImage(src, 0, 0);
+  px.globalCompositeOperation = 'destination-in'; px.filter = 'blur(2px)'; px.drawImage(ST._mask, 0, 0, SW, SH); px.filter = 'none'; px.globalCompositeOperation = 'source-over';
+  ctx.drawImage(pc, 0, 0);
+}
+
+// ---------- sound: original + music + voice-over ----------
+function stAudio() {
+  if (ST.audio) return ST.audio;
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const master = ac.createGain(), dest = ac.createMediaStreamDestination();
+  master.connect(ac.destination); master.connect(dest);
+  const orig = ac.createGain(), music = ac.createGain(), voice = ac.createGain();
+  orig.gain.value = ST.origVol; music.gain.value = ST.music.vol; voice.gain.value = ST.voice ? ST.voice.vol : 1;
+  orig.connect(master); music.connect(master); voice.connect(master);
+  if (ST.video) { try { ac.createMediaElementSource(ST.video).connect(orig); } catch {} }
+  ST.audio = { ac, master, dest, orig, music, voice, sess: null, timer: null };
+  return ST.audio;
+}
+// Original music made by Maata itself (so there is no copyright problem)
+const ST_MUSIC = {
+  happy: { name: 'Happy', ic: '😊', bpm: 112, prog: [[261.6, 329.6, 392], [196, 246.9, 293.7], [220, 261.6, 329.6], [174.6, 220, 261.6]] },
+  lofi: { name: 'Lo-fi chill', ic: '🌙', bpm: 78, prog: [[146.8, 174.6, 220, 261.6], [196, 246.9, 293.7, 349.2], [130.8, 164.8, 196, 246.9], [110, 130.8, 164.8, 196]] },
+  devotional: { name: 'Devotional', ic: '🪔', bpm: 60, prog: [[130.8, 196, 261.6]] },
+  party: { name: 'Party', ic: '🎉', bpm: 124, prog: [[220, 261.6, 329.6], [174.6, 220, 261.6], [130.8, 164.8, 196], [196, 246.9, 293.7]] },
+  cinematic: { name: 'Cinematic', ic: '🎬', bpm: 70, prog: [[220, 261.6, 329.6], [174.6, 220, 261.6], [130.8, 164.8, 196], [196, 246.9, 293.7]] },
+  folk: { name: 'Folk dance', ic: '🥁', bpm: 132, prog: [[293.7, 370, 440], [261.6, 329.6, 392]] },
+};
+function stTone(a, out, f, when, dur, type, vol, lp) {
+  const o = a.ac.createOscillator(), g = a.ac.createGain(); o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(vol, when + Math.min(0.03, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  if (lp) { const fl = a.ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; o.connect(fl); fl.connect(g); } else o.connect(g);
+  g.connect(out); o.start(when); o.stop(when + dur + 0.05);
+}
+function stNoise(a, out, when, dur, vol, hp) {
+  const len = Math.floor(a.ac.sampleRate * dur), buf = a.ac.createBuffer(1, len, a.ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = a.ac.createBufferSource(); s.buffer = buf; const f = a.ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp; const g = a.ac.createGain(); g.gain.value = vol;
+  s.connect(f); f.connect(g); g.connect(out); s.start(when);
+}
+function stKick(a, out, when, vol = 0.9) { const o = a.ac.createOscillator(), g = a.ac.createGain(); o.frequency.setValueAtTime(150, when); o.frequency.exponentialRampToValueAtTime(42, when + 0.18); g.gain.setValueAtTime(vol, when); g.gain.exponentialRampToValueAtTime(0.001, when + 0.32); o.connect(g); g.connect(out); o.start(when); o.stop(when + 0.35); }
+function stBeat(style, a, out, i, when) {
+  const m = ST_MUSIC[style], b = 60 / m.bpm, ch = m.prog[Math.floor(i / 4) % m.prog.length];
+  if (style === 'happy') {
+    if (i % 2 === 0) stKick(a, out, when); else stNoise(a, out, when, 0.15, 0.35, 1800);
+    stNoise(a, out, when + b / 2, 0.05, 0.12, 7000); stNoise(a, out, when, 0.05, 0.1, 7000);
+    stTone(a, out, ch[i % ch.length] * 2, when, b * 0.45, 'triangle', 0.16); stTone(a, out, ch[(i + 1) % ch.length] * 2, when + b / 2, b * 0.45, 'triangle', 0.12);
+    if (i % 4 === 0) ch.forEach((f) => stTone(a, out, f, when, b * 3.8, 'sine', 0.07));
+  } else if (style === 'lofi') {
+    if (i % 4 === 0) ch.forEach((f) => stTone(a, out, f, when, b * 4, 'sine', 0.08, 1200));
+    if (i % 4 === 0 || i % 4 === 2.5) stKick(a, out, when, 0.6); if (i % 2 === 1) stNoise(a, out, when, 0.12, 0.18, 2500);
+    stNoise(a, out, when + b * 0.55, 0.04, 0.07, 6000); stNoise(a, out, when, 0.6, 0.012, 3000); // soft hats and a little "vinyl" hiss
+    if (i % 2 === 0) stTone(a, out, ch[(i / 2) % ch.length] * 2, when + b * 0.25, b * 0.7, 'sine', 0.09, 1800);
+  } else if (style === 'devotional') { // tanpura-like drone (Sa-Pa-Sa) and a temple bell
+    const notes = [196, 261.6, 261.6, 130.8]; stTone(a, out, notes[i % 4], when, b * 2.2, 'sawtooth', 0.05, 900); stTone(a, out, notes[i % 4] * 2, when, b * 1.5, 'sine', 0.03);
+    if (i % 4 === 0) { stTone(a, out, 880, when, 2.6, 'sine', 0.12); stTone(a, out, 1318, when, 2.0, 'sine', 0.06); stTone(a, out, 2093, when, 1.2, 'sine', 0.03); }
+  } else if (style === 'party') {
+    stKick(a, out, when, 1); stNoise(a, out, when + b / 2, 0.06, 0.2, 8000); if (i % 2 === 1) stNoise(a, out, when, 0.18, 0.3, 1500);
+    stTone(a, out, ch[0] / 2, when + b / 2, b * 0.45, 'sawtooth', 0.12, 700);
+    if (i % 4 === 1 || i % 4 === 3) ch.forEach((f) => stTone(a, out, f * 2, when + b / 2, b * 0.3, 'square', 0.035, 2500));
+  } else if (style === 'cinematic') {
+    if (i % 4 === 0) ch.forEach((f) => { const o = a.ac.createOscillator(), g = a.ac.createGain(), fl = a.ac.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = 800; g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(0.05, when + b * 1.5); g.gain.linearRampToValueAtTime(0.0001, when + b * 4.2); o.connect(fl); fl.connect(g); g.connect(out); o.start(when); o.stop(when + b * 4.3); });
+    if (i % 8 === 0) { stKick(a, out, when, 1); stNoise(a, out, when, 0.8, 0.08, 200); }
+  } else if (style === 'folk') { // dappu-style drum pattern
+    stKick(a, out, when, 0.8); stNoise(a, out, when + b / 3, 0.08, 0.3, 900); stNoise(a, out, when + 2 * b / 3, 0.08, 0.22, 900);
+    if (i % 2 === 0) stTone(a, out, ch[(i / 2) % ch.length] * 2, when, b * 0.8, 'triangle', 0.1);
+  }
+}
+function stMusicStop() {
+  const a = ST && ST.audio; if (!a) return;
+  clearInterval(a.timer); a.timer = null; if (a.sess) { try { a.sess.disconnect(); } catch {} a.sess = null; }
+  if (ST.music.el) ST.music.el.pause();
+}
+function stMusicRestart() {
+  stMusicStop(); if (!ST.playing || !ST.music.style) return;
+  const a = stAudio();
+  if (ST.music.style === 'file' && ST.music.el) { const el2 = ST.music.el; el2.currentTime = Math.max(0, ST.t - ST.trimS) % (el2.duration || 1e9); el2.play().catch(() => {}); return; }
+  const m = ST_MUSIC[ST.music.style]; if (!m) return;
+  const sess = a.ac.createGain(); sess.connect(a.music); a.sess = sess;
+  const b = 60 / m.bpm, startPos = ST.t - ST.trimS, t0 = a.ac.currentTime + 0.05 - startPos;
+  let next = Math.ceil(startPos / b);
+  const sched = () => { const ahead = a.ac.currentTime + 0.6; while (t0 + next * b < ahead) { if (t0 + next * b >= a.ac.currentTime - 0.01) stBeat(ST.music.style, a, sess, next, t0 + next * b); next++; } };
+  sched(); a.timer = setInterval(sched, 200);
+}
+function stVoiceSync(force) {
+  const v = ST.voice; if (!v || !v.el || !ST.playing) return;
+  const rel = ST.t - ST.trimS - v.at;
+  if (rel < 0 || rel > (v.el.duration || 0)) { if (!v.el.paused) v.el.pause(); return; }
+  if (force || v.el.paused) { v.el.currentTime = rel; v.el.play().catch(() => {}); }
+}
+
+// ---------- tool panels ----------
+function stTool(id) {
+  ST.tool = id; document.querySelectorAll('.st-tools [data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === id)));
+  const p = ST.panel; p.innerHTML = '';
+  const row = (label, input) => { const r = el('label', 'st-row'); r.append(el('span', null, label), input); p.append(r); return input; };
+  const slider = (min, max, val, step, on) => { const s2 = el('input'); s2.type = 'range'; s2.min = min; s2.max = max; s2.step = step || 1; s2.value = val; s2.oninput = () => on(Number(s2.value)); return s2; };
+  const chips = (items, cur, on) => { const box = el('div', 'st-chips'); for (const [v, label] of items) { const b = el('button', null, label); b.setAttribute('aria-pressed', String(v === cur)); b.onclick = () => { on(v); [...box.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; box.append(b); } p.append(box); return box; };
+  const note = (t) => p.append(el('p', 'st-note', t));
+  if (id === 'trim') {
+    if (ST.src === 'slides') { note('📸 Photo reel: ' + ST.slides.length + ' photos × ' + SLIDE + ' s with smooth zoom. Add music and text to finish it.'); }
+    const lab = el('div', 'st-note'); const upd = () => (lab.textContent = '✂️ From ' + stFmt(ST.trimS) + ' to ' + stFmt(ST.trimE) + ' · ' + Math.round(stRange()) + ' s (max 60 s)');
+    row('Start', slider(0, ST.dur, ST.trimS, 0.1, (v) => { ST.trimS = Math.min(v, ST.trimE - 1); if (ST.trimE - ST.trimS > 60) ST.trimE = ST.trimS + 60; upd(); stSeek(ST.trimS); }));
+    row('End', slider(0, ST.dur, ST.trimE, 0.1, (v) => { ST.trimE = Math.max(v, ST.trimS + 1); if (ST.trimE - ST.trimS > 60) ST.trimS = ST.trimE - 60; upd(); stSeek(Math.max(ST.trimS, ST.trimE - 1.5)); }));
+    p.append(lab); upd();
+  } else if (id === 'filter') {
+    const grid = el('div', 'st-filters');
+    for (const [k, [name, css]] of Object.entries(STF)) { const b = el('button'); b.setAttribute('aria-pressed', String(k === ST.filter)); const sw = el('span', 'sw'); sw.style.filter = css; b.append(sw, el('span', null, name)); b.onclick = () => { ST.filter = k; [...grid.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); stDraw(); }; grid.append(b); }
+    p.append(grid);
+  } else if (id === 'adjust') {
+    const ai = el('button', 'st-ai', '✨ AI Auto-enhance'); ai.onclick = () => { stAutoEnhance(); stTool('adjust'); toast('✨ Brightness, contrast and colour set for this video'); }; p.append(ai);
+    row('☀️ Brightness', slider(50, 160, ST.adj.b, 1, (v) => { ST.adj.b = v; stDraw(); }));
+    row('◐ Contrast', slider(50, 160, ST.adj.c, 1, (v) => { ST.adj.c = v; stDraw(); }));
+    row('🎨 Colour', slider(0, 200, ST.adj.s, 1, (v) => { ST.adj.s = v; stDraw(); }));
+  } else if (id === 'text') {
+    const l = ST.sel && ST.sel.kind === 'text' ? ST.sel : null;
+    const ta = el('textarea'); ta.rows = 2; ta.maxLength = 120; ta.placeholder = 'Type your text… (తెలుగు works too)'; ta.value = l ? l.text : '';
+    ta.oninput = () => { if (l) { l.text = ta.value || ' '; stDraw(); } };
+    p.append(ta);
+    if (!l) { const add = el('button', 'st-ai', '＋ Add text'); add.onclick = () => { if (!ta.value.trim()) return toast('Type something first.'); const n = { kind: 'text', text: ta.value.trim(), x: SW / 2, y: SH * 0.3 + ST.layers.length * 90, size: 64, color: '#FFFFFF', bg: true, font: 'bold', anim: 'pop' }; ST.layers.push(n); ST.sel = n; stTool('text'); stDraw(); }; p.append(add); note('Tip: drag the text on the picture to move it.'); return; }
+    const cs = el('div', 'st-colors'); for (const c of ST_COLORS) { const b = el('button'); b.style.background = c; b.setAttribute('aria-label', 'Colour ' + c); b.setAttribute('aria-pressed', String(l.color === c)); b.onclick = () => { l.color = c; stTool('text'); stDraw(); }; cs.append(b); } p.append(cs);
+    chips(Object.entries(ST_FONTS).map(([k, v]) => [k, v[0]]), l.font, (v) => { l.font = v; stDraw(); });
+    chips([['none', 'No motion'], ['pop', 'Pop'], ['fade', 'Fade'], ['slide', 'Slide up'], ['type', 'Typewriter'], ['pulse', 'Pulse']], l.anim, (v) => { l.anim = v; stDraw(); });
+    row('Size', slider(28, 140, l.size, 1, (v) => { l.size = v; stDraw(); }));
+    const opts = el('div', 'st-chips'); const bgb = el('button', null, l.bg ? '▣ Box on' : '▢ Box off'); bgb.onclick = () => { l.bg = !l.bg; bgb.textContent = l.bg ? '▣ Box on' : '▢ Box off'; stDraw(); };
+    const del = el('button', null, '🗑 Delete'); del.onclick = () => { ST.layers = ST.layers.filter((x) => x !== l); ST.sel = null; stTool('text'); stDraw(); };
+    const nw = el('button', null, '＋ New text'); nw.onclick = () => { ST.sel = null; stTool('text'); stDraw(); };
+    opts.append(bgb, del, nw); p.append(opts);
+  } else if (id === 'sticker') {
+    const em = ['🔥', '❤️', '😂', '😍', '🎉', '🙏', '👍', '💯', '✨', '⭐', '🎁', '🛍️', '📱', '💐', '🪔', '🌸', '🎊', '😎', '🤩', '💪', '👑', '🦜', '🏏', '🍛', '☕', '🎂', '💍', '🚀', '📍', '⏰'];
+    const g = el('div', 'st-emojis'); for (const e of em) { const b = el('button', null, e); b.onclick = () => { const n = { kind: 'sticker', text: e, x: SW / 2 + (Math.random() - 0.5) * 200, y: SH / 2 + (Math.random() - 0.5) * 300, size: 120, anim: 'pop' }; ST.layers.push(n); ST.sel = n; stDraw(); }; g.append(b); } p.append(g);
+    note('Badges:'); const bd = el('div', 'st-chips');
+    for (const [t, c] of [['SALE', '#FF3B5C'], ['NEW', '#21C063'], ['OFFER', '#FFD60A'], ['🔥 HOT', '#FF7A3D'], ['LIMITED', '#B388FF'], ['FREE', '#3D8BDB']]) { const b = el('button', null, t); b.onclick = () => { const n = { kind: 'text', text: t, x: SW / 2, y: SH * 0.18, size: 72, color: c, bg: true, font: 'bold', anim: 'pulse' }; ST.layers.push(n); ST.sel = n; stDraw(); }; bd.append(b); }
+    p.append(bd);
+    if (ST.sel && ST.sel.kind === 'sticker') { const l = ST.sel; row('Size', slider(50, 300, l.size, 1, (v) => { l.size = v; stDraw(); })); const del = el('button', 'st-ai', '🗑 Remove this sticker'); del.onclick = () => { ST.layers = ST.layers.filter((x) => x !== l); ST.sel = null; stTool('sticker'); stDraw(); }; p.append(del); }
+  } else if (id === 'music') {
+    note('🎵 Music made by Maata — free to use, no copyright problems.');
+    const grid = el('div', 'st-music');
+    const pick = (style, label, ic) => { const b = el('button'); b.setAttribute('aria-pressed', String(ST.music.style === style)); b.append(el('span', 'i', ic), el('span', null, label)); b.onclick = () => { ST.music.style = style; [...grid.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (style && !ST.playing) stPlay(); else stMusicRestart(); }; grid.append(b); };
+    pick(null, 'No music', '🔇'); for (const [k, m] of Object.entries(ST_MUSIC)) pick(k, m.name, m.ic);
+    p.append(grid);
+    const opts = el('div', 'st-chips');
+    const ai = el('button', null, '✨ AI pick for my reel'); ai.onclick = () => { const s2 = stAiMusic(); ST.music.style = s2; toast('✨ ' + ST_MUSIC[s2].name + ' fits your reel'); stTool('music'); if (!ST.playing) stPlay(); else stMusicRestart(); };
+    const up = el('button', null, ST.music.style === 'file' ? '📁 ' + ST.music.name : '📁 My own audio'); up.onclick = async () => { const f = (await pickFiles('audio/*', false))[0]; if (!f) return; const a = new Audio(URL.createObjectURL(f)); a.loop = true; a.crossOrigin = 'anonymous'; const au = stAudio(); try { au.ac.createMediaElementSource(a).connect(au.music); } catch {} ST.music.el = a; ST.music.style = 'file'; ST.music.name = f.name.slice(0, 22); stTool('music'); if (!ST.playing) stPlay(); else stMusicRestart(); };
+    opts.append(ai, up); p.append(opts);
+    if (ST.music.style === 'file') note('⚠️ Use only music you own or have the right to use. Film songs can get your reel removed.');
+    row('🎵 Music volume', slider(0, 100, Math.round(ST.music.vol * 100), 1, (v) => { ST.music.vol = v / 100; stAudio().music.gain.value = ST.music.vol; }));
+    if (ST.video) row('🎤 Original sound', slider(0, 100, Math.round(ST.origVol * 100), 1, (v) => { ST.origVol = v / 100; stAudio().orig.gain.value = ST.origVol; }));
+  } else if (id === 'bg') {
+    note('🖼️ AI finds the person and changes everything behind them. Works best with one person and a clear outline.');
+    const st2 = el('p', 'st-note'); p.append(st2);
+    chips([['none', 'Off'], ['blur', '💧 Blur'], ['color', '🎨 Colour'], ['image', '🖼️ My photo']], ST.bg.mode, async (v) => {
+      if (v === 'image') { const f = (await pickFiles('image/*', false))[0]; if (!f) return; ST.bg.img = await createImageBitmap(f); }
+      if (v !== 'none' && !ST.seg) { st2.textContent = '⏳ Loading the AI model (one time, about 3 MB)…'; try { await stLoadSegmenter(); st2.textContent = '✅ AI background is ready.'; } catch (e) { st2.textContent = '⚠️ ' + e.message; return; } }
+      ST.bg.mode = v; ST.maskReady = false; stDraw(); if (v === 'color') stTool('bg');
+    });
+    if (ST.bg.mode === 'color') { const cs = el('div', 'st-colors'); for (const c of ['#0F4C5C', '#7A4E9E', '#C8413A', '#1F6FB2', '#2E8B57', '#E8A317', '#111111', '#FF7A3D']) { const b = el('button'); b.style.background = c; b.onclick = () => { ST.bg.color = c; stDraw(); }; cs.append(b); } p.append(cs); }
+  } else if (id === 'subs') {
+    if (!ST.video) { note('💬 Subtitles need a video with speech. For a photo reel, use 🗣️ AI Voice.'); return; }
+    note('💬 AI listens to your video and writes subtitles — in the spoken language, or translated.');
+    const sel = el('select'); sel.add(new Option('Same as spoken', '')); for (const [c, n] of MT_LANGS) sel.add(new Option(n, c)); row('Language', sel);
+    const go = el('button', 'st-ai', ST.subs.segs.length ? '↻ Make subtitles again' : '✨ Make subtitles with AI');
+    go.onclick = async () => { go.disabled = true; go.textContent = '⏳ Listening to your video…'; try { ST.subs.segs = await stAiSubtitles(sel.value); ST.subs.on = true; toast(ST.subs.segs.length ? '💬 ' + ST.subs.segs.length + ' subtitle lines added' : 'No speech found in this part of the video.'); } catch (e) { toast(e.message); } stTool('subs'); stDraw(); };
+    p.append(go);
+    if (ST.subs.segs.length) {
+      chips([['box', 'Box'], ['yellow', 'Yellow'], ['karaoke', 'Karaoke'], ['neon', 'Neon']], ST.subs.style, (v) => { ST.subs.style = v; stDraw(); });
+      const list = el('div', 'st-subs');
+      ST.subs.segs.forEach((s2) => { const r = el('div'); const tm = el('button', 'tm', stFmt(s2.start - ST.trimS)); tm.onclick = () => stSeek(s2.start); const inp = el('input'); inp.value = s2.text; inp.oninput = () => { s2.text = inp.value; stDraw(); }; r.append(tm, inp); list.append(r); });
+      p.append(list);
+      const off = el('button', 'st-ai', ST.subs.on ? 'Hide subtitles' : 'Show subtitles'); off.onclick = () => { ST.subs.on = !ST.subs.on; stTool('subs'); stDraw(); }; p.append(off);
+    }
+  } else if (id === 'voice') {
+    note('🗣️ Type what to say — AI speaks it in a natural voice. Great for shop offers.');
+    const ta = el('textarea'); ta.rows = 3; ta.maxLength = 400; ta.placeholder = 'Diwali offer! 20% off on all chargers at Kavitha Telecom, Mount Road.'; ta.value = ST.voice ? ST.voice.text : ''; p.append(ta);
+    const sel = el('select'); for (const [c, n] of MT_LANGS) sel.add(new Option(n, c)); sel.value = ST.voice ? ST.voice.lang : (me.lang && SPEECH_LANG[me.lang] ? me.lang : 'te'); row('Language', sel);
+    const gsel = el('select'); gsel.add(new Option('Female', 'FEMALE')); gsel.add(new Option('Male', 'MALE')); gsel.value = ST.voice ? ST.voice.gender : 'FEMALE'; row('Voice', gsel);
+    const tr = el('label', 'st-row'); const trc = el('input'); trc.type = 'checkbox'; trc.checked = true; tr.append(el('span', null, 'Translate my text into this language'), trc); p.append(tr);
+    const go = el('button', 'st-ai', ST.voice ? '↻ Make voice again' : '✨ Make AI voice');
+    go.onclick = async () => {
+      if (!ta.value.trim()) return toast('Type what the voice should say.');
+      go.disabled = true; go.textContent = '⏳ Making the voice…';
+      try {
+        let text = ta.value.trim();
+        if (trc.checked) { try { text = (await api('/api/translate', { method: 'POST', body: JSON.stringify({ text, to: sel.value }) })).translated || text; } catch {} }
+        const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 400), lang: sel.value, gender: gsel.value }) });
+        const a = new Audio('data:audio/mp3;base64,' + r.audio); const au = stAudio(); try { au.ac.createMediaElementSource(a).connect(au.voice); } catch {}
+        await new Promise((ok) => { a.onloadedmetadata = ok; setTimeout(ok, 1500); });
+        ST.voice = { el: a, text: ta.value.trim(), lang: sel.value, gender: gsel.value, at: Math.max(0, ST.t - ST.trimS), vol: 1 };
+        toast('🗣️ Voice added at ' + stFmt(ST.voice.at)); if (!ST.playing) stPlay(); else stVoiceSync(true);
+      } catch (e) { toast(/voice|tts|key/i.test(e.message) ? 'AI voice needs the Google voice key on the server (GOOGLE_TRANSLATE_KEY).' : e.message); }
+      stTool('voice');
+    };
+    p.append(go);
+    if (ST.voice) {
+      row('Starts at (s)', slider(0, Math.floor(stRange()), Math.round(ST.voice.at), 0.5, (v) => { ST.voice.at = v; }));
+      row('Voice volume', slider(0, 150, Math.round(ST.voice.vol * 100), 1, (v) => { ST.voice.vol = v / 100; stAudio().voice.gain.value = ST.voice.vol; }));
+      const del = el('button', 'st-ai', '🗑 Remove voice'); del.onclick = () => { ST.voice.el.pause(); ST.voice = null; stTool('voice'); }; p.append(del);
+    }
+  } else if (id === 'cover') {
+    note('🎯 The cover is the picture people see before they tap your reel.');
+    const ai = el('button', 'st-ai', '✨ AI: pick the best moment'); ai.onclick = async () => { ai.disabled = true; ai.textContent = '⏳ Looking at your video…'; const t = await stAiCover(); stSeek(t); ST.thumb = await stSnap(); toast('🎯 Cover chosen at ' + stFmt(t - ST.trimS)); stTool('cover'); };
+    const cur = el('button', 'st-ai', '📸 Use this frame as cover'); cur.onclick = async () => { ST.thumb = await stSnap(); toast('🎯 Cover saved'); stTool('cover'); };
+    p.append(ai, cur);
+    if (ST.thumb) { const im = el('img', 'st-thumb'); im.src = URL.createObjectURL(ST.thumb); im.alt = 'Cover'; p.append(im); }
+    const wm = el('label', 'st-row'); const wc = el('input'); wc.type = 'checkbox'; wc.checked = ST.watermark; wc.onchange = () => { ST.watermark = wc.checked; stDraw(); }; wm.append(el('span', null, '🦜 Show small "Maata" mark'), wc); p.append(wm);
+  }
+}
+
+// ---------- AI helpers ----------
+function stAutoEnhance() { // looks at a small copy of the picture and balances light, contrast and colour
+  const c = document.createElement('canvas'); c.width = 72; c.height = 128; const x = c.getContext('2d'); stSourceFrame(x, ST.t, 'none');
+  x.setTransform(72 / SW, 0, 0, 128 / SH, 0, 0); stSourceFrame(x, ST.t, 'none');
+  const d = x.getImageData(0, 0, 72, 128).data; let sum = 0, sq = 0, sat = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4) { const r = d[i], g = d[i + 1], b = d[i + 2], l = 0.299 * r + 0.587 * g + 0.114 * b; sum += l; sq += l * l; sat += Math.max(r, g, b) - Math.min(r, g, b); n++; }
+  const mean = sum / n, sd = Math.sqrt(Math.max(0, sq / n - mean * mean)), s = sat / n;
+  ST.adj.b = Math.round(Math.max(85, Math.min(140, 100 * (125 / Math.max(40, mean)) ** 0.5)));
+  ST.adj.c = Math.round(Math.max(95, Math.min(135, 100 * (55 / Math.max(20, sd)) ** 0.35)));
+  ST.adj.s = Math.round(Math.max(100, Math.min(145, 100 * (60 / Math.max(15, s)) ** 0.3)));
+  stDraw();
+}
+function stAiMusic() {
+  const t = ((ST.layers.map((l) => l.text).join(' ') + ' ' + (ST.voice ? ST.voice.text : '')) || '').toLowerCase();
+  if (/god|temple|pooja|puja|bhakti|devotional|swami|ఆలయ|దేవ|పూజ|🙏|🪔/.test(t)) return 'devotional';
+  if (/party|dance|birthday|celebrat|🎉|🎂|🥳/.test(t)) return 'party';
+  if (/offer|sale|shop|new|discount|%/.test(t)) return 'happy';
+  if (/village|festival|sankranti|jatara|folk/.test(t)) return 'folk';
+  if (/travel|trip|story|journey|cinema|film/.test(t)) return 'cinematic';
+  return ST.adj.b < 100 || ST.filter === 'cinema' ? 'cinematic' : 'lofi';
+}
+async function stAiCover() {
+  if (!ST.video) return ST.trimS + Math.min(1, stRange() / 2);
+  stPause(); const c = document.createElement('canvas'); c.width = 54; c.height = 96; const x = c.getContext('2d', { willReadFrequently: true });
+  let best = ST.trimS, bestScore = -1;
+  for (let k = 1; k <= 8; k++) {
+    const t = ST.trimS + stRange() * k / 9; ST.video.currentTime = t; await new Promise((r) => { ST.video.onseeked = r; setTimeout(r, 1200); });
+    x.drawImage(ST.video, 0, 0, 54, 96); const d = x.getImageData(0, 0, 54, 96).data; let sum = 0, edge = 0;
+    for (let y = 1; y < 95; y++) for (let xx = 1; xx < 53; xx++) { const i = (y * 54 + xx) * 4, l = d[i] + d[i + 1] + d[i + 2], r = d[i + 4] + d[i + 5] + d[i + 6], dn = d[i + 216] + d[i + 217] + d[i + 218]; sum += l; edge += Math.abs(l - r) + Math.abs(l - dn); }
+    const bright = sum / (52 * 94 * 765), score = edge / 1000 - Math.abs(bright - 0.55) * 60;
+    if (score > bestScore) { bestScore = score; best = t; }
+  }
+  ST.video.onseeked = () => { if (!ST.playing) stDraw(); };
+  return best;
+}
+function stSnap() { stDraw(); const c = document.createElement('canvas'); c.width = 540; c.height = 960; c.getContext('2d').drawImage(ST.canvas, 0, 0, 540, 960); return new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85)); }
+function wavFrom(buf) { // 16 kHz mono 16-bit WAV
+  const d = buf.getChannelData(0), out = new DataView(new ArrayBuffer(44 + d.length * 2)), w = (o, s) => [...s].forEach((ch, i) => out.setUint8(o + i, ch.charCodeAt(0)));
+  w(0, 'RIFF'); out.setUint32(4, 36 + d.length * 2, true); w(8, 'WAVE'); w(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true); out.setUint32(24, 16000, true); out.setUint32(28, 32000, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, 'data'); out.setUint32(40, d.length * 2, true);
+  for (let i = 0; i < d.length; i++) out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, d[i])) * 0x7fff, true);
+  return new Blob([out], { type: 'audio/wav' });
+}
+async function stAiSubtitles(lang) {
+  const ab = await ST.file.arrayBuffer();
+  const tmp = new (window.AudioContext || window.webkitAudioContext)(); let full;
+  try { full = await tmp.decodeAudioData(ab); } catch { throw new Error('Could not read the sound of this video.'); } finally { tmp.close(); }
+  const len = Math.ceil(stRange() * 16000), off = new OfflineAudioContext(1, len, 16000), src = off.createBufferSource(); src.buffer = full; src.connect(off.destination); src.start(0, ST.trimS, stRange());
+  const wav = wavFrom(await off.startRendering());
+  const r = await fetch('/api/ai/subtitles?lang=' + encodeURIComponent(lang || ''), { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'audio/wav' }, body: wav });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'AI subtitles failed. Try again.');
+  return d.segments.map((s2) => ({ start: s2.start + ST.trimS, end: s2.end + ST.trimS, text: s2.text }));
+}
+
+// ---------- render the final reel ----------
+async function stExport(onProgress) {
+  stPause(); ST.sel = null; ST.exporting = true; stSeek(ST.trimS);
+  if (ST.video) await new Promise((r) => { ST.video.onseeked = r; setTimeout(r, 800); });
+  const a = stAudio(); if (a.ac.state === 'suspended') await a.ac.resume().catch(() => {});
+  try { a.master.disconnect(a.ac.destination); } catch {} // render quietly
+  const vs = ST.canvas.captureStream(30), stream = new MediaStream([...vs.getVideoTracks(), ...a.dest.stream.getAudioTracks()]);
+  const type = ['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 1800000, audioBitsPerSecond: 128000 }); const parts = [];
+  rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
+  const done = new Promise((r) => (rec.onstop = r));
+  const prog = setInterval(() => onProgress && onProgress(Math.min(99, Math.round((ST.t - ST.trimS) / stRange() * 100))), 300);
+  await new Promise((resolve) => { ST.onEnd = resolve; rec.start(1000); stPlay(); });
+  stPause(); rec.stop(); await done; clearInterval(prog);
+  try { a.master.connect(a.ac.destination); } catch {}
+  ST.exporting = false;
+  return new Blob(parts, { type: (type || 'video/webm').split(';')[0] });
+}
+async function stNext() {
+  stPause();
+  const dur = Math.round(stRange());
+  sheet('🎬 Post your reel', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const l = el('label'); l.append(el('span', null, 'Caption')); const cap = el('textarea'); cap.maxLength = 300; cap.placeholder = 'Say something about your reel… #maata'; l.append(cap);
+    const ai = el('button', 'linkbtn', '✨ Write caption & hashtags with AI');
+    ai.onclick = async () => { ai.disabled = true; const about = (ST.layers.map((x) => x.text).join(' ') + ' ' + (ST.voice ? ST.voice.text : '') + ' ' + ST.subs.segs.map((x) => x.text).join(' ')).trim(); try { const r = await api('/api/ai/write', { method: 'POST', body: JSON.stringify({ task: 'write', text: 'A short catchy caption (max 20 words) with 3 relevant hashtags for a short video reel about: ' + (cap.value || about || 'my day') }) }); cap.value = r.text.slice(0, 300); } catch (e) { toast(e.message); } ai.disabled = false; };
+    const prog = el('div', 'rl-prog'); prog.hidden = true;
+    const go = el('button', 'primary', 'Make video & post');
+    go.onclick = async () => {
+      go.disabled = true; prog.hidden = false; prog.textContent = '🎬 Making your video… 0% (keep this screen open)';
+      try {
+        if (!ST.thumb) { stSeek(ST.trimS + Math.min(1, stRange() / 3)); if (ST.video) await new Promise((r) => { ST.video.onseeked = r; setTimeout(r, 800); }); ST.thumb = await stSnap(); }
+        const blob = await stExport((p2) => (prog.textContent = '🎬 Making your video… ' + p2 + '% (keep this screen open)'));
+        if (blob.size > 16 * 1024 * 1024) throw new Error('The video came out too big. Make it shorter with Trim.');
+        const r = await new Promise((ok, bad) => {
+          const x = new XMLHttpRequest(); x.open('POST', '/api/reels?caption=' + encodeURIComponent(cap.value.trim()) + '&dur=' + dur);
+          x.setRequestHeader('Authorization', 'Bearer ' + token); x.setRequestHeader('Content-Type', blob.type || 'video/webm');
+          x.upload.onprogress = (e) => { if (e.lengthComputable) prog.textContent = '⬆️ Uploading… ' + Math.round(e.loaded / e.total * 100) + '%'; };
+          x.onload = () => { let d = {}; try { d = JSON.parse(x.responseText); } catch {} x.status < 300 ? ok(d) : bad(new Error(d.error || 'Upload failed.')); };
+          x.onerror = () => bad(new Error('Upload failed. Check your internet.')); x.send(blob);
+        });
+        if (ST.thumb) await fetch('/api/reels/' + r.id + '/thumb', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: ST.thumb }).catch(() => {});
+        closeSheet('moreSheet'); stClose(); toast('🎬 Your reel is live!');
+        RL.tab = 'user:' + me.id; RL.first = r.id; if (tab !== 'reels') { IG.pendingView = 'reels'; setTab('reels'); } else igSetView('reels');
+      } catch (e) { toast(e.message); go.disabled = false; prog.hidden = true; if (ST) ST.exporting = false; }
+    };
+    box.append(l, ai, prog, go); list.append(box); cap.focus();
+  });
+}
 
 // ---------------- go ----------------
 applyAppLang();

@@ -1669,6 +1669,24 @@ app.post('/api/ai/write', auth, async (req, res) => {
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] });
   res.json({ text: plain(r.text).replace(/^"|"$/g, '').slice(0, 4000) });
 });
+// Maata Studio: AI subtitles. The phone sends the reel's sound (small WAV); Gemini listens and returns timed lines,
+// in the spoken language or translated into the chosen Indian language (in its own script).
+const SUB_LANGS = { te: 'Telugu (Telugu script)', en: 'English', hi: 'Hindi (Devanagari)', ta: 'Tamil (Tamil script)', kn: 'Kannada (Kannada script)', ml: 'Malayalam (Malayalam script)', bn: 'Bengali (Bengali script)', mr: 'Marathi (Devanagari)', gu: 'Gujarati (Gujarati script)', pa: 'Punjabi (Gurmukhi)', ur: 'Urdu (Urdu script)', or: 'Odia (Odia script)' };
+app.post('/api/ai/subtitles', auth, express.raw({ type: ['audio/*'], limit: '6mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || req.body.length < 1000) return res.status(400).json({ error: 'No sound found in this video.' });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const lang = SUB_LANGS[String(req.query.lang || '')] || null, mime = String(req.headers['content-type'] || 'audio/wav').split(';')[0];
+  const prompt = 'Listen to this short video sound and write subtitles. Return ONLY a JSON array like [{"start":0.0,"end":2.4,"text":"..."}]. ' +
+    'start/end are seconds from the beginning. Keep each line short (at most 7 words), in time order, no overlaps. ' +
+    (lang ? 'Write every line in ' + lang + ' (translate if the speech is in another language).' : 'Write the words in the language that is spoken, in that language\'s own script.') +
+    ' If there is no speech (only music or silence), return [].';
+  const r = await gemini('You are a careful subtitle writer.', [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text: prompt }] }], { json: true, maxTokens: 2000, temperature: 0.2 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
+  let segs = []; try { segs = JSON.parse(r.text.replace(/^```json|```$/g, '').trim()); } catch { segs = []; }
+  segs = (Array.isArray(segs) ? segs : []).map((x) => ({ start: Math.max(0, Number(x.start) || 0), end: Math.max(0, Number(x.end) || 0), text: String(x.text || '').trim().slice(0, 80) }))
+    .filter((x) => x.text && x.end > x.start).slice(0, 120);
+  res.json({ segments: segs });
+});
 app.post('/api/ai/replies', auth, async (req, res) => {
   const msgs = (Array.isArray(req.body?.messages) ? req.body.messages : []).slice(-6).map((m) => ({ who: m.mine ? 'Me' : 'Them', text: String(m.text || '').slice(0, 500) })).filter((m) => m.text);
   if (!msgs.length) return res.status(400).json({ error: 'No messages to reply to.' });
