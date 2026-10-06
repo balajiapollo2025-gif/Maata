@@ -694,14 +694,32 @@ app.post('/api/tts', auth, async (req, res) => {
 });
 
 const trHits = new Map();
+const TR_NAMES = { te: 'Telugu (Telugu script)', en: 'English', hi: 'Hindi (Devanagari script)', ta: 'Tamil (Tamil script)', kn: 'Kannada (Kannada script)', ml: 'Malayalam (Malayalam script)', bn: 'Bengali (Bengali script)', mr: 'Marathi (Devanagari script)', gu: 'Gujarati (Gujarati script)', pa: 'Punjabi (Gurmukhi script)', ur: 'Urdu (Urdu script)', or: 'Odia (Odia script)' };
+const aiTrCache = new Map();
+async function aiTranslate(text, to) {
+  const name = TR_NAMES[to]; if (!name) return null;
+  const k = to + '|' + text; if (aiTrCache.has(k)) return aiTrCache.get(k);
+  const r = await gemini('You are a translator for a chat app in India. Translate the user message into ' + name + '. The message may be in any language, including Indian languages typed in English letters (for example Telugu like "eppudu vastharu" or Hindi like "kab aaoge"). Keep names, numbers, phone numbers and addresses exactly. Keep the tone. Return ONLY the translation, nothing else.',
+    [{ role: 'user', parts: [{ text }] }], { maxTokens: 800, temperature: 0.2 });
+  if (r.error || !r.text) return null;
+  const out = r.text.trim().replace(/^["“]|["”]$/g, '');
+  aiTrCache.set(k, out); if (aiTrCache.size > 3000) aiTrCache.delete(aiTrCache.keys().next().value);
+  return out;
+}
 app.post('/api/translate', auth, async (req, res) => {
   const list = (trHits.get(req.user.id) || []).filter((t) => now() - t < 60_000);
   list.push(now()); trHits.set(req.user.id, list);
   if (list.length > 60) return res.status(429).json({ error: 'Too many translations. Wait a minute.' });
   const to = String(req.body?.to || req.user.lang || 'en');
   const from = String(req.body?.from || '');
-  const out = await translate(req.body?.text, from, to);
-  if (!out) return res.status(502).json({ error: 'Translation is not available right now.' });
+  const text = String(req.body?.text || '').trim().slice(0, 1500);
+  if (!text) return res.status(400).json({ error: 'Nothing to translate.' });
+  let out = LANGS.includes(to) ? await translate(text, from, to) : null;
+  // The free/Google translators fail on Indian languages typed in English letters ("eppudu vastharu") or when their
+  // daily limit is over — then Maata AI (Gemini) translates. It understands mixed and romanised Telugu, Hindi, Tamil…
+  const unchanged = out && out.trim().toLowerCase() === text.toLowerCase();
+  if ((!out || unchanged) && GEMINI_KEY) out = await aiTranslate(text, to) || out;
+  if (!out) return res.status(502).json({ error: 'Translation is not available right now. Try again in a minute.' });
   res.json({ translated: out });
 });
 
