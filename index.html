@@ -984,8 +984,8 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .ig-ph .who b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ig-ph .who small{font-size:12.5px;color:var(--muted)}
 .ig-follow{padding:6px 16px;border-radius:9px;border:1.5px solid var(--line);background:none;color:var(--ink);font-weight:700;font-size:13.5px}
 .ig-follow.blue{background:#0095F6;border-color:#0095F6;color:#fff}
-.ig-media{position:relative;background:#000;aspect-ratio:4/5;max-height:72vh;width:100%;overflow:hidden}
-.ig-media video{width:100%;height:100%;object-fit:cover}
+.ig-media{position:relative;background:#000;aspect-ratio:9/14;max-height:74vh;width:100%;overflow:hidden}
+.ig-media video{width:100%;height:100%;object-fit:contain;background:#000}
 .ig-mute{position:absolute;right:10px;bottom:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center;font-size:14px}
 .ig-full{position:absolute;right:10px;top:10px;padding:5px 10px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:12.5px;font-weight:600}
 .ig-acts{display:flex;align-items:center;gap:4px;padding:6px 6px 0}
@@ -7255,6 +7255,8 @@ let ST = null;
 const stEnd = () => (ST.video && ST.video.duration ? Math.min(ST.trimE, ST.video.duration - 0.06) : ST.trimE);
 const stRange = () => Math.max(0.5, stEnd() - ST.trimS);
 const stFmt = (x) => { x = Math.max(0, Math.round(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
+function stContain(w, h) { const s = Math.min(SW / w, SH / h); const dw = w * s, dh = h * s; return [(SW - dw) / 2, (SH - dh) / 2, dw, dh]; }
+const stNeedsFit = (w, h) => Math.abs(w / h - SW / SH) > 0.04; // not already a 9:16 phone video
 function stCover(w, h) { const s = Math.max(SW / w, SH / h); const dw = w * s, dh = h * s; return [(SW - dw) / 2, (SH - dh) / 2, dw, dh]; }
 function stFilterStr() { const f = STF[ST.filter][1], a = ST.adj; return (f + ` brightness(${a.b / 100}) contrast(${a.c / 100}) saturate(${a.s / 100})`).trim(); }
 
@@ -7263,7 +7265,7 @@ async function openStudio(files) {
   const vids = files.filter((f) => f.type.startsWith('video/')), imgs = files.filter((f) => f.type.startsWith('image/'));
   if (!vids.length && !imgs.length) return toast('Choose a video or photos.');
   ST = { src: vids.length ? 'video' : 'slides', file: vids[0] || null, video: null, slides: [], dur: 0, trimS: 0, trimE: 0, t: 0, playing: false, last: 0,
-    filter: 'none', adj: { b: 100, c: 100, s: 100 }, layers: [], sel: null, drag: null, music: { style: null, el: null, vol: 0.55, name: '' }, origVol: 1, voice: null,
+    fit: 'fit', filter: 'none', adj: { b: 100, c: 100, s: 100 }, layers: [], sel: null, drag: null, music: { style: null, el: null, vol: 0.55, name: '' }, origVol: 1, voice: null,
     bg: { mode: 'none', color: '#0F4C5C', img: null }, subs: { segs: [], style: 'box', on: true }, seg: null, mask: null, maskReady: false, watermark: true,
     audio: null, exporting: false, thumb: null, tool: 'trim' };
   if (ST.src === 'video') {
@@ -7347,10 +7349,25 @@ function stPause() {
 // ---------- drawing one frame ----------
 function stSourceFrame(ctx, t, filt) {
   ctx.save(); ctx.filter = filt || 'none';
-  if (ST.video) { const v = ST.video; if (v.videoWidth) { const [x, y, w, h] = stCover(v.videoWidth, v.videoHeight); ctx.drawImage(v, x, y, w, h); } }
+  if (ST.video) {
+    const v = ST.video; if (v.videoWidth) {
+      const vw = v.videoWidth, vh = v.videoHeight;
+      if (ST.fit === 'fit' && stNeedsFit(vw, vh)) {
+        const [bx, by, bw, bh] = stCover(vw, vh); ctx.save(); ctx.filter = (filt ? filt + ' ' : '') + 'blur(30px) brightness(.62)'; ctx.drawImage(v, bx - 40, by - 40, bw + 80, bh + 80); ctx.restore();
+        const [x, y, w, h] = stContain(vw, vh); ctx.drawImage(v, x, y, w, h);
+      } else { const [x, y, w, h] = stCover(vw, vh); ctx.drawImage(v, x, y, w, h); }
+    }
+  }
   else {
     const i = Math.min(ST.slides.length - 1, Math.floor(t / SLIDE)), p = (t % SLIDE) / SLIDE;
-    const drawSlide = (img, prog, alpha, k) => { const z = 1 + 0.12 * prog, [x, y, w, h] = stCover(img.width, img.height); const dx = (k % 2 ? -1 : 1) * 30 * prog; ctx.globalAlpha = alpha; ctx.drawImage(img, x - (w * z - w) / 2 + dx, y - (h * z - h) / 2, w * z, h * z); ctx.globalAlpha = 1; };
+    const drawSlide = (img, prog, alpha, k) => {
+      ctx.globalAlpha = alpha;
+      if (ST.fit === 'fit' && stNeedsFit(img.width, img.height)) { // whole photo on a blurred copy, with a gentle zoom
+        const [bx, by, bw, bh] = stCover(img.width, img.height); ctx.save(); ctx.filter = (filt ? filt + ' ' : '') + 'blur(30px) brightness(.62)'; ctx.drawImage(img, bx - 40, by - 40, bw + 80, bh + 80); ctx.restore();
+        const z = 1 + 0.05 * prog, [x, y, w, h] = stContain(img.width, img.height); ctx.drawImage(img, x - (w * z - w) / 2, y - (h * z - h) / 2, w * z, h * z);
+      } else { const z = 1 + 0.12 * prog, [x, y, w, h] = stCover(img.width, img.height); const dx = (k % 2 ? -1 : 1) * 30 * prog; ctx.drawImage(img, x - (w * z - w) / 2 + dx, y - (h * z - h) / 2, w * z, h * z); }
+      ctx.globalAlpha = 1;
+    };
     drawSlide(ST.slides[i], p, 1, i);
     if (p > 0.83 && i + 1 < ST.slides.length) drawSlide(ST.slides[i + 1], 0, (p - 0.83) / 0.17, i + 1); // cross-fade to the next photo
   }
@@ -7543,6 +7560,7 @@ function stTool(id) {
   const note = (t) => p.append(el('p', 'st-note', t));
   if (id === 'trim') {
     if (ST.src === 'slides') { note('📸 Photo reel: ' + ST.slides.length + ' photos × ' + SLIDE + ' s with smooth zoom. Add music and text to finish it.'); }
+    chips([['fit', '📐 Show whole video'], ['fill', '🔍 Fill screen (cuts edges)']], ST.fit, (v) => { ST.fit = v; stDraw(); });
     const lab = el('div', 'st-note'); const upd = () => (lab.textContent = '✂️ From ' + stFmt(ST.trimS) + ' to ' + stFmt(ST.trimE) + ' · ' + Math.round(stRange()) + ' s (max 60 s)');
     row('Start', slider(0, ST.dur, ST.trimS, 0.1, (v) => { ST.trimS = Math.min(v, ST.trimE - 1); if (ST.trimE - ST.trimS > 60) ST.trimE = ST.trimS + 60; upd(); stSeek(ST.trimS); }));
     row('End', slider(0, ST.dur, ST.trimE, 0.1, (v) => { ST.trimE = Math.max(v, ST.trimS + 1); if (ST.trimE - ST.trimS > 60) ST.trimS = ST.trimE - 60; upd(); stSeek(Math.max(ST.trimS, ST.trimE - 1.5)); }));
