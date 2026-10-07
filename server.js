@@ -358,13 +358,59 @@ app.get('/sw.js', (req, res) => {
   res.send(SW_SOURCE);
 });
 const SW_SOURCE = `
-const CACHE = 'maata-shell-v2';
+const CACHE = 'maata-shell-v3';
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icons/icon-192.png', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 // Pages: always try the network first (so updates show at once), fall back to the saved copy when offline
+// Chat photos, videos, voice notes and files are kept on the phone. The server deletes them after some days,
+// so the phone's copy is what people see later (like WhatsApp).
+const MEDIA = 'maata-media-v1';
+const mediaKey = (u) => { const x = new URL(u); return x.origin + x.pathname; };
+function sliceResp(resp, range) {
+  return resp.blob().then((b) => {
+    const m = /bytes=(\\d*)-(\\d*)/.exec(range || ''); let a = 0, z = b.size - 1;
+    if (m) { if (m[1]) { a = parseInt(m[1], 10); if (m[2]) z = Math.min(parseInt(m[2], 10), b.size - 1); } else if (m[2]) a = Math.max(0, b.size - parseInt(m[2], 10)); }
+    if (a > z) return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */' + b.size } });
+    return new Response(b.slice(a, z + 1), { status: 206, headers: { 'Content-Type': resp.headers.get('Content-Type') || '', 'Content-Range': 'bytes ' + a + '-' + z + '/' + b.size, 'Content-Length': String(z - a + 1), 'Accept-Ranges': 'bytes' } });
+  });
+}
+function expiredResp(req) {
+  if (req.destination === 'image') return new Response('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect width="320" height="200" rx="14" fill="#E4E7EC"/><text x="160" y="92" text-anchor="middle" font-family="sans-serif" font-size="34">⌛</text><text x="160" y="128" text-anchor="middle" font-family="sans-serif" font-size="15" fill="#475467">Photo expired</text><text x="160" y="150" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#667085">No copy on this phone</text></svg>', { status: 200, headers: { 'Content-Type': 'image/svg+xml', 'X-Maata-Expired': '1' } });
+  return new Response(null, { status: 410, headers: { 'X-Maata-Expired': '1' } });
+}
+function saveFull(url, key) {
+  return fetch(url, { credentials: 'same-origin' }).then((net) => {
+    if (!net.ok || net.status !== 200) return net;
+    const len = Number(net.headers.get('content-length') || 0);
+    if (len && len > 80 * 1048576) return net; // very big files are not kept
+    return net.blob().then((b) => caches.open(MEDIA).then((c) => c.put(key, new Response(b, { headers: { 'Content-Type': net.headers.get('content-type') || b.type || '', 'Content-Length': String(b.size), 'X-Saved': String(Date.now()) } }))).then(() => caches.open(MEDIA)).then((c) => c.match(key)));
+  });
+}
+async function mediaFetch(e) {
+  const req = e.request, key = mediaKey(req.url), range = req.headers.get('range');
+  const hit = await (await caches.open(MEDIA)).match(key);
+  if (hit) return range ? sliceResp(hit, range) : hit;
+  if (range) { // a video or voice note starting to play: stream it now, keep a full copy in the background
+    let net; try { net = await fetch(req); } catch { return expiredResp(req); }
+    if (net.status === 410) return expiredResp(req);
+    if (net.ok) e.waitUntil(saveFull(req.url, key).catch(() => {}));
+    return net;
+  }
+  try { const r = await saveFull(req.url, key); return r && r.status === 410 ? expiredResp(req) : r; } catch { return expiredResp(req); }
+}
+self.addEventListener('fetch', (e) => {
+  const u = new URL(e.request.url);
+  if (e.request.method === 'GET' && u.origin === location.origin && u.pathname.startsWith('/api/chat/file/') && !u.searchParams.has('dl')) e.respondWith(mediaFetch(e));
+});
+self.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d.type === 'media-stats') e.waitUntil(caches.open(MEDIA).then(async (c) => { const ks = await c.keys(); let bytes = 0, videos = 0, vbytes = 0; for (const k of ks) { const r = await c.match(k); const n = Number(r.headers.get('Content-Length') || 0); bytes += n; if (/^video\\//.test(r.headers.get('Content-Type') || '')) { videos++; vbytes += n; } } e.source.postMessage({ type: 'media-stats', files: ks.length, bytes, videos, vbytes }); }));
+  if (d.type === 'media-clear') e.waitUntil(caches.open(MEDIA).then(async (c) => { let n = 0; for (const k of await c.keys()) { const r = await c.match(k); if (d.videosOnly && !/^video\\//.test(r.headers.get('Content-Type') || '')) continue; await c.delete(k); n++; } e.source.postMessage({ type: 'media-cleared', n }); }));
+});
 self.addEventListener('fetch', (e) => {
   const r = e.request;
   if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
+  if (r.url.includes('/api/chat/file/')) return;
   if (r.mode === 'navigate') { e.respondWith(fetch(r).then((res) => { const cp = res.clone(); caches.open(CACHE).then((c) => c.put('/', cp)); return res; }).catch(() => caches.match('/'))); return; }
   if (r.url.includes('/icons/')) e.respondWith(caches.match(r).then((m) => m || fetch(r)));
 });
@@ -889,6 +935,38 @@ app.get('/api/messages/:userId', auth, (req, res) => {
   res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
 });
 
+// ---------- Chat media is kept on the server for MEDIA_KEEP_DAYS (default 30), then only on phones ----------
+// Existing media gets the same grace period counted from the day this feature was first switched on.
+const MEDIA_KEEP_DAYS = process.env.MEDIA_KEEP_DAYS === undefined ? 30 : Math.max(0, Number(process.env.MEDIA_KEEP_DAYS) || 0);
+let purging = false;
+async function purgeOldMedia() {
+  if (!MEDIA_KEEP_DAYS || purging || !db.meta) return;
+  purging = true;
+  try {
+    let meta = db.meta.find((x) => x.id === 'mediaPurge');
+    if (!meta) { meta = { id: 'mediaPurge', since: now(), freed: 0, files: 0, createdAt: now() }; db.meta.push(meta); save(); }
+    const cutoff = now() - MEDIA_KEEP_DAYS * 86400000;
+    if (meta.since > cutoff) return; // still inside the first grace period
+    let n = 0;
+    for (const m of db.messages) {
+      if (!m.file || m.file.purged || m.ts > cutoff || !m.file.id) continue;
+      try { await deleteChatFile(m.file.id); } catch { /* already gone */ }
+      m.file.purged = true; m.file.purgedAt = now(); meta.freed += m.file.size || 0; meta.files++; n++;
+      if (n >= 400) break; // a little at a time
+    }
+    if (n) { meta.lastRun = now(); save(); console.log('[media] removed ' + n + ' old chat files from the server (phones keep their copies)'); }
+  } finally { purging = false; }
+}
+setTimeout(() => purgeOldMedia().catch(() => {}), 90_000); setInterval(() => purgeOldMedia().catch(() => {}), 3600_000);
+app.get('/admin/api/storage', adminAuth, (req, res) => {
+  const meta = (db.meta || []).find((x) => x.id === 'mediaPurge') || null;
+  let files = 0, bytes = 0; for (const m of db.messages) if (m.file && !m.file.purged) { files++; bytes += m.file.size || 0; }
+  const reels = db.reels.reduce((n, r) => n + (r.file ? r.file.size || 0 : 0), 0);
+  res.json({ keepDays: MEDIA_KEEP_DAYS, chatFiles: files, chatBytes: bytes, reelBytes: reels, reels: db.reels.length, freedFiles: meta ? meta.files : 0, freedBytes: meta ? meta.freed : 0,
+    graceUntil: meta ? meta.since + MEDIA_KEEP_DAYS * 86400000 : null, lastRun: meta ? meta.lastRun || null : null, r2: R2_ON });
+});
+app.get('/api/media-policy', auth, (req, res) => { const meta = (db.meta || []).find((x) => x.id === 'mediaPurge'); res.json({ keepDays: MEDIA_KEEP_DAYS, graceUntil: meta ? meta.since + MEDIA_KEEP_DAYS * 86400000 : null }); });
+
 // ---------- Chat backup (saved by the customer to Google Drive / phone) ----------
 app.get('/api/backup/export', auth, (req, res) => {
   const me = req.user.id, hidden = new Set(req.user.hiddenMsgs || []), cleared = req.user.clearedChats || {}, t = now();
@@ -1353,6 +1431,7 @@ app.get('/api/chat/file/:id', (req, res) => {
   const m = db.messages.find((x) => x.file && x.file.id === req.params.id && (x.from === viewer.id || x.to === viewer.id || (x.group && gMember(groupById(x.group), viewer.id))));
   if (!m) return res.status(404).end();
   if (m.viewOnce && (m.from === viewer.id || (m.openedBy || {})[viewer.id])) return res.status(410).end(); // view once: opened already (or sender)
+  if (m.file.purged) { res.setHeader('X-Maata-Expired', '1'); return res.status(410).end(); } // older than the keep period: only phones have it now
   if (isR2(m.file.id)) { // big file on R2: send the phone a short-lived signed link (supports seeking in videos)
     const inline2 = /^(image|video|audio)\//.test(m.file.mime) || m.file.mime === 'application/pdf';
     res.setHeader('Cache-Control', 'private, max-age=300');

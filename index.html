@@ -1159,6 +1159,10 @@ html.dark .st-open{background:#3A2E10;color:#F6CF7A}html.dark .st-prog{backgroun
 .bkv-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px}
 .bkv-msgs .day{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);padding:3px 10px;border-radius:999px;margin:8px 0}
 .bkv-msgs .sender{font-size:12px;font-weight:700;color:var(--leaf)}
+.expired-note{margin:4px 0;padding:10px 12px;border-radius:12px;background:var(--line);color:var(--muted);font-size:13px;line-height:1.4;max-width:260px}
+.stor-row{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:15px}
+.stor-bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin:4px 0}.stor-bar i{display:block;height:100%;background:var(--leaf)}
+.stor-pol{display:flex;flex-direction:column;gap:2px;margin:6px 0}.stor-pol>span{font-weight:600;font-size:14.5px}
 </style>
 </head>
 <body>
@@ -1539,6 +1543,7 @@ html.dark .st-open{background:#3A2E10;color:#F6CF7A}html.dark .st-prog{backgroun
 
     <div class="set-group" style="margin-top:4px"><div class="set-row" id="setRunning"></div></div>
     <div id="setNotifBox"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setStorage">📦 Storage &amp; data <span style="margin-left:auto;color:var(--muted)">Phone copies</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setBackup">☁️ Chat backup <span style="margin-left:auto;color:var(--muted)">Google Drive</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setSupport">🆘 Help &amp; Support <span style="margin-left:auto;color:var(--muted)">Raise a complaint</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCallQ">🎧 Call quality <span style="margin-left:auto;color:var(--muted)" id="setCallQName"></span></button></div>
@@ -1899,6 +1904,7 @@ function renderContacts() {
 
 // ---------------- chat ----------------
 async function openChat(id) {
+  setTimeout(() => { try { (messagesCache[id] || []).slice(-80).forEach((m) => { if (m.file && !m.file.purged && (m.from === me.id || adAllowed(m))) savePhoneCopy(m); }); } catch {} }, 2500);
   if (selectMode && activeId !== id) exitSelect();
   if (activeId !== id) { cancelReply(); pinIndex = 0; }
   closeMsgMenu(); if (MV.id) closeMediaView(); closeChatSearch(); if (editing) cancelEdit();
@@ -1963,6 +1969,7 @@ function markRead() {
 document.addEventListener('visibilitychange', () => { if (activeId) markRead(); });
 
 async function onMessage(m) {
+  try { if (m && m.file && m.from !== me.id && adAllowed(m)) savePhoneCopy(m); } catch {}
   const other = m.group ? 'g:' + m.group : m.from === me.id ? m.to : m.from;
   if (m.group && !userById(other)) { await reloadUsers(); }
   else if (!userById(other)) {
@@ -3248,17 +3255,19 @@ function renderRich(b, m, mine) {
     b.classList.add('media');
     const w = el('div', 'vidwrap'); w.setAttribute('role', 'button'); w.tabIndex = 0; w.setAttribute('aria-label', 'Play video');
     const v = el('video'); v.preload = 'metadata'; v.muted = true; v.playsInline = true; v.src = fileUrl(f) + '#t=0.1';
+    if (f.purged) v.onerror = () => w.replaceWith(mediaExpiredNote(f));
     const play = el('div', 'play'); play.append(el('span', null, '▶'));
     w.append(v, play); w.onclick = (e) => { e.stopPropagation(); selectMode ? toggleSelect(m.id) : openMediaView(m.id); };
     w.onkeydown = (e) => { if (e.key === 'Enter') openMediaView(m.id); };
     b.append(w); if (m.text) b.append(el('div', 'cap', m.text));
   } else if (m.type === 'audio') {
     b.append(el('div', null, f.voice ? '🎤 Voice message' + (f.duration ? ' · ' + fmtDur(f.duration) : '') : '🎵 ' + f.name));
-    const a = el('audio'); a.controls = true; a.preload = 'metadata'; a.src = fileUrl(f); b.append(a);
+    const a = el('audio'); a.controls = true; a.preload = 'metadata'; a.src = fileUrl(f); if (f.purged) a.onerror = () => a.replaceWith(mediaExpiredNote(f)); b.append(a);
   } else if (m.type === 'file') {
     const a = el('a', 'filecard'); a.href = fileUrl(f, true); a.target = '_blank'; a.rel = 'noopener';
     a.append(el('div', 'fi', fileIcon(f.mime, f.name)));
-    const fn = el('div', 'fn'); fn.append(el('b', null, f.name)); fn.append(el('small', null, fmtSize(f.size) + ' · tap to download')); a.append(fn);
+    const fn = el('div', 'fn'); fn.append(el('b', null, f.name)); fn.append(el('small', null, fmtSize(f.size) + ' · tap to ' + (f.purged ? 'open your copy' : 'download'))); a.append(fn);
+    if (f.purged) a.onclick = async (e) => { e.preventDefault(); e.stopPropagation(); try { const r = await fetch(fileUrl(f)); if (!r.ok) throw 0; downloadBlob(await r.blob(), f.name); } catch { b.append(mediaExpiredNote(f)); } };
     b.append(a); if (m.text) b.append(el('div', 'cap', m.text));
   } else if (m.type === 'contact') {
     const box = el('div', 'card-x'), top = el('div', 'evdate');
@@ -8313,6 +8322,67 @@ setTimeout(() => {
 }, 15000);
 
 $('#setBackup').onclick = openBackup;
+// ================= 📦 Storage & data: chat media kept on the phone =================
+const AD_DEF = { image: 'always', audio: 'always', video: 'wifi', file: 'wifi' };
+const adPolicy = () => { try { return { ...AD_DEF, ...JSON.parse(store.get('maata_autodl') || '{}') }; } catch { return { ...AD_DEF }; } };
+const onWifi = () => { const c = navigator.connection; return !c || !c.type || c.type === 'wifi' || c.type === 'ethernet'; };
+const mediaKind = (m) => (m.type === 'image' || m.type === 'video' || m.type === 'audio' ? m.type : 'file');
+function adAllowed(m) { const p = adPolicy()[mediaKind(m)]; return p === 'always' || (p === 'wifi' && onWifi()); }
+const prefetched = new Set(); let prefetchQ = [], prefetchBusy = false;
+function savePhoneCopy(m) { // ask the service worker to keep a copy on this phone
+  if (!m || !m.file || m.file.purged || m.viewOnce || prefetched.has(m.file.id) || !navigator.serviceWorker?.controller) return;
+  if (m.file.size > 80 * 1048576) return;
+  prefetched.add(m.file.id); prefetchQ.push(m); runPrefetch();
+}
+async function runPrefetch() {
+  if (prefetchBusy) return; prefetchBusy = true;
+  while (prefetchQ.length) { const m = prefetchQ.shift(); try { const r = await fetch(fileUrl(m.file)); await r.blob(); } catch {} }
+  prefetchBusy = false;
+}
+function mediaExpiredNote(f) { return el('div', 'expired-note', '⌛ ' + (f && f.name ? f.name + ' — ' : '') + 'expired. The server keeps media for ' + (window.MEDIA_DAYS || 30) + ' days and this phone has no copy. Open your Google Drive backup to see it.'); }
+function swAsk(msg) {
+  return new Promise((ok) => {
+    const c = navigator.serviceWorker && navigator.serviceWorker.controller; if (!c) return ok(null);
+    const want = msg.type === 'media-stats' ? 'media-stats' : 'media-cleared';
+    const h = (e) => { if (e.data && e.data.type === want) { navigator.serviceWorker.removeEventListener('message', h); ok(e.data); } };
+    navigator.serviceWorker.addEventListener('message', h); c.postMessage(msg); setTimeout(() => ok(null), 15000);
+  });
+}
+async function openStorage() {
+  closeSettings();
+  const [pol, st, est, persisted] = await Promise.all([api('/api/media-policy').catch(() => ({ keepDays: 30 })), swAsk({ type: 'media-stats' }), navigator.storage?.estimate?.().catch(() => null), navigator.storage?.persisted?.().catch(() => false)]);
+  window.MEDIA_DAYS = pol.keepDays || 30;
+  sheet('📦 Storage & data', (list) => {
+    const box = el('div'); box.style.padding = '12px 14px 20px';
+    const info = el('div', 'bk-card'); info.append(el('div', 'bk-ic', '📱'));
+    const it = el('div'); it.append(el('b', null, 'Your chat media lives on your phone'),
+      el('small', null, pol.keepDays ? 'Photos, videos, voice messages and files are kept on the Maata server for ' + pol.keepDays + ' days, then only on your phone' + (pol.graceUntil && pol.graceUntil > Date.now() ? ' (older media is kept until ' + new Date(pol.graceUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ')' : '') + '. Back up to Google Drive to keep them forever.' : 'The server keeps your media.'));
+    info.append(it); box.append(info);
+    box.append(el('div', 'th-title', 'On this phone'));
+    const used = el('div', 'stor-row');
+    used.append(el('span', null, '🗂 Saved chat media'), el('b', null, st ? fmtBytes(st.bytes) + ' · ' + st.files + ' files' : '—'));
+    box.append(used);
+    if (est && est.quota) { const bar = el('div', 'stor-bar'); const fill = el('i'); fill.style.width = Math.min(100, est.usage / est.quota * 100).toFixed(1) + '%'; bar.append(fill); box.append(bar, el('small', 'muted', 'Maata uses ' + fmtBytes(est.usage) + ' of ' + fmtBytes(est.quota) + ' allowed on this phone')); }
+    if (persisted === false && navigator.storage?.persist) { const ps = el('button', 'sheet-btn', '🔒 Protect my saved media (so the phone does not clear it)'); ps.onclick = async () => { const ok = await navigator.storage.persist().catch(() => false); toast(ok ? '🔒 Protected' : 'This phone did not allow it — install the Maata app for best results.'); }; box.append(ps); }
+    box.append(el('div', 'th-title', 'Save automatically'));
+    const p = adPolicy();
+    for (const [k, label] of [['image', '📷 Photos'], ['audio', '🎤 Voice & audio'], ['video', '🎬 Videos'], ['file', '📄 Documents']]) {
+      const row = el('div', 'stor-pol'); row.append(el('span', null, label)); const ch = el('div', 'st-chips');
+      for (const [v, t] of [['always', 'Always'], ['wifi', 'Wi-Fi only'], ['never', 'Never']]) { const b = el('button', null, t); b.type = 'button'; b.setAttribute('aria-pressed', String(p[k] === v)); b.onclick = () => { const np = adPolicy(); np[k] = v; store.set('maata_autodl', JSON.stringify(np)); [...ch.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; ch.append(b); }
+      row.append(ch); box.append(row);
+    }
+    box.append(el('p', 'info-note', 'Saving automatically keeps a copy even if you never open it — so nothing is lost after ' + (pol.keepDays || 30) + ' days. "Never" saves only what you open.'));
+    box.append(el('div', 'th-title', 'Free up space'));
+    const warn = 'Media older than ' + (pol.keepDays || 30) + ' days is no longer on the server — deleting it here removes it for good (unless it is in your Google Drive backup). Continue?';
+    const dv = el('button', 'sheet-btn', '🗑 Delete saved videos' + (st && st.videos ? ' (' + fmtBytes(st.vbytes) + ')' : '')); dv.onclick = async () => { if (!confirm(warn)) return; const r = await swAsk({ type: 'media-clear', videosOnly: true }); toast('🗑 Deleted ' + ((r && r.n) || 0) + ' videos'); closeSheet('moreSheet'); };
+    const da = el('button', 'sheet-btn warn', '🗑 Delete all saved media'); da.onclick = async () => { if (!confirm(warn)) return; const r = await swAsk({ type: 'media-clear' }); toast('🗑 Deleted ' + ((r && r.n) || 0) + ' files'); closeSheet('moreSheet'); };
+    const bk = el('button', 'sheet-btn', '☁️ Back up to Google Drive first'); bk.onclick = () => { closeSheet('moreSheet'); openBackup(); };
+    box.append(bk, dv, da); list.append(box);
+  });
+}
+
+$('#setStorage').onclick = openStorage;
+try { navigator.storage?.persist?.().catch(() => {}); } catch {}
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

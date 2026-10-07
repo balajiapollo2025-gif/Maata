@@ -204,6 +204,7 @@ textarea.input{min-height:110px;resize:vertical}
         <div class="livebox" style="background:linear-gradient(135deg,#C07A00,#E8A317)"><span class="emo">🔔</span><div><div class="v" id="lvRing">0</div><div class="l">Ringing now</div></div></div>
       </div>
       <div class="grid kpis" id="kpis"></div>
+      <div class="card" id="storCard" style="margin-top:14px;padding:14px" hidden></div>
       <div class="grid two">
         <div class="card chart"><h3>Daily logins &amp; new customers <span class="hint">last 14 days</span></h3><div id="chLogins"></div></div>
         <div class="card chart"><h3>Voice &amp; video calls <span class="hint">last 14 days</span></h3><div id="chCalls"></div></div>
@@ -472,6 +473,14 @@ async function loadDash() {
   const s = await api('/admin/api/stats?days=14');
   setLive(s.live);
   const t = s.today;
+  api('/admin/api/storage').then((st) => {
+    const mb = (b) => (b / 1048576).toFixed(1) + ' MB', c = $('#storCard'); c.hidden = false;
+    c.innerHTML = `<b>📦 Server storage</b><div class="muted" style="margin:4px 0 8px">Chat photos, videos, voice notes and files stay on the server for <b>${st.keepDays || '∞'}</b> days, then only on customers' phones (like WhatsApp).${st.graceUntil && st.graceUntil > Date.now() ? ' First clean-up starts ' + dt(st.graceUntil) + ' (older media gets this grace period).' : ''}</div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap"><div><b style="font-size:20px">${mb(st.chatBytes)}</b><div class="muted">${st.chatFiles} chat files on server</div></div>
+      <div><b style="font-size:20px">${mb(st.freedBytes)}</b><div class="muted">${st.freedFiles} old files removed (space saved)</div></div>
+      <div><b style="font-size:20px">${mb(st.reelBytes)}</b><div class="muted">${st.reels} reels (kept)</div></div>
+      <div><b style="font-size:20px">${st.r2 ? '✅ R2' : '⚠️ MongoDB'}</b><div class="muted">${st.r2 ? 'Cloudflare R2 storage on' : 'Set up R2 — MongoDB free is 512 MB'}</div></div></div>`;
+  }).catch(() => {});
   $('#kpis').innerHTML =
     kpi('Customers logged in today', num(t.uniqueLogins), num(t.loginEvents) + ' login sessions', '#2E8B57') +
     kpi('New customers today', num(t.signups), num(s.totals.customers) + ' total customers', '#7A4E9E') +
