@@ -1212,6 +1212,10 @@ html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
 .coin-st{font-weight:800;color:#B07800}
 .coin-tip{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:#FFF3C4;color:#5A3E00;font-weight:600;font-size:13.5px}
 html.feat-off-coins #coinBtn,html.feat-off-coins .set-group:has(#setCoins),html.feat-off-coins .coin-welcome{display:none!important}
+.inv-langs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.inv-langs button{padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:13.5px}
+.inv-langs button[aria-pressed="true"]{background:var(--leaf);border-color:var(--leaf);color:#fff;font-weight:700}
+.inv-en{display:flex;align-items:center;gap:8px;font-size:13.5px;margin:4px 0}.inv-en input{width:18px;height:18px}
 </style>
 </head>
 <body>
@@ -8563,16 +8567,20 @@ function applyFeatures() {
 
 loadFeatures();
 // ================= 🎁 Invite a friend =================
-const INV_TEXT = {
-  en: (n, l) => '👋 Hi! I use *Maata* — a free Indian app for chat, voice calls and video calls.\n\n✅ Free calls & HD video calls\n✅ Chat, photos, status & reels\n✅ Live translation in Telugu, Hindi, Tamil & more\n✅ Maata AI assistant\n\nJoin me here 👉 ' + l + '\n(Works on any phone or computer — Android app too)\n— ' + n,
-  te: (n, l) => '👋 హాయ్! నేను *Maata* వాడుతున్నాను — చాట్, వాయిస్ కాల్స్, వీడియో కాల్స్ కోసం ఉచిత భారతీయ యాప్.\n\n✅ ఉచిత కాల్స్ & HD వీడియో కాల్స్\n✅ చాట్, ఫోటోలు, స్టేటస్, రీల్స్\n✅ తెలుగు, హిందీ, తమిళం… లైవ్ అనువాదం\n✅ Maata AI సహాయకుడు\n\nఇక్కడ చేరండి 👉 ' + l + '\n(ఏ ఫోన్ / కంప్యూటర్‌లోనైనా పని చేస్తుంది)\n— ' + n,
-};
-INV_TEXT.both = (n, l) => INV_TEXT.te(n, l) + '\n\n' + INV_TEXT.en(n, l);
+// invite message in 13 Indian languages: [name of language, first line, 4 points, "join here", note]
+const INV_L = {"te": ["తెలుగు", "👋 హాయ్! నేను *Maata* వాడుతున్నాను — చాట్, వాయిస్ కాల్స్, వీడియో కాల్స్ కోసం ఉచిత భారతీయ యాప్.", ["ఉచిత కాల్స్ & HD వీడియో కాల్స్", "చాట్, ఫోటోలు, స్టేటస్, రీల్స్", "తెలుగు, హిందీ, తమిళం… లైవ్ అనువాదం", "Maata AI సహాయకుడు"], "ఇక్కడ చేరండి", "(ఏ ఫోన్ / కంప్యూటర్‌లోనైనా పని చేస్తుంది)"], "hi": ["हिंदी", "👋 नमस्ते! *Maata* पर मुझसे जुड़िए — चैट, वॉइस कॉल और वीडियो कॉल के लिए एक मुफ़्त भारतीय ऐप।", ["मुफ़्त कॉल और HD वीडियो कॉल", "चैट, फ़ोटो, स्टेटस और रील्स", "हिंदी, तेलुगु, तमिल और अन्य भाषाओं में लाइव अनुवाद", "Maata AI सहायक"], "यहाँ जुड़ें", "(किसी भी फ़ोन या कंप्यूटर पर चलता है)"], "ta": ["தமிழ்", "👋 வணக்கம்! *Maata*-வில் என்னுடன் இணையுங்கள் — அரட்டை, குரல் அழைப்பு, வீடியோ அழைப்புக்கான இலவச இந்திய செயலி.", ["இலவச அழைப்புகள் & HD வீடியோ அழைப்புகள்", "அரட்டை, புகைப்படங்கள், ஸ்டேட்டஸ், ரீல்ஸ்", "தமிழ், தெலுங்கு, இந்தி மற்றும் பல மொழிகளில் நேரடி மொழிபெயர்ப்பு", "Maata AI உதவியாளர்"], "இங்கே இணையுங்கள்", "(எந்த போன் அல்லது கணினியிலும் இயங்கும்)"], "kn": ["ಕನ್ನಡ", "👋 ನಮಸ್ಕಾರ! *Maata*ದಲ್ಲಿ ನನ್ನೊಂದಿಗೆ ಸೇರಿ — ಚಾಟ್, ಧ್ವನಿ ಕರೆ ಮತ್ತು ವೀಡಿಯೊ ಕರೆಗಾಗಿ ಉಚಿತ ಭಾರತೀಯ ಆ್ಯಪ್.", ["ಉಚಿತ ಕರೆಗಳು & HD ವೀಡಿಯೊ ಕರೆಗಳು", "ಚಾಟ್, ಫೋಟೋಗಳು, ಸ್ಟೇಟಸ್, ರೀಲ್ಸ್", "ಕನ್ನಡ, ತೆಲುಗು, ಹಿಂದಿ ಮತ್ತು ಇತರ ಭಾಷೆಗಳಲ್ಲಿ ಲೈವ್ ಅನುವಾದ", "Maata AI ಸಹಾಯಕ"], "ಇಲ್ಲಿ ಸೇರಿ", "(ಯಾವುದೇ ಫೋನ್ ಅಥವಾ ಕಂಪ್ಯೂಟರ್‌ನಲ್ಲಿ ಕೆಲಸ ಮಾಡುತ್ತದೆ)"], "ml": ["മലയാളം", "👋 നമസ്കാരം! *Maata*-യിൽ എന്നോടൊപ്പം ചേരൂ — ചാറ്റ്, വോയ്സ് കോൾ, വീഡിയോ കോൾ എന്നിവയ്ക്കുള്ള സൗജന്യ ഇന്ത്യൻ ആപ്പ്.", ["സൗജന്യ കോളുകളും HD വീഡിയോ കോളുകളും", "ചാറ്റ്, ഫോട്ടോകൾ, സ്റ്റാറ്റസ്, റീൽസ്", "മലയാളം, തെലുങ്ക്, ഹിന്ദി തുടങ്ങിയ ഭാഷകളിൽ തത്സമയ വിവർത്തനം", "Maata AI സഹായി"], "ഇവിടെ ചേരൂ", "(ഏത് ഫോണിലും കമ്പ്യൂട്ടറിലും പ്രവർത്തിക്കും)"], "bn": ["বাংলা", "👋 নমস্কার! *Maata*-তে আমার সাথে যোগ দিন — চ্যাট, ভয়েস কল ও ভিডিও কলের জন্য একটি বিনামূল্যের ভারতীয় অ্যাপ।", ["বিনামূল্যে কল ও HD ভিডিও কল", "চ্যাট, ছবি, স্ট্যাটাস ও রিলস", "বাংলা, হিন্দি, তেলুগু সহ বিভিন্ন ভাষায় লাইভ অনুবাদ", "Maata AI সহকারী"], "এখানে যোগ দিন", "(যেকোনো ফোন বা কম্পিউটারে চলে)"], "mr": ["मराठी", "👋 नमस्कार! *Maata* वर माझ्यासोबत सामील व्हा — चॅट, व्हॉइस कॉल आणि व्हिडिओ कॉलसाठी मोफत भारतीय ॲप.", ["मोफत कॉल आणि HD व्हिडिओ कॉल", "चॅट, फोटो, स्टेटस आणि रील्स", "मराठी, हिंदी, तेलुगू आणि इतर भाषांमध्ये थेट भाषांतर", "Maata AI सहाय्यक"], "येथे सामील व्हा", "(कोणत्याही फोन किंवा कॉम्प्युटरवर चालते)"], "gu": ["ગુજરાતી", "👋 નમસ્તે! *Maata* પર મારી સાથે જોડાઓ — ચેટ, વોઇસ કૉલ અને વિડિયો કૉલ માટે મફત ભારતીય એપ.", ["મફત કૉલ અને HD વિડિયો કૉલ", "ચેટ, ફોટા, સ્ટેટસ અને રીલ્સ", "ગુજરાતી, હિન્દી, તેલુગુ અને અન્ય ભાષાઓમાં લાઇવ અનુવાદ", "Maata AI સહાયક"], "અહીં જોડાઓ", "(કોઈપણ ફોન કે કમ્પ્યુટર પર ચાલે છે)"], "pa": ["ਪੰਜਾਬੀ", "👋 ਸਤ ਸ੍ਰੀ ਅਕਾਲ! *Maata* 'ਤੇ ਮੇਰੇ ਨਾਲ ਜੁੜੋ — ਚੈਟ, ਵੌਇਸ ਕਾਲ ਅਤੇ ਵੀਡੀਓ ਕਾਲ ਲਈ ਮੁਫ਼ਤ ਭਾਰਤੀ ਐਪ।", ["ਮੁਫ਼ਤ ਕਾਲਾਂ ਅਤੇ HD ਵੀਡੀਓ ਕਾਲਾਂ", "ਚੈਟ, ਫੋਟੋਆਂ, ਸਟੇਟਸ ਅਤੇ ਰੀਲਜ਼", "ਪੰਜਾਬੀ, ਹਿੰਦੀ, ਤੇਲਗੂ ਅਤੇ ਹੋਰ ਭਾਸ਼ਾਵਾਂ ਵਿੱਚ ਲਾਈਵ ਅਨੁਵਾਦ", "Maata AI ਸਹਾਇਕ"], "ਇੱਥੇ ਜੁੜੋ", "(ਕਿਸੇ ਵੀ ਫ਼ੋਨ ਜਾਂ ਕੰਪਿਊਟਰ 'ਤੇ ਚੱਲਦੀ ਹੈ)"], "ur": ["اردو", "👋 السلام علیکم! *Maata* پر مجھ سے جڑیں — چیٹ، وائس کال اور ویڈیو کال کے لیے ایک مفت ہندوستانی ایپ۔", ["مفت کالز اور HD ویڈیو کالز", "چیٹ، تصاویر، اسٹیٹس اور ریلز", "اردو، ہندی، تیلگو اور دیگر زبانوں میں لائیو ترجمہ", "Maata AI معاون"], "یہاں جڑیں", "(کسی بھی فون یا کمپیوٹر پر چلتی ہے)"], "or": ["ଓଡ଼ିଆ", "👋 ନମସ୍କାର! *Maata*ରେ ମୋ ସହ ଯୋଗ ଦିଅନ୍ତୁ — ଚାଟ୍, ଭଏସ୍ କଲ୍ ଓ ଭିଡିଓ କଲ୍ ପାଇଁ ଏକ ମାଗଣା ଭାରତୀୟ ଆପ୍।", ["ମାଗଣା କଲ୍ ଓ HD ଭିଡିଓ କଲ୍", "ଚାଟ୍, ଫଟୋ, ଷ୍ଟାଟସ୍ ଓ ରିଲ୍ସ", "ଓଡ଼ିଆ, ହିନ୍ଦୀ, ତେଲୁଗୁ ଓ ଅନ୍ୟ ଭାଷାରେ ଲାଇଭ୍ ଅନୁବାଦ", "Maata AI ସହାୟକ"], "ଏଠାରେ ଯୋଗ ଦିଅନ୍ତୁ", "(ଯେକୌଣସି ଫୋନ୍ ବା କମ୍ପ୍ୟୁଟରରେ ଚାଲେ)"], "as": ["অসমীয়া", "👋 নমস্কাৰ! *Maata*ত মোৰ লগত যোগ দিয়ক — চেট, ভইচ কল আৰু ভিডিঅ' কলৰ বাবে এটা বিনামূলীয়া ভাৰতীয় এপ।", ["বিনামূলীয়া কল আৰু HD ভিডিঅ' কল", "চেট, ফটো, ষ্টেটাছ আৰু ৰিলছ", "অসমীয়া, হিন্দী, তেলুগুকে ধৰি বিভিন্ন ভাষাত লাইভ অনুবাদ", "Maata AI সহায়ক"], "ইয়াত যোগ দিয়ক", "(যিকোনো ফোন বা কম্পিউটাৰত চলে)"], "en": ["English", "👋 Hi! I use *Maata* — a free Indian app for chat, voice calls and video calls.", ["Free calls & HD video calls", "Chat, photos, status & reels", "Live translation in Telugu, Hindi, Tamil & more", "Maata AI assistant"], "Join me here", "(Works on any phone or computer — Android app too)"]};
+const INV_ORDER = ['en', 'te', 'hi', 'ta', 'kn', 'ml', 'bn', 'mr', 'gu', 'pa', 'ur', 'or', 'as'];
+function invMsg(lang, name, link, addEn) {
+  const one = (k) => { const x = INV_L[k] || INV_L.en; return x[1] + '\n\n' + x[2].map((t) => '✅ ' + t).join('\n') + '\n\n' + x[3] + ' 👉 ' + link + '\n' + x[4] + '\n— ' + name; };
+  return addEn && lang !== 'en' ? one(lang) + '\n\n— — —\n\n' + one('en') : one(lang);
+}
+const invLang = () => { const v = store.get('maata_inv_lang'); if (v === 'both') return 'te'; return INV_L[v] ? v : (me && INV_L[me.lang] ? me.lang : 'en'); };
+const invAddEn = () => store.get('maata_inv_lang') === 'both' || store.get('maata_inv_en') === '1';
 let INV = null;
 async function openInvite() {
   closeSettings();
   try { INV = await api('/api/invite'); } catch (e) { return toast(e.message); }
-  let lang = store.get('maata_inv_lang') || (me.lang === 'te' ? 'both' : 'en');
+  let lang = invLang(), addEn = invAddEn();
   sheet('🎁 Invite a friend', (list) => {
     const box = el('div'); box.style.padding = '12px 14px 20px';
     const hero = el('div', 'bk-card'); hero.append(el('div', 'bk-ic', '🎁'));
@@ -8581,10 +8589,11 @@ async function openInvite() {
     if (F('coins')) box.append(el('p', 'coin-tip', '🪙 Earn 1 Maata coin for every friend who joins with your link and uses Maata on 3 different days.'));
     const lr = el('div', 'inv-link'); const lt = el('code', null, INV.link); const cp = el('button', 'linkbtn', '📋 Copy link'); cp.onclick = () => copyText(INV.link); lr.append(lt, cp); box.append(lr);
     box.append(el('div', 'th-title', 'Message'));
-    const ch = el('div', 'pd-langs'); const ta = el('textarea', 'inv-msg'); ta.rows = 9;
-    const fill = () => { ta.value = INV_TEXT[lang](me.name, INV.link); };
-    for (const [v, t] of [['en', 'English'], ['te', 'తెలుగు'], ['both', 'Both']]) { const b = el('button', null, t); b.type = 'button'; b.setAttribute('aria-pressed', String(v === lang)); b.onclick = () => { lang = v; store.set('maata_inv_lang', v); [...ch.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); fill(); }; ch.append(b); }
-    fill(); box.append(ch, ta);
+    const ch = el('div', 'inv-langs'); const ta = el('textarea', 'inv-msg'); ta.rows = 10; ta.dir = 'auto';
+    const fill = () => { ta.value = invMsg(lang, me.name, INV.link, addEn); };
+    for (const k of INV_ORDER) { const b = el('button', null, INV_L[k][0]); b.type = 'button'; b.setAttribute('aria-pressed', String(k === lang)); b.onclick = () => { lang = k; store.set('maata_inv_lang', k); [...ch.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); enRow.hidden = k === 'en'; fill(); }; ch.append(b); }
+    const enRow = el('label', 'inv-en'); const enc = el('input'); enc.type = 'checkbox'; enc.checked = addEn; enc.onchange = () => { addEn = enc.checked; store.set('maata_inv_en', addEn ? '1' : '0'); fill(); }; enRow.append(enc, el('span', null, '➕ Add the English message below too')); enRow.hidden = lang === 'en';
+    fill(); box.append(ch, enRow, ta);
     const btns = el('div', 'inv-btns');
     const mk = (cls, label, fn) => { const b = el('button', 'inv-b ' + cls, label); b.onclick = fn; btns.append(b); };
     mk('wa', '🟢 WhatsApp', () => openOut('https://wa.me/?text=' + encodeURIComponent(ta.value)));
@@ -8614,7 +8623,7 @@ function shareTextAny(text) {
   copyText(text); toast('📋 Message copied — paste it in any app');
 }
 function inviteToMaata(c) {
-  const go = (inv) => { const text = INV_TEXT[store.get('maata_inv_lang') || 'en']((me && me.name) || '', inv ? inv.link : location.origin); openOut('https://wa.me/91' + c.n + '?text=' + encodeURIComponent(text)); };
+  const go = (inv) => { const text = invMsg(invLang(), (me && me.name) || '', inv ? inv.link : location.origin, invAddEn()); openOut('https://wa.me/91' + c.n + '?text=' + encodeURIComponent(text)); };
   if (INV) go(INV); else api('/api/invite').then((x) => { INV = x; go(x); }).catch(() => go(null));
 }
 // joined from someone's invite link
