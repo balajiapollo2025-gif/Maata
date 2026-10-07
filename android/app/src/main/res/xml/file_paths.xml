@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- backup files Maata makes, shared to Google Drive / WhatsApp / Files -->
+    <cache-path name="share" path="share/" />
+</paths>

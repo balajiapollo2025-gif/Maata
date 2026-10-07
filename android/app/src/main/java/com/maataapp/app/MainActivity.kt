@@ -300,6 +300,26 @@ class MainActivity : Activity() {
             for ((name, nums) in byName) arr.put(org.json.JSONObject().put("name", name).put("phones", org.json.JSONArray(nums.toList())))
             return arr.toString()
         }
+        /** Save a file made by the web app (chat backup) and open Android's Share menu → Google Drive.
+         *  Sent in pieces so big backups do not run out of memory. */
+        private var shareOut: java.io.File? = null
+        @JavascriptInterface fun shareFileStart(name: String): Boolean = try {
+            val dir = java.io.File(cacheDir, "share").apply { mkdirs() }
+            dir.listFiles()?.forEach { if (System.currentTimeMillis() - it.lastModified() > 3_600_000) it.delete() }
+            shareOut = java.io.File(dir, name.replace(Regex("[^A-Za-z0-9._-]"), "_")).apply { writeBytes(ByteArray(0)) }
+            true
+        } catch (e: Exception) { false }
+        @JavascriptInterface fun shareFileChunk(b64: String): Boolean = try {
+            shareOut?.appendBytes(android.util.Base64.decode(b64, android.util.Base64.DEFAULT)); shareOut != null
+        } catch (e: Exception) { false }
+        @JavascriptInterface fun shareFileEnd(mime: String, title: String): Boolean = try {
+            val f = shareOut ?: throw IllegalStateException("no file")
+            val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.files", f)
+            val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_TITLE, f.name).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            runOnUiThread { startActivity(Intent.createChooser(send, title)) }
+            true
+        } catch (e: Exception) { false }
         @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }

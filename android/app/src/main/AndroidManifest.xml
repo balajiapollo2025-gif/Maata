@@ -61,6 +61,17 @@
 
         <receiver android:name=".CallActionReceiver" android:exported="false" />
 
+        <!-- Lets Maata hand a backup file to Google Drive (Share → Drive) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Keeps the microphone (and camera) working during a call while the phone is locked -->
         <service
             android:name=".CallService"

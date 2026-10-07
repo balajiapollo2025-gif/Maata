@@ -1151,6 +1151,14 @@ html.dark .st-open{background:#3A2E10;color:#F6CF7A}html.dark .st-prog{backgroun
 .sup-msg small{font-size:11.5px;opacity:.75}
 .sup-msg.me{align-self:flex-end;background:var(--mine);color:var(--mine-ink)}.sup-msg.them{align-self:flex-start;background:var(--peacock-soft);color:var(--ink)}
 .sup-cats{margin:4px 0 10px}
+.bk-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:14px;background:var(--peacock-soft)}
+.bk-card .bk-ic{font-size:34px}.bk-card b{display:block;font-size:16px}.bk-card small{color:var(--muted);font-size:13px}
+.bk-row{display:flex!important;align-items:center;gap:12px;color:var(--ink)}.bk-row span{min-width:0!important;flex:1;opacity:1!important}.bk-row input{width:22px;height:22px;flex:none}
+.bkv-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.bkv-head .tx{flex:1;display:flex;flex-direction:column}.bkv-head small{color:var(--muted);font-size:12.5px}
+.bkv-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px}
+.bkv-msgs .day{align-self:center;font-size:12px;color:var(--muted);background:var(--panel);padding:3px 10px;border-radius:999px;margin:8px 0}
+.bkv-msgs .sender{font-size:12px;font-weight:700;color:var(--leaf)}
 </style>
 </head>
 <body>
@@ -1531,6 +1539,7 @@ html.dark .st-open{background:#3A2E10;color:#F6CF7A}html.dark .st-prog{backgroun
 
     <div class="set-group" style="margin-top:4px"><div class="set-row" id="setRunning"></div></div>
     <div id="setNotifBox"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setBackup">☁️ Chat backup <span style="margin-left:auto;color:var(--muted)">Google Drive</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setSupport">🆘 Help &amp; Support <span style="margin-left:auto;color:var(--muted)">Raise a complaint</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCallQ">🎧 Call quality <span style="margin-left:auto;color:var(--muted)" id="setCallQName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setThemes">🎨 Theme &amp; colours <span style="margin-left:auto;color:var(--muted)" id="setThemeName"></span></button></div>
@@ -6895,6 +6904,7 @@ const isMobileLayout = () => matchMedia('(max-width:760px)').matches;
 // the screens, top-most first, each with how to close it
 const BACK_LAYERS = [
   ['.qr-scan', () => { const b = document.querySelector('.qr-scan .qr-close'); if (b) b.click(); }],
+  ['#bkView', () => $('#bkView').remove()],
   ['#ngPage', () => $('#ngPage').remove()],
   ['#studio', () => { if (!$('#moreSheet').hidden) return closeSheet('moreSheet'); if (confirm('Discard this reel?')) stClose(); }],
   ['.ci-photo', () => document.querySelector('.ci-photo').remove()],
@@ -8173,6 +8183,136 @@ function supView(t) {
 }
 
 $('#setSupport').onclick = openSupport;
+// ================= ☁️ Chat backup to Google Drive =================
+let jszipLoading = null;
+function loadJSZip() { if (window.JSZip) return Promise.resolve(); if (!jszipLoading) jszipLoading = new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; sc.onload = ok; sc.onerror = () => { jszipLoading = null; bad(new Error('Could not load the backup tool. Check your internet.')); }; document.head.append(sc); }); return jszipLoading; }
+const fmtBytes = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+const BK_FREQ = { off: 'Off', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+const bkDue = (last, f) => f !== 'off' && (!last || Date.now() - last > ({ daily: 1, weekly: 7, monthly: 30 })[f] * 86400000);
+async function openBackup() {
+  closeSettings();
+  let info = null; try { info = await api('/api/backup/info'); } catch {}
+  sheet('☁️ Chat backup', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px 14px 20px';
+    const card = el('div', 'bk-card');
+    card.append(el('div', 'bk-ic', '☁️'));
+    const tx = el('div'); tx.append(el('b', null, 'Back up to Google Drive'),
+      el('small', null, info ? 'Last backup: ' + new Date(info.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · ' + fmtBytes(info.size) + ' · ' + info.messages + ' messages' + (info.media ? ' + photos' : '') : 'Never backed up'));
+    card.append(tx); box.append(card);
+    box.append(el('p', 'info-note', 'Saves all your chats into one file. On the next screen choose "Drive" (Save to Google Drive) — or Files / WhatsApp / email. Keep it safe: anyone with the file can read your chats.'));
+    const med = el('label', 'st-row bk-row'); const medc = el('input'); medc.type = 'checkbox'; medc.checked = store.get('maata_bk_media') === '1';
+    medc.onchange = () => store.set('maata_bk_media', medc.checked ? '1' : '0');
+    med.append(el('span', null, '📷 Include photos, videos & voice messages (bigger file)'), medc); box.append(med);
+    const prog = el('div', 'rl-prog'); prog.hidden = true;
+    const go = el('button', 'primary', '☁️ Back up now');
+    go.onclick = async () => { go.disabled = true; prog.hidden = false; try { await runBackup(medc.checked, (t) => (prog.textContent = t)); closeSheet('moreSheet'); } catch (e) { toast(e.message); } go.disabled = false; prog.hidden = true; };
+    box.append(go, prog);
+    box.append(el('div', 'th-title', 'Automatic backup reminder'));
+    const f = store.get('maata_bk_freq') || 'weekly', fr = el('div', 'st-chips');
+    for (const [k, v] of Object.entries(BK_FREQ)) { const b = el('button', null, v); b.type = 'button'; b.setAttribute('aria-pressed', String(k === f)); b.onclick = () => { store.set('maata_bk_freq', k); [...fr.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); toast(k === 'off' ? 'Backup reminders off' : '☁️ We will remind you ' + v.toLowerCase()); }; fr.append(b); }
+    box.append(fr, el('p', 'info-note', 'Maata reminds you when it is time, and the backup takes one tap.'));
+    box.append(el('div', 'th-title', 'Restore'));
+    const rs = el('button', 'sheet-btn', '📂 Open a backup (from Google Drive or phone)'); rs.onclick = () => { closeSheet('moreSheet'); openRestore(); };
+    box.append(rs, el('p', 'info-note', 'Your chats are also kept safely on the Maata server, so a backup is extra safety — for example if you delete your account or clear a chat.'));
+    list.append(box);
+  });
+}
+async function runBackup(withMedia, say) {
+  say('⏳ Getting your chats…');
+  const data = await api('/api/backup/export');
+  await loadJSZip();
+  const zip = new JSZip(); let mediaCount = 0, mediaBytes = 0;
+  const inApp = !!(window.MaataAndroid && window.MaataAndroid.shareFileStart);
+  if (withMedia) {
+    const files = []; for (const c of data.chats) for (const m of c.messages) if (m.file && m.file.size && m.file.size < 25 * 1048576) files.push(m);
+    const limit = inApp ? 80 * 1048576 : 400 * 1048576;
+    for (const [i, m] of files.entries()) {
+      if (mediaBytes + m.file.size > limit) { m.file.skipped = true; continue; }
+      say('📷 Adding photos & voice messages… ' + (i + 1) + ' / ' + files.length);
+      try { const r = await fetch(fileUrl(m.file)); if (!r.ok) throw 0; const b = await r.blob(); const path = 'media/' + m.file.id + '_' + String(m.file.name || 'file').replace(/[^\w.\-]/g, '_'); zip.file(path, b); m.file.path = path; mediaCount++; mediaBytes += b.size; } catch { m.file.skipped = true; }
+    }
+  }
+  zip.file('backup.json', JSON.stringify(data));
+  zip.file('README.txt', 'Maata chat backup of ' + data.me.name + ' (+91 ' + data.me.phone + '), made ' + new Date(data.exportedAt).toString() + '.\nOpen it in Maata: Settings → Chat backup → Open a backup.\n');
+  say('📦 Packing the backup…');
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  const d = new Date(), name = 'Maata-backup-' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + '.zip';
+  let where = 'download';
+  if (inApp) { // Android app: hand the file to Android's Share menu → "Drive"
+    say('☁️ Opening Google Drive…');
+    const A = window.MaataAndroid; if (!A.shareFileStart(name)) throw new Error('Could not save the backup on this phone.');
+    const buf = new Uint8Array(await blob.arrayBuffer()), step = 768 * 1024;
+    for (let i = 0; i < buf.length; i += step) { let s2 = ''; const part = buf.subarray(i, i + step); for (let k = 0; k < part.length; k += 8192) s2 += String.fromCharCode.apply(null, part.subarray(k, k + 8192)); if (!A.shareFileChunk(btoa(s2))) throw new Error('Could not save the backup on this phone.'); say('☁️ Preparing… ' + Math.round(Math.min(1, (i + step) / buf.length) * 100) + '%'); }
+    A.shareFileEnd('application/zip', 'Save Maata backup to… (choose Drive)'); where = 'share';
+  } else {
+    const file = new File([blob], name, { type: 'application/zip' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Maata chat backup' }); where = 'share'; } catch (e) { if (e && e.name === 'AbortError') throw new Error('Backup not saved.'); downloadBlob(blob, name); } }
+    else downloadBlob(blob, name);
+  }
+  await api('/api/backup/done', { method: 'POST', body: JSON.stringify({ size: blob.size, messages: data.totalMessages, media: withMedia && mediaCount > 0, where }) }).catch(() => {});
+  store.set('maata_bk_last', String(Date.now()));
+  toast(where === 'share' ? '☁️ Choose "Drive" to save your backup (' + fmtBytes(blob.size) + ')' : '✅ Backup saved (' + fmtBytes(blob.size) + '). Upload it to Google Drive to keep it safe.');
+}
+function downloadBlob(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); }
+// ----- open a backup (read-only viewer) -----
+async function openRestore() {
+  const f = (await pickFiles('.zip,.json,application/zip,application/json', false))[0]; if (!f) return;
+  let data, zip = null;
+  try {
+    if (/\.json$/i.test(f.name) || f.type === 'application/json') data = JSON.parse(await f.text());
+    else { await loadJSZip(); zip = await JSZip.loadAsync(f); data = JSON.parse(await zip.file('backup.json').async('string')); }
+    if (data.app !== 'Maata' || !Array.isArray(data.chats)) throw 0;
+  } catch { return toast('This is not a Maata backup file.'); }
+  sheet('📂 Backup · ' + new Date(data.exportedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), (list) => {
+    const box = el('div'); box.style.padding = '8px 12px 16px';
+    box.append(el('p', 'info-note', '👤 ' + data.me.name + ' · +91 ' + data.me.phone + ' · ' + data.chats.length + ' chats · ' + data.totalMessages + ' messages' + (data.me.phone !== me.phone ? '\n⚠️ This backup belongs to a different number.' : '')));
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search chats'; q.className = 'search'; q.style.width = '100%'; box.append(q);
+    const ul = el('div'); box.append(ul);
+    const draw = () => { ul.innerHTML = ''; for (const c of data.chats.filter((c2) => !q.value || c2.name.toLowerCase().includes(q.value.toLowerCase()))) { const last = c.messages.at(-1) || {}; const r = el('button', 'mem-row'); r.append(avatar({ id: c.id, name: c.name }, 'sm')); const t = el('div', 'txt'); t.append(el('b', null, (c.isGroup ? '👥 ' : '') + c.name), el('small', null, c.messages.length + ' messages · ' + (last.ts ? new Date(last.ts).toLocaleDateString('en-IN') : ''))); r.append(t); r.onclick = () => { closeSheet('moreSheet'); viewBackupChat(c, zip, data); }; ul.append(r); } };
+    q.oninput = draw; draw(); list.append(box);
+  });
+}
+function viewBackupChat(c, zip, data) {
+  const pg = el('section', 'ngp bkv'); pg.id = 'bkView';
+  const head = el('div', 'bkv-head'); const back = el('button', 'icon-btn'); back.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'; back.onclick = () => pg.remove();
+  const ex = el('button', 'linkbtn', '⬇ Text'); ex.onclick = () => downloadBlob(new Blob([c.messages.map((m) => '[' + new Date(m.ts).toLocaleString('en-IN') + '] ' + m.fromName + ': ' + (m.text || (m.file ? '<' + (m.file.name || 'file') + '>' : '<' + m.type + '>'))).join('\n')], { type: 'text/plain' }), 'Maata chat - ' + c.name + '.txt');
+  const tt = el('div', 'tx'); tt.append(el('b', null, c.name), el('small', null, '📂 From backup · read only'));
+  head.append(back, avatar({ id: c.id, name: c.name }, 'sm'), tt, ex);
+  const msgs = el('div', 'bkv-msgs'); let day = '';
+  for (const m of c.messages) {
+    const d = new Date(m.ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); if (d !== day) { day = d; msgs.append(el('div', 'day', d)); }
+    const b = el('div', 'bubble' + (m.from === 'me' ? ' mine' : ''));
+    if (c.isGroup && m.from !== 'me') b.append(el('div', 'sender', m.fromName));
+    if (m.file) {
+      if (m.file.path && zip) { const holder = el('div'); b.append(holder); zip.file(m.file.path).async('blob').then((bl) => { const u = URL.createObjectURL(new Blob([bl], { type: m.file.mime })); if (/^image\//.test(m.file.mime)) { const im = el('img'); im.src = u; im.style.cssText = 'max-width:240px;border-radius:10px;display:block'; holder.append(im); } else if (/^(audio|video)\//.test(m.file.mime)) { const md = el(/^audio/.test(m.file.mime) ? 'audio' : 'video'); md.controls = true; md.src = u; md.style.maxWidth = '240px'; holder.append(md); } else { const a = el('a', null, '📎 ' + (m.file.name || 'file')); a.href = u; a.download = m.file.name || 'file'; holder.append(a); } }).catch(() => {}); }
+      else b.append(el('div', 'muted', '📎 ' + (m.file.name || m.type) + (m.file.skipped ? ' (not in backup)' : '')));
+    }
+    if (m.text) b.append(el('div', null, m.text));
+    if (!m.text && !m.file) b.append(el('div', 'muted', ({ location: '📍 Location', poll: '📊 Poll', contact: '👤 Contact', product: '🛍️ Product', reel: '🎬 Reel', event: '📅 Event', gif: 'GIF', sticker: 'Sticker' })[m.type] || m.type));
+    b.append(el('div', 'meta', new Date(m.ts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })));
+    msgs.append(b);
+  }
+  pg.append(head, msgs); document.body.append(pg); msgs.scrollTop = msgs.scrollHeight;
+}
+// reminder when a backup is due
+setTimeout(() => {
+  try {
+    if (!token || !me) return;
+    const f = store.get('maata_bk_freq') || 'weekly', last = Number(store.get('maata_bk_last') || 0), asked = Number(store.get('maata_bk_asked') || 0);
+    if (!bkDue(last, f) || Date.now() - asked < 86400000) return;
+    store.set('maata_bk_asked', String(Date.now()));
+    if (!last && Date.now() - (me.createdAt || 0) < 3 * 86400000) return; // brand-new users: not yet
+    sheet('☁️ Time to back up', (list) => {
+      const box = el('div'); box.style.padding = '14px';
+      box.append(el('p', null, last ? 'Your last chat backup was ' + Math.round((Date.now() - last) / 86400000) + ' days ago. Save a fresh copy to Google Drive?' : 'Keep a copy of your chats safe in your Google Drive.'));
+      const go = el('button', 'primary', '☁️ Back up now'); go.onclick = () => { closeSheet('moreSheet'); openBackup(); };
+      const later = el('button', 'linkbtn', 'Later'); later.onclick = () => closeSheet('moreSheet');
+      box.append(go, later); list.append(box);
+    });
+  } catch {}
+}, 15000);
+
+$('#setBackup').onclick = openBackup;
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

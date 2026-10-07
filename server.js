@@ -889,6 +889,28 @@ app.get('/api/messages/:userId', auth, (req, res) => {
   res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
 });
 
+// ---------- Chat backup (saved by the customer to Google Drive / phone) ----------
+app.get('/api/backup/export', auth, (req, res) => {
+  const me = req.user.id, hidden = new Set(req.user.hiddenMsgs || []), cleared = req.user.clearedChats || {}, t = now();
+  const myGroups = new Set(db.groups.filter((g) => gMember(g, me)).map((g) => g.id));
+  const chats = new Map();
+  const nameFor = (id) => { const c = contactsOf(req.user).find((x) => x.id === id); const u = userById(id); return (c && c.name) || (u && u.name) || 'Maata user'; };
+  for (const m of db.messages) {
+    let key;
+    if (m.group) { if (!myGroups.has(m.group)) continue; key = 'g:' + m.group; }
+    else if (m.from === me) key = m.to; else if (m.to === me) key = m.from; else continue;
+    if (hidden.has(m.id) || m.ts <= (cleared[key] || 0) || (m.expiresAt && m.expiresAt <= t) || m.viewOnce || m.deleted) continue;
+    if (!chats.has(key)) { const g = m.group && groupById(m.group), u = !m.group && userById(key); chats.set(key, { id: key, name: g ? g.name : nameFor(key), phone: u ? u.phone : '', isGroup: !!g, messages: [] }); }
+    chats.get(key).messages.push({ id: m.id, from: m.from === me ? 'me' : m.from, fromName: m.from === me ? req.user.name : nameFor(m.from), ts: m.ts, type: m.type || 'text', text: m.text || '',
+      ...(m.file ? { file: { id: m.file.id, name: m.file.name, mime: m.file.mime, size: m.file.size } } : {}), ...(m.product ? { product: m.product } : {}), ...(m.location ? { location: m.location } : {}) });
+  }
+  const list = [...chats.values()].sort((a, b) => (b.messages.at(-1)?.ts || 0) - (a.messages.at(-1)?.ts || 0));
+  let total = 0; for (const c of list) { if (c.messages.length > 5000) c.messages = c.messages.slice(-5000); total += c.messages.length; }
+  res.json({ app: 'Maata', version: 1, exportedAt: t, me: { id: me, name: req.user.name, phone: req.user.phone }, chats: list, totalMessages: total });
+});
+app.post('/api/backup/done', auth, (req, res) => { req.user.lastBackup = { at: now(), size: Math.max(0, Number(req.body?.size) || 0), messages: Math.max(0, Number(req.body?.messages) || 0), media: !!req.body?.media, where: clip(req.body?.where, 30) }; save(); res.json(req.user.lastBackup); });
+app.get('/api/backup/info', auth, (req, res) => res.json(req.user.lastBackup || null));
+
 app.get('/api/ice', auth, (req, res) => {
   const ice = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
   if (process.env.TURN_URL) ice.push({ urls: process.env.TURN_URL.split(','), username: process.env.TURN_USERNAME || '', credential: process.env.TURN_PASSWORD || '' });
