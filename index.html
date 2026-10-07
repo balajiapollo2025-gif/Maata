@@ -1163,6 +1163,19 @@ html.dark .st-open{background:#3A2E10;color:#F6CF7A}html.dark .st-prog{backgroun
 .stor-row{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:15px}
 .stor-bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin:4px 0}.stor-bar i{display:block;height:100%;background:var(--leaf)}
 .stor-pol{display:flex;flex-direction:column;gap:2px;margin:6px 0}.stor-pol>span{font-weight:600;font-size:14.5px}
+/* features switched off by the admin */
+html.feat-off-reels [data-go="reels"],html.feat-off-communities [data-go="communities"],html.feat-off-updates [data-go="status"],html.feat-off-updates #tabStatus,
+html.feat-off-ai #aiBtn,html.feat-off-ai #suggestBar,html.feat-off-qrLogin #qrLoginBtn,html.feat-off-backup .set-group:has(#setBackup),html.feat-off-themes .set-group:has(#setThemes),html.feat-off-support .set-group:has(#setSupport),html.feat-off-callQuality .set-group:has(#setCallQ),
+html.feat-off-conference #addCallBtn,html.feat-off-callTranslate #trBtn,html.feat-off-screenShare #shareBtn,
+html.feat-off-voiceCalls #voiceBtn,html.feat-off-videoCalls #videoBtn,
+html.feat-off-status #stMine,html.feat-off-status .st-actions,html.feat-off-status #stRecentTitle,html.feat-off-status #stRecent,html.feat-off-status #stSeenTitle,html.feat-off-status #stSeen,html.feat-off-status #statusPane>.info-note,html.feat-off-status .ig-stories,
+html.feat-off-channels #stChannels,html.feat-off-nearby [data-rt="nearby"],html.feat-off-reels #igPlus,
+html.feat-off-ai .mt-ai-only{display:none!important}
+.locmap{width:100%;height:260px;border-radius:14px;overflow:hidden;background:var(--line)}
+.loc-status{font-weight:600;margin:8px 0 2px;font-size:14px}.loc-addr{font-size:13px;color:var(--muted);margin:0 0 6px}
+.loc-warn{font-size:13px;line-height:1.45;padding:10px 12px;border-radius:12px;background:#FFF3D6;color:#6B4A00}
+html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
+.leaflet-container{font:inherit}
 </style>
 </head>
 <body>
@@ -1812,6 +1825,7 @@ function connectSocket() {
   socket.on('msg:update', refreshBubble);
   socket.on('support:reply', (p) => { toast('🆘 ' + p.text); notify('Maata Support', p.text); });
   socket.on('reel:review', () => toast('🛡️ Your new reel is being checked by the Maata team before everyone can see it.'));
+  socket.on('features', (f) => { FEAT = f || {}; applyFeatures(); });
   socket.on('activity:new', () => { const d = $('#igDot'); if (d) d.hidden = false; });
   socket.on('user:profile', () => { reloadUsers(); });
   socket.on('msg:expired', ({ ids }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => !ids.includes(m.id)); if (activeId) renderMessages(); });
@@ -1863,6 +1877,7 @@ function renderContacts() {
   const list = $('#contacts'); list.innerHTML = '';
   const shown = users
     .filter((u) => !q || nameOf(u).toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.phone.includes(q))
+    .filter((u) => !u.isAI || F('ai'))
     .filter((u) => filterOk(u) || (u.isAI && chatFilter === 'all'))
     .sort((a, b) => (b.isAI ? 1 : 0) - (a.isAI ? 1 : 0) || (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0) || (b.online - a.online) || nameOf(a).localeCompare(nameOf(b)));
   if (!shown.length && numberQuery()) { renderLookup(list); return; }
@@ -1933,7 +1948,7 @@ function renderChatHead() {
   let jb = $('#gJoinBtn'); if (jb) jb.remove();
   $('#chatSearchBtn').hidden = !!u.isAI;
   { const n0 = $('#chatName'); const old = n0.querySelector('.dis-ic'); if (old) old.remove(); if ((chatSettings[u.id] || {}).disappearing) n0.append(el('span', 'dis-ic', '⏱')); }
-  $('#voiceBtn').hidden = $('#videoBtn').hidden = !!u.isAI;
+  $('#voiceBtn').hidden = $('#videoBtn').hidden = !!u.isAI || (u.isGroup && !F('groupCalls'));
   for (const id of ['#attachBtn', '#camBtnChat']) $(id).hidden = !!u.isAI;
   if (u.isAI) { const s0 = $('#chatStatus'); s0.classList.remove('on'); s0.textContent = aiEnabled ? 'AI assistant · powered by Google Gemini' : 'Not switched on yet'; return; }
   if (u.isGroup) {
@@ -2308,7 +2323,8 @@ function onConnected() {
 function nativeCall(on, kind, name) { try { const A = window.MaataAndroid; if (!A) return; if (on && A.callStarted) A.callStarted(kind || 'voice', name || 'Maata'); else if (!on && A.callEnded) A.callEnded(); } catch {} }
 window.maataHangup = () => { if (call) { const b = $('#endBtn'); if (b) b.click(); else endCall('Call ended', true); } else if (GC.id) gcLeave(); };
 async function startCall(kind) {
-  if (isGroupId(activeId)) return startGroupCall(activeId, kind);
+  if (!F(kind === 'video' ? 'videoCalls' : 'voiceCalls')) return toast('This feature is turned off by Maata right now.');
+  if (isGroupId(activeId)) { if (!F('groupCalls')) return toast('Group calls are turned off by Maata right now.'); return startGroupCall(activeId, kind); }
   if (call || GC.id) return toast('You are already on a call.');
   const u = userById(activeId); if (!u) return;
   // The server decides if the other person is reachable (online status is only shown for saved contacts).
@@ -3431,6 +3447,7 @@ function openAttach() {
   const body = $('#attBody'); body.innerHTML = '';
   const grid = el('div', 'attach-grid');
   for (const [id, icon, label, color] of ATT) {
+    if (ATT_FEAT[id] && !F(ATT_FEAT[id])) continue;
     const b = el('button', 'att'); const i = el('i', null, icon); i.style.background = color; b.append(i, el('span', null, label));
     b.onclick = () => attachAction(id); grid.append(b);
   }
@@ -3557,37 +3574,91 @@ function eventView() {
   box.append(go); attachView('Create event', box); title.focus();
 }
 
-// ----- location: current or live -----
+// ----- location: current or live (waits for a precise GPS fix, pin can be moved) -----
 const liveMine = new Map(); // message id -> geolocation watch id
-function getPosition() {
+let leafletLoading = null;
+function loadLeaflet() {
+  if (window.L && window.L.map) return Promise.resolve();
+  if (!leafletLoading) leafletLoading = new Promise((ok, bad) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.append(css);
+    const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; sc.onload = () => { try { L.Icon.Default.imagePath = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/'; } catch {} ok(); }; sc.onerror = () => { leafletLoading = null; bad(new Error('map')); }; document.head.append(sc);
+  });
+  return leafletLoading;
+}
+function getPosition() { // best fix within a few seconds (used by other features)
   return new Promise((res, rej) => {
     if (!navigator.geolocation) return rej(new Error('Location is not supported on this device.'));
-    navigator.geolocation.getCurrentPosition((p) => res(p.coords), (e) => rej(new Error(e.code === 1 ? 'Allow location access to share your location.' : 'Could not find your location. Turn on GPS and try again.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+    let best = null; const t0 = Date.now();
+    const wid = navigator.geolocation.watchPosition((p) => { if (!best || p.coords.accuracy < best.accuracy) best = p.coords; if (best.accuracy <= 30 || Date.now() - t0 > 12000) { navigator.geolocation.clearWatch(wid); res(best); } },
+      (e) => { navigator.geolocation.clearWatch(wid); if (best) res(best); else rej(new Error(e.code === 1 ? 'Allow location access to share your location.' : 'Could not find your location. Turn on GPS and try again.')); },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+    setTimeout(() => { if (best) { navigator.geolocation.clearWatch(wid); res(best); } }, 14000);
   });
 }
 async function locationView() {
-  const box = el('div', 'formcol'); box.append(el('p', 'info-note', '📡 Finding your location…')); attachView('Location', box);
-  let pos; try { pos = await getPosition(); } catch (e) { box.innerHTML = ''; box.append(el('p', 'info-note', '⚠️ ' + e.message)); return; }
-  box.innerHTML = '';
-  const fr = mapFrame(pos.latitude, pos.longitude); fr.style.cssText = 'width:100%;height:200px'; fr.loading = 'eager';
-  box.append(fr, el('p', 'info-note', 'Accurate to about ' + Math.round(pos.accuracy) + ' m'));
-  const cur = el('button', 'primary', '📍 Send your current location');
-  cur.onclick = () => { sendRich({ type: 'location', location: { lat: pos.latitude, lng: pos.longitude, acc: pos.accuracy } }); closeSheet('attachSheet'); };
-  box.append(cur, el('div', 'or-line', 'or share live location'));
+  const box = el('div', 'formcol'); attachView('Location', box);
+  if (!navigator.geolocation) { box.append(el('p', 'info-note', '⚠️ Location is not supported on this device.')); return; }
+  const mapDiv = el('div', 'locmap'); const status = el('p', 'loc-status', '📡 Finding your exact location… (turn on GPS for best results)');
+  const addr = el('p', 'loc-addr', ''); const warn = el('p', 'loc-warn'); warn.hidden = true;
+  const cur = el('button', 'primary', '📍 Send your current location'); cur.disabled = true;
   const l = el('label'); l.append(el('span', null, 'Share live location for'));
-  const sel = el('select'); for (const [v, t] of [[15, '15 minutes'], [60, '1 hour'], [480, '8 hours']]) sel.add(new Option(t, v)); l.append(sel); box.append(l);
-  const live = el('button', 'primary', '📡 Share live location'); live.style.background = 'var(--leaf)';
-  live.onclick = () => startLive(pos, Number(sel.value));
-  box.append(live, el('p', 'info-note', 'Live location keeps updating while Maata stays open on this phone. You can stop sharing anytime.'));
+  const sel = el('select'); for (const [v, t] of [[15, '15 minutes'], [60, '1 hour'], [480, '8 hours']]) sel.add(new Option(t, v)); l.append(sel);
+  const live = el('button', 'primary', '📡 Share live location'); live.style.background = 'var(--leaf)'; live.disabled = true;
+  box.append(mapDiv, status, addr, warn, cur, el('div', 'or-line', 'or share live location'), l, live, el('p', 'info-note', 'Live location keeps updating while Maata stays open on this phone. You can stop sharing anytime.'));
+  let best = null, pin = null, moved = false, map = null, marker = null, circle = null, wid = null, t0 = Date.now(), addrT = 0;
+  const showAddr = (lat, lng) => { clearTimeout(addrT); addrT = setTimeout(async () => { try { const g = await api('/api/geo/reverse?lat=' + lat + '&lng=' + lng); addr.textContent = '📍 ' + (g.address || g.title || ''); } catch {} }, 500); };
+  try { await loadLeaflet(); } catch { /* no interactive map: simple map picture instead */ }
+  const draw = () => {
+    const lat = pin ? pin.lat : best.latitude, lng = pin ? pin.lng : best.longitude;
+    if (window.L && window.L.map) {
+      if (!map) {
+        map = L.map(mapDiv, { zoomControl: true, attributionControl: true }).setView([lat, lng], 17);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+        circle = L.circle([lat, lng], { radius: best.accuracy, color: '#1F6FB2', weight: 1, fillOpacity: 0.12 }).addTo(map);
+        marker = L.marker([lat, lng], { draggable: true, title: 'Drag to the right place' }).addTo(map);
+        marker.on('dragend', () => { const p2 = marker.getLatLng(); pin = { lat: p2.lat, lng: p2.lng }; moved = true; cur.textContent = '📍 Send this location (you moved the pin)'; status.textContent = '✋ Pin moved by you'; showAddr(p2.lat, p2.lng); });
+        map.on('click', (e) => { marker.setLatLng(e.latlng); marker.fire('dragend'); });
+        setTimeout(() => map.invalidateSize(), 200);
+      } else {
+        circle.setLatLng([best.latitude, best.longitude]).setRadius(best.accuracy);
+        if (!moved) { marker.setLatLng([lat, lng]); map.setView([lat, lng], best.accuracy > 500 ? 14 : 17); }
+      }
+    } else { mapDiv.innerHTML = ''; const fr = mapFrame(lat, lng); fr.style.cssText = 'width:100%;height:100%;border:0'; fr.loading = 'eager'; mapDiv.append(fr); }
+    if (!moved) showAddr(lat, lng);
+  };
+  const stop = () => { if (wid !== null) { navigator.geolocation.clearWatch(wid); wid = null; } };
+  wid = navigator.geolocation.watchPosition((p) => {
+    const c = p.coords; if (best && c.accuracy >= best.accuracy && Date.now() - t0 < 25000) return; // keep only better fixes
+    best = { latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy };
+    cur.disabled = live.disabled = false;
+    const a = Math.round(best.accuracy);
+    if (!moved) status.textContent = a <= 50 ? '✅ Accurate to ' + a + ' m' : '📡 Improving accuracy… now ±' + (a >= 1000 ? (a / 1000).toFixed(1) + ' km' : a + ' m');
+    draw();
+    if (a <= 20) stop();
+  }, (e) => {
+    if (!best) { status.textContent = '⚠️ ' + (e.code === 1 ? 'Allow location access for Maata (phone Settings → Apps → Maata → Permissions → Location).' : 'Could not find your location. Turn on GPS / Location and try again.'); }
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  setTimeout(() => {
+    stop();
+    if (best && best.accuracy > 300 && !moved) {
+      warn.hidden = false;
+      warn.innerHTML = '⚠️ Your phone gave only an <b>approximate</b> location (±' + Math.round(best.accuracy) + ' m). To fix: turn on <b>Location / GPS</b>, and allow <b>Precise location</b> for Maata (Settings → Apps → Maata → Permissions → Location). Or drag the pin to the right place.';
+    }
+  }, 25000);
+  const obs = new MutationObserver(() => { if (!box.isConnected) { stop(); obs.disconnect(); } }); obs.observe(document.body, { childList: true, subtree: true });
+  cur.onclick = () => { if (!best) return; stop(); const lat = pin ? pin.lat : best.latitude, lng = pin ? pin.lng : best.longitude; sendRich({ type: 'location', location: { lat, lng, acc: moved ? 0 : best.accuracy } }); closeSheet('attachSheet'); };
+  live.onclick = () => { if (!best) return; stop(); startLive(best, Number(sel.value)); };
 }
 function startLive(pos, minutes) {
   sendRich({ type: 'location', location: { lat: pos.latitude, lng: pos.longitude, acc: pos.accuracy, live: true, minutes } }, (m) => {
-    let last = 0;
+    let last = 0, lastAcc = 1e9;
     const wid = navigator.geolocation.watchPosition((p) => {
       if (Date.now() > m.location.until) return stopLive(m.id);
-      if (Date.now() - last < 8000) return; last = Date.now();
+      const better = p.coords.accuracy < lastAcc - 20; // a clearly better fix is sent at once
+      if (!better && Date.now() - last < 8000) return; last = Date.now(); lastAcc = p.coords.accuracy;
+      if (p.coords.accuracy > 2000) return; // ignore very rough tower-only fixes while moving
       socket.emit('live:update', { id: m.id, lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy });
-    }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 0 });
     liveMine.set(m.id, wid);
     setTimeout(() => stopLive(m.id), minutes * 60000 + 1000);
     toast('Sharing live location for ' + (minutes < 60 ? minutes + ' minutes' : minutes / 60 + ' hour' + (minutes > 60 ? 's' : '')));
@@ -3779,7 +3850,7 @@ function openMsgMenu(m, bubble) {
     bar.append(more); menu.append(bar);
   }
   const list = el('div', 'menu-list');
-  const item = (icon, label, fn, warn) => { const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = ICON[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
+  const item = (icon, label, fn, warn) => { if (MENU_FEAT[icon] && !F(MENU_FEAT[icon])) return; const b = el('button'); b.setAttribute('role', 'menuitem'); if (warn) b.className = 'warn'; b.innerHTML = ICON[icon]; b.append(el('span', null, label)); b.onclick = () => { closeMsgMenu(); fn(); }; list.append(b); };
   if (!dead && (m.type === 'image' || m.type === 'video')) item('open', m.type === 'image' ? 'View photo' : 'Play video', () => openMediaView(m.id));
   if (mine && !dead) item('info', 'Message info', () => msgInfo(m));
   if (m.viewOnce) { if (!dead) item('reply', 'Reply', () => startReply(m)); list.append(el('hr')); item('del', 'Delete', () => askDelete([m.id]), true); menu.append(list); document.body.append(shade, menu); menuEls = [shade, menu]; place(); return; }
@@ -5374,7 +5445,7 @@ function renderAiSuggest() {
   if (!bar) { bar = el('div', 'ai-suggest'); bar.id = 'aiSuggest'; $('#composer').before(bar); }
   const list = messagesCache[activeId] || [];
   const last = [...list].reverse().find((m) => m.type !== 'system');
-  const show = aiEnabled && activeId && activeId !== AI_ID && last && last.from !== me.id && isText(last) && !last.deleted && !$('#composer').hidden;
+  const show = F('ai') && aiEnabled && activeId && activeId !== AI_ID && last && last.from !== me.id && isText(last) && !last.deleted && !$('#composer').hidden;
   bar.hidden = !show; if (!show) return;
   if (bar.dataset.for === last.id) return;
   bar.dataset.for = last.id; bar.innerHTML = '';
@@ -6691,7 +6762,7 @@ const mtName = (code) => (MT_LANGS.find((x) => x[0] === code) || [code, code])[1
 function mtKey(id) { const s2 = mtState[id]; return s2 ? s2.lang + (s2.hidden ? 'h' : '') + (s2.text ? s2.text.length : 0) : ''; }
 function mtRedraw(id) { bubbleCache.delete(id); const old = document.querySelector('#messages [data-mid="' + CSS.escape(id) + '"]'); const m = (messagesCache[activeId] || []).find((x) => x.id === id); if (old && m) old.replaceWith(buildBubble(m)); else if (activeId) renderMessages(); }
 function mtAttach(b, m, mine) {
-  if (mine || !m.text || m.deleted || m.type === 'system' || !(isText(m) || m.text)) return;
+  if (!F('translate') || mine || !m.text || m.deleted || m.type === 'system' || !(isText(m) || m.text)) return;
   const st = mtState[m.id];
   const btn = el('button', 'mt-btn'); btn.type = 'button';
   btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
@@ -7108,8 +7179,7 @@ function reelMore(r, c) {
     b('👤  ' + (r.mine ? 'My profile' : r.by.name + '\u2019s profile'), () => igSetView('profile', { id: r.by.id }));
     if (!r.mine && !r.by.biz) b('💬  Message ' + r.by.name, async () => { await ensureUser(r.by.id); setTab('chats'); openChat(r.by.id); });
     if (r.by.biz) b('🏪  Visit shop', () => viewBusiness(r.by.id));
-    b('🎭  Remix this reel', () => reelRemix(r, false));
-    b('👯  Duet (side by side with your video)', () => reelRemix(r, true));
+    if (F('remix') && F('studio')) { b('🎭  Remix this reel', () => reelRemix(r, false)); b('👯  Duet (side by side with your video)', () => reelRemix(r, true)); }
     if (r.mine) b('🗑  Delete this reel', async () => { if (!confirm('Delete this reel?')) return; try { await api('/api/reels/' + r.id, { method: 'DELETE' }); c.remove(); toast('Reel deleted'); } catch (e) { toast(e.message); } }, true);
     else b('🚩  Report', async () => { const why = prompt('What is wrong with this reel? (nudity, violence, hate, scam, copyright…)'); if (why === null) return; await api('/api/reels/' + r.id + '/report', { method: 'POST', body: JSON.stringify({ reason: why }) }).catch(() => {}); c.remove(); toast('Reported. Thank you — our team will check it.'); }, true);
   });
@@ -7130,9 +7200,11 @@ function reelCreate() {
       list.append(b);
     };
     const studio = (label, accept, multiple, capture) => { const b = el('button', 'sheet-btn', label); b.onclick = async () => { closeSheet('moreSheet'); const f = await pickFiles(accept, multiple, capture); if (f.length) openStudio(f); }; list.append(b); };
+    if (F('studio')) {
     studio('🎥  Record a video', 'video/*', false, 'user');
     studio('🖼️  Video from gallery', 'video/*', false);
     studio('📸  Photo reel (choose up to 15 photos)', 'image/*', true);
+    }
     const q = el('button', 'sheet-btn', '⚡  Quick post (no editing)'); q.onclick = () => { closeSheet('moreSheet'); pickFiles('video/*', false).then((f) => f[0] && reelPrepare(f[0])); }; list.append(q);
     list.append(el('p', 'info-note', '🎬 Maata Studio: trim, filters, text, stickers, music, AI background, AI subtitles in Indian languages and AI voice. Share only your own videos — nothing violent, adult or hateful.'));
   });
@@ -8383,6 +8455,28 @@ async function openStorage() {
 
 $('#setStorage').onclick = openStorage;
 try { navigator.storage?.persist?.().catch(() => {}); } catch {}
+// ================= App features (switched on/off by the admin) =================
+let FEAT = {};
+const F = (k) => FEAT[k] !== false;
+const FEAT_KEYS = ['translate', 'ai', 'documents', 'contactCard', 'polls', 'location', 'gps', 'broadcast', 'quickReplies', 'status', 'channels', 'communities', 'reels', 'studio', 'remix', 'nearby', 'voiceCalls', 'videoCalls', 'groupCalls', 'conference', 'callTranslate', 'screenShare', 'callQuality', 'business', 'qrLogin', 'backup', 'themes', 'appLock', 'support'];
+const MENU_FEAT = { reels: 'reels', community: 'communities', channel: 'channels', biz: 'business', broadcast: 'broadcast', quick: 'quickReplies', ai: 'ai', linked: 'qrLogin', support: 'support', lock: 'appLock' };
+const ATT_FEAT = { doc: 'documents', contact: 'contactCard', poll: 'polls', event: 'polls', location: 'location', gps: 'gps' };
+async function loadFeatures() { try { FEAT = await fetch('/api/features', { cache: 'no-store' }).then((r) => r.json()); } catch { /* keep last */ } applyFeatures(); }
+function applyFeatures() {
+  const h = document.documentElement;
+  for (const k of FEAT_KEYS) h.classList.toggle('feat-off-' + k, !F(k));
+  h.classList.toggle('feat-off-updates', !F('status') && !F('channels'));
+  h.classList.toggle('feat-off-calls', !F('voiceCalls') && !F('videoCalls'));
+  // if the person is on a tab that was just switched off, go back to Chats
+  try {
+    if ((tab === 'reels' && !F('reels')) || (tab === 'communities' && !F('communities')) || (tab === 'status' && !F('status') && !F('channels'))) setTab('chats');
+    if (typeof renderContacts === 'function' && me) renderContacts();
+    if (activeId && typeof renderChatHead === 'function') renderChatHead();
+    if (tab === 'status' && typeof renderStatus === 'function') renderStatus();
+  } catch {}
+}
+
+loadFeatures();
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

@@ -459,6 +459,52 @@ function auth(req, res, next) {
   } catch { res.status(401).json({ error: 'Session expired. Log in again.' }); }
 }
 
+// ---------- App features: the admin can switch any customer feature on or off (Admin → ⚙️ App features) ----------
+const FEATURE_LIST = [
+  ['Chat', 'translate', '🌐 Maata Translate (translate any message)'],
+  ['Chat', 'ai', '🦜 Maata AI (AI chat, ✨ write with AI, suggest replies, AI auto-reply)'],
+  ['Chat', 'documents', '📄 Send documents'],
+  ['Chat', 'contactCard', '👤 Share a contact'],
+  ['Chat', 'polls', '📊 Polls & events'],
+  ['Chat', 'location', '📍 Share location'],
+  ['Chat', 'gps', '🗺️ GPS photo stamp'],
+  ['Chat', 'broadcast', '📣 Broadcast lists'],
+  ['Chat', 'quickReplies', '⚡ Quick replies'],
+  ['Updates & social', 'status', '⭕ Status / stories'],
+  ['Updates & social', 'channels', '📢 Channels'],
+  ['Updates & social', 'communities', '👥 Communities'],
+  ['Reels', 'reels', '🎬 Reels (watch & post short videos)'],
+  ['Reels', 'studio', '🎨 Maata Studio (reel editor: music, text, AI subtitles, AI voice)'],
+  ['Reels', 'remix', '🎭 Remix & Duet'],
+  ['Reels', 'nearby', '📍 Nearby reels'],
+  ['Calls', 'voiceCalls', '📞 Voice calls'],
+  ['Calls', 'videoCalls', '🎥 Video calls'],
+  ['Calls', 'groupCalls', '👥 Group calls'],
+  ['Calls', 'conference', '➕ Add a person to a call (conference)'],
+  ['Calls', 'callTranslate', '🌐 Live call translation'],
+  ['Calls', 'screenShare', '🖥️ Screen share in video calls'],
+  ['Calls', 'callQuality', '🎧 Call quality setting'],
+  ['Business', 'business', '🏪 Business tools (profile, catalogue, free ads)'],
+  ['Account & app', 'qrLogin', '💻 Log in on a computer with QR code'],
+  ['Account & app', 'backup', '☁️ Chat backup (Google Drive)'],
+  ['Account & app', 'themes', '🎨 Theme & colours'],
+  ['Account & app', 'appLock', '🔒 App lock'],
+  ['Account & app', 'support', '🆘 Help & Support (complaints)'],
+];
+function featureFlags() {
+  const m = (db.meta || []).find((x) => x.id === 'features'), f = {};
+  for (const [, k] of FEATURE_LIST) f[k] = !(m && m.flags && m.flags[k] === false);
+  return f;
+}
+const featOn = (k) => featureFlags()[k] !== false;
+const OFF_MSG = 'This feature is turned off by Maata right now.';
+app.get('/api/features', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json(featureFlags()); });
+// the server enforces it too (older app versions cannot use a switched-off feature)
+const FEAT_PATHS = [['/api/reels', 'reels'], ['/api/reels-creators', 'reels'], ['/api/insights', 'reels'], ['/api/ai', 'ai'], ['/api/translate', 'translate'], ['/api/qr', 'qrLogin'], ['/api/backup', 'backup'],
+  ['/api/support', 'support'], ['/api/channels', 'channels'], ['/api/communities', 'communities'], ['/api/business', 'business'], ['/api/catalogue', 'business'], ['/api/ads', 'business']];
+for (const [path, k] of FEAT_PATHS) app.use(path, (req, res, next) => (featOn(k) ? next() : res.status(403).json({ error: OFF_MSG, featureOff: k })));
+app.use('/api/status', (req, res, next) => (req.method === 'GET' || featOn('status') ? next() : res.status(403).json({ error: OFF_MSG, featureOff: 'status' })));
+
 // ---------- Live feed for admins ----------
 let liveTimer = null;
 function liveNow() {
@@ -2751,6 +2797,16 @@ app.post('/admin/api/tickets/:id', adminAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/admin/api/features', adminAuth, (req, res) => { const f = featureFlags(); res.json(FEATURE_LIST.map(([group, key, label]) => ({ group, key, label, on: f[key] }))); });
+app.post('/admin/api/features', adminAuth, (req, res) => {
+  let m = db.meta.find((x) => x.id === 'features'); if (!m) { m = { id: 'features', flags: {}, createdAt: now() }; db.meta.push(m); }
+  const set = req.body && typeof req.body.flags === 'object' ? req.body.flags : { [String(req.body?.key || '')]: !!req.body?.on };
+  for (const [k, v] of Object.entries(set)) if (FEATURE_LIST.some((f) => f[1] === k)) m.flags[k] = !!v;
+  save(); const f = featureFlags(); io.emit('features', f); // every open app updates at once
+  audit(req.admin, 'features', Object.entries(set).map(([k, v]) => k + (v ? ' on' : ' off')).join(', '), '');
+  res.json(f);
+});
+
 // Reels moderation
 app.get('/admin/api/reels', adminAuth, (req, res) => res.json(db.reels.slice().sort((a, b) => (b.reports || []).length - (a.reports || []).length || b.createdAt - a.createdAt).slice(0, 200).map((r) => { const u = userById(r.by) || {}; return { id: r.id, caption: r.caption, ownerName: u.name || 'Deleted user', ownerPhone: u.phone || '', createdAt: r.createdAt, likes: (r.likes || []).length, views: r.viewCount || 0, reports: (r.reports || []).map((x) => x.reason || 'reported'), removed: !!r.removed, hidden: !!r.hidden, hasThumb: !!r.thumb }; })));
 app.get('/admin/api/reels/:id/:what', (req, res) => {
@@ -3285,6 +3341,7 @@ io.on('connection', (socket) => {
 
   socket.on('call:offer', (p) => {
     if (!valid(p)) return;
+    if (!featOn(p.kind === 'video' ? 'videoCalls' : 'voiceCalls')) return socket.emit('call:unavailable', { callId: p.callId, reason: OFF_MSG });
     const target = userById(p.to);
     if (!target || target.status === 'blocked' || blockedOf(target).includes(me) || blockedOf(socket.user).includes(p.to)) return socket.emit('call:unavailable', { callId: p.callId });
     const callId = String(p.callId).slice(0, 64);
@@ -3397,6 +3454,7 @@ io.on('connection', (socket) => {
     pushLive();
   }
   socket.on('gcall:start', (p) => {
+    if (!featOn('groupCalls')) return socket.emit('gcall:ended', { reason: OFF_MSG });
     const g = groupById(gidOf(String(p?.gid || ''))); if (!gMember(g, me)) return;
     if (socket.gcall) gcallLeave(socket.gcall);
     let c = gcalls.get(g.id);
@@ -3431,6 +3489,7 @@ io.on('connection', (socket) => {
     return true;
   }
   socket.on('conf:create', (p, reply) => {
+    if (!featOn('conference')) return reply?.({ error: OFF_MSG });
     const kind = p?.kind === 'video' ? 'video' : 'voice', moveId = String(p?.move || '');
     const invite = [...new Set((Array.isArray(p?.invite) ? p.invite : []).map(String))].filter((id) => id !== me && mayCall(id)).slice(0, GCALL_MAX - 1);
     if (!invite.length) return reply?.({ error: 'Choose someone to add.' });
