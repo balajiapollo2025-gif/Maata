@@ -217,10 +217,8 @@ class MainActivity : Activity() {
                 AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
                 .firstNotNullOfOrNull { t -> devs.firstOrNull { it.type == t } }
             if (pick != null) ok = am.setCommunicationDevice(pick)
-            val now = am.communicationDevice?.type
-            if (!ok || (on && now != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) || (!on && now == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)) {
-                am.isSpeakerphoneOn = on; ok = true
-            }
+            am.isSpeakerphoneOn = on // also the older switch — some phones (Vivo, Oppo, Realme…) only listen to this one
+            ok = true
         } else {
             am.isSpeakerphoneOn = on // older Android
             ok = true
@@ -269,6 +267,19 @@ class MainActivity : Activity() {
         @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity) }
         /** Loudspeaker on/off during a call. Off = phone earpiece (or a connected headset / Bluetooth), like a normal call. */
         /** Phone contacts for "New group" and the Contacts tab: JSON [{name, phones:[...]}], or "PERMISSION" while asking. */
+        /** What the phone is really doing with call sound (shown when the speaker button is held). */
+        @JavascriptInterface fun audioInfo(): String = try {
+            val am = getSystemService(AudioManager::class.java)
+            val modes = mapOf(0 to "NORMAL", 1 to "RINGTONE", 2 to "IN_CALL", 3 to "IN_COMMUNICATION")
+            val types = mapOf(1 to "EARPIECE", 2 to "SPEAKER", 3 to "WIRED_HEADSET", 4 to "WIRED_HEADPHONES", 7 to "BLUETOOTH_SCO", 8 to "BLUETOOTH_A2DP", 22 to "USB_HEADSET", 26 to "BLE_HEADSET")
+            val dev = if (Build.VERSION.SDK_INT >= 31) am.communicationDevice?.type?.let { types[it] ?: it.toString() } ?: "none" else "n/a"
+            val outs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { types[it.type] ?: it.type.toString() }.distinct().joinToString(",")
+            org.json.JSONObject().put("android", Build.VERSION.SDK_INT).put("phone", Build.MANUFACTURER + " " + Build.MODEL)
+                .put("mode", modes[am.mode] ?: am.mode.toString()).put("speakerphone", am.isSpeakerphoneOn).put("commDevice", dev)
+                .put("want", wantSpeaker?.toString() ?: "none").put("callService", CallService.running).put("outputs", outs)
+                .put("voiceVol", am.getStreamVolume(AudioManager.STREAM_VOICE_CALL).toString() + "/" + am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL))
+                .put("app", BuildConfig.VERSION_NAME).toString()
+        } catch (e: Exception) { "{\"error\":\"" + (e.message ?: "?") + "\"}" }
         @JavascriptInterface fun getContacts(): String {
             if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
                 runOnUiThread { requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS), 77) }

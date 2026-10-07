@@ -170,8 +170,8 @@ html.dark .call-btn{color:#7CC4D4}
 .mascot{width:min(42vw,160px);height:auto;flex:none;overflow:visible}
 .mascot,.mascot *,.mini,.mini *,#parrot *{stroke:none}
 .hero .wordmark{white-space:nowrap}
-.brand-row{display:flex;align-items:center;gap:6px}
-.brand-row .mini{width:40px;height:40px}
+.brand-row{display:flex;align-items:center;gap:8px}
+.brand-row .mini{width:50px;height:50px;flex:none;align-self:center}
 .bird{animation:bob 3s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
 .float1{animation:floaty 2.6s ease-in-out infinite;transform-box:fill-box}
 .float2{animation:floaty 3.2s ease-in-out .4s infinite;transform-box:fill-box}
@@ -758,7 +758,7 @@ html.dark .forgot-link{color:#7CC4D4}
   :root{font-family:Roboto,"Noto Sans","Noto Sans Telugu",system-ui,-apple-system,"Segoe UI",sans-serif}
   .side-head{padding:10px 6px 4px 16px;gap:2px;justify-content:flex-start}
   .side-head{justify-content:flex-start;padding:12px 8px 4px 16px}
-  .side-head .brand-row .mini{width:28px;height:28px}
+  .side-head .brand-row .mini{width:46px;height:46px;margin:0 -2px 0 -6px}
   .side-head .brand{font-size:25px;font-weight:700;letter-spacing:-.2px}
   .side-head .icon-btn{width:42px;height:42px}
   .side-head .icon-btn svg{width:22px;height:22px}
@@ -1086,7 +1086,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .post-prods{display:flex;gap:6px;flex-wrap:wrap}.post-prods button{padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font-size:13px}
 .post-prods button[aria-pressed="true"]{background:var(--leaf);color:#fff;border-color:var(--leaf)}
 .brand-txt{display:flex;flex-direction:column;line-height:1.05}
-.tagline{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.2px;margin-top:3px;white-space:nowrap}
+.brand-txt .tagline{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.2px;margin:3px 0 0;white-space:nowrap;line-height:1.2}
 .dev-foot{display:flex;align-items:center;gap:10px;margin:6px 10px 10px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--leaf);background:var(--peacock-soft)}
 .dev-ic{width:34px;height:34px;border-radius:50%;background:var(--leaf);color:#fff;display:grid;place-items:center;flex:none}
 .dev-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
@@ -1119,6 +1119,27 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .ng-msg{margin:-2px 4px 8px 38px;padding:8px 10px;border-radius:10px;background:#FDECEA;color:#8A1C14;font-size:13px}
 html.dark .ng-msg{background:#3A1A18;color:#F5B7B1}
 .ng-letter{list-style:none;font-size:12px;font-weight:800;color:var(--leaf);padding:8px 4px 2px;border-bottom:1px solid var(--line)}
+.ngp{position:fixed;inset:0;z-index:30;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.ngp-head{display:flex;align-items:center;gap:6px;margin:10px 12px 4px;padding:4px 6px;border-radius:999px;background:var(--line)}
+.ngp-head input{flex:1;height:44px;border:0;background:none;font:inherit;font-size:17px;color:var(--ink);outline:none}
+.ngp-sub{padding:2px 22px 6px;font-size:13px;color:var(--muted)}
+.ngp-chips{display:flex;gap:10px;overflow-x:auto;padding:8px 14px;scrollbar-width:none}
+.ngp-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;color:var(--ink);font-size:12px;flex:none;width:58px}
+.ngp-chip i{position:absolute;top:30px;right:4px;width:18px;height:18px;border-radius:50%;background:var(--muted);color:var(--paper);font-size:10px;font-style:normal;display:grid;place-items:center}
+.ngp-chip .avatar{width:46px!important;height:46px!important}
+.ngp-list{flex:1;overflow-y:auto;padding-bottom:100px}
+.ngp-sec{padding:16px 22px 6px;font-size:15px;font-weight:600;color:var(--muted)}
+.ngp-row{display:flex;align-items:center;gap:16px;width:100%;padding:10px 22px;background:none;color:var(--ink);text-align:left}
+.ngp-row .avatar{width:48px!important;height:48px!important;flex:none}
+.ngp-row .tx{flex:1;min-width:0;display:flex;flex-direction:column;border-bottom:1px solid var(--line);padding:6px 0 12px}
+.ngp-row .tx b{font-size:17px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ngp-row .tx small{font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ngp-ck{width:26px;height:26px;border-radius:50%;border:2px solid var(--muted);flex:none;display:grid;place-items:center}
+.ngp-ck.on{background:#21C063;border-color:#21C063}.ngp-ck svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:3}
+.ngp-ck.wait{border-style:dashed;animation:rlspin 1s linear infinite}
+.ngp-fab{position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:18px;background:#21C063;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.ngp-fab svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.4}
+.ngp-load{display:block;margin:12px 22px;padding:12px;border-radius:12px;background:var(--peacock-soft);color:var(--ink);font-weight:700;width:calc(100% - 44px)}
+@media (min-width:761px){.ngp{left:50%;transform:translateX(-50%);width:min(520px,100vw);box-shadow:0 0 0 100vw rgba(0,0,0,.45)}}
 </style>
 </head>
 <body>
@@ -4685,71 +4706,79 @@ function closeActiveChat() { activeId = null; $('#app').classList.remove('in-cha
 
 // ----- new group: pick members → name & photo -----
 function openNewGroup() {
-  const pick = new Set();
-  sheet('👥 New group', async (list) => {
-    const box = el('div', 'formcol'); box.style.padding = '12px';
-    const sum = el('p', 'info-note', ''); box.append(sum);
-    const load = el('button', 'st-ai', '📱 Load my phone contacts');
-    load.onclick = async () => { load.disabled = true; load.textContent = '⏳ Reading your contacts…'; await syncFromPhone(); load.disabled = false; draw(); };
-    box.append(load);
-    const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q);
-    const sel = el('div', 'row2'); sel.style.cssText = 'display:flex;gap:8px;margin:8px 0;align-items:center';
-    const all = el('button', 'linkbtn', 'Select all on Maata'), cnt = el('span', 'muted', ''); cnt.style.marginLeft = 'auto'; sel.append(all, cnt); box.append(sel);
-    const ul = el('ul', 'fwd-list ng-list'); box.append(ul);
-    const next = el('button', 'primary', 'Next →');
-    const count = () => { cnt.textContent = pick.size + ' selected'; next.disabled = !pick.size; };
-    const notOn = new Set(); // numbers we checked and found not registered
-    // one list: every phone contact + every Maata person I already know, each once
-    const entries = () => {
-      const byPhone = new Map(users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && u.phone).map((u) => [l10(u.phone), u]));
-      const out = new Map();
-      for (const c of phoneBook) out.set(c.n, { n: c.n, name: c.name, phone: c.phone, user: byPhone.get(c.n) || null });
-      for (const [n, u] of byPhone) if (!out.has(n) && (u.inContacts || u.lastMessage)) out.set(n, { n, name: nameOf(u), phone: '+91 ' + u.phone, user: u });
-      return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const pick = new Map(); // user id → user
+  const pg = el('section', 'ngp'); pg.id = 'ngPage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-label', 'New group');
+  const head = el('div', 'ngp-head');
+  const back = el('button', 'icon-btn', ''); back.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'; back.setAttribute('aria-label', 'Back'); back.onclick = () => pg.remove();
+  const q = el('input'); q.type = 'search'; q.placeholder = 'Name, number'; q.setAttribute('aria-label', 'Search contacts');
+  const pad = el('button', 'icon-btn'); pad.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="1.4"/><circle cx="12" cy="5" r="1.4"/><circle cx="18" cy="5" r="1.4"/><circle cx="6" cy="11" r="1.4"/><circle cx="12" cy="11" r="1.4"/><circle cx="18" cy="11" r="1.4"/><circle cx="6" cy="17" r="1.4"/><circle cx="12" cy="17" r="1.4"/><circle cx="18" cy="17" r="1.4"/><circle cx="12" cy="22" r="1.4"/></svg>'; pad.setAttribute('aria-label', 'Type a number');
+  pad.onclick = () => { q.type = q.type === 'tel' ? 'search' : 'tel'; q.inputMode = q.type === 'tel' ? 'numeric' : 'text'; q.focus(); };
+  head.append(back, q, pad);
+  const chips = el('div', 'ngp-chips'); chips.hidden = true;
+  const sub = el('div', 'ngp-sub');
+  const listEl = el('div', 'ngp-list');
+  const fab = el('button', 'ngp-fab'); fab.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>'; fab.setAttribute('aria-label', 'Next'); fab.hidden = true;
+  fab.onclick = () => { pg.remove(); groupDetailsStep([...pick.keys()]); };
+  pg.append(head, chips, sub, listEl, fab); document.body.append(pg);
+  const notOn = new Set();
+  const entries = () => {
+    const byPhone = new Map(users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && u.phone).map((u) => [l10(u.phone), u]));
+    const out = new Map();
+    for (const c of phoneBook) out.set(c.n, { n: c.n, name: c.name, phone: c.phone, user: byPhone.get(c.n) || null });
+    for (const [n, u] of byPhone) if (!out.has(n) && (u.inContacts || u.lastMessage)) out.set(n, { n, name: nameOf(u), phone: '+91 ' + u.phone, user: u });
+    return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
+  };
+  const drawChips = () => {
+    chips.innerHTML = ''; chips.hidden = !pick.size; fab.hidden = !pick.size;
+    for (const [id, u] of pick) { const c = el('button', 'ngp-chip'); c.append(avatar(u, 'sm'), el('span', null, nameOf(u).split(' ')[0]), el('i', null, '✕')); c.onclick = () => { pick.delete(id); draw(); }; chips.append(c); }
+  };
+  const row = (e) => {
+    const r = el('button', 'ngp-row'); r.type = 'button';
+    const on = e.user && pick.has(e.user.id);
+    const tx = el('div', 'tx'); tx.append(el('b', null, e.name), el('small', null, e.user ? (e.user.about || 'On Maata · ' + e.phone) : notOn.has(e.n) ? '❌ Not registered on Maata' : e.phone));
+    const ck = el('span', 'ngp-ck' + (on ? ' on' : '')); ck.innerHTML = on ? '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>' : '';
+    r.append(avatar(e.user || { id: e.n, name: e.name }), tx, ck);
+    r.onclick = async () => {
+      if (e.user) { if (pick.has(e.user.id)) pick.delete(e.user.id); else pick.set(e.user.id, e.user); draw(); return; }
+      ck.classList.add('wait');
+      let found = null; try { const x = await api('/api/lookup?phone=' + e.n); found = x.user || null; } catch {}
+      ck.classList.remove('wait');
+      if (found) { upsertUser(found); e.user = userById(found.id) || found; pick.set(e.user.id, e.user); toast('✅ ' + e.name + ' added'); draw(); return; }
+      notOn.add(e.n); draw();
+      sheet('Not on Maata', (l2) => {
+        const b2 = el('div'); b2.style.padding = '14px';
+        b2.append(el('p', null, '❌ ' + e.name + ' (' + e.phone + ') is not registered on Maata, so they cannot be added to the group.'));
+        const inv = el('button', 'primary', '📨 Invite ' + e.name.split(' ')[0] + ' to Maata'); inv.onclick = () => { closeSheet('moreSheet'); inviteToMaata(e); };
+        b2.append(inv); l2.append(b2);
+      });
     };
-    const draw = () => {
-      const es = entries(), t = q.value.trim().toLowerCase(), digits = t.replace(/\D/g, '');
-      const onMaata = es.filter((e) => e.user).length;
-      sum.textContent = '📒 Total contacts: ' + es.length + '  ·  ✅ On Maata: ' + onMaata + '  ·  ' + (es.length - onMaata) + ' not on Maata';
-      load.textContent = phoneBook.length ? '📱 Refresh phone contacts' : '📱 Load my phone contacts';
-      ul.innerHTML = '';
-      const shown = es.filter((e) => !t || e.name.toLowerCase().includes(t) || (digits && e.n.includes(digits)));
-      if (digits.length === 10 && !shown.some((e) => e.n === digits)) shown.unshift({ n: digits, name: '+91 ' + digits, phone: '+91 ' + digits, user: null, typed: true });
-      let letter = '';
-      for (const e of shown.slice(0, 800)) {
-        const L = (e.name[0] || '#').toUpperCase(); if (L !== letter && !t) { letter = L; ul.append(el('li', 'ng-letter', /[A-Z]/.test(L) ? L : '#')); }
-        const li = el('li', 'ng-row'), lab = el('label'), cb = el('input'); cb.type = 'checkbox';
-        cb.checked = !!(e.user && pick.has(e.user.id)); cb.setAttribute('aria-label', 'Select ' + e.name);
-        const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', e.user && e.user.phone ? e.name : e.name), el('div', 'c-last', e.phone));
-        const tag = el('span', e.user ? 'ng-tag on' : 'ng-tag', e.user ? '✅ On Maata' : notOn.has(e.n) ? 'Not registered' : '');
-        const msg = el('div', 'ng-msg'); msg.hidden = true;
-        cb.onchange = async () => {
-          if (!cb.checked) { if (e.user) pick.delete(e.user.id); count(); return; }
-          if (e.user) { pick.add(e.user.id); count(); return; }
-          // not known yet: check if this number is on Maata
-          cb.checked = false; cb.disabled = true; tag.textContent = '⏳ Checking…';
-          let found = null; try { const r = await api('/api/lookup?phone=' + e.n); found = r.user || null; } catch {}
-          cb.disabled = false;
-          if (found) { upsertUser(found); e.user = userById(found.id) || found; pick.add(e.user.id); cb.checked = true; tag.textContent = '✅ On Maata'; tag.className = 'ng-tag on'; count(); toast('✅ ' + e.name + ' added'); return; }
-          notOn.add(e.n); tag.textContent = 'Not registered';
-          msg.hidden = false; msg.innerHTML = '';
-          const inv = el('button', 'linkbtn', '📨 Invite to Maata'); inv.onclick = (ev) => { ev.preventDefault(); inviteToMaata(e); };
-          msg.append(el('span', null, '❌ ' + e.name + ' is not registered on Maata, so they cannot be added. '), inv);
-          toast('❌ ' + e.name + ' is not registered on Maata');
-        };
-        lab.append(cb, avatar(e.user || { id: e.n, name: e.name }, 'sm'), tx, tag); li.append(lab, msg); ul.append(li);
-      }
-      if (shown.length > 800) ul.append(el('li', 'empty-list', 'Showing 800 of ' + shown.length + ' — type a name to find others.'));
-      if (!shown.length) ul.append(el('li', 'empty-list', phoneBook.length ? 'No one found.' : 'Tap "📱 Load my phone contacts" to see all your contacts.'));
-      count();
-    };
-    q.oninput = draw;
-    all.onclick = () => { const es = entries().filter((e) => e.user); const allOn = es.every((e) => pick.has(e.user.id)); es.forEach((e) => (allOn ? pick.delete(e.user.id) : pick.add(e.user.id))); draw(); };
-    next.onclick = () => groupDetailsStep([...pick]);
-    box.append(next); list.append(box); draw();
-    // inside the Android app, read the phone's contacts straight away
-    if (!phoneBook.length && window.MaataAndroid && window.MaataAndroid.getContacts) { load.click(); }
-  });
+    return r;
+  };
+  const section = (title) => listEl.append(el('div', 'ngp-sec', title));
+  const draw = () => {
+    drawChips(); listEl.innerHTML = '';
+    const es = entries(), t = q.value.trim().toLowerCase(), digits = t.replace(/\D/g, '');
+    const match = (e) => !t || e.name.toLowerCase().includes(t) || (digits.length >= 3 && e.n.includes(digits));
+    const onM = es.filter((e) => e.user), offM = es.filter((e) => !e.user);
+    sub.textContent = pick.size ? pick.size + ' of ' + es.length + ' selected' : es.length + ' contacts · ' + onM.length + ' on Maata';
+    if (!phoneBook.length) {
+      const ld = el('button', 'ngp-load', '📱 Show all my phone contacts');
+      ld.onclick = async () => { ld.disabled = true; ld.textContent = '⏳ Reading your contacts…'; await syncFromPhone(); draw(); };
+      listEl.append(ld);
+    }
+    if (digits.length === 10 && !es.some((e) => e.n === digits)) { section('Number'); listEl.append(row({ n: digits, name: '+91 ' + digits, phone: '+91 ' + digits, user: null })); }
+    if (!t) {
+      const freq = users.filter((u) => !u.isGroup && !u.isAI && !u.blocked && u.lastMessage).sort((a, b) => (b.lastMessage.ts || 0) - (a.lastMessage.ts || 0)).slice(0, 8)
+        .map((u) => es.find((e) => e.user && e.user.id === u.id) || { n: l10(u.phone), name: nameOf(u), phone: '+91 ' + u.phone, user: u });
+      if (freq.length) { section('Frequently contacted'); freq.forEach((e) => listEl.append(row(e))); }
+    }
+    const a = onM.filter(match); if (a.length) { section('Contacts on Maata'); a.forEach((e) => listEl.append(row(e))); }
+    const b = offM.filter(match).slice(0, 1500); if (b.length) { section('Invite to Maata'); b.forEach((e) => listEl.append(row(e))); }
+    if (!a.length && !b.length && !(digits.length === 10)) listEl.append(el('p', 'info-note', phoneBook.length ? 'No one found.' : 'Your phone contacts will show here.'));
+  };
+  q.oninput = draw; draw();
+  if (!phoneBook.length && window.MaataAndroid && window.MaataAndroid.getContacts) syncFromPhone().then(draw);
+  setTimeout(() => q.focus(), 50);
 }
 function inviteToMaata(c) {
   const text = 'Hi ' + (c.name || '') + '! I use Maata for free calls, video calls and chat. Join me: ' + location.origin;
@@ -6850,6 +6879,7 @@ const isMobileLayout = () => matchMedia('(max-width:760px)').matches;
 // the screens, top-most first, each with how to close it
 const BACK_LAYERS = [
   ['.qr-scan', () => { const b = document.querySelector('.qr-scan .qr-close'); if (b) b.click(); }],
+  ['#ngPage', () => $('#ngPage').remove()],
   ['#studio', () => { if (!$('#moreSheet').hidden) return closeSheet('moreSheet'); if (confirm('Discard this reel?')) stClose(); }],
   ['.ci-photo', () => document.querySelector('.ci-photo').remove()],
   ['.menu-shade', () => closeMsgMenu()],
@@ -8059,6 +8089,13 @@ async function openInsights() {
 }
 
 $('#devGear').onclick = () => openSettings();
+function audioDiag() {
+  const A = window.MaataAndroid;
+  if (!A || !A.audioInfo) return alert('Running in the browser (not the Maata Android app).\nThe loudspeaker switch only works in the Android app (APK).');
+  let i = {}; try { i = JSON.parse(A.audioInfo()); } catch {}
+  alert('🔊 Call sound check — send a screenshot of this to support\n\nPhone: ' + i.phone + ' (Android ' + i.android + ')\nMaata app: ' + i.app + '\nMode: ' + i.mode + '\nSpeakerphone: ' + i.speakerphone + '\nSound goes to: ' + i.commDevice + '\nYou chose: ' + (i.want === 'true' ? 'LOUDSPEAKER' : i.want === 'false' ? 'EARPIECE' : i.want) + '\nCall service: ' + i.callService + '\nOutputs: ' + i.outputs + '\nCall volume: ' + i.voiceVol);
+}
+(function () { let t = 0; for (const id of ['spkBtn']) { const b = $('#' + id); if (!b) continue; b.addEventListener('pointerdown', () => { t = setTimeout(() => { t = -1; audioDiag(); }, 900); }); b.addEventListener('pointerup', () => clearTimeout(t)); b.addEventListener('pointerleave', () => clearTimeout(t)); } })();
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
