@@ -1176,6 +1176,8 @@ html.feat-off-ai .mt-ai-only{display:none!important}
 .loc-warn{font-size:13px;line-height:1.45;padding:10px 12px;border-radius:12px;background:#FFF3D6;color:#6B4A00}
 html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
 .leaflet-container{font:inherit}
+.loc-search{position:relative}.loc-search input{width:100%;box-sizing:border-box;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
+.loc-results{display:flex;flex-direction:column;gap:2px;margin:4px 0}.loc-res{text-align:left;padding:9px 10px;border-radius:10px;background:var(--paper);color:var(--ink);font-size:13.5px;border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -3604,7 +3606,16 @@ async function locationView() {
   const l = el('label'); l.append(el('span', null, 'Share live location for'));
   const sel = el('select'); for (const [v, t] of [[15, '15 minutes'], [60, '1 hour'], [480, '8 hours']]) sel.add(new Option(t, v)); l.append(sel);
   const live = el('button', 'primary', '📡 Share live location'); live.style.background = 'var(--leaf)'; live.disabled = true;
-  box.append(mapDiv, status, addr, warn, cur, el('div', 'or-line', 'or share live location'), l, live, el('p', 'info-note', 'Live location keeps updating while Maata stays open on this phone. You can stop sharing anytime.'));
+  const isComputer = !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  const srch = el('div', 'loc-search'); const sq = el('input'); sq.type = 'search'; sq.placeholder = '🔍 Search a place or address (e.g. Gandhi Road, Chittoor)'; const sres = el('div', 'loc-results'); srch.append(sq, sres);
+  let sqT = 0;
+  sq.oninput = () => { clearTimeout(sqT); const q = sq.value.trim(); if (q.length < 3) { sres.innerHTML = ''; return; } sqT = setTimeout(async () => {
+    let list = []; try { list = await api('/api/geo/search?q=' + encodeURIComponent(q)); } catch (e) { sres.innerHTML = ''; sres.append(el('small', 'muted', e.message)); return; }
+    sres.innerHTML = ''; if (!list.length) sres.append(el('small', 'muted', 'No place found. Try another spelling or add the town name.'));
+    for (const r of list) { const b2 = el('button', 'loc-res', '📍 ' + r.title); b2.onclick = () => { sres.innerHTML = ''; sq.value = r.title; pin = { lat: r.lat, lng: r.lng }; moved = true; if (!best) best = { latitude: r.lat, longitude: r.lng, accuracy: 30 }; cur.disabled = false; live.disabled = false; stop(); status.textContent = '✋ Place chosen by you'; cur.textContent = '📍 Send this location'; if (map) { marker.setLatLng([r.lat, r.lng]); map.setView([r.lat, r.lng], 17); } else draw(); showAddr(r.lat, r.lng); }; sres.append(b2); }
+  }, 450); };
+  if (isComputer) { warn.hidden = false; warn.innerHTML = '💻 Computers have no GPS, so the browser can only <b>guess</b> your location from the internet — it is often wrong by a few km. <b>Search your place above</b> or <b>drag the pin</b> to the right spot. (On a phone, Maata uses GPS and is exact.)'; }
+  box.append(srch, mapDiv, status, addr, warn, cur, el('div', 'or-line', 'or share live location'), l, live, el('p', 'info-note', 'Live location keeps updating while Maata stays open on this phone. You can stop sharing anytime.'));
   let best = null, pin = null, moved = false, map = null, marker = null, circle = null, wid = null, t0 = Date.now(), addrT = 0;
   const showAddr = (lat, lng) => { clearTimeout(addrT); addrT = setTimeout(async () => { try { const g = await api('/api/geo/reverse?lat=' + lat + '&lng=' + lng); addr.textContent = '📍 ' + (g.address || g.title || ''); } catch {} }, 500); };
   try { await loadLeaflet(); } catch { /* no interactive map: simple map picture instead */ }
@@ -3640,7 +3651,7 @@ async function locationView() {
   }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
   setTimeout(() => {
     stop();
-    if (best && best.accuracy > 300 && !moved) {
+    if (best && best.accuracy > 300 && !moved && !/💻/.test(warn.textContent)) {
       warn.hidden = false;
       warn.innerHTML = '⚠️ Your phone gave only an <b>approximate</b> location (±' + Math.round(best.accuracy) + ' m). To fix: turn on <b>Location / GPS</b>, and allow <b>Precise location</b> for Maata (Settings → Apps → Maata → Permissions → Location). Or drag the pin to the right place.';
     }

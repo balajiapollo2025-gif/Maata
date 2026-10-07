@@ -1314,6 +1314,20 @@ function geoLimit(req, res) {
   if (l.length > 40) { res.status(429).json({ error: 'Too many location requests. Wait a minute.' }); return false; }
   return true;
 }
+// place / address search for picking a location on a computer (no GPS there)
+const geoSearchCache = new Map(), geoSearchHits = new Map();
+app.get('/api/geo/search', auth, async (req, res) => {
+  const q = clip(req.query.q, 120); if (q.length < 3) return res.json([]);
+  const hits = (geoSearchHits.get(req.user.id) || []).filter((t) => now() - t < 60000); if (hits.length > 20) return res.status(429).json({ error: 'Too many searches. Wait a minute.' });
+  hits.push(now()); geoSearchHits.set(req.user.id, hits);
+  if (geoSearchCache.has(q.toLowerCase())) return res.json(geoSearchCache.get(q.toLowerCase()));
+  try {
+    const d = await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=0&countrycodes=in&q=' + encodeURIComponent(q), { headers: OSM_UA, signal: AbortSignal.timeout(8000) })).json();
+    const out = (Array.isArray(d) ? d : []).map((x) => ({ title: String(x.display_name || '').split(', ').slice(0, 4).join(', '), lat: Number(x.lat), lng: Number(x.lon) })).filter((x) => isFinite(x.lat));
+    geoSearchCache.set(q.toLowerCase(), out); if (geoSearchCache.size > 1000) geoSearchCache.delete(geoSearchCache.keys().next().value);
+    res.json(out);
+  } catch { res.status(502).json({ error: 'Place search is not available right now.' }); }
+});
 app.get('/api/geo/reverse', auth, async (req, res) => {
   const lat = Number(req.query.lat), lng = Number(req.query.lng);
   if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.status(400).json({ error: 'Bad location.' });
