@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2609,6 +2609,47 @@ async function aiModerate(r, jpegBuf) {
   save();
 }
 
+// ---------- Help & Support: customers raise complaints about the app, admin replies (ticket numbers) ----------
+const SUP_CATS = ['Calls', 'Messages', 'Login / account', 'Notifications', 'Reels', 'Business / catalogue', 'App is slow / crashing', 'Other'];
+const supHits = new Map();
+const ticketOut = (t) => ({ id: t.id, no: t.no, category: t.category, text: t.text, status: t.status, createdAt: t.createdAt, updatedAt: t.updatedAt, replies: t.replies, unreadForUser: !!t.unreadForUser });
+app.post('/api/support', auth, (req, res) => {
+  const day = (supHits.get(req.user.id) || []).filter((x) => now() - x < 86400000);
+  if (day.length >= 5) return res.status(429).json({ error: 'You can raise up to 5 complaints a day. We will reply to your earlier ones soon.' });
+  const text = clip(req.body?.text, 2000); if (text.length < 5) return res.status(400).json({ error: 'Please write what the problem is.' });
+  const category = SUP_CATS.includes(req.body?.category) ? req.body.category : 'Other';
+  const no = 'MT-' + (1001 + db.tickets.length);
+  const t = { id: newId(), no, userId: req.user.id, category, text, device: clip(req.body?.device, 200), status: 'open', replies: [], createdAt: now(), updatedAt: now(), unreadForAdmin: true };
+  db.tickets.push(t); day.push(now()); supHits.set(req.user.id, day); save();
+  io.to('admins').emit('feed', { kind: 'report', text: '🆘 New complaint ' + no + ' (' + category + ') from ' + req.user.name, ts: now() });
+  res.json(ticketOut(t));
+});
+app.get('/api/support', auth, (req, res) => res.json(db.tickets.filter((t) => t.userId === req.user.id).sort((a, b) => b.updatedAt - a.updatedAt).map(ticketOut)));
+app.post('/api/support/:id/reply', auth, (req, res) => {
+  const t = db.tickets.find((x) => x.id === req.params.id && x.userId === req.user.id); if (!t) return res.status(404).json({ error: 'Not found.' });
+  const text = clip(req.body?.text, 2000); if (!text) return res.status(400).json({ error: 'Write a message.' });
+  t.replies.push({ by: 'user', text, ts: now() }); if (t.status === 'resolved') t.status = 'open'; t.updatedAt = now(); t.unreadForAdmin = true; save();
+  io.to('admins').emit('feed', { kind: 'report', text: '🆘 ' + t.no + ': new message from ' + req.user.name, ts: now() });
+  res.json(ticketOut(t));
+});
+app.post('/api/support/:id/seen', auth, (req, res) => { const t = db.tickets.find((x) => x.id === req.params.id && x.userId === req.user.id); if (t) { t.unreadForUser = false; save(); } res.json({ ok: true }); });
+// admin
+app.get('/admin/api/tickets', adminAuth, (req, res) => res.json(db.tickets.slice().sort((a, b) => (a.status === 'resolved') - (b.status === 'resolved') || b.updatedAt - a.updatedAt).slice(0, 300)
+  .map((t) => { const u = userById(t.userId) || {}; return { ...ticketOut(t), device: t.device, userName: u.name || 'Deleted user', userPhone: u.phone || '', userId: t.userId, unreadForAdmin: !!t.unreadForAdmin }; })));
+app.post('/admin/api/tickets/:id', adminAuth, async (req, res) => {
+  const t = db.tickets.find((x) => x.id === req.params.id); if (!t) return res.status(404).json({ error: 'Not found.' });
+  const text = clip(req.body?.text, 2000), status = ['open', 'in-progress', 'resolved'].includes(req.body?.status) ? req.body.status : t.status;
+  if (text) { t.replies.push({ by: 'admin', text, ts: now() }); t.unreadForUser = true; }
+  t.status = status; t.updatedAt = now(); t.unreadForAdmin = false; save();
+  audit(req.admin, 'ticket-' + status, t.no, text.slice(0, 60));
+  if (text || status === 'resolved') {
+    const msg = text ? 'Maata Support (' + t.no + '): ' + text.slice(0, 120) : 'Your complaint ' + t.no + ' is resolved ✅';
+    io.to('user:' + t.userId).emit('support:reply', { id: t.id, no: t.no, text: msg });
+    const u = userById(t.userId); if (u && !isOnline(u.id)) { try { await pushTo(u, { type: 'msg', title: '🆘 Maata Support', body: msg, tag: 'support-' + t.id, url: '/#support' }); } catch {} }
+  }
+  res.json({ ok: true });
+});
+
 // Reels moderation
 app.get('/admin/api/reels', adminAuth, (req, res) => res.json(db.reels.slice().sort((a, b) => (b.reports || []).length - (a.reports || []).length || b.createdAt - a.createdAt).slice(0, 200).map((r) => { const u = userById(r.by) || {}; return { id: r.id, caption: r.caption, ownerName: u.name || 'Deleted user', ownerPhone: u.phone || '', createdAt: r.createdAt, likes: (r.likes || []).length, views: r.viewCount || 0, reports: (r.reports || []).map((x) => x.reason || 'reported'), removed: !!r.removed, hidden: !!r.hidden, hasThumb: !!r.thumb }; })));
 app.get('/admin/api/reels/:id/:what', (req, res) => {
@@ -2725,6 +2766,7 @@ function deleteAccountData(u, why) {
   db.aichats = db.aichats.filter((x) => x.userId !== u.id);
   for (const c of db.channels) { if (c.ownerId === u.id) c.removed = true; c.followers = (c.followers || []).filter((x) => x !== u.id); }
   db.logins = db.logins.filter((x) => x.userId !== u.id);
+  db.tickets = db.tickets.filter((x) => x.userId !== u.id);
   for (const r of db.reels.filter((x) => x.by === u.id)) { deleteChatFile(r.file.id); if (r.thumb) deleteChatFile(r.thumb.id); }
   db.reels = db.reels.filter((x) => x.by !== u.id); db.reelComments = db.reelComments.filter((c) => c.by !== u.id);
   db.activity = db.activity.filter((a) => a.to !== u.id && a.from !== u.id); for (const x of db.users) if (x.following) x.following = x.following.filter((f) => f !== u.id);

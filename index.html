@@ -946,7 +946,7 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .rl-cmt{display:flex;gap:10px;padding:8px 0;align-items:flex-start}
 .rl-cmt .txt{flex:1;font-size:14.5px;line-height:1.4}.rl-cmt .txt small{display:block;color:var(--muted);font-size:12px}
 .rl-cin{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
-.rl-cin input{flex:1;border:1.5px solid var(--line);border-radius:999px;padding:10px 14px;font:inherit;background:var(--paper);color:var(--ink)}
+.rl-cin input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:999px;padding:10px 14px;font:inherit;background:var(--paper);color:var(--ink)}
 .rl-cin .primary{width:auto;padding:10px 18px}
 .reel-msg{width:200px;cursor:pointer}
 .rm-thumb{position:relative;height:250px;border-radius:12px;background:#111 center/cover no-repeat;display:grid;place-items:center;margin-bottom:6px}
@@ -1140,6 +1140,17 @@ html.dark .ng-msg{background:#3A1A18;color:#F5B7B1}
 .ngp-fab svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.4}
 .ngp-load{display:block;margin:12px 22px;padding:12px;border-radius:12px;background:var(--peacock-soft);color:var(--ink);font-weight:700;width:calc(100% - 44px)}
 @media (min-width:761px){.ngp{left:50%;transform:translateX(-50%);width:min(520px,100vw);box-shadow:0 0 0 100vw rgba(0,0,0,.45)}}
+.sup-item{display:block;width:100%;text-align:left;padding:12px;margin:6px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.sup-item.new{border-color:var(--leaf);box-shadow:0 0 0 1px var(--leaf)}
+.sup-item .top{display:flex;align-items:center;gap:8px;justify-content:space-between}.sup-item .tx{margin:4px 0;font-size:14px}.sup-item small{color:var(--muted);font-size:12.5px}
+.sup-st{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.st-open{background:#FFF3D6;color:#8A5A00}.st-prog{background:#DCEBFF;color:#1F4E8C}.st-done{background:#DDF5E6;color:#1C6B3E}
+html.dark .st-open{background:#3A2E10;color:#F6CF7A}html.dark .st-prog{background:#16294A;color:#9CC3FF}html.dark .st-done{background:#123322;color:#8FE0B0}
+.sup-conv{display:flex;flex-direction:column;gap:8px;margin:12px 0;max-height:50vh;overflow-y:auto}
+.sup-msg{max-width:85%;padding:9px 12px;border-radius:14px;font-size:14.5px;white-space:pre-wrap;display:flex;flex-direction:column;gap:3px}
+.sup-msg small{font-size:11.5px;opacity:.75}
+.sup-msg.me{align-self:flex-end;background:var(--mine);color:var(--mine-ink)}.sup-msg.them{align-self:flex-start;background:var(--peacock-soft);color:var(--ink)}
+.sup-cats{margin:4px 0 10px}
 </style>
 </head>
 <body>
@@ -1520,6 +1531,7 @@ html.dark .ng-msg{background:#3A1A18;color:#F5B7B1}
 
     <div class="set-group" style="margin-top:4px"><div class="set-row" id="setRunning"></div></div>
     <div id="setNotifBox"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setSupport">🆘 Help &amp; Support <span style="margin-left:auto;color:var(--muted)">Raise a complaint</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCallQ">🎧 Call quality <span style="margin-left:auto;color:var(--muted)" id="setCallQName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setThemes">🎨 Theme &amp; colours <span style="margin-left:auto;color:var(--muted)" id="setThemeName"></span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setAppLang">🌐 <span data-t="appLang">App language</span> <span id="setAppLangName" style="margin-left:auto;color:var(--muted)"></span></button></div>
@@ -1784,6 +1796,7 @@ function connectSocket() {
   });
   socket.on('call:log', onCallLog);
   socket.on('msg:update', refreshBubble);
+  socket.on('support:reply', (p) => { toast('🆘 ' + p.text); notify('Maata Support', p.text); });
   socket.on('reel:review', () => toast('🛡️ Your new reel is being checked by the Maata team before everyone can see it.'));
   socket.on('activity:new', () => { const d = $('#igDot'); if (d) d.hidden = false; });
   socket.on('user:profile', () => { reloadUsers(); });
@@ -4088,6 +4101,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  support: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>',
   reels: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="M10 12v5l4.5-2.5z"/></svg>',
   linked: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="1.5"/><path d="M6 18h6M9 14v4"/><rect x="17" y="8" width="5" height="12" rx="1"/></svg>',
   install: '<svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 7v8M9 12l3 3 3-3"/></svg>',
@@ -4131,6 +4145,7 @@ function openMainMenu(btn) {
   item('read', i18n('markRead'), markAllRead);
   list.append(el('hr'));
   item('linked', 'Linked devices', openLinkedDevices);
+  item('support', 'Help & Support', openSupport);
   item('lock', i18n('appLock'), openLockSettings);
   item('settings', i18n('settings'), openSettings);
   if (!inApp()) item('install', 'Install Maata app', installApp);
@@ -6188,6 +6203,7 @@ async function installApp() {
 }
 function handleAppLink(url) {
   const h = (url.split('#')[1] || '');
+  if (h === 'support') { history.replaceState(null, '', location.pathname); openSupport(); return; }
   const m = /^(chat|answer|tab|reel)=(.+)$/.exec(h); if (!m) return;
   if (m[1] === 'reel') { history.replaceState(null, '', location.pathname); openReels(m[2]); return; }
   history.replaceState(null, '', location.pathname);
@@ -8096,6 +8112,67 @@ function audioDiag() {
   alert('🔊 Call sound check — send a screenshot of this to support\n\nPhone: ' + i.phone + ' (Android ' + i.android + ')\nMaata app: ' + i.app + '\nMode: ' + i.mode + '\nSpeakerphone: ' + i.speakerphone + '\nSound goes to: ' + i.commDevice + '\nYou chose: ' + (i.want === 'true' ? 'LOUDSPEAKER' : i.want === 'false' ? 'EARPIECE' : i.want) + '\nCall service: ' + i.callService + '\nOutputs: ' + i.outputs + '\nCall volume: ' + i.voiceVol);
 }
 (function () { let t = 0; for (const id of ['spkBtn']) { const b = $('#' + id); if (!b) continue; b.addEventListener('pointerdown', () => { t = setTimeout(() => { t = -1; audioDiag(); }, 900); }); b.addEventListener('pointerup', () => clearTimeout(t)); b.addEventListener('pointerleave', () => clearTimeout(t)); } })();
+// ================= 🆘 Help & Support: raise a complaint, see replies =================
+const SUP_CATS = [['Calls', '📞'], ['Messages', '💬'], ['Login / account', '🔐'], ['Notifications', '🔔'], ['Reels', '🎬'], ['Business / catalogue', '🏪'], ['App is slow / crashing', '🐢'], ['Other', '❓']];
+const SUP_ST = { open: ['⏳ Open', 'st-open'], 'in-progress': ['🔧 Working on it', 'st-prog'], resolved: ['✅ Resolved', 'st-done'] };
+async function openSupport() {
+  closeSettings();
+  let mine = []; try { mine = await api('/api/support'); } catch {}
+  sheet('🆘 Help & Support', (list) => {
+    const box = el('div'); box.style.padding = '12px 14px 20px';
+    const raise = el('button', 'primary', '＋ Raise a complaint'); raise.onclick = supNew; box.append(raise);
+    box.append(el('p', 'info-note', 'Tell us about any problem with Maata — calls, messages, login, anything. Our team replies here, usually within 24 hours. To complain about a PERSON, open their chat → ⋮ → 🚩 Report.'));
+    box.append(el('div', 'th-title', 'My complaints'));
+    if (!mine.length) box.append(el('p', 'info-note', 'No complaints yet. 🎉'));
+    for (const t of mine) {
+      const r = el('button', 'sup-item' + (t.unreadForUser ? ' new' : ''));
+      const [stTxt, stCls] = SUP_ST[t.status] || SUP_ST.open;
+      const top = el('div', 'top'); top.append(el('b', null, t.no + ' · ' + t.category), el('span', 'sup-st ' + stCls, stTxt));
+      r.append(top, el('div', 'tx', t.text.slice(0, 90)), el('small', null, (t.replies.length ? '💬 ' + t.replies.length + ' message' + (t.replies.length > 1 ? 's' : '') + ' · ' : '') + new Date(t.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + (t.unreadForUser ? ' · 🔴 New reply' : '')));
+      r.onclick = () => supView(t); box.append(r);
+    }
+    box.append(el('p', 'dev-credit', 'Maata Support · Developed by Gurram Pavani'));
+    list.append(box);
+  });
+}
+function supNew() {
+  sheet('＋ Raise a complaint', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    box.append(el('span', 'muted', 'What is the problem about?'));
+    let cat = ''; const chips = el('div', 'st-chips sup-cats');
+    for (const [c, ic] of SUP_CATS) { const b = el('button', null, ic + ' ' + c); b.type = 'button'; b.setAttribute('aria-pressed', 'false'); b.onclick = () => { cat = c; [...chips.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; chips.append(b); }
+    const l = el('label'); l.append(el('span', null, 'Explain the problem')); const ta = el('textarea'); ta.rows = 5; ta.maxLength = 2000; ta.placeholder = 'Example: When I call my brother, his phone does not ring if the app is closed. Started yesterday.'; l.append(ta);
+    const go = el('button', 'primary', 'Send complaint');
+    go.onclick = async () => {
+      if (!cat) return toast('Choose what the problem is about.');
+      if (ta.value.trim().length < 5) return toast('Please write what the problem is.');
+      go.disabled = true;
+      const av = (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1];
+      const device = (av ? 'Android app v' + av : 'Browser') + ' · ' + (navigator.userAgentData?.platform || (/Android/.test(navigator.userAgent) ? 'Android' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : 'Computer')) + ' · ' + screen.width + 'x' + screen.height;
+      try { const t = await api('/api/support', { method: 'POST', body: JSON.stringify({ category: cat, text: ta.value.trim(), device }) }); closeSheet('moreSheet'); toast('✅ Complaint ' + t.no + ' sent. We will reply soon.'); openSupport(); }
+      catch (e) { toast(e.message); go.disabled = false; }
+    };
+    box.append(chips, l, go, el('p', 'info-note', 'Your phone type and app version are added automatically so we can fix it faster. Never share your password or OTP with anyone — Maata Support will never ask for it.'));
+    list.append(box);
+  });
+}
+function supView(t) {
+  if (t.unreadForUser) api('/api/support/' + t.id + '/seen', { method: 'POST' }).catch(() => {});
+  sheet(t.no + ' · ' + t.category, (list) => {
+    const box = el('div'); box.style.padding = '12px 14px';
+    const [stTxt, stCls] = SUP_ST[t.status] || SUP_ST.open; box.append(el('span', 'sup-st ' + stCls, stTxt));
+    const conv = el('div', 'sup-conv');
+    const msg = (by, text, ts) => { const m = el('div', 'sup-msg ' + (by === 'admin' ? 'them' : 'me')); m.append(el('small', null, by === 'admin' ? '🦜 Maata Support' : 'You'), el('div', null, text), el('small', null, new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))); conv.append(m); };
+    msg('user', t.text, t.createdAt); t.replies.forEach((r) => msg(r.by, r.text, r.ts));
+    if (!t.replies.some((r) => r.by === 'admin')) conv.append(el('p', 'info-note', '⏳ Our team has your complaint and will reply here.'));
+    box.append(conv);
+    const row = el('div', 'rl-cin'); const inp = el('input'); inp.placeholder = t.status === 'resolved' ? 'Still a problem? Write here to reopen' : 'Add more details…'; const send = el('button', 'primary', 'Send'); row.append(inp, send);
+    send.onclick = async () => { const v = inp.value.trim(); if (!v) return; send.disabled = true; try { const nt = await api('/api/support/' + t.id + '/reply', { method: 'POST', body: JSON.stringify({ text: v }) }); closeSheet('moreSheet'); supView(nt); } catch (e) { toast(e.message); send.disabled = false; } };
+    list.append(box, row);
+  });
+}
+
+$('#setSupport').onclick = openSupport;
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
