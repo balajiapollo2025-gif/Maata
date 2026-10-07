@@ -1216,6 +1216,11 @@ html.feat-off-coins #coinBtn,html.feat-off-coins .set-group:has(#setCoins),html.
 .inv-langs button{padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:13.5px}
 .inv-langs button[aria-pressed="true"]{background:var(--leaf);border-color:var(--leaf);color:#fff;font-weight:700}
 .inv-en{display:flex;align-items:center;gap:8px;font-size:13.5px;margin:4px 0}.inv-en input{width:18px;height:18px}
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{width:100%;box-sizing:border-box;padding-right:52px!important}
+.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:40px;display:grid;place-items:center;background:none;border:0;color:var(--muted);border-radius:10px;cursor:pointer}
+.pw-eye svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pw-eye[aria-pressed="true"]{color:var(--leaf)}
 </style>
 </head>
 <body>
@@ -1830,6 +1835,7 @@ async function start() {
   loadCalls();
   loadStatus();
   setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
+  setTimeout(() => { if (appKind() === 'old') askAppUpdate(false); }, 6000);
   loadPrefs();
   aiInit();
   setTimeout(handleJoinLink, 800);
@@ -2208,8 +2214,8 @@ function renderSettings() {
   { // which Maata is this? (the Android app can switch speaker/earpiece and keeps calls working when locked; the browser cannot)
     const box = $('#setRunning'); if (box) {
       const av = (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1];
-      box.innerHTML = '';
-      const t = el('div', 'txt'); t.append(el('b', null, av ? '📱 Running in: Maata Android app v' + av : '🌐 Running in: browser (' + (inApp() ? 'installed from Chrome' : 'Chrome tab') + ')'),
+      box.innerHTML = ''; const kind = appKind(); if (kind !== 'new') { box.style.cursor = 'pointer'; box.onclick = () => askAppUpdate(true); }
+      const t = el('div', 'txt'); t.append(el('b', null, kind === 'new' ? '📱 Running in: Maata Android app v' + av + ' ✅ latest' : kind === 'old' ? '⚠️ Old Maata Android app v' + av + ' — tap to update' : '🌐 Running in: browser (' + (inApp() ? 'installed from Chrome' : 'Chrome tab') + ') — tap to get the app'),
         el('small', null, av ? 'All call features work: loudspeaker switch, voice when the phone is locked, full-screen incoming calls.' : 'Loudspeaker switch, voice when the phone is locked and full-screen calls need the Maata Android app (APK).'));
       box.append(t);
     }
@@ -7053,7 +7059,7 @@ function setSpeaker(on, quiet) {
   document.querySelectorAll('#spkBtn,#gcSpk').forEach((b) => { b.setAttribute('aria-pressed', String(speakerOn)); b.title = speakerOn ? 'Speaker on' : 'Speaker off'; });
   if (!quiet) {
     if (ok) toast(speakerOn ? '🔊 Loudspeaker on' : '🔈 Earpiece: hold the phone to your ear (like a normal call)');
-    else if (!A) toast('🔊 Loudspeaker switch needs the Maata Android app (APK). You are using Maata in the browser right now — see Settings → "Running in".');
+    else if (appKind() !== 'new') askAppUpdate(true);
   }
 }
 // When the call's sound starts, the phone's web engine switches to the loudspeaker by itself.
@@ -8285,9 +8291,26 @@ async function openInsights() {
 }
 
 $('#devGear').onclick = () => openSettings();
+// Which Maata is this? The newest Android app has all of these phone features.
+const APP_NEEDS = ['setSpeaker', 'audioInfo', 'startPhoneRingtone', 'getContacts', 'shareFileStart'];
+const appKind = () => { const A = window.MaataAndroid; if (!A) return 'browser'; return APP_NEEDS.every((k) => typeof A[k] === 'function') ? 'new' : 'old'; };
+const appVersion = () => (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1] || '';
+function askAppUpdate(force) {
+  const k = appKind(); if (k === 'new') return;
+  if (!force && Date.now() - Number(store.get('maata_upd_asked') || 0) < 86400000) return;
+  store.set('maata_upd_asked', String(Date.now()));
+  sheet(k === 'old' ? '📲 Update the Maata app' : '📲 Get the Maata Android app', (list) => {
+    const box = el('div'); box.style.padding = '14px';
+    box.append(el('p', null, k === 'old' ? 'Your Maata app is an older version' + (appVersion() ? ' (v' + appVersion() + ')' : '') + '. The new version adds:' : 'You are using Maata in the browser. The Android app adds:'));
+    const ul = el('ul', 'coin-how'); for (const t of ['🔈 Earpiece / 🔊 loudspeaker switch, like a normal call', '📱 Your phone\u2019s own ringtone for Maata calls', '🔒 Voice keeps working when the phone is locked', '👥 All phone contacts in New group', '☁️ Share backups to Google Drive']) ul.append(el('li', null, t)); box.append(ul);
+    const dl = el('a', 'primary', '⬇ Download the new Maata app'); dl.href = '/download'; dl.style.cssText = 'display:block;text-align:center;text-decoration:none;padding:13px;border-radius:12px';
+    box.append(dl, el('p', 'info-note', 'Open the downloaded file and tap Install (allow "Install unknown apps" if asked). It installs over the old app and your chats stay. If the phone says "App not installed", uninstall the old Maata first, then install again.'));
+    list.append(box);
+  });
+}
 function audioDiag() {
   const A = window.MaataAndroid;
-  if (!A || !A.audioInfo) return alert('Running in the browser (not the Maata Android app).\nThe loudspeaker switch only works in the Android app (APK).');
+  if (appKind() !== 'new') { askAppUpdate(true); return; }
   let i = {}; try { i = JSON.parse(A.audioInfo()); } catch {}
   alert('🔊 Call sound check — send a screenshot of this to support\n\nPhone: ' + i.phone + ' (Android ' + i.android + ')\nMaata app: ' + i.app + '\nMode: ' + i.mode + '\nSpeakerphone: ' + i.speakerphone + '\nSound goes to: ' + i.commDevice + '\nYou chose: ' + (i.want === 'true' ? 'LOUDSPEAKER' : i.want === 'false' ? 'EARPIECE' : i.want) + '\nCall service: ' + i.callService + '\nOutputs: ' + i.outputs + '\nCall volume: ' + i.voiceVol);
 }
@@ -8682,6 +8705,25 @@ async function openCoins() {
 }
 
 $('#coinBtn').onclick = openCoins; $('#setCoins').onclick = openCoins;
+// ===== 👁 Show / hide password — added to every password box in the app (login, register, reset, change, PIN) =====
+const EYE_OPEN = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_SHUT = '<svg viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 19c-7 0-11-7-11-7a18 18 0 0 1 5.1-5.9M9.9 5.2A9 9 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-2.2 3.2M1 1l22 22"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/></svg>';
+function addPasswordEye(inp) {
+  if (!inp || inp.dataset.eye || !inp.parentNode) return;
+  inp.dataset.eye = '1';
+  const wrap = document.createElement('span'); wrap.className = 'pw-wrap';
+  inp.parentNode.insertBefore(wrap, inp); wrap.append(inp);
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'pw-eye'; b.tabIndex = 0;
+  const set = (show) => { inp.type = show ? 'text' : 'password'; b.innerHTML = show ? EYE_SHUT : EYE_OPEN; b.setAttribute('aria-pressed', String(show)); b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); b.title = show ? 'Hide password' : 'Show password'; };
+  b.onmousedown = (e) => e.preventDefault(); // keep the keyboard open on phones
+  b.onclick = () => { const pos = inp.selectionStart; set(inp.type === 'password'); try { inp.focus(); inp.setSelectionRange(pos, pos); } catch {} };
+  set(false); wrap.append(b);
+}
+document.querySelectorAll('input[type="password"]').forEach(addPasswordEye);
+new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { if (n.nodeType !== 1) continue; if (n.matches && n.matches('input[type="password"]')) addPasswordEye(n); n.querySelectorAll && n.querySelectorAll('input[type="password"]').forEach(addPasswordEye); } }).observe(document.body, { childList: true, subtree: true });
+// after login the password must never stay visible on the screen
+const _hidePw = () => document.querySelectorAll('.pw-eye[aria-pressed="true"]').forEach((b) => b.click());
+
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

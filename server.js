@@ -434,6 +434,12 @@ self.addEventListener('notificationclick', (e) => {
 });`;
 
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PAGES, 'index.html')));
+// Android app download: put the newest APK in public/ as maata.apk (from GitHub Actions → Artifacts)
+app.get(['/download', '/app', '/maata.apk'], (req, res) => {
+  const f = path.join(PAGES, 'maata.apk');
+  if (fs.existsSync(f)) { res.setHeader('Content-Type', 'application/vnd.android.package-archive'); res.setHeader('Cache-Control', 'no-cache'); return res.download(f, 'Maata.apk'); }
+  res.status(404).type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:24px;line-height:1.5"><h2>🦜 Maata Android app</h2><p>The download is being prepared. Please try again soon, or use Maata in your browser at <a href="/">maataapp.com</a>.</p></body>');
+});
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(PAGES, 'admin.html')));
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 3e6 }); // allows short speech clips for live translation
