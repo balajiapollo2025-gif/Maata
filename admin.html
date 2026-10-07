@@ -185,6 +185,7 @@ textarea.input{min-height:110px;resize:vertical}
     <div class="logo">🦜 Maata <small>Admin</small></div>
     <button data-view="dash"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
     <button data-view="features"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12l3 3 5-6"/></svg>⚙️ App features</button>
+    <button data-view="coins"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.2 1.1-2 2.5-2s2.5.8 2.5 2-1.1 1.8-2.5 2.2-2.5 1-2.5 2.3 1.1 2 2.5 2 2.5-.8 2.5-2"/></svg>🪙 Coins & referrals</button>
     <button data-view="customers"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M22 21a6 6 0 0 0-4-5.6"/></svg>Customers</button>
     <button data-view="calls"><svg class="ico" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>Call report</button>
     <button data-view="messages"><svg class="ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat report</button>
@@ -316,6 +317,13 @@ textarea.input{min-height:110px;resize:vertical}
       <div id="ftList"></div>
     </section>
 
+    <section data-page="coins" hidden>
+      <div class="top"><h2>🪙 Coins & referrals</h2><div class="actions" style="margin:0"><input id="rfSearch" type="search" placeholder="Search name or number" style="padding:8px 12px;border-radius:10px;border:1px solid #ccc"><button class="btn" id="rfCsv">⬇ Excel (CSV)</button></div></div>
+      <p class="muted" style="margin-top:-6px">A customer gets 1 coin when a friend joins with their invite link and uses Maata on 3 different days. Tap a customer to see the friends they invited and whether those friends are still using Maata.</p>
+      <div class="grid kpis" id="rfKpis"></div>
+      <div class="card" style="padding:0;overflow:auto;margin-top:14px"><table class="tbl" id="rfTable"><thead><tr><th>Customer</th><th>🪙 Coins</th><th>Invited</th><th>Coins earned</th><th>Waiting (under 3 days)</th><th>Friends active now</th><th></th></tr></thead><tbody></tbody></table></div>
+    </section>
+
     <!-- ANNOUNCEMENTS -->
     <section data-page="announce" hidden>
       <div class="top"><h2>Announcements</h2></div>
@@ -433,7 +441,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -651,6 +659,32 @@ async function loadReports() {
     try { await api(`/admin/api/reports/${b.dataset.resolve}/resolve`, { method: 'POST', body: JSON.stringify({ note }) }); toast('Complaint resolved.'); loadReports(); } catch (e) { toast(e.message); }
   });
 }
+
+// ---------- coins & referrals ----------
+let RF = null;
+async function loadReferrals() {
+  RF = await api('/admin/api/referrals');
+  const t = RF.totals, k = (label, v, sub, color) => `<div class="card kpi" style="border-left:4px solid ${color}"><div class="muted">${label}</div><b style="font-size:26px">${v}</b><div class="muted" style="font-size:12.5px">${sub}</div></div>`;
+  $('#rfKpis').innerHTML = k('🪙 Coins given', t.coins, 'to all customers', '#F4B400') + k('Customers who invited', t.inviters, 'shared their link', '#1F6FB2') + k('Friends who joined', t.joined, 'with an invite link', '#2E8B57') + k('Coins earned (3 days used)', t.earned, (t.joined ? Math.round(t.earned / t.joined * 100) : 0) + '% of joined friends', '#7A4E9E') + k('Invited friends active', t.active, 'used Maata in the last 7 days', '#C8413A');
+  drawReferrals();
+}
+const rfState = (f) => ({ online: '<span class="tag t-green">🟢 Online now</span>', active: '<span class="tag t-green">Active · ' + (f.daysAgo ? f.daysAgo + ' day' + (f.daysAgo > 1 ? 's' : '') + ' ago' : 'today') + '</span>', inactive: '<span class="tag t-red">Inactive · ' + f.daysAgo + ' days</span>', blocked: '<span class="tag t-red">Blocked</span>' })[f.state];
+function drawReferrals() {
+  const q = ($('#rfSearch').value || '').trim().toLowerCase();
+  const rows = RF.rows.filter((r) => !q || r.name.toLowerCase().includes(q) || r.phone.includes(q) || r.friends.some((f) => f.name.toLowerCase().includes(q) || f.phone.includes(q)));
+  $('#rfTable tbody').innerHTML = rows.length ? rows.map((r) => `<tr class="rf-row" data-rf="${esc(r.id)}" style="cursor:pointer"><td><b>${esc(r.name)}</b><div class="muted">${esc(r.phone)}</div></td><td><b style="font-size:18px">🪙 ${r.coins}</b>${r.bonus ? `<div class="muted" style="font-size:12px">${r.bonus > 0 ? '+' : ''}${r.bonus} by admin</div>` : ''}</td><td>${r.invited}</td><td>${r.earned}</td><td>${r.pending}</td><td>${r.activeFriends} of ${r.invited}</td><td>${r.invited ? '▾ Friends' : ''}</td></tr>
+    <tr class="rf-detail" data-rfd="${esc(r.id)}" hidden><td colspan="7" style="background:rgba(128,128,128,.06)">${r.friends.length ? `<table class="tbl" style="margin:4px 0"><thead><tr><th>Friend invited</th><th>Joined</th><th>Days used</th><th>Coin</th><th>Using Maata now?</th><th>Last seen</th></tr></thead><tbody>${r.friends.map((f) => `<tr><td><b>${esc(f.name)}</b><div class="muted">${esc(f.phone)}</div></td><td>${dt(f.joinedAt)}</td><td>${f.activeDays}${f.rewarded ? '' : ' of 3'}</td><td>${f.rewarded ? '✅ +1 given' : '⏳ waiting'}</td><td>${rfState(f)}</td><td>${f.online ? 'now' : dt(f.lastSeen)}</td></tr>`).join('')}</tbody></table>` : '<div class="muted" style="padding:8px">No invited friends — coins came from admin bonus.</div>'}
+      <div class="actions" style="margin:6px 0"><button class="btn" data-open-cust="${esc(r.id)}">Open customer</button></div></td></tr>`).join('') : '<tr><td colspan="7" class="empty">No coins or referrals yet.</td></tr>';
+  $$('.rf-row').forEach((tr) => tr.onclick = () => { const d = document.querySelector(`[data-rfd="${tr.dataset.rf}"]`); d.hidden = !d.hidden; });
+  $$('[data-open-cust]').forEach((b) => b.onclick = (e) => { e.stopPropagation(); openCustomer(b.dataset.openCust); });
+}
+$('#rfSearch').oninput = () => RF && drawReferrals();
+$('#rfCsv').onclick = () => {
+  if (!RF) return; const q = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const lines = [['Customer', 'Phone', 'Coins', 'Invited', 'Coins earned', 'Waiting', 'Friend', 'Friend phone', 'Joined', 'Days used', 'Coin given', 'Status', 'Last seen'].map(q).join(',')];
+  for (const r of RF.rows) { if (!r.friends.length) lines.push([r.name, r.phone, r.coins, r.invited, r.earned, r.pending, '', '', '', '', '', '', ''].map(q).join(',')); for (const f of r.friends) lines.push([r.name, r.phone, r.coins, r.invited, r.earned, r.pending, f.name, f.phone, new Date(f.joinedAt).toLocaleString('en-IN'), f.activeDays, f.rewarded ? 'Yes' : 'No', f.state, f.online ? 'now' : new Date(f.lastSeen).toLocaleString('en-IN')].map(q).join(',')); }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv' })); a.download = 'Maata-coins-referrals.csv'; a.click();
+};
 
 // ---------- app features ----------
 async function loadFeaturesAdmin() {

@@ -1053,6 +1053,25 @@ app.get('/api/coins', auth, (req, res) => {
     .map((x) => ({ name: x.name, joinedAt: x.createdAt, days: Math.min(REF_DAYS, (x.activeDays || []).length), done: !!x.referralRewarded }));
   res.json({ coins: me2.coins || 0, need: REF_DAYS, friends, log: (me2.coinLog || []).slice(0, 50) });
 });
+// Admin: every customer's coins, the friends they invited, and whether those friends are still active
+app.get('/admin/api/referrals', adminAuth, (req, res) => {
+  const t = now(), DAY = 86400000;
+  const friendOut = (x) => {
+    const last = isOnline(x.id) ? t : (x.lastSeenAt || x.lastLoginAt || x.createdAt);
+    const ago = Math.floor((t - last) / DAY);
+    return { id: x.id, name: x.name, phone: x.phone, joinedAt: x.createdAt, activeDays: (x.activeDays || []).length, lastSeen: last, online: isOnline(x.id),
+      state: x.status === 'blocked' ? 'blocked' : isOnline(x.id) ? 'online' : ago <= 7 ? 'active' : 'inactive', daysAgo: ago, rewarded: !!x.referralRewarded };
+  };
+  const byInviter = new Map();
+  for (const x of db.users) if (x.referredBy) { if (!byInviter.has(x.referredBy)) byInviter.set(x.referredBy, []); byInviter.get(x.referredBy).push(x); }
+  const rows = db.users.filter((u) => (u.coins || 0) > 0 || byInviter.has(u.id) || (u.coinLog || []).length).map((u) => {
+    const fr = (byInviter.get(u.id) || []).sort((a, b) => b.createdAt - a.createdAt).map(friendOut);
+    return { id: u.id, name: u.name, phone: u.phone, coins: u.coins || 0, invited: fr.length, earned: fr.filter((f) => f.rewarded).length, pending: fr.filter((f) => !f.rewarded).length,
+      activeFriends: fr.filter((f) => f.state === 'online' || f.state === 'active').length, bonus: (u.coinLog || []).filter((l) => l.type === 'admin').reduce((n, l) => n + l.amount, 0), friends: fr };
+  }).sort((a, b) => b.coins - a.coins || b.invited - a.invited);
+  const all = rows.flatMap((r) => r.friends);
+  res.json({ totals: { coins: rows.reduce((n, r) => n + r.coins, 0), inviters: rows.filter((r) => r.invited).length, joined: all.length, earned: all.filter((f) => f.rewarded).length, active: all.filter((f) => f.state === 'online' || f.state === 'active').length }, rows });
+});
 app.post('/admin/api/users/:id/coins', adminAuth, (req, res) => {
   const u = userById(req.params.id); if (!u) return res.status(404).json({ error: 'Not found.' });
   const delta = Math.trunc(Number(req.body?.delta) || 0); if (!delta || Math.abs(delta) > 1000) return res.status(400).json({ error: 'Enter how many coins to add or remove.' });
