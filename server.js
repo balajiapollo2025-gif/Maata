@@ -490,6 +490,8 @@ const FEATURE_LIST = [
   ['Account & app', 'themes', '🎨 Theme & colours'],
   ['Account & app', 'appLock', '🔒 App lock'],
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
+  ['Account & app', 'invite', '🎁 Invite a friend'],
+  ['Account & app', 'coins', '🪙 Referral coins (1 coin when an invited friend uses Maata 3 days)'],
 ];
 function featureFlags() {
   const m = (db.meta || []).find((x) => x.id === 'features'), f = {};
@@ -610,9 +612,17 @@ app.post('/api/register', rateLimit, async (req, res) => {
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   if (findByMobile(phone)) return res.status(409).json({ error: 'This number is already registered. Log in instead.' });
   const u = { id: newId(), name, phone, email, passHash: await bcrypt.hash(password, 10), createdAt: now(), status: 'active', tokenVersion: 0 };
+  // joined from a friend's invite link: remember who invited, and save each other as contacts
+  const inviter = req.body?.ref ? db.users.find((x) => x.inviteCode && x.inviteCode === String(req.body.ref).trim().toUpperCase() && x.status !== 'blocked') : null;
+  if (inviter) {
+    u.referredBy = inviter.id;
+    contactsOf(u).push({ id: inviter.id, name: inviter.name, addedAt: now() });
+    if (!contactsOf(inviter).some((c) => c.id === u.id)) contactsOf(inviter).push({ id: u.id, name: u.name, addedAt: now() });
+  }
   db.users.push(u);
-  recordLogin(u, req, 'signup');
+  recordLogin(u, req, 'signup'); u.activeDays = [istDay()];
   save();
+  if (inviter) { io.to('user:' + inviter.id).emit('invite:joined', { name: u.name }); try { pushTo(inviter, { type: 'msg', title: '🎉 ' + u.name + ' joined Maata', body: 'Your friend joined from your invite. Say hi!', tag: 'joined-' + u.id }); } catch {} }
   res.json({ token: sign(u), user: publicUser(u) });
 });
 
@@ -1012,6 +1022,58 @@ app.get('/admin/api/storage', adminAuth, (req, res) => {
     graceUntil: meta ? meta.since + MEDIA_KEEP_DAYS * 86400000 : null, lastRun: meta ? meta.lastRun || null : null, r2: R2_ON });
 });
 app.get('/api/media-policy', auth, (req, res) => { const meta = (db.meta || []).find((x) => x.id === 'mediaPurge'); res.json({ keepDays: MEDIA_KEEP_DAYS, graceUntil: meta ? meta.since + MEDIA_KEEP_DAYS * 86400000 : null }); });
+
+// ---------- 🪙 Referral coins: a friend joins with your invite and uses Maata on 3 different days → you get 1 coin ----------
+const REF_DAYS = 3, REF_DAY_CAP = 10; // at most 10 coins a day per person (stops fake-account farming)
+const istDay = (t = now()) => new Date(t + 5.5 * 3600000).toISOString().slice(0, 10);
+function addCoins(u, amount, entry) {
+  u.coins = Math.max(0, (u.coins || 0) + amount);
+  (u.coinLog = u.coinLog || []).unshift({ amount, ts: now(), ...entry }); if (u.coinLog.length > 200) u.coinLog.length = 200;
+}
+function markActive(u) {
+  if (!u) return;
+  const d = istDay(); u.activeDays = u.activeDays || [];
+  if (u.activeDays.includes(d)) return;
+  u.activeDays.push(d); if (u.activeDays.length > 30) u.activeDays = u.activeDays.slice(-30);
+  checkReferral(u); save();
+}
+function checkReferral(u) {
+  if (!u.referredBy || u.referralRewarded || (u.activeDays || []).length < REF_DAYS || !featOn('coins')) return;
+  const inv = userById(u.referredBy); if (!inv || inv.status === 'blocked') return;
+  const today = istDay(); const given = (inv.coinLog || []).filter((x) => x.type === 'referral' && istDay(x.ts) === today).length;
+  if (given >= REF_DAY_CAP) return; // tried again on their next active day
+  u.referralRewarded = now();
+  addCoins(inv, 1, { type: 'referral', friend: u.name, friendId: u.id });
+  io.to('user:' + inv.id).emit('coins:update', { coins: inv.coins, text: '🪙 +1 coin! ' + u.name + ' used Maata for ' + REF_DAYS + ' days.' });
+  try { pushTo(inv, { type: 'msg', title: '🪙 +1 Maata coin', body: u.name + ' used Maata for ' + REF_DAYS + ' days. You now have ' + inv.coins + ' coins.', tag: 'coins' }); } catch {}
+}
+app.get('/api/coins', auth, (req, res) => {
+  const me2 = req.user;
+  const friends = db.users.filter((x) => x.referredBy === me2.id).sort((a, b) => b.createdAt - a.createdAt).slice(0, 50)
+    .map((x) => ({ name: x.name, joinedAt: x.createdAt, days: Math.min(REF_DAYS, (x.activeDays || []).length), done: !!x.referralRewarded }));
+  res.json({ coins: me2.coins || 0, need: REF_DAYS, friends, log: (me2.coinLog || []).slice(0, 50) });
+});
+app.post('/admin/api/users/:id/coins', adminAuth, (req, res) => {
+  const u = userById(req.params.id); if (!u) return res.status(404).json({ error: 'Not found.' });
+  const delta = Math.trunc(Number(req.body?.delta) || 0); if (!delta || Math.abs(delta) > 1000) return res.status(400).json({ error: 'Enter how many coins to add or remove.' });
+  addCoins(u, delta, { type: 'admin', note: clip(req.body?.reason, 100) || (delta > 0 ? 'Bonus from Maata' : 'Adjusted by Maata') }); save();
+  io.to('user:' + u.id).emit('coins:update', { coins: u.coins, text: delta > 0 ? '🪙 +' + delta + ' coins from Maata' : '🪙 Coins updated' });
+  audit(req.admin, 'coins', u.name + ' ' + (delta > 0 ? '+' : '') + delta, clip(req.body?.reason, 100));
+  res.json({ coins: u.coins });
+});
+
+// ---------- Invite a friend ----------
+function inviteCodeOf(u) {
+  if (!u.inviteCode) { let c; do { c = crypto.randomBytes(4).toString('base64').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 6); } while (c.length < 6 || db.users.some((x) => x.inviteCode === c)); u.inviteCode = c; save(); }
+  return u.inviteCode;
+}
+app.get('/api/invite', auth, async (req, res) => {
+  const code = inviteCodeOf(req.user), base = (process.env.APP_ORIGIN || ('https://' + req.headers.host)).replace(/\/$/, '');
+  const joined = db.users.filter((x) => x.referredBy === req.user.id).sort((a, b) => b.createdAt - a.createdAt);
+  let qr = ''; try { qr = await QRCode.toDataURL(base + '/?ref=' + code, { margin: 2, width: 360, color: { dark: '#0A2E36', light: '#FFFFFF' } }); } catch {}
+  res.json({ code, link: base + '/?ref=' + code, site: base, qr, joined: joined.length, recent: joined.slice(0, 10).map((x) => ({ name: x.name, at: x.createdAt })) });
+});
+app.get('/api/invite/:code', (req, res) => { const u = db.users.find((x) => x.inviteCode === String(req.params.code).toUpperCase()); res.json(u ? { name: u.name } : {}); });
 
 // ---------- Chat backup (saved by the customer to Google Drive / phone) ----------
 app.get('/api/backup/export', auth, (req, res) => {
@@ -2916,7 +2978,7 @@ app.get('/admin/api/users/:id', adminAuth, (req, res) => {
   const logins = db.logins.filter((l) => l.userId === u.id).slice(-30).reverse();
   const reports = db.reports.filter((r) => r.target === u.id).map((r) => ({ ...r, reporterName: nameOf(r.reporter) }));
   res.json({
-    user: { ...publicUser(u), status: u.status || 'active', createdAt: u.createdAt, lastLoginAt: u.lastLoginAt, lastSeenAt: u.lastSeenAt, online: isOnline(u.id) },
+    user: { ...publicUser(u), coins: u.coins || 0, referred: db.users.filter((x) => x.referredBy === u.id).length, referredBy: u.referredBy ? (userById(u.referredBy) || {}).name || '' : '', activeDays: (u.activeDays || []).length, status: u.status || 'active', createdAt: u.createdAt, lastLoginAt: u.lastLoginAt, lastSeenAt: u.lastSeenAt, online: isOnline(u.id) },
     stats: { ...agg, received, chatPartners: partners.size },
     calls, logins, reports,
   });
@@ -3152,6 +3214,7 @@ io.on('connection', (socket) => {
   const me = socket.user.id;
   const room = (id) => 'user:' + id;
   socket.join(room(me));
+  markActive(socket.user); // counts the days people use Maata (for referral coins)
   for (const g of db.groups) if (gMember(g, me)) socket.join('grp:' + g.id);
   for (const c of db.channels) if (!c.removed && (c.followers || []).includes(me)) socket.join('ch:' + c.id);
 

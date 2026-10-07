@@ -529,6 +529,7 @@ async function loadCustomers() {
 }
 
 async function openCustomer(id) {
+  window.drawerUserId = id;
   let d; try { d = await api('/admin/api/users/' + id); } catch (e) { return toast(e.message); }
   const u = d.user, s = d.stats;
   $('#drawerBody').innerHTML = `
@@ -548,6 +549,7 @@ async function openCustomer(id) {
       <button class="btn ghost" id="aLogout">Log out all devices</button>
       <button class="btn ghost" id="aDelete" style="color:var(--chili)">Delete account</button>
     </div>
+    <div class="section-title">🪙 Coins & referrals</div><div class="card" style="padding:12px;margin-bottom:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap"><div><b style="font-size:22px">🪙 ${d.user.coins}</b><div class="muted">coins</div></div><div><b style="font-size:22px">${d.user.referred}</b><div class="muted">friends invited</div></div><div><b style="font-size:22px">${d.user.activeDays}</b><div class="muted">days active</div></div>${d.user.referredBy ? `<div class="muted">Invited by <b>${esc(d.user.referredBy)}</b></div>` : ''}<div class="actions" style="margin:0 0 0 auto"><button class="btn" data-coins="1">＋ Add coins</button><button class="btn danger" data-coins="-1">− Remove</button></div></div>
     ${d.reports.length ? `<div class="section-title">Complaints against this customer (${d.reports.length})</div>${d.reports.map((r) => `<div class="report"><div class="r-top"><b>${esc(r.reporterName)}</b><span class="muted">${dt(r.ts)}</span><span class="tag ${r.status === 'open' ? 't-amber' : 't-green'}">${r.status === 'open' ? 'Open' : 'Resolved'}</span></div><blockquote>${esc(r.reason)}</blockquote></div>`).join('')}` : ''}
     <div class="section-title">Recent calls</div>
     <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>With</th><th>Type</th><th>Result</th><th>Duration</th></tr></thead><tbody>
@@ -572,6 +574,12 @@ async function openCustomer(id) {
     try { await api('/admin/api/users/' + id, { method: 'DELETE' }); toast(u.name + ' was deleted.'); closeDrawer(); loadCustomers(); } catch (e) { toast(e.message); }
   };
 }
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-coins]'); if (!b || !window.drawerUserId) return;
+  const n = Number(prompt(b.dataset.coins === '1' ? 'How many coins to ADD?' : 'How many coins to REMOVE?', '1')); if (!n) return;
+  const reason = prompt('Reason (the customer sees this):', b.dataset.coins === '1' ? 'Bonus from Maata' : 'Fake referral removed') || '';
+  try { const r = await api('/admin/api/users/' + window.drawerUserId + '/coins', { method: 'POST', body: JSON.stringify({ delta: n * Number(b.dataset.coins), reason }) }); toast('Coins now: ' + r.coins); openCustomer(window.drawerUserId); } catch (er) { toast(er.message); }
+});
 function closeDrawer() { $('#drawer').hidden = true; }
 $('#drawer').onclick = (e) => { if (e.target.id === 'drawer') closeDrawer(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) closeDrawer(); });

@@ -1170,7 +1170,7 @@ html.feat-off-conference #addCallBtn,html.feat-off-callTranslate #trBtn,html.fea
 html.feat-off-voiceCalls #voiceBtn,html.feat-off-videoCalls #videoBtn,
 html.feat-off-status #stMine,html.feat-off-status .st-actions,html.feat-off-status #stRecentTitle,html.feat-off-status #stRecent,html.feat-off-status #stSeenTitle,html.feat-off-status #stSeen,html.feat-off-status #statusPane>.info-note,html.feat-off-status .ig-stories,
 html.feat-off-channels #stChannels,html.feat-off-nearby [data-rt="nearby"],html.feat-off-reels #igPlus,
-html.feat-off-ai .mt-ai-only{display:none!important}
+html.feat-off-ai .mt-ai-only,html.feat-off-invite .set-group:has(#setInvite){display:none!important}
 .locmap{width:100%;height:260px;border-radius:14px;overflow:hidden;background:var(--line)}
 .loc-status{font-weight:600;margin:8px 0 2px;font-size:14px}.loc-addr{font-size:13px;color:var(--muted);margin:0 0 6px}
 .loc-warn{font-size:13px;line-height:1.45;padding:10px 12px;border-radius:12px;background:#FFF3D6;color:#6B4A00}
@@ -1184,6 +1184,34 @@ html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
 .pd-langs{display:flex;gap:4px}.pd-langs button{padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:12.5px}
 .pd-langs button[aria-pressed="true"]{background:var(--peacock-soft);border-color:var(--leaf);font-weight:700}
 .pd-ai small{flex-basis:100%}
+.inv-link{display:flex;align-items:center;gap:8px;margin:12px 0;padding:10px 12px;border-radius:12px;background:var(--paper);border:1px dashed var(--leaf)}
+.inv-link code{flex:1;font-size:13px;word-break:break-all}
+.inv-msg{width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px}
+.inv-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.inv-b{padding:12px;border-radius:12px;font-weight:700;color:#fff;font-size:14px}
+.inv-b.wa{background:#25D366}.inv-b.sms{background:#1F6FB2}.inv-b.tg{background:#229ED9}.inv-b.more{background:#7A4E9E}.inv-b.cp{background:var(--peacock);grid-column:span 2}
+.inv-qr{display:block;width:200px;margin:6px auto;border-radius:12px;background:#fff;padding:6px}
+.invite-hello{margin:0 0 12px;padding:12px;border-radius:12px;background:#DDF5E6;color:#1C6B3E;font-weight:600}
+.coin-pill{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:5px 11px 5px 8px;border-radius:999px;background:linear-gradient(135deg,#FFE082,#F4B400);color:#5A3E00;font-weight:800;font-size:14.5px;box-shadow:0 1px 4px rgba(0,0,0,.18);flex:none}
+.coin-pill span{font-size:16px}
+.side-head .coin-pill + .cam-btn{margin-left:2px!important}
+.coin-welcome{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:40;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:linear-gradient(135deg,#FFF6D5,#FFE08A);color:#4A3300;box-shadow:0 8px 28px rgba(0,0,0,.25);animation:cwin .5s ease-out;max-width:520px;margin:0 auto}
+.coin-welcome.out{opacity:0;transform:translateY(-20px);transition:.5s}
+@keyframes cwin{from{opacity:0;transform:translateY(-30px) scale(.95)}to{opacity:1;transform:none}}
+.cw-big{display:flex;flex-direction:column;align-items:center;min-width:54px}.cw-coin{font-size:30px;animation:cwspin 1.6s ease-in-out 2}.cw-big b{font-size:20px}
+@keyframes cwspin{50%{transform:rotateY(180deg) scale(1.15)}}
+.cw-txt{flex:1;display:flex;flex-direction:column;gap:2px}.cw-txt small{font-size:13px;line-height:1.35}
+.cw-go{padding:9px 14px;border-radius:999px;background:#4A3300;color:#FFE08A;font-weight:700;white-space:nowrap}
+.cw-x{position:absolute;top:4px;right:8px;background:none;color:#4A3300;font-size:14px;opacity:.6}
+.coin-hero{display:flex;flex-direction:column;align-items:center;padding:20px;border-radius:20px;background:linear-gradient(135deg,#FFF6D5,#FFD54F);color:#4A3300}
+.coin-hero .ch-coin{font-size:56px}.coin-hero b{font-size:44px;line-height:1}.coin-hero small{font-weight:700}
+.coin-how{margin:0 0 12px;padding-left:22px;line-height:1.7;font-size:14.5px}
+.coin-fr{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.coin-fr .tx{flex:1;display:flex;flex-direction:column;gap:3px}.coin-fr small{color:var(--muted);font-size:12.5px}
+.coin-bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}.coin-bar i{display:block;height:100%;background:#F4B400}
+.coin-st{font-weight:800;color:#B07800}
+.coin-tip{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:#FFF3C4;color:#5A3E00;font-weight:600;font-size:13.5px}
+html.feat-off-coins #coinBtn,html.feat-off-coins .set-group:has(#setCoins),html.feat-off-coins .coin-welcome{display:none!important}
 </style>
 </head>
 <body>
@@ -1259,6 +1287,7 @@ html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
     <header class="side-head">
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand-txt"><div class="brand">Maata</div><div class="tagline">Connect · Chat · Share</div></div></div>
       <h1 class="page-title" id="pageTitle">Maata</h1>
+      <button class="coin-pill" id="coinBtn" title="Maata coins" aria-label="My Maata coins"><span>🪙</span><b>0</b></button>
       <button class="icon-btn cam-btn" id="camHeadBtn" title="Camera" aria-label="Camera" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
@@ -1561,9 +1590,11 @@ html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
   <section class="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <div class="settings-head"><h2 id="setTitle">Settings</h2><button class="icon-btn" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="pf-card" id="setProfile"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCoins">🪙 My coins <b style="margin-left:auto">🪙 0 coins</b></button></div>
 
     <div class="set-group" style="margin-top:4px"><div class="set-row" id="setRunning"></div></div>
     <div id="setNotifBox"></div>
+    <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setInvite">🎁 Invite a friend <span style="margin-left:auto;color:var(--muted)">Share Maata</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setStorage">📦 Storage &amp; data <span style="margin-left:auto;color:var(--muted)">Phone copies</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setBackup">☁️ Chat backup <span style="margin-left:auto;color:var(--muted)">Google Drive</span></button></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setSupport">🆘 Help &amp; Support <span style="margin-left:auto;color:var(--muted)">Raise a complaint</span></button></div>
@@ -1740,6 +1771,7 @@ $('#authForm').onsubmit = async (e) => {
       const body = { phone: mobile, password: $('#password').value };
       if (mode === 'register') {
         body.name = $('#name').value; body.email = $('#email').value.trim();
+        if (store.get('maata_ref')) body.ref = store.get('maata_ref');
         if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(body.email)) throw new Error('Enter a valid email address. It is used if you forget your password.');
       }
       r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
@@ -1793,6 +1825,7 @@ async function start() {
   api('/api/announcement').then(showNotice).catch(() => {});
   loadCalls();
   loadStatus();
+  setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
   loadPrefs();
   aiInit();
   setTimeout(handleJoinLink, 800);
@@ -1834,6 +1867,8 @@ function connectSocket() {
   socket.on('support:reply', (p) => { toast('🆘 ' + p.text); notify('Maata Support', p.text); });
   socket.on('reel:review', () => toast('🛡️ Your new reel is being checked by the Maata team before everyone can see it.'));
   socket.on('features', (f) => { FEAT = f || {}; applyFeatures(); });
+  socket.on('coins:update', (p) => { COINS.coins = p.coins; drawCoinBadges(); toast(p.text); });
+  socket.on('invite:joined', (p) => { toast('🎉 ' + p.name + ' joined Maata from your invite!'); reloadUsers(); });
   socket.on('activity:new', () => { const d = $('#igDot'); if (d) d.hidden = false; });
   socket.on('user:profile', () => { reloadUsers(); });
   socket.on('msg:expired', ({ ids }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => !ids.includes(m.id)); if (activeId) renderMessages(); });
@@ -4207,6 +4242,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  invite: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s4 1 6 1zm0 0c2-4 6-4 6-1s-4 1-6 1z"/></svg>',
   support: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>',
   reels: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="M10 12v5l4.5-2.5z"/></svg>',
   linked: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="1.5"/><path d="M6 18h6M9 14v4"/><rect x="17" y="8" width="5" height="12" rx="1"/></svg>',
@@ -4251,6 +4287,7 @@ function openMainMenu(btn) {
   item('read', i18n('markRead'), markAllRead);
   list.append(el('hr'));
   item('linked', 'Linked devices', openLinkedDevices);
+  item('invite', 'Invite a friend', openInvite);
   item('support', 'Help & Support', openSupport);
   item('lock', i18n('appLock'), openLockSettings);
   item('settings', i18n('settings'), openSettings);
@@ -4900,12 +4937,6 @@ function openNewGroup() {
   q.oninput = draw; draw();
   if (!phoneBook.length && window.MaataAndroid && window.MaataAndroid.getContacts) syncFromPhone().then(draw);
   setTimeout(() => q.focus(), 50);
-}
-function inviteToMaata(c) {
-  const text = 'Hi ' + (c.name || '') + '! I use Maata for free calls, video calls and chat. Join me: ' + location.origin;
-  const num = '91' + c.n;
-  if (navigator.share) navigator.share({ text }).catch(() => {});
-  else window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
 }
 function groupDetailsStep(ids) {
   let photo = null;
@@ -8512,8 +8543,8 @@ try { navigator.storage?.persist?.().catch(() => {}); } catch {}
 // ================= App features (switched on/off by the admin) =================
 let FEAT = {};
 const F = (k) => FEAT[k] !== false;
-const FEAT_KEYS = ['translate', 'ai', 'documents', 'contactCard', 'polls', 'location', 'gps', 'broadcast', 'quickReplies', 'status', 'channels', 'communities', 'reels', 'studio', 'remix', 'nearby', 'voiceCalls', 'videoCalls', 'groupCalls', 'conference', 'callTranslate', 'screenShare', 'callQuality', 'business', 'qrLogin', 'backup', 'themes', 'appLock', 'support'];
-const MENU_FEAT = { reels: 'reels', community: 'communities', channel: 'channels', biz: 'business', broadcast: 'broadcast', quick: 'quickReplies', ai: 'ai', linked: 'qrLogin', support: 'support', lock: 'appLock' };
+const FEAT_KEYS = ['coins', 'invite', 'translate', 'ai', 'documents', 'contactCard', 'polls', 'location', 'gps', 'broadcast', 'quickReplies', 'status', 'channels', 'communities', 'reels', 'studio', 'remix', 'nearby', 'voiceCalls', 'videoCalls', 'groupCalls', 'conference', 'callTranslate', 'screenShare', 'callQuality', 'business', 'qrLogin', 'backup', 'themes', 'appLock', 'support'];
+const MENU_FEAT = { invite: 'invite', reels: 'reels', community: 'communities', channel: 'channels', biz: 'business', broadcast: 'broadcast', quick: 'quickReplies', ai: 'ai', linked: 'qrLogin', support: 'support', lock: 'appLock' };
 const ATT_FEAT = { doc: 'documents', contact: 'contactCard', poll: 'polls', event: 'polls', location: 'location', gps: 'gps' };
 async function loadFeatures() { try { FEAT = await fetch('/api/features', { cache: 'no-store' }).then((r) => r.json()); } catch { /* keep last */ } applyFeatures(); }
 function applyFeatures() {
@@ -8531,6 +8562,117 @@ function applyFeatures() {
 }
 
 loadFeatures();
+// ================= 🎁 Invite a friend =================
+const INV_TEXT = {
+  en: (n, l) => '👋 Hi! I use *Maata* — a free Indian app for chat, voice calls and video calls.\n\n✅ Free calls & HD video calls\n✅ Chat, photos, status & reels\n✅ Live translation in Telugu, Hindi, Tamil & more\n✅ Maata AI assistant\n\nJoin me here 👉 ' + l + '\n(Works on any phone or computer — Android app too)\n— ' + n,
+  te: (n, l) => '👋 హాయ్! నేను *Maata* వాడుతున్నాను — చాట్, వాయిస్ కాల్స్, వీడియో కాల్స్ కోసం ఉచిత భారతీయ యాప్.\n\n✅ ఉచిత కాల్స్ & HD వీడియో కాల్స్\n✅ చాట్, ఫోటోలు, స్టేటస్, రీల్స్\n✅ తెలుగు, హిందీ, తమిళం… లైవ్ అనువాదం\n✅ Maata AI సహాయకుడు\n\nఇక్కడ చేరండి 👉 ' + l + '\n(ఏ ఫోన్ / కంప్యూటర్‌లోనైనా పని చేస్తుంది)\n— ' + n,
+};
+INV_TEXT.both = (n, l) => INV_TEXT.te(n, l) + '\n\n' + INV_TEXT.en(n, l);
+let INV = null;
+async function openInvite() {
+  closeSettings();
+  try { INV = await api('/api/invite'); } catch (e) { return toast(e.message); }
+  let lang = store.get('maata_inv_lang') || (me.lang === 'te' ? 'both' : 'en');
+  sheet('🎁 Invite a friend', (list) => {
+    const box = el('div'); box.style.padding = '12px 14px 20px';
+    const hero = el('div', 'bk-card'); hero.append(el('div', 'bk-ic', '🎁'));
+    const ht = el('div'); ht.append(el('b', null, 'Bring your friends & family to Maata'), el('small', null, INV.joined ? '🎉 ' + INV.joined + ' friend' + (INV.joined > 1 ? 's' : '') + ' joined from your invite' : 'They join with your link and you are added to each other\u2019s contacts automatically.'));
+    hero.append(ht); box.append(hero);
+    if (F('coins')) box.append(el('p', 'coin-tip', '🪙 Earn 1 Maata coin for every friend who joins with your link and uses Maata on 3 different days.'));
+    const lr = el('div', 'inv-link'); const lt = el('code', null, INV.link); const cp = el('button', 'linkbtn', '📋 Copy link'); cp.onclick = () => copyText(INV.link); lr.append(lt, cp); box.append(lr);
+    box.append(el('div', 'th-title', 'Message'));
+    const ch = el('div', 'pd-langs'); const ta = el('textarea', 'inv-msg'); ta.rows = 9;
+    const fill = () => { ta.value = INV_TEXT[lang](me.name, INV.link); };
+    for (const [v, t] of [['en', 'English'], ['te', 'తెలుగు'], ['both', 'Both']]) { const b = el('button', null, t); b.type = 'button'; b.setAttribute('aria-pressed', String(v === lang)); b.onclick = () => { lang = v; store.set('maata_inv_lang', v); [...ch.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); fill(); }; ch.append(b); }
+    fill(); box.append(ch, ta);
+    const btns = el('div', 'inv-btns');
+    const mk = (cls, label, fn) => { const b = el('button', 'inv-b ' + cls, label); b.onclick = fn; btns.append(b); };
+    mk('wa', '🟢 WhatsApp', () => openOut('https://wa.me/?text=' + encodeURIComponent(ta.value)));
+    mk('sms', '💬 SMS', () => openOut('sms:?&body=' + encodeURIComponent(ta.value)));
+    mk('tg', '✈️ Telegram', () => openOut('https://t.me/share/url?url=' + encodeURIComponent(INV.link) + '&text=' + encodeURIComponent(ta.value.replace(INV.link, ''))));
+    mk('more', '↗ More apps', () => shareTextAny(ta.value));
+    mk('cp', '📋 Copy message', () => copyText(ta.value));
+    box.append(btns);
+    if (INV.qr) { box.append(el('div', 'th-title', 'QR code — print it at your shop counter')); const qi = el('img', 'inv-qr'); qi.src = INV.qr; qi.alt = 'Invite QR code'; const dq = el('button', 'linkbtn', '⬇ Save QR picture'); dq.onclick = () => { fetch(INV.qr).then((r) => r.blob()).then((b) => downloadBlob(b, 'Maata-invite-QR.png')); }; box.append(qi, dq); }
+    // phone contacts who are not on Maata yet
+    const onM = new Set(users.map((u) => l10(u.phone))); const notOn = phoneBook.filter((c) => !onM.has(c.n));
+    box.append(el('div', 'th-title', 'Invite your contacts' + (notOn.length ? ' · ' + notOn.length + ' not on Maata' : '')));
+    if (!phoneBook.length) { const ld = el('button', 'sheet-btn', '📱 Show my phone contacts'); ld.onclick = async () => { await syncFromPhone(); closeSheet('moreSheet'); openInvite(); }; box.append(ld); }
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search contacts'; q.className = 'search'; q.style.width = '100%'; if (notOn.length) box.append(q);
+    const ul = el('div'); box.append(ul);
+    const draw = () => { ul.innerHTML = ''; const t = q.value.trim().toLowerCase(); for (const c of notOn.filter((c2) => !t || c2.name.toLowerCase().includes(t) || c2.n.includes(t)).slice(0, 200)) { const r = el('div', 'ng-inv'); const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', c.name), el('div', 'c-last', c.phone)); const wa = el('button', 'linkbtn', 'WhatsApp'); wa.onclick = () => openOut('https://wa.me/91' + c.n + '?text=' + encodeURIComponent(ta.value)); const sm = el('button', 'linkbtn', 'SMS'); sm.onclick = () => openOut('sms:+91' + c.n + '?&body=' + encodeURIComponent(ta.value)); r.append(avatar({ id: c.n, name: c.name }, 'sm'), tx, wa, sm); ul.append(r); } };
+    q.oninput = draw; draw();
+    if (INV.recent.length) { box.append(el('div', 'th-title', 'Joined from your invite')); for (const j of INV.recent) box.append(el('div', 'stor-row', '🎉 ' + j.name + ' · ' + new Date(j.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }))); }
+    list.append(box);
+  });
+}
+function openOut(url) { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove(); }
+function shareTextAny(text) {
+  const A = window.MaataAndroid;
+  if (navigator.share) return navigator.share({ text }).catch(() => {});
+  if (A && A.shareFileStart) { try { const b = new TextEncoder().encode(text); let s2 = ''; b.forEach((x) => (s2 += String.fromCharCode(x))); A.shareFileStart('Maata-invite.txt'); A.shareFileChunk(btoa(s2)); A.shareFileEnd('text/plain', 'Invite to Maata'); return; } catch {} }
+  copyText(text); toast('📋 Message copied — paste it in any app');
+}
+function inviteToMaata(c) {
+  const go = (inv) => { const text = INV_TEXT[store.get('maata_inv_lang') || 'en']((me && me.name) || '', inv ? inv.link : location.origin); openOut('https://wa.me/91' + c.n + '?text=' + encodeURIComponent(text)); };
+  if (INV) go(INV); else api('/api/invite').then((x) => { INV = x; go(x); }).catch(() => go(null));
+}
+// joined from someone's invite link
+(function captureRef() {
+  try {
+    const r = new URLSearchParams(location.search).get('ref');
+    if (r && /^[A-Z0-9]{4,10}$/i.test(r)) { store.set('maata_ref', r.toUpperCase()); history.replaceState(null, '', location.pathname + location.hash);
+      fetch('/api/invite/' + encodeURIComponent(r)).then((x) => x.json()).then((d) => { if (d.name && !token) { const n = el('p', 'invite-hello', '🎁 ' + d.name + ' invited you to Maata — create your free account below.'); const card = document.querySelector('#auth .card, #auth form, #auth'); if (card) card.prepend(n); } }).catch(() => {}); }
+  } catch {}
+})();
+
+$('#setInvite').onclick = openInvite;
+// ================= 🪙 Maata coins (referral rewards) =================
+let COINS = { coins: 0, friends: [], log: [], need: 3 }, coinWelcomeShown = false;
+async function loadCoins(showWelcome) {
+  if (!F('coins')) return;
+  try { COINS = await api('/api/coins'); } catch { return; }
+  drawCoinBadges();
+  if (showWelcome && !coinWelcomeShown) { coinWelcomeShown = true; coinWelcome(); }
+}
+function drawCoinBadges() {
+  const b = $('#coinBtn'); if (b) { b.querySelector('b').textContent = COINS.coins; b.title = COINS.coins + ' Maata coins'; }
+  const c = $('#setCoins'); if (c) c.querySelector('b').textContent = '🪙 ' + COINS.coins + ' coins';
+}
+function coinWelcome() { // shown once every time the app is opened / logged in
+  const pend = COINS.friends.filter((f) => !f.done);
+  const card = el('div', 'coin-welcome'); card.setAttribute('role', 'status');
+  const x = el('button', 'cw-x', '✕'); x.setAttribute('aria-label', 'Close'); x.onclick = () => card.remove();
+  const big = el('div', 'cw-big'); big.append(el('span', 'cw-coin', '🪙'), el('b', null, String(COINS.coins)));
+  const t = el('div', 'cw-txt'); t.append(el('b', null, 'Welcome back, ' + (me.name.split(/\s+/).find((w) => w.replace(/\./g, '').length > 1) || me.name) + '!'), el('small', null, COINS.coins ? 'You have ' + COINS.coins + ' Maata coin' + (COINS.coins > 1 ? 's' : '') + '.' + (pend.length ? ' ' + pend.length + ' friend' + (pend.length > 1 ? 's are' : ' is') + ' on the way.' : '') : 'Invite friends — get 1 coin when each friend uses Maata for ' + COINS.need + ' days.'));
+  const go = el('button', 'cw-go', COINS.coins ? 'My coins' : '🎁 Invite'); go.onclick = () => { card.remove(); COINS.coins ? openCoins() : openInvite(); };
+  card.append(big, t, go, x); document.body.append(card);
+  setTimeout(() => { card.classList.add('out'); setTimeout(() => card.remove(), 600); }, 9000);
+}
+async function openCoins() {
+  closeSettings(); await loadCoins(false);
+  sheet('🪙 My Maata coins', (list) => {
+    const box = el('div'); box.style.padding = '12px 14px 20px';
+    const hero = el('div', 'coin-hero'); hero.append(el('div', 'ch-coin', '🪙'), el('b', null, String(COINS.coins)), el('small', null, 'Maata coins'));
+    box.append(hero);
+    box.append(el('div', 'th-title', 'How to earn'));
+    const how = el('ol', 'coin-how'); for (const t of ['Share your invite link (🎁 Invite a friend).', 'Your friend creates a Maata account with your link.', 'When your friend uses Maata on ' + COINS.need + ' different days, you get 🪙 1 coin.']) how.append(el('li', null, t)); box.append(how);
+    const inv = el('button', 'primary', '🎁 Invite friends & earn'); inv.onclick = () => { closeSheet('moreSheet'); openInvite(); }; box.append(inv);
+    if (COINS.friends.length) {
+      box.append(el('div', 'th-title', 'Your friends'));
+      for (const f of COINS.friends) {
+        const r = el('div', 'coin-fr'); const tx = el('div', 'tx'); tx.append(el('b', null, f.name), el('small', null, f.done ? '✅ Coin earned' : 'Used Maata ' + f.days + ' of ' + COINS.need + ' days'));
+        const bar = el('div', 'coin-bar'); const fill = el('i'); fill.style.width = (f.days / COINS.need * 100) + '%'; bar.append(fill); tx.append(bar);
+        r.append(avatar({ id: f.name, name: f.name }, 'sm'), tx, el('span', 'coin-st', f.done ? '🪙 +1' : '⏳')); box.append(r);
+      }
+    }
+    if (COINS.log.length) { box.append(el('div', 'th-title', 'History')); for (const l of COINS.log) box.append(el('div', 'stor-row', (l.amount > 0 ? '🟢 +' : '🔴 ') + l.amount + '  ' + (l.type === 'referral' ? l.friend + ' used Maata ' + COINS.need + ' days' : l.note || 'Maata') + ' · ' + new Date(l.ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }))); }
+    box.append(el('p', 'info-note', 'Coins are Maata reward points. They are not money and cannot be exchanged for cash. Maata will announce rewards you can use them for. Fake accounts are removed and their coins taken back.'));
+    list.append(box);
+  });
+}
+
+$('#coinBtn').onclick = openCoins; $('#setCoins').onclick = openCoins;
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
