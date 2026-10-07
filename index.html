@@ -1178,6 +1178,12 @@ html.dark .loc-warn{background:#3A2E10;color:#F6CF7A}
 .leaflet-container{font:inherit}
 .loc-search{position:relative}.loc-search input{width:100%;box-sizing:border-box;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
 .loc-results{display:flex;flex-direction:column;gap:2px;margin:4px 0}.loc-res{text-align:left;padding:9px 10px;border-radius:10px;background:var(--paper);color:var(--ink);font-size:13.5px;border:1px solid var(--line)}
+.pd-ai{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-4px 0 10px}
+.pd-ai-btn{padding:8px 14px;border-radius:999px;background:linear-gradient(90deg,#1DAA61,#1B7A8F);color:#fff;font-weight:700;font-size:13.5px}
+.pd-ai-btn:disabled{opacity:.6}
+.pd-langs{display:flex;gap:4px}.pd-langs button{padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:12.5px}
+.pd-langs button[aria-pressed="true"]{background:var(--peacock-soft);border-color:var(--leaf);font-weight:700}
+.pd-ai small{flex-basis:100%}
 </style>
 </head>
 <body>
@@ -5822,11 +5828,40 @@ function editProduct(p) {
   let photo = null;
   sheet(p ? 'Edit product' : 'New product', (list) => {
     const box = el('div', 'formcol'); box.style.padding = '12px';
-    photoPicker(box, p && p.hasPhoto ? prodPhoto(p) : null, (b) => (photo = b));
+    photoPicker(box, p && p.hasPhoto ? prodPhoto(p) : null, (b) => { photo = b; if (typeof aiPhotoHook === 'function') aiPhotoHook(); });
+    let aiPhotoHook = null;
     const f = (label, tag, val, attrs = {}) => { const l = el('label'); l.append(el('span', null, label)); const i = el(tag); if (tag === 'input') i.type = attrs.type || 'text'; Object.assign(i, attrs); i.value = val ?? ''; l.append(i); box.append(l); return i; };
     const name = f('Product name', 'input', p && p.name, { maxLength: 80, placeholder: 'e.g. 20W fast charger' });
     const price = f('Price in ₹ (optional)', 'input', p && p.price, { type: 'number', min: 0, step: '0.01', inputMode: 'decimal' });
-    const desc = f('Description (optional)', 'textarea', p && p.description, { maxLength: 500 });
+    const desc = f('Description', 'textarea', p && p.description, { maxLength: 500, placeholder: 'Type it yourself, or let ✨ AI write it from the name' });
+    // ✨ AI description: written from the name + price + shop type (+ photo if added). The owner can edit or type their own.
+    const aiRow = el('div', 'pd-ai'); let aiLang = store.get('maata_pd_lang') || 'en', userTyped = !!(p && p.description), aiBusy = false;
+    const aiBtn = el('button', 'pd-ai-btn', '✨ Write with AI'); aiBtn.type = 'button';
+    const langs = el('div', 'pd-langs');
+    for (const [v, t] of [['en', 'English'], ['te', 'తెలుగు'], ['both', 'Both'], ['hi', 'हिंदी']]) { const b = el('button', null, t); b.type = 'button'; b.setAttribute('aria-pressed', String(v === aiLang)); b.onclick = () => { aiLang = v; store.set('maata_pd_lang', v); [...langs.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; langs.append(b); }
+    const aiNote = el('small', 'muted', ''); aiRow.append(aiBtn, langs, aiNote);
+    desc.closest('label').after(aiRow);
+    desc.addEventListener('input', () => { userTyped = !!desc.value.trim(); if (userTyped) aiNote.textContent = '✍️ Your own description'; });
+    const aiWrite = async (auto) => {
+      if (aiBusy || !F('ai')) return; const n = name.value.trim();
+      if (n.length < 2) { if (!auto) toast('Enter the product name first.'); return; }
+      if (auto && userTyped) return; // never overwrite what the owner typed
+      if (!auto && desc.value.trim() && userTyped && !confirm('Replace your description with an AI one?')) return;
+      aiBusy = true; aiBtn.disabled = true; aiBtn.textContent = '⏳ Writing…'; aiNote.textContent = photo ? 'Looking at the name and photo…' : 'Using the product name' + (price.value ? ' and price' : '') + '…';
+      try {
+        const q = '/api/ai/product-desc?name=' + encodeURIComponent(n) + '&price=' + encodeURIComponent(price.value || '') + '&lang=' + aiLang;
+        const r = await fetch(q, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': photo ? (photo.type || 'image/jpeg') : 'text/plain' }, body: photo || '' });
+        const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'AI could not write it. Try again.');
+        desc.value = d.description; userTyped = false; aiNote.textContent = '✨ Written by AI — check it and edit anything you like.';
+      } catch (e) { aiNote.textContent = ''; if (!auto) toast(e.message); }
+      aiBusy = false; aiBtn.disabled = false; aiBtn.textContent = '✨ Write again';
+    };
+    aiBtn.onclick = () => aiWrite(false);
+    // automatic: after typing the name (and when a photo is added), if the description is still empty
+    let autoT = 0; const autoSoon = () => { clearTimeout(autoT); autoT = setTimeout(() => { if (!desc.value.trim()) aiWrite(true); }, 1200); };
+    name.addEventListener('change', autoSoon); name.addEventListener('blur', autoSoon); price.addEventListener('change', () => { if (!userTyped && desc.value.trim()) return; autoSoon(); });
+    if (!F('ai')) aiRow.hidden = true;
+    aiPhotoHook = () => { if (!userTyped && name.value.trim().length >= 2) aiWrite(true); };
     const r = el('div', 'set-row'); r.style.padding = '8px 0'; const t = el('div', 'txt'); t.append(el('b', null, 'Show to customers')); const sw = el('label', 'switch-ui'); const av = el('input'); av.type = 'checkbox'; av.checked = p ? p.available : true; av.setAttribute('aria-label', 'Show to customers'); sw.append(av, el('span')); r.append(t, sw); box.append(r);
     const go = el('button', 'primary', p ? 'Save product' : 'Add product');
     go.onclick = async () => {
@@ -5938,28 +5973,36 @@ async function openAdvertise() {
       const c = el('div', 'ad-row');
       const st = a.status === 'pending' ? '⏳ Waiting for review' : a.status === 'approved' && a.endsAt > Date.now() ? '🟢 Live until ' + new Date(a.endsAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : a.status === 'rejected' ? '❌ Not approved: ' + a.reason : '⚪ Ended';
       c.append(el('b', null, a.title), el('small', null, st), el('small', null, '👁 ' + a.views + ' views · 👆 ' + a.clicks + ' chats'));
+      const ed = el('button', 'linkbtn', a.status === 'pending' || (a.status === 'approved' && a.endsAt > Date.now()) ? '✏️ Edit' : '✏️ Edit & run again'); ed.onclick = () => createAd(a); c.append(ed);
       if (a.status === 'pending' || (a.status === 'approved' && a.endsAt > Date.now())) { const x = el('button', 'linkbtn', a.status === 'pending' ? 'Cancel' : 'Stop ad'); x.onclick = async () => { if (!confirm('Stop this ad?')) return; await api('/api/ads/' + a.id, { method: 'DELETE' }); openAdvertise(); }; c.append(x); }
       box.append(c);
     }
     list.append(box);
   });
 }
-async function createAd() {
-  let photo = null, items = [];
+async function createAd(ad) {
+  let photo = null, items = [], removePhoto = false;
   try { items = await api('/api/catalogue/' + me.id); } catch {}
-  sheet('📢 New ad', (list) => {
+  sheet(ad ? '✏️ Edit ad' : '📢 New ad', (list) => {
     const box = el('div', 'formcol'); box.style.padding = '12px';
-    photoPicker(box, null, (b) => (photo = b));
+    const live = ad && ad.status === 'approved' && ad.endsAt > Date.now();
+    if (ad) box.append(el('p', 'info-note', live ? '⚠️ This ad is live. After you save, it goes back to the Maata team for a quick check and stops showing until it is approved again.' : ad.status === 'pending' ? 'Your changes are checked together with the ad.' : 'Saving sends this ad for review again, so it can run once more.'));
+    photoPicker(box, ad && ad.hasPhoto ? adPhoto(ad) : null, (b) => { photo = b; removePhoto = false; });
+    if (ad && ad.hasPhoto) { const rp = el('button', 'linkbtn', '🗑 Remove photo'); rp.type = 'button'; rp.onclick = () => { removePhoto = true; photo = null; rp.textContent = 'Photo will be removed'; }; box.append(rp); }
     const f = (label, tag, attrs = {}) => { const l = el('label'); l.append(el('span', null, label)); const i = el(tag); Object.assign(i, attrs); l.append(i); box.append(l); return i; };
     const title = f('Headline', 'input', { maxLength: 60, placeholder: 'Diwali offer: 20% off on all chargers' });
     const text = f('Message', 'textarea', { maxLength: 300, placeholder: 'Visit Kavitha Telecom, Mount Road. Offer till Sunday!' });
+    if (ad) { title.value = ad.title; text.value = ad.text; }
     const pl = el('label'); pl.append(el('span', null, 'Link a product (optional)')); const ps = el('select'); ps.add(new Option('No product', '')); items.forEach((p) => ps.add(new Option(p.name + (p.price !== null ? ' · ' + rupee(p.price) : ''), p.id))); pl.append(ps); box.append(pl);
     const dl = el('label'); dl.append(el('span', null, 'Run for')); const ds = el('select'); for (const [v, t2] of [[1, '1 day'], [3, '3 days'], [7, '7 days']]) ds.add(new Option(t2, v)); ds.value = '3'; dl.append(ds); box.append(dl);
     box.append(el('p', 'info-note', 'Not allowed: fake offers, adult content, alcohol/tobacco, gambling, loans, or misleading claims.'));
-    const go = el('button', 'primary', 'Send for review');
+    if (ad) { ps.value = ad.productId || ''; ds.value = String(ad.days || 3); }
+    const go = el('button', 'primary', ad ? (live ? 'Save & send for review' : 'Save') : 'Send for review');
     go.onclick = async () => {
       if (!title.value.trim() || !text.value.trim()) return toast('Add a headline and a message.');
+      if (live && !confirm('Your ad will stop showing until the Maata team approves the changes. Continue?')) return;
       go.disabled = true;
+      if (ad) { try { const a = await api('/api/ads/' + ad.id, { method: 'PUT', body: JSON.stringify({ title: title.value, text: text.value, productId: ps.value, days: ds.value, removePhoto }) }); if (photo) await upPhoto('/api/ads/' + a.id + '/photo', photo); toast('✏️ Ad updated · ⏳ waiting for review'); openAdvertise(); } catch (e) { toast(e.message); go.disabled = false; } return; }
       try { const a = await api('/api/ads', { method: 'POST', body: JSON.stringify({ title: title.value, text: text.value, productId: ps.value, days: ds.value }) }); if (photo) await upPhoto('/api/ads/' + a.id + '/photo', photo); toast('Sent for review ⏳'); openAdvertise(); }
       catch (e) { toast(e.message); go.disabled = false; }
     };

@@ -1866,6 +1866,24 @@ app.post('/api/ai/subtitles', auth, express.raw({ type: ['audio/*'], limit: '6mb
     .filter((x) => x.text && x.end > x.start).slice(0, 120);
   res.json({ segments: segs });
 });
+// Catalogue: AI writes the product description from the name, price, shop type and (if added) the photo
+app.post('/api/ai/product-desc', auth, express.raw({ type: ['image/*'], limit: '2mb' }), async (req, res) => {
+  const name = clip(req.query.name, 80); if (name.length < 2) return res.status(400).json({ error: 'Enter the product name first.' });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const price = Number(req.query.price) > 0 ? Number(req.query.price) : null;
+  const lang = { en: 'English', te: 'Telugu (Telugu script)', both: 'English, then the same in Telugu (Telugu script) on the next line', hi: 'Hindi (Devanagari script)' }[String(req.query.lang || 'en')] || 'English';
+  const shop = req.user.business ? req.user.business.name + ' (' + req.user.business.category + ')' : 'a local shop in India';
+  const hasPhoto = Buffer.isBuffer(req.body) && req.body.length > 500;
+  const parts = [];
+  if (hasPhoto) parts.push({ inline_data: { mime_type: String(req.headers['content-type'] || 'image/jpeg').split(';')[0], data: req.body.toString('base64') } });
+  parts.push({ text: 'Product name: ' + name + (price ? '\nPrice: Rs ' + price : '') + '\nShop: ' + shop + (hasPhoto ? '\nThe photo shows the product.' : '') +
+    '\n\nWrite a catalogue description for this product in ' + lang + '. 2 to 3 short sentences, at most 280 characters (per language). Say what it is, who it is for and its main useful features. ' +
+    'Use only facts that are typical for this kind of product' + (hasPhoto ? ' or clearly visible in the photo' : '') + ' — do NOT invent exact specifications (battery mAh, warranty years, model numbers) unless they are in the product name. ' +
+    'Friendly, simple words for Indian customers. No price, no emojis overload (max 1), no hashtags, no markdown. Return only the description.' });
+  const r = await gemini('You write short, honest product descriptions for small shops in India.', [{ role: 'user', parts }], { maxTokens: 400, temperature: 0.6 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
+  res.json({ description: plain(r.text).replace(/^["“]|["”]$/g, '').trim().slice(0, 500) });
+});
 app.post('/api/ai/replies', auth, async (req, res) => {
   const msgs = (Array.isArray(req.body?.messages) ? req.body.messages : []).slice(-6).map((m) => ({ who: m.mine ? 'Me' : 'Them', text: String(m.text || '').slice(0, 500) })).filter((m) => m.text);
   if (!msgs.length) return res.status(400).json({ error: 'No messages to reply to.' });
@@ -2127,6 +2145,24 @@ app.post('/api/ads', auth, (req, res) => {
   db.ads.push(a); save();
   io.to('admins').emit('feed', { kind: 'ad', text: 'New ad to review from ' + req.user.business.name, ts: now() });
   res.json(adOut(a, true));
+});
+// Edit an ad. A live (or stopped / rejected / ended) ad goes back to "waiting for review" — so an approved ad
+// cannot be changed into something else without the Maata team seeing it again.
+app.put('/api/ads/:id', auth, (req, res) => {
+  const a = db.ads.find((x) => x.id === req.params.id && x.ownerId === req.user.id); if (!a) return res.status(404).json({ error: 'Not found.' });
+  const title = clip(req.body?.title, 60), text = clip(req.body?.text, 300);
+  if (!title || !text) return res.status(400).json({ error: 'Add a title and a message for your ad.' });
+  if (a.status !== 'pending' && !adLive(a)) { // re-running an old ad counts towards the limit of 2
+    const open = db.ads.filter((x) => x.id !== a.id && x.ownerId === req.user.id && (x.status === 'pending' || adLive(x)));
+    if (open.length >= 2) return res.status(400).json({ error: 'You can have up to 2 ads waiting or running at a time.' });
+  }
+  const pid = String(req.body?.productId || ''); const prod = pid && db.products.find((p) => p.id === pid && p.ownerId === req.user.id);
+  const wasLive = adLive(a);
+  Object.assign(a, { title, text, productId: prod ? prod.id : null, days: [1, 3, 7].includes(Number(req.body?.days)) ? Number(req.body.days) : a.days, status: 'pending', reason: '', startsAt: null, endsAt: null, editedAt: now() });
+  if (req.body?.removePhoto && a.photo) { deleteChatFile(a.photo); a.photo = null; a.photoV = (a.photoV || 0) + 1; }
+  save();
+  io.to('admins').emit('feed', { kind: 'ad', text: 'Ad edited — please review again: ' + (req.user.business ? req.user.business.name : req.user.name), ts: now() });
+  res.json({ ...adOut(a, true), wasLive });
 });
 app.post('/api/ads/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
   const a = db.ads.find((x) => x.id === req.params.id && x.ownerId === req.user.id && x.status === 'pending'); if (!a) return res.status(404).json({ error: 'Not found.' });
