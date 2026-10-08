@@ -2,4 +2,6 @@
 <paths>
     <!-- backup files Maata makes, shared to Google Drive / WhatsApp / Files -->
     <cache-path name="share" path="share/" />
+    <!-- new Maata app downloaded by the in-app updater -->
+    <external-files-path name="updates" path="Download/" />
 </paths>

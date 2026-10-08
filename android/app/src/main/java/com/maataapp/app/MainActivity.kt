@@ -320,6 +320,35 @@ class MainActivity : Activity() {
             runOnUiThread { startActivity(Intent.createChooser(send, title)) }
             true
         } catch (e: Exception) { false }
+        /** In-app update: download the newest APK from maataapp.com and open Android's "Update" screen.
+         *  Returns "OK", "PERMISSION" (the person must allow Maata to install apps first) or "ERROR". */
+        @JavascriptInterface fun installUpdate(url: String): String = try {
+            if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                runOnUiThread { try { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) } catch (_: Exception) { } }
+                "PERMISSION"
+            } else {
+                val dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: throw IllegalStateException("no storage")
+                val apk = java.io.File(dir, "maata-update.apk"); if (apk.exists()) apk.delete()
+                val dm = getSystemService(DownloadManager::class.java)
+                val id = dm.enqueue(DownloadManager.Request(Uri.parse(url)).setTitle("Maata update").setDescription("Downloading the new Maata app")
+                    .setMimeType("application/vnd.android.package-archive").setDestinationUri(Uri.fromFile(apk))
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE))
+                val done = object : android.content.BroadcastReceiver() {
+                    override fun onReceive(c: android.content.Context, i: Intent) {
+                        if (i.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) != id) return
+                        try { unregisterReceiver(this) } catch (_: Exception) { }
+                        try {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.files", apk)
+                            startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+                        } catch (_: Exception) { Toast.makeText(this@MainActivity, "Open Downloads and tap the Maata update", Toast.LENGTH_LONG).show() }
+                    }
+                }
+                val filter = android.content.IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+                runOnUiThread { if (Build.VERSION.SDK_INT >= 33) registerReceiver(done, filter, android.content.Context.RECEIVER_EXPORTED) else registerReceiver(done, filter) }
+                "OK"
+            }
+        } catch (e: Exception) { "ERROR" }
         @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }

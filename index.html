@@ -1835,7 +1835,7 @@ async function start() {
   loadCalls();
   loadStatus();
   setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
-  setTimeout(() => { if (appKind() === 'old') askAppUpdate(false); }, 6000);
+  setTimeout(checkAppUpdate, 6000);
   loadPrefs();
   aiInit();
   setTimeout(handleJoinLink, 800);
@@ -2216,7 +2216,7 @@ function renderSettings() {
       const av = (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1];
       box.innerHTML = ''; const kind = appKind(); if (kind !== 'new') { box.style.cursor = 'pointer'; box.onclick = () => askAppUpdate(true); }
       const t = el('div', 'txt'); t.append(el('b', null, kind === 'new' ? '📱 Running in: Maata Android app v' + av + ' ✅ latest' : kind === 'old' ? '⚠️ Old Maata Android app v' + av + ' — tap to update' : '🌐 Running in: browser (' + (inApp() ? 'installed from Chrome' : 'Chrome tab') + ') — tap to get the app'),
-        el('small', null, av ? 'All call features work: loudspeaker switch, voice when the phone is locked, full-screen incoming calls.' : 'Loudspeaker switch, voice when the phone is locked and full-screen calls need the Maata Android app (APK).'));
+        el('small', null, kind === 'new' ? 'All call features work: loudspeaker switch, phone ringtone, voice when the phone is locked, full-screen incoming calls.' : kind === 'old' ? 'Update to get: earpiece / loudspeaker switch, your phone ringtone, voice when the phone is locked, all phone contacts.' : 'Loudspeaker switch, phone ringtone, voice when the phone is locked and full-screen calls need the Maata Android app.'));
       box.append(t);
     }
   }
@@ -8293,7 +8293,19 @@ async function openInsights() {
 $('#devGear').onclick = () => openSettings();
 // Which Maata is this? The newest Android app has all of these phone features.
 const APP_NEEDS = ['setSpeaker', 'audioInfo', 'startPhoneRingtone', 'getContacts', 'shareFileStart'];
-const appKind = () => { const A = window.MaataAndroid; if (!A) return 'browser'; return APP_NEEDS.every((k) => typeof A[k] === 'function') ? 'new' : 'old'; };
+let LATEST_APP = 0;
+const appBuild = () => Number((navigator.userAgent.match(/MaataAndroid\/[\d.]*?(\d+)(?:\s|$)/) || [])[1] || 0);
+const appKind = () => { const A = window.MaataAndroid; if (!A) return 'browser'; if (!APP_NEEDS.every((k) => typeof A[k] === 'function')) return 'old'; return LATEST_APP && appBuild() && appBuild() < LATEST_APP ? 'old' : 'new'; };
+async function checkAppUpdate() { if (!window.MaataAndroid) return; try { const v = await fetch('/app-version.json', { cache: 'no-store' }).then((r) => r.json()); LATEST_APP = Number(v.version) || 0; } catch {} if (appKind() === 'old') askAppUpdate(false); }
+function startAppUpdate() {
+  const A = window.MaataAndroid, url = location.origin + '/download';
+  if (A && A.installUpdate) {
+    let r = 'ERROR'; try { r = A.installUpdate(url); } catch {}
+    if (r === 'OK') { closeSheet('moreSheet'); toast('⬇ Downloading the new Maata… then tap "Update" when Android asks.'); return; }
+    if (r === 'PERMISSION') { toast('Allow "Install unknown apps" for Maata, come back and tap Update again.'); return; }
+  }
+  location.href = url; // older apps / browsers: normal download
+}
 const appVersion = () => (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1] || '';
 function askAppUpdate(force) {
   const k = appKind(); if (k === 'new') return;
@@ -8301,10 +8313,10 @@ function askAppUpdate(force) {
   store.set('maata_upd_asked', String(Date.now()));
   sheet(k === 'old' ? '📲 Update the Maata app' : '📲 Get the Maata Android app', (list) => {
     const box = el('div'); box.style.padding = '14px';
-    box.append(el('p', null, k === 'old' ? 'Your Maata app is an older version' + (appVersion() ? ' (v' + appVersion() + ')' : '') + '. The new version adds:' : 'You are using Maata in the browser. The Android app adds:'));
+    box.append(el('p', null, k === 'old' ? 'A new Maata app is ready' + (LATEST_APP ? ' (v1.0.' + LATEST_APP + ')' : '') + '. You have v' + (appVersion() || 'old') + '. The new version has:' : 'You are using Maata in the browser. The Android app adds:'));
     const ul = el('ul', 'coin-how'); for (const t of ['🔈 Earpiece / 🔊 loudspeaker switch, like a normal call', '📱 Your phone\u2019s own ringtone for Maata calls', '🔒 Voice keeps working when the phone is locked', '👥 All phone contacts in New group', '☁️ Share backups to Google Drive']) ul.append(el('li', null, t)); box.append(ul);
-    const dl = el('a', 'primary', '⬇ Download the new Maata app'); dl.href = '/download'; dl.style.cssText = 'display:block;text-align:center;text-decoration:none;padding:13px;border-radius:12px';
-    box.append(dl, el('p', 'info-note', 'Open the downloaded file and tap Install (allow "Install unknown apps" if asked). It installs over the old app and your chats stay. If the phone says "App not installed", uninstall the old Maata first, then install again.'));
+    const dl = el('button', 'primary', LATEST_APP && k === 'old' && appBuild() ? '⬇ Update to v1.0.' + LATEST_APP : '⬇ Download the new Maata app'); dl.onclick = startAppUpdate; dl.style.cssText = 'display:block;width:100%;text-align:center;padding:13px;border-radius:12px';
+    box.append(dl, el('p', 'info-note', 'Tap Update, wait for the download, then tap "Update" on the Android screen. Your chats stay. (Only the first time: allow "Install unknown apps" for Maata. If the phone says "App not installed", uninstall the old Maata once and install again.)'));
     list.append(box);
   });
 }
