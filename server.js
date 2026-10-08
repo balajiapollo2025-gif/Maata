@@ -552,16 +552,42 @@ const findByMobile = (m) => db.users.find((x) => cleanMobile(x.phone) === m);
 // ---------- Email (for forgot password) ----------
 // Works with any SMTP: Gmail (smtp.gmail.com, port 465, an "App password"), Brevo, Zoho, etc.
 const nodemailer = require('nodemailer');
+// ---------- Email (password reset codes) ----------
+// Render's free plan blocks normal email ports (SMTP), so the best choice is an email API over HTTPS:
+//   BREVO_API_KEY  (brevo.com, free 300 emails/day)  or  RESEND_API_KEY (resend.com)
+// SMTP (e.g. Gmail app password) still works on paid servers.
 const SMTP = { host: (process.env.SMTP_HOST || '').trim(), port: Number(process.env.SMTP_PORT || 465), user: (process.env.SMTP_USER || '').trim(), pass: (process.env.SMTP_PASS || '').replace(/\s+/g, '') };
-const MAIL_ON = !!(SMTP.host && SMTP.user && SMTP.pass);
-const mailer = MAIL_ON ? nodemailer.createTransport({ host: SMTP.host, port: SMTP.port, secure: SMTP.port === 465, auth: { user: SMTP.user, pass: SMTP.pass } }) : null;
-console.log(MAIL_ON ? '[mail] Email on (' + SMTP.host + ' as ' + SMTP.user + ')' : '[mail] Email off: add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS to send password reset codes');
+const BREVO_KEY = (process.env.BREVO_API_KEY || '').trim(), RESEND_KEY = (process.env.RESEND_API_KEY || '').trim();
+const MAIL_FROM_RAW = (process.env.MAIL_FROM || '').trim();
+const mailer = SMTP.host && SMTP.user && SMTP.pass ? nodemailer.createTransport({ host: SMTP.host, port: SMTP.port, secure: SMTP.port === 465, auth: { user: SMTP.user, pass: SMTP.pass }, connectionTimeout: 10000, greetingTimeout: 10000 }) : null;
+const MAIL_VIA = BREVO_KEY ? 'Brevo' : RESEND_KEY ? 'Resend' : mailer ? 'SMTP ' + SMTP.host : '';
+const MAIL_ON = !!MAIL_VIA;
+console.log(MAIL_ON ? '[mail] Email on via ' + MAIL_VIA : '[mail] Email off: add BREVO_API_KEY + MAIL_FROM (recommended) to send password reset codes');
+function mailFrom() { // "Maata <no-reply@maataapp.com>" -> { name, email }
+  const m = /^(.*?)\s*<([^>]+)>$/.exec(MAIL_FROM_RAW);
+  if (m) return { name: m[1].replace(/"/g, '').trim() || 'Maata', email: m[2].trim() };
+  return { name: 'Maata', email: MAIL_FROM_RAW || SMTP.user };
+}
+async function sendMail(to, subject, html, text) {
+  const from = mailFrom();
+  if (BREVO_KEY) {
+    if (!from.email) throw new Error('Set MAIL_FROM on Render (the sender email you verified in Brevo).');
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': BREVO_KEY, 'Content-Type': 'application/json', accept: 'application/json' }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ sender: from, to: [{ email: to }], subject, htmlContent: html, textContent: text }) });
+    if (!r.ok) throw new Error('Brevo ' + r.status + ': ' + (await r.text()).slice(0, 200));
+    return;
+  }
+  if (RESEND_KEY) {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ from: from.name + ' <' + (from.email || 'onboarding@resend.dev') + '>', to: [to], subject, html, text }) });
+    if (!r.ok) throw new Error('Resend ' + r.status + ': ' + (await r.text()).slice(0, 200));
+    return;
+  }
+  if (!mailer) throw new Error('mail-off');
+  await mailer.sendMail({ from: MAIL_FROM_RAW || ('Maata <' + SMTP.user + '>'), to, subject, html, text });
+}
 const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); return /^[^\s@]{1,64}@[^\s@]+\.[a-z]{2,}$/.test(v) && v.length <= 120 ? v : null; };
 const maskEmail = (e) => { const [a, d] = String(e).split('@'); return a.slice(0, 2) + '•'.repeat(Math.max(2, a.length - 2)) + '@' + d; };
-async function sendMail(to, subject, html, text) {
-  if (!mailer) throw new Error('mail-off');
-  await mailer.sendMail({ from: process.env.MAIL_FROM || ('Maata <' + SMTP.user + '>'), to, subject, html, text });
-}
 const resetCodes = new Map(); // userId -> { hash, until, tries, sentAt }
 app.post('/api/password/forgot', rateLimit, async (req, res) => {
   const id = String(req.body?.id || '').trim();
@@ -2940,6 +2966,13 @@ app.post('/admin/api/tickets/:id', adminAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/admin/api/mail', adminAuth, (req, res) => res.json({ on: MAIL_ON, via: MAIL_VIA, from: MAIL_FROM_RAW || '' }));
+app.post('/admin/api/mail-test', adminAuth, async (req, res) => {
+  const to = cleanEmail(req.body?.to); if (!to) return res.status(400).json({ error: 'Enter a valid email address.' });
+  if (!MAIL_ON) return res.status(400).json({ error: 'Email is off. Add BREVO_API_KEY and MAIL_FROM on Render → Environment.' });
+  try { await sendMail(to, 'Maata test email ✅', '<div style="font-family:Arial,sans-serif;padding:20px"><h2 style="color:#0F4C5C">🦜 Maata</h2><p>Email works! Password reset codes will reach your customers.</p></div>', 'Maata test email: email works!'); res.json({ ok: true, via: MAIL_VIA }); }
+  catch (e) { console.error('[mail test]', e.message); res.status(502).json({ error: 'Sending failed via ' + MAIL_VIA + ': ' + e.message }); }
+});
 app.get('/admin/api/features', adminAuth, (req, res) => { const f = featureFlags(); res.json(FEATURE_LIST.map(([group, key, label]) => ({ group, key, label, on: f[key] }))); });
 app.post('/admin/api/features', adminAuth, (req, res) => {
   let m = db.meta.find((x) => x.id === 'features'); if (!m) { m = { id: 'features', flags: {}, createdAt: now() }; db.meta.push(m); }

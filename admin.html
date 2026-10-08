@@ -214,6 +214,7 @@ textarea.input{min-height:110px;resize:vertical}
       <button class="btn" id="dashFeatures" style="margin:0 0 12px;font-weight:700">⚙️ App features — choose what customers see</button>
       <div class="grid kpis" id="kpis"></div>
       <div class="card" id="storCard" style="margin-top:14px;padding:14px" hidden></div>
+      <div class="card" id="mailCard" style="margin-top:14px;padding:14px" hidden></div>
       <div class="grid two">
         <div class="card chart"><h3>Daily logins &amp; new customers <span class="hint">last 14 days</span></h3><div id="chLogins"></div></div>
         <div class="card chart"><h3>Voice &amp; video calls <span class="hint">last 14 days</span></h3><div id="chCalls"></div></div>
@@ -495,6 +496,13 @@ async function loadDash() {
   const s = await api('/admin/api/stats?days=14');
   setLive(s.live);
   const t = s.today;
+  api('/admin/api/mail').then((m) => {
+    const c = $('#mailCard'); c.hidden = false;
+    c.innerHTML = `<b>✉️ Email (forgot-password codes)</b> ${m.on ? '<span class="tag t-green">On · ' + esc(m.via) + '</span>' : '<span class="tag t-red">Off</span>'}
+      <div class="muted" style="margin:6px 0 10px">${m.on ? 'Sender: ' + esc(m.from || '(not set)') : 'Customers cannot reset a forgotten password until email is set up. On Render → Environment add <b>BREVO_API_KEY</b> and <b>MAIL_FROM</b> (free at brevo.com).'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="mailTo" type="email" placeholder="your@gmail.com" style="padding:8px 12px;border-radius:10px;border:1px solid #ccc;min-width:240px"><button class="btn" id="mailTestBtn">Send test email</button></div>`;
+    $('#mailTestBtn').onclick = async () => { const b = $('#mailTestBtn'); b.disabled = true; b.textContent = 'Sending…'; try { const r = await api('/admin/api/mail-test', { method: 'POST', body: JSON.stringify({ to: $('#mailTo').value }) }); toast('✅ Test email sent via ' + r.via + ' — check the inbox (and Spam).'); } catch (e) { alert(e.message); } b.disabled = false; b.textContent = 'Send test email'; };
+  }).catch(() => {});
   api('/admin/api/storage').then((st) => {
     const mb = (b) => (b / 1048576).toFixed(1) + ' MB', c = $('#storCard'); c.hidden = false;
     c.innerHTML = `<b>📦 Server storage</b><div class="muted" style="margin:4px 0 8px">Chat photos, videos, voice notes and files stay on the server for <b>${st.keepDays || '∞'}</b> days, then only on customers' phones (like WhatsApp).${st.graceUntil && st.graceUntil > Date.now() ? ' First clean-up starts ' + dt(st.graceUntil) + ' (older media gets this grace period).' : ''}</div>
