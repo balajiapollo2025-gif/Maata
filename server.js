@@ -2966,6 +2966,9 @@ app.post('/admin/api/tickets/:id', adminAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Brevo API keys stop working after 90 days without use: say hello once a week so the key stays active
+async function brevoKeepAlive() { if (!BREVO_KEY) return; try { const r = await fetch('https://api.brevo.com/v3/account', { headers: { 'api-key': BREVO_KEY, accept: 'application/json' }, signal: AbortSignal.timeout(15000) }); if (!r.ok) console.error('[mail] Brevo key check failed: ' + r.status); } catch (e) { console.error('[mail] Brevo key check: ' + e.message); } }
+setTimeout(brevoKeepAlive, 120000); setInterval(brevoKeepAlive, 7 * 86400000);
 app.get('/admin/api/mail', adminAuth, (req, res) => res.json({ on: MAIL_ON, via: MAIL_VIA, from: MAIL_FROM_RAW || '' }));
 app.post('/admin/api/mail-test', adminAuth, async (req, res) => {
   const to = cleanEmail(req.body?.to); if (!to) return res.status(400).json({ error: 'Enter a valid email address.' });
