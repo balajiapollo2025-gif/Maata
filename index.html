@@ -1221,6 +1221,42 @@ html.feat-off-coins #coinBtn,html.feat-off-coins .set-group:has(#setCoins),html.
 .pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:40px;display:grid;place-items:center;background:none;border:0;color:var(--muted);border-radius:10px;cursor:pointer}
 .pw-eye svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .pw-eye[aria-pressed="true"]{color:var(--leaf)}
+/* ===== WhatsApp-style call screen ===== */
+.call:not(.mini){z-index:32}
+.vc-hidden{display:none!important}
+.call .call-controls{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;gap:10px;padding:10px 12px;border-radius:999px;background:rgba(18,22,26,.78);backdrop-filter:blur(10px)}
+.call .call-controls .round{width:56px;height:56px;background:rgba(255,255,255,.12)}
+.call .call-controls .round svg{width:26px;height:26px}
+.call .call-controls .round[aria-pressed="true"]{background:#fff;color:#111}
+.call .call-controls .round.end{background:#E5293F;color:#fff}
+#camBtn[aria-pressed="false"]{background:#fff;color:#111}
+.call:not(.video) #camBtn{display:none}
+.vc-ib{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(18,22,26,.72);color:#fff;backdrop-filter:blur(6px)}
+.vc-ib svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.vc-ib[aria-pressed="true"]{background:#fff;color:#111}
+.vc-mini{position:absolute;left:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:3}
+.vc-side{position:absolute;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:3;display:flex;flex-direction:column;gap:14px}
+.call.video .call-info{position:absolute;top:calc(18px + env(safe-area-inset-top,0px));left:80px;right:80px;z-index:2;text-align:center;pointer-events:none}
+.call.video .call-info #callAvatar{display:none}
+.call.video .call-info h2{font-size:18px;margin:0;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.call.video .call-info p{font-size:13px;margin:2px 0 0;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.call.video #localVideo{top:auto!important;right:16px!important;bottom:calc(112px + env(safe-area-inset-bottom,0px));width:118px;height:auto;aspect-ratio:3/4;z-index:2;border-radius:14px;touch-action:none;cursor:grab;transition:width .25s}
+.call.video.swap #localVideo{position:absolute;inset:0!important;width:100%!important;height:100%!important;border-radius:0;border:0;z-index:0;aspect-ratio:auto}
+.call.video.swap #remoteVideo{position:absolute;inset:auto 16px calc(112px + env(safe-area-inset-bottom,0px)) auto!important;width:118px!important;height:auto!important;aspect-ratio:3/4;border-radius:14px;border:2px solid rgba(255,255,255,.6);z-index:2;object-fit:cover}
+.call.my-cam-off #localVideo{opacity:.15}
+.vc-camoff{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;background:#14191E}
+.vc-camoff .avatar{width:120px!important;height:120px!important;font-size:42px}
+/* minimized call: a small floating window, the rest of Maata stays usable */
+.call.mini{inset:auto 12px calc(84px + env(safe-area-inset-bottom,0px)) auto!important;width:120px;height:170px;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:45;cursor:pointer}
+.call.mini > :not(#remoteVideo):not(.vc-camoff):not(.call-info){display:none!important}
+.call.mini .call-info{top:auto!important;bottom:6px;left:4px!important;right:4px!important}
+.call.mini .call-info h2{font-size:12px}.call.mini .call-info p{font-size:11px}
+.call.mini:not(.video) .call-info #callAvatar{display:block;transform:scale(.55);margin:-18px 0 -24px}
+.call.mini:not(.video){background:#0F4C5C;display:flex;align-items:center;justify-content:center}
+.fx-row{display:flex;gap:10px;overflow-x:auto;padding:12px}
+.fx-row button{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;color:var(--ink);font-size:12.5px}
+.fx-row .sw{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#F9A826,#E2366B 45%,#1B7A8F);border:3px solid transparent}
+.fx-row button[aria-pressed="true"] .sw{border-color:var(--leaf)}
 </style>
 </head>
 <body>
@@ -1447,25 +1483,33 @@ html.feat-off-coins #coinBtn,html.feat-off-coins .set-group:has(#setCoins),html.
     <div class="sub-them" id="subThemBox" hidden><b id="subThem"></b><small id="subThemOrig"></small></div>
     <div class="sub-me" id="subMe"></div>
   </div>
+  <button class="vc-ib vc-mini" id="miniBtn" aria-label="Minimize call" title="Minimize"><svg viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg></button>
+  <div class="vc-side">
+    <button class="vc-ib" id="addCallBtn" aria-label="Add call" title="Add people (conference)"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg></button>
+    <button class="vc-ib video-only" id="flipBtn" aria-label="Switch camera">
+      <svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg>
+    </button>
+    <button class="vc-ib video-only" id="fxBtn" aria-label="Effects" title="Effects"><svg viewBox="0 0 24 24"><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8l1.4 1.4M17.8 6.2l1.4-1.4M12.2 6.2l-1.4-1.4M3 21l9-9"/></svg></button>
+  </div>
+  <div class="vc-camoff" id="vcCamOff" hidden><div id="vcCamOffAv"></div><b>Camera off</b></div>
   <div class="call-controls">
-    <button class="round tr" id="trBtn" aria-pressed="false" aria-label="Live translation" title="Live translation">
-      <svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+    <button class="round" id="moreCallBtn" aria-label="More options" title="More"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
+    <button class="round" id="camBtn" aria-pressed="false" aria-label="Turn camera off">
+      <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
     </button>
     <button class="round" id="spkBtn" aria-pressed="false" aria-label="Loudspeaker" title="Speaker off"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></button>
     <button class="round" id="muteBtn" aria-pressed="false" aria-label="Mute microphone">
       <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
     </button>
-    <button class="round video-only" id="camBtn" aria-pressed="false" aria-label="Turn camera off">
-      <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-    </button>
-    <button class="round video-only" id="shareBtn" aria-label="Share screen" aria-pressed="false" hidden><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M12 7v6M9 10l3-3 3 3"/></svg></button>
-    <button class="round video-only" id="flipBtn" aria-label="Switch camera">
-      <svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5.2-2"/><path d="M15 13a3 3 0 0 1-5.2 2"/></svg>
-    </button>
-    <button class="round" id="addCallBtn" aria-label="Add call" title="Add people (conference)"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M19 8v6M16 11h6"/></svg></button>
     <button class="round end" id="endBtn" aria-label="End call">
       <svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
     </button>
+    <span class="vc-hidden">
+    <button class="round tr" id="trBtn" aria-pressed="false" aria-label="Live translation" title="Live translation">
+      <svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+    </button>
+    <button class="round video-only" id="shareBtn" aria-label="Share screen" aria-pressed="false" hidden><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4M12 7v6M9 10l3-3 3 3"/></svg></button>
+    </span>
   </div>
 </section>
 
@@ -1903,6 +1947,7 @@ function connectSocket() {
   socket.on('call:rejected', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' declined the call.'); });
   socket.on('call:busy', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is on another call.'); });
   socket.on('call:unavailable', (p) => { if (call && call.id === p.callId) endCall(call.peerName + ' is not reachable right now. They need to have Maata open. Try again later.'); });
+  socket.on('call:state', (p) => { if (!call || p.from !== call.peerId) return; const off = p.cam === false; $('#vcCamOff').hidden = !off || call.kind !== 'video'; if (off) { const a = $('#vcCamOffAv'); a.innerHTML = ''; a.append(avatar(userById(call.peerId) || { id: call.peerId, name: call.peerName })); } });
   socket.on('call:ended', (p) => { if (call && call.id === p.callId) endCall(call.state === 'incoming' ? 'Missed call from ' + call.peerName : 'Call ended.'); });
   socket.on('call:taken-elsewhere', (p) => { if (call && call.id === p.callId && call.state === 'incoming') endCall('Answered on another device.'); });
 }
@@ -2306,7 +2351,7 @@ loadCustomTones();
 // ---------------- calls (WebRTC) ----------------
 const callEl = $('#callScreen');
 function showCallScreen(status) {
-  callEl.hidden = false;
+  callEl.hidden = false; callEl.classList.remove('mini', 'swap', 'my-cam-off'); $('#vcCamOff').hidden = true; const lv0 = $('#localVideo'); lv0.style.left = lv0.style.top = lv0.style.right = lv0.style.bottom = ''; lv0.style.filter = ''; $('#camBtn').setAttribute('aria-pressed', 'false');
   $('#shareBtn').hidden = !canShareScreen || call.kind !== 'video';
   callEl.classList.toggle('video', call.kind === 'video');
   callEl.classList.remove('live');
@@ -2442,6 +2487,7 @@ async function onRemoteIce(p) {
 
 function endCall(reason, notifyPeer = false) {
   if (!call) return;
+  try { fxPipelineStop(); } catch {} callEl.classList.remove('mini', 'swap');
   if (!GC.id) nativeCall(false);
   stopScreenShare(true);
   if (notifyPeer) socket.emit('call:end', { to: call.peerId, callId: call.id });
@@ -2466,27 +2512,7 @@ $('#muteBtn').onclick = () => {
   $('#muteBtn').setAttribute('aria-label', t.enabled ? 'Mute microphone' : 'Unmute microphone');
   if (!t.enabled) stopListening(); else listen();
 };
-$('#camBtn').onclick = () => {
-  if (!call?.local) return;
-  const t = call.local.getVideoTracks()[0]; if (!t) return;
-  t.enabled = !t.enabled;
-  $('#camBtn').setAttribute('aria-pressed', String(!t.enabled));
-  $('#camBtn').setAttribute('aria-label', t.enabled ? 'Turn camera off' : 'Turn camera on');
-};
-$('#flipBtn').onclick = async () => {
-  if (!call?.local || !call.pc) return;
-  call.facing = call.facing === 'environment' ? 'user' : 'environment';
-  try {
-    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: call.facing } });
-    const newTrack = s.getVideoTracks()[0];
-    const sender = call.pc.getSenders().find((x) => x.track && x.track.kind === 'video');
-    if (sender) await sender.replaceTrack(newTrack);
-    const old = call.local.getVideoTracks()[0];
-    if (old) { call.local.removeTrack(old); old.stop(); }
-    call.local.addTrack(newTrack);
-    $('#localVideo').style.transform = call.facing === 'user' ? 'scaleX(-1)' : 'none';
-  } catch { toast('This device has only one camera.'); }
-};
+// camera / flip handlers: see "WhatsApp-style video call" below
 
 
 // ---------------- live translation ----------------
@@ -7074,7 +7100,7 @@ $('#setCallQ').onclick = openCallQuality;
 // pressing Back closes the top-most screen. Only on the Chats home screen does Back leave the app.
 const BACK = { guard: false, skipNext: false };
 const shown = (sel) => { const e = document.querySelector(sel); if (!e || e.hidden) return false; const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && (e.offsetParent !== null || cs.position === 'fixed'); };
-const inCallNow = () => shown('#callScreen') || !!$('#gcView');
+const inCallNow = () => (shown('#callScreen') && !$('#callScreen').classList.contains('mini')) || !!$('#gcView');
 const isMobileLayout = () => matchMedia('(max-width:760px)').matches;
 // the screens, top-most first, each with how to close it
 const BACK_LAYERS = [
@@ -8735,6 +8761,95 @@ document.querySelectorAll('input[type="password"]').forEach(addPasswordEye);
 new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { if (n.nodeType !== 1) continue; if (n.matches && n.matches('input[type="password"]')) addPasswordEye(n); n.querySelectorAll && n.querySelectorAll('input[type="password"]').forEach(addPasswordEye); } }).observe(document.body, { childList: true, subtree: true });
 // after login the password must never stay visible on the screen
 const _hidePw = () => document.querySelectorAll('.pw-eye[aria-pressed="true"]').forEach((b) => b.click());
+
+// ================= WhatsApp-style video call: camera on/off, front/back camera, effects, more, minimize =================
+const VC_FX = { none: ['Normal', ''], bright: ['Low light', 'brightness(1.4) contrast(1.05) saturate(1.1)'], touch: ['Touch up', 'brightness(1.1) contrast(.92) saturate(1.12) blur(.6px)'], warm: ['Warm', 'sepia(.25) saturate(1.35) brightness(1.04)'], cool: ['Cool', 'hue-rotate(-12deg) saturate(1.1) brightness(1.03)'], bw: ['B&W', 'grayscale(1) contrast(1.1)'], vivid: ['Vivid', 'saturate(1.6) contrast(1.08)'] };
+const vcSender = () => call && call.pc && call.pc.getSenders().find((x) => x.track && x.track.kind === 'video') || (call && call.pc && call.pc.getSenders().find((x) => x.track === null && x._wasVideo));
+const camTrack = () => call && call.local && call.local.getVideoTracks()[0];
+// effects: the picture you SEND goes through a small canvas painter; your own preview just uses the same filter
+function fxPipelineStop() { if (!call || !call.fxp) return; cancelAnimationFrame(call.fxp.raf); try { call.fxp.out.stop(); } catch {} call.fxp = null; }
+async function setVideoEffect(name) {
+  if (!call) return; call.fx = name; const f = VC_FX[name][1];
+  $('#localVideo').style.filter = f || '';
+  const sender = vcSender(), cam = camTrack(); if (!sender || !cam) return;
+  if (!f) { fxPipelineStop(); await sender.replaceTrack(cam).catch(() => {}); return; }
+  if (!call.fxp) {
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = new MediaStream([cam]); await v.play().catch(() => {});
+    const c = document.createElement('canvas'), st = cam.getSettings(); c.width = st.width || 640; c.height = st.height || 480;
+    const ctx = c.getContext('2d'); const out = c.captureStream(24).getVideoTracks()[0];
+    call.fxp = { v, c, ctx, out, raf: 0 };
+    const draw = () => { if (!call || !call.fxp) return; const p = call.fxp; if (p.v.videoWidth && (p.c.width !== p.v.videoWidth)) { p.c.width = p.v.videoWidth; p.c.height = p.v.videoHeight; } p.ctx.filter = VC_FX[call.fx][1] || 'none'; p.ctx.drawImage(p.v, 0, 0, p.c.width, p.c.height); p.raf = requestAnimationFrame(draw); };
+    draw(); await sender.replaceTrack(out).catch(() => {});
+  }
+}
+function openEffects() {
+  sheet('✨ Effects', (list) => {
+    const row = el('div', 'fx-row');
+    for (const [k, [label, css]] of Object.entries(VC_FX)) { const b = el('button'); const sw = el('span', 'sw'); sw.style.filter = css; b.append(sw, el('span', null, label)); b.setAttribute('aria-pressed', String((call && call.fx || 'none') === k)); b.onclick = () => { setVideoEffect(k); [...row.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; row.append(b); }
+    list.append(row, el('p', 'info-note', 'The other person sees the effect too. "Low light" helps in dark rooms.'));
+  });
+}
+// camera on / off (the other person sees your photo and "Camera off")
+function setMyCamera(on) {
+  const t = camTrack(); if (!t) return;
+  t.enabled = on; callEl.classList.toggle('my-cam-off', !on);
+  $('#camBtn').setAttribute('aria-pressed', String(!on)); $('#camBtn').setAttribute('aria-label', on ? 'Turn camera off' : 'Turn camera on');
+  if (call.fxp) call.fxp.v.srcObject = new MediaStream([t]);
+  socket.emit('call:state', { to: call.peerId, callId: call.id, cam: on });
+}
+// front / back camera: Android needs the current camera released before the other one can open
+async function flipCamera() {
+  if (!call || !call.local || !call.pc) return;
+  const want = call.facing === 'environment' ? 'user' : 'environment', old = camTrack(), q = callQ(), wasOn = old ? old.enabled : true;
+  const oldId = old && old.getSettings ? old.getSettings().deviceId : null;
+  if (old) old.stop();
+  const vid = (extra) => navigator.mediaDevices.getUserMedia({ video: { width: { ideal: q.w }, height: { ideal: q.h }, frameRate: { ideal: q.fps, max: 30 }, ...extra } });
+  let s = null;
+  try { s = await vid({ facingMode: { exact: want } }); }
+  catch {
+    try {
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+      const byLabel = cams.find((d) => (want === 'environment' ? /back|rear|environment|wide/i : /front|user|selfie/i).test(d.label));
+      const other = byLabel || cams.find((d) => d.deviceId && d.deviceId !== oldId);
+      if (other) s = await vid({ deviceId: { exact: other.deviceId } });
+    } catch { s = null; }
+  }
+  if (!s) { try { s = await vid({ facingMode: call.facing || 'user' }); } catch {} toast('Could not switch the camera on this phone.'); if (!s) return; }
+  else call.facing = want;
+  const nt = s.getVideoTracks()[0]; nt.enabled = wasOn; if ('contentHint' in nt) nt.contentHint = 'motion';
+  if (old) call.local.removeTrack(old); call.local.addTrack(nt);
+  $('#localVideo').srcObject = call.local;
+  $('#localVideo').style.transform = call.facing === 'user' ? 'scaleX(-1)' : 'none';
+  if (call.fxp) { call.fxp.v.srcObject = new MediaStream([nt]); call.fxp.v.play().catch(() => {}); }
+  else { const sender = call.pc.getSenders().find((x) => x.track === null || (x.track && x.track.kind === 'video')); if (sender) await sender.replaceTrack(nt).catch(() => {}); }
+  tuneSenders(call.pc);
+}
+function openCallMore() {
+  sheet('Call options', (list) => {
+    const b = (label, fn) => { const x = el('button', 'sheet-btn', label); x.onclick = () => { closeSheet('moreSheet'); fn(); }; list.append(x); };
+    if (F('callTranslate')) b((tr && tr.on ? '🌐  Stop live translation' : '🌐  Live translation'), () => $('#trBtn').click());
+    if (call && call.kind === 'video' && F('screenShare') && canShareScreen) b('🖥️  Share screen', () => $('#shareBtn').click());
+    if (F('conference')) b('👤➕  Add a person', () => $('#addCallBtn').click());
+    if (call && call.kind === 'video') b('✨  Effects', openEffects);
+    if (F('callQuality')) b('🎧  Call quality', openCallQuality);
+    b('💬  Message ' + (call ? call.peerName : ''), () => { const id = call.peerId; minimizeCall(true); openChat(id); });
+  });
+}
+function minimizeCall(on) { callEl.classList.toggle('mini', !!on); }
+(function vcInit() {
+  $('#camBtn').onclick = () => { const t = camTrack(); if (t) setMyCamera(!t.enabled); };
+  $('#flipBtn').onclick = flipCamera;
+  $('#fxBtn').onclick = openEffects;
+  $('#moreCallBtn').onclick = openCallMore;
+  $('#miniBtn').onclick = (e) => { e.stopPropagation(); minimizeCall(true); };
+  callEl.addEventListener('click', () => { if (callEl.classList.contains('mini')) minimizeCall(false); });
+  // your small video: drag it anywhere; tap it to swap big and small
+  const lv = $('#localVideo'); let drag = null, moved = false;
+  lv.addEventListener('pointerdown', (e) => { if (!callEl.classList.contains('video') || callEl.classList.contains('swap') || callEl.classList.contains('mini')) return; const r = lv.getBoundingClientRect(); drag = { dx: e.clientX - r.left, dy: e.clientY - r.top }; moved = false; lv.setPointerCapture(e.pointerId); });
+  lv.addEventListener('pointermove', (e) => { if (!drag) return; moved = true; const W = innerWidth, H = innerHeight, w = lv.offsetWidth, h = lv.offsetHeight; lv.style.left = Math.max(8, Math.min(W - w - 8, e.clientX - drag.dx)) + 'px'; lv.style.top = Math.max(8, Math.min(H - h - 8, e.clientY - drag.dy)) + 'px'; lv.style.right = 'auto'; lv.style.bottom = 'auto'; });
+  lv.addEventListener('pointerup', () => { if (drag && !moved) callEl.classList.toggle('swap'); drag = null; });
+  $('#remoteVideo').addEventListener('click', (e) => { if (callEl.classList.contains('swap')) { e.stopPropagation(); callEl.classList.remove('swap'); } });
+})();
 
 // ---------------- go ----------------
 applyAppLang();

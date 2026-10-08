@@ -3564,6 +3564,11 @@ io.on('connection', (socket) => {
     } finally { sttBusy--; }
   });
 
+  // camera on/off during a 1-to-1 call, so the other side shows the photo + "Camera off" instead of a black screen
+  socket.on('call:state', (p) => {
+    const to = String(p?.to || ''); const t = userById(to); if (!t || blockedOf(t).includes(me)) return;
+    io.to('user:' + to).emit('call:state', { from: me, callId: String(p?.callId || '').slice(0, 64), cam: p?.cam !== false });
+  });
   socket.on('call:end', (p) => {
     if (!valid(p)) return;
     const pr = pendingRings.get(p.to);
