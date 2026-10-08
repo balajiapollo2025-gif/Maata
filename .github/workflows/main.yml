@@ -31,14 +31,25 @@ jobs:
       - name: Use the signing key (from GitHub Secrets)
         env:
           KS: ${{ secrets.MAATA_KEYSTORE_BASE64 }}
+          KS_PW: ${{ secrets.MAATA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.MAATA_KEY_ALIAS }}
         run: |
-          if [ -n "$KS" ]; then
-            echo "$KS" | base64 -d > "$RUNNER_TEMP/maata.keystore"
-            echo "MAATA_KEYSTORE=$RUNNER_TEMP/maata.keystore" >> "$GITHUB_ENV"
-            echo "Signing key found: the Play Store file will be signed."
-          else
-            echo "::warning::No MAATA_KEYSTORE_BASE64 secret yet - only the test APK (debug) will be usable."
+          if [ -z "$KS" ]; then
+            echo "::warning::No MAATA_KEYSTORE_BASE64 secret yet - only the test APK (debug) will be made."
+            exit 0
           fi
+          # remove spaces / line breaks that can sneak in while copy-pasting
+          printf '%s' "$KS" | tr -d ' \r\n\t' > "$RUNNER_TEMP/ks.b64"
+          if ! base64 -d "$RUNNER_TEMP/ks.b64" > "$RUNNER_TEMP/maata.keystore" 2>/dev/null; then
+            echo "::warning::MAATA_KEYSTORE_BASE64 is not complete (part of the long text is missing). Paste it again in Settings > Secrets. Making only the test APK this time."
+            exit 0
+          fi
+          if ! keytool -list -keystore "$RUNNER_TEMP/maata.keystore" -storepass "$KS_PW" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::warning::The signing key could not be opened: check MAATA_KEYSTORE_PASSWORD and MAATA_KEY_ALIAS (alias must be: maata). Making only the test APK this time."
+            exit 0
+          fi
+          echo "MAATA_KEYSTORE=$RUNNER_TEMP/maata.keystore" >> "$GITHUB_ENV"
+          echo "Signing key OK: the app will be signed with the permanent Maata key."
 
       - name: Build the app
         working-directory: android
