@@ -1,3 +1,5 @@
+# Builds the Maata Android app on GitHub's computers (no Android Studio needed).
+# Runs when files in android/ change, or by hand: Actions -> "Build Maata Android app" -> Run workflow.
 name: Build Maata Android app
 
 on:
@@ -5,7 +7,10 @@ on:
   push:
     paths:
       - "android/**"
-      - ".github/workflows/**"
+      - ".github/workflows/android.yml"
+
+permissions:
+  contents: write   # lets the build put the new APK on maataapp.com/download by itself
 
 jobs:
   build:
@@ -56,3 +61,23 @@ jobs:
           name: Maata-Android-${{ github.run_number }}
           path: out/
           retention-days: 30
+
+      # Publish: the signed APK becomes maataapp.com/download, and app-version.json tells every
+      # installed Maata app that an update is ready. (Only signed builds: a test build has a different
+      # key each time and could not install over the old app.)
+      - name: Put the new app on maataapp.com
+        if: github.ref == 'refs/heads/main'
+        run: |
+          APK="out/Maata-release-${{ github.run_number }}.apk"
+          if [ ! -f "$APK" ]; then
+            echo "::warning::No signed APK (add the 4 MAATA_KEY... secrets). Not publishing to the website."
+            exit 0
+          fi
+          cp "$APK" maata.apk
+          printf '{"version":%s,"name":"1.0.%s","date":"%s"}\n' "${{ github.run_number }}" "${{ github.run_number }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > app-version.json
+          git config user.name "Maata build"
+          git config user.email "build@maataapp.com"
+          git add maata.apk app-version.json
+          git commit -m "Maata app v1.0.${{ github.run_number }} (automatic)" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
