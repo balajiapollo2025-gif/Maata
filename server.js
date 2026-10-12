@@ -502,6 +502,7 @@ const FEATURE_LIST = [
   ['Account & app', 'themes', '🎨 Theme & colours'],
   ['Account & app', 'appLock', '🔒 App lock'],
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
+  ['Updates & social', 'maps', '🗺️ Maata Maps (navigation)'],
   ['Account & app', 'invite', '🎁 Invite a friend'],
   ['Account & app', 'coins', '🪙 Referral coins (1 coin when an invited friend uses Maata 3 days)'],
 ];
@@ -515,7 +516,7 @@ const OFF_MSG = 'This feature is turned off by Maata right now.';
 app.get('/api/features', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json(featureFlags()); });
 // the server enforces it too (older app versions cannot use a switched-off feature)
 const FEAT_PATHS = [['/api/reels', 'reels'], ['/api/reels-creators', 'reels'], ['/api/insights', 'reels'], ['/api/ai', 'ai'], ['/api/translate', 'translate'], ['/api/qr', 'qrLogin'], ['/api/backup', 'backup'],
-  ['/api/support', 'support'], ['/api/channels', 'channels'], ['/api/communities', 'communities'], ['/api/business', 'business'], ['/api/catalogue', 'business'], ['/api/ads', 'business']];
+  ['/api/support', 'support'], ['/api/maps', 'maps'], ['/api/channels', 'channels'], ['/api/communities', 'communities'], ['/api/business', 'business'], ['/api/catalogue', 'business'], ['/api/ads', 'business']];
 for (const [path, k] of FEAT_PATHS) app.use(path, (req, res, next) => (featOn(k) ? next() : res.status(403).json({ error: OFF_MSG, featureOff: k })));
 app.use('/api/status', (req, res, next) => (req.method === 'GET' || featOn('status') ? next() : res.status(403).json({ error: OFF_MSG, featureOff: 'status' })));
 
@@ -1433,17 +1434,85 @@ function geoLimit(req, res) {
   if (l.length > 40) { res.status(429).json({ error: 'Too many location requests. Wait a minute.' }); return false; }
   return true;
 }
+// ---------- 🗺️ Maata Maps: routes, nearby places and AI search (free OpenStreetMap services, called from the server) ----------
+const MAP_UA = { 'User-Agent': 'MaataApp/1.0 (maataapp.com maps)', 'Accept-Language': 'en' };
+const mapCache = new Map(); // small cache so repeated requests are instant
+const mapCacheGet = (k) => { const c = mapCache.get(k); if (c && now() - c.t < c.ttl) return c.v; mapCache.delete(k); return null; };
+const mapCacheSet = (k, v, ttl) => { mapCache.set(k, { v, t: now(), ttl }); if (mapCache.size > 800) mapCache.delete(mapCache.keys().next().value); };
+const mapHits = new Map();
+function mapLimit(req, res, max = 40) {
+  const h = (mapHits.get(req.user.id) || []).filter((t) => now() - t < 60000); h.push(now()); mapHits.set(req.user.id, h);
+  if (h.length > max) { res.status(429).json({ error: 'Too many map requests. Wait a minute.' }); return false; }
+  return true;
+}
+const ROUTERS = { car: ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'], bike: ['https://routing.openstreetmap.de/routed-bike/route/v1/driving/'], foot: ['https://routing.openstreetmap.de/routed-foot/route/v1/driving/'] };
+app.get('/api/maps/route', auth, async (req, res) => {
+  if (!mapLimit(req, res)) return;
+  const mode = ROUTERS[req.query.mode] ? req.query.mode : 'car';
+  const pts = String(req.query.pts || '').split(';').map((p) => p.split(',').map(Number)).filter((p) => p.length === 2 && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90).slice(0, 6);
+  if (pts.length < 2) return res.status(400).json({ error: 'Choose where to go.' });
+  const key = mode + ':' + pts.map((p) => p.map((x) => x.toFixed(5)).join(',')).join(';');
+  const hit = mapCacheGet(key); if (hit) return res.json(hit);
+  const path = pts.map((p) => p[0].toFixed(6) + ',' + p[1].toFixed(6)).join(';') + '?overview=full&geometries=geojson&steps=true&alternatives=' + (pts.length === 2 ? 'true' : 'false');
+  for (const base of ROUTERS[mode]) {
+    try {
+      const d = await (await fetch(base + path, { headers: MAP_UA, signal: AbortSignal.timeout(12000) })).json();
+      if (d.code !== 'Ok' || !d.routes?.length) { if (d.code === 'NoRoute') return res.status(404).json({ error: 'No road route found between these places.' }); continue; }
+      const out = { mode, routes: d.routes.slice(0, 3).map((r) => ({ distance: Math.round(r.distance), duration: Math.round(r.duration), geometry: r.geometry,
+        via: [...new Set(r.legs.flatMap((l) => l.steps.filter((s) => s.distance > 1500).sort((a, b) => b.distance - a.distance).map((s) => s.ref || s.name).filter(Boolean)))].slice(0, 2),
+        steps: r.legs.flatMap((l) => l.steps).map((s) => ({ type: s.maneuver.type, mod: s.maneuver.modifier || '', exit: s.maneuver.exit || 0, loc: s.maneuver.location, name: s.name || '', ref: s.ref || '', distance: Math.round(s.distance), duration: Math.round(s.duration) })) })) };
+      mapCacheSet(key, out, 10 * 60000); return res.json(out);
+    } catch { /* try the next server */ }
+  }
+  res.status(502).json({ error: 'Route service is busy. Try again in a moment.' });
+});
+const NEAR_CATS = { fuel: 'amenity=fuel', ev: 'amenity=charging_station', hospital: 'amenity~"hospital|clinic"', atm: 'amenity~"atm|bank"', food: 'amenity~"restaurant|fast_food|cafe"', parking: 'amenity=parking', hotel: 'tourism~"hotel|guest_house"', temple: 'amenity=place_of_worship', pharmacy: 'amenity=pharmacy', police: 'amenity=police', toilets: 'amenity=toilets', mechanic: 'shop~"car_repair|motorcycle_repair|tyres"' };
+app.get('/api/maps/nearby', auth, async (req, res) => {
+  if (!mapLimit(req, res, 20)) return;
+  const lat = Number(req.query.lat), lng = Number(req.query.lng), cat = NEAR_CATS[req.query.cat] ? req.query.cat : 'fuel';
+  if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.status(400).json({ error: 'Location needed.' });
+  const key = 'near:' + cat + ':' + lat.toFixed(2) + ',' + lng.toFixed(2); const hit = mapCacheGet(key); if (hit) return res.json(hit);
+  const q = '[out:json][timeout:15];(nwr[' + NEAR_CATS[cat] + '](around:6000,' + lat + ',' + lng + '););out center 40;';
+  for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']) {
+    try {
+      const d = await (await fetch(base, { method: 'POST', headers: { ...MAP_UA, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(q), signal: AbortSignal.timeout(16000) })).json();
+      const R = 6371000, rad = Math.PI / 180;
+      const out = (d.elements || []).map((e) => { const la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon; const t = e.tags || {};
+        const dist = Math.round(2 * R * Math.asin(Math.sqrt(Math.sin((la - lat) * rad / 2) ** 2 + Math.cos(lat * rad) * Math.cos(la * rad) * Math.sin((lo - lng) * rad / 2) ** 2)));
+        return { name: t.name || t.brand || t.operator || '', lat: la, lng: lo, dist, open: t.opening_hours || '', phone: t.phone || t['contact:phone'] || '', brand: t.brand || '' }; })
+        .filter((x) => isFinite(x.lat)).sort((a, b) => a.dist - b.dist).slice(0, 25);
+      mapCacheSet(key, out, 30 * 60000); return res.json(out);
+    } catch { /* next */ }
+  }
+  res.status(502).json({ error: 'Nearby search is busy. Try again in a moment.' });
+});
+// ✨ AI: understands "nearest petrol bunk", "Tirupati via Chittoor by bike", "take me home", Telugu / Hindi typed in English letters
+app.post('/api/maps/ai', auth, async (req, res) => {
+  const text = clip(req.body?.text, 200); if (text.length < 2) return res.status(400).json({ error: 'Say where you want to go.' });
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const sys = 'You turn a driver\'s request (English, Telugu, Hindi, Tamil or any Indian language, also typed in English letters) into JSON for a map app in India. ' +
+    'Return ONLY JSON: {"intent":"route"|"nearby"|"place","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|ev|hospital|atm|food|parking|hotel|temple|pharmacy|police|toilets|mechanic or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
+    '"nearby" = they want the nearest kind of place (petrol bunk = fuel, ATM, hospital, hotel/food, mechanic/puncture = mechanic). "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
+  const r = await gemini(sys, [{ role: 'user', parts: [{ text: text + (req.body?.near ? '\n(Person is near: ' + clip(req.body.near, 100) + ')' : '') }] }], { json: true, maxTokens: 300, temperature: 0.2 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
+  try { const j = JSON.parse(String(r.text).replace(/^```json|```$/g, '').trim());
+    res.json({ intent: ['route', 'nearby', 'place'].includes(j.intent) ? j.intent : 'place', to: clip(j.to, 120), via: (Array.isArray(j.via) ? j.via : []).slice(0, 3).map((v) => clip(v, 80)), category: NEAR_CATS[j.category] ? j.category : '', mode: ROUTERS[j.mode] ? j.mode : 'car', saved: ['home', 'work'].includes(j.saved) ? j.saved : '', reply: clip(j.reply, 160) });
+  } catch { res.status(502).json({ error: 'AI could not understand. Try typing the place name.' }); }
+});
+
 // place / address search for picking a location on a computer (no GPS there)
 const geoSearchCache = new Map(), geoSearchHits = new Map();
 app.get('/api/geo/search', auth, async (req, res) => {
   const q = clip(req.query.q, 120); if (q.length < 3) return res.json([]);
   const hits = (geoSearchHits.get(req.user.id) || []).filter((t) => now() - t < 60000); if (hits.length > 20) return res.status(429).json({ error: 'Too many searches. Wait a minute.' });
   hits.push(now()); geoSearchHits.set(req.user.id, hits);
-  if (geoSearchCache.has(q.toLowerCase())) return res.json(geoSearchCache.get(q.toLowerCase()));
+  const ck = q.toLowerCase() + '|' + Math.round(Number(req.query.lat) || 0) + ',' + Math.round(Number(req.query.lng) || 0);
+  if (geoSearchCache.has(ck)) return res.json(geoSearchCache.get(ck));
   try {
-    const d = await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=0&countrycodes=in&q=' + encodeURIComponent(q), { headers: OSM_UA, signal: AbortSignal.timeout(8000) })).json();
+    const la = Number(req.query.lat), lo = Number(req.query.lng), near = isFinite(la) && isFinite(lo) && la && lo ? '&viewbox=' + (lo - 1.5) + ',' + (la + 1.5) + ',' + (lo + 1.5) + ',' + (la - 1.5) + '&bounded=0' : '';
+    const d = await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=0&countrycodes=in&q=' + encodeURIComponent(q) + near, { headers: OSM_UA, signal: AbortSignal.timeout(8000) })).json();
     const out = (Array.isArray(d) ? d : []).map((x) => ({ title: String(x.display_name || '').split(', ').slice(0, 4).join(', '), lat: Number(x.lat), lng: Number(x.lon) })).filter((x) => isFinite(x.lat));
-    geoSearchCache.set(q.toLowerCase(), out); if (geoSearchCache.size > 1000) geoSearchCache.delete(geoSearchCache.keys().next().value);
+    geoSearchCache.set(ck, out); if (geoSearchCache.size > 1000) geoSearchCache.delete(geoSearchCache.keys().next().value);
     res.json(out);
   } catch { res.status(502).json({ error: 'Place search is not available right now.' }); }
 });

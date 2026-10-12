@@ -37,6 +37,9 @@ class MainActivity : Activity() {
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
     }
     private lateinit var web: WebView
+    private fun bioReply(id: String, ok: Boolean, msg: String) = runOnUiThread {
+        web.evaluateJavascript("window.maataBioResult && maataBioResult(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")", null)
+    }
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingWebPermission: PermissionRequest? = null
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
@@ -349,6 +352,38 @@ class MainActivity : Activity() {
                 "OK"
             }
         } catch (e: Exception) { "ERROR" }
+        /** App lock with the phone's fingerprint / face. "OK", "NONE_ENROLLED", "NO_HARDWARE" or "OLD" (Android 8). */
+        @JavascriptInterface fun biometricStatus(): String = try {
+            when {
+                Build.VERSION.SDK_INT < 29 -> if (Build.VERSION.SDK_INT >= 28 && packageManager.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)) "OK" else "OLD"
+                else -> {
+                    val bm = getSystemService(android.hardware.biometrics.BiometricManager::class.java)
+                    val r = if (Build.VERSION.SDK_INT >= 30) bm.canAuthenticate(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK) else @Suppress("DEPRECATION") bm.canAuthenticate()
+                    when (r) {
+                        android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS -> "OK"
+                        android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> "NONE_ENROLLED"
+                        else -> "NO_HARDWARE"
+                    }
+                }
+            }
+        } catch (e: Exception) { "NO_HARDWARE" }
+        /** Shows the fingerprint sheet; answers through window.maataBioResult(id, ok, message). */
+        @JavascriptInterface fun biometricAuth(id: String, title: String) {
+            if (Build.VERSION.SDK_INT < 28) { bioReply(id, false, "OLD"); return }
+            runOnUiThread {
+                try {
+                    val b = android.hardware.biometrics.BiometricPrompt.Builder(this@MainActivity)
+                        .setTitle(title.ifBlank { "Unlock Maata" }).setSubtitle("Touch the fingerprint sensor")
+                        .setNegativeButton("Use PIN", mainExecutor) { _, _ -> bioReply(id, false, "PIN") }
+                    if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                    if (Build.VERSION.SDK_INT >= 29) b.setConfirmationRequired(false)
+                    b.build().authenticate(android.os.CancellationSignal(), mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) { bioReply(id, true, "") }
+                        override fun onAuthenticationError(code: Int, msg: CharSequence) { bioReply(id, false, msg.toString()) }
+                    })
+                } catch (e: Exception) { bioReply(id, false, e.message ?: "error") }
+            }
+        }
         @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }
