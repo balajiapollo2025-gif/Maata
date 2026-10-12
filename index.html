@@ -9171,12 +9171,31 @@ function mpListen() {
   try { r.start(); } catch { b.classList.remove('rec'); }
 }
 // ----- nearby (petrol, hospital, ATM…) -----
+// The phone asks the free OpenStreetMap place servers itself (cloud servers like Render are often blocked by them);
+// the Maata server is the backup.
+const MP_OSM = { fuel: 'amenity=fuel', ev: 'amenity=charging_station', hospital: 'amenity~"hospital|clinic|doctors"', atm: 'amenity~"atm|bank"', food: 'amenity~"restaurant|fast_food|cafe"', parking: 'amenity=parking', hotel: 'tourism~"hotel|guest_house|motel"', temple: 'amenity=place_of_worship', pharmacy: 'amenity=pharmacy', police: 'amenity=police', toilets: 'amenity=toilets', mechanic: 'shop~"car_repair|motorcycle_repair|tyres"' };
+async function mpNearbyFetch(cat, lat, lng) {
+  const near = (radius) => {
+    const q = '[out:json][timeout:12];(nwr[' + MP_OSM[cat] + '](around:' + radius + ',' + lat + ',' + lng + '););out center 40;';
+    const one = (base) => fetch(base, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(12000) })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((d) => { if (!Array.isArray(d.elements)) throw new Error('bad'); return d.elements; });
+    return Promise.any(['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'].map(one));
+  };
+  const shape = (els) => els.map((e) => { const t = e.tags || {}, la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon; return { name: t.name || t.brand || t.operator || '', lat: la, lng: lo, open: t.opening_hours || '', phone: t.phone || t['contact:phone'] || '', dist: Math.round(hav([lng, lat], [lo, la])) }; })
+    .filter((x) => isFinite(x.lat)).sort((a, b) => a.dist - b.dist).slice(0, 25);
+  try {
+    let list = shape(await near(6000));
+    if (!list.length) list = shape(await near(20000)); // villages: look a little further
+    return list;
+  } catch { /* phone could not reach them either: ask the Maata server */ }
+  return api('/api/maps/nearby?cat=' + cat + '&lat=' + lat + '&lng=' + lng);
+}
 async function mpNearby(cat, label) {
   const c = MP.me || (MP.map && MP.map.getCenter().toArray()); if (!c) return toast('Waiting for your location…');
   const res = $('#mpRes'); res.hidden = false; res.innerHTML = ''; res.append(el('div', 'mp-thinking', '🔎 Finding ' + label + ' near you…'));
-  let list = []; try { list = await api('/api/maps/nearby?cat=' + cat + '&lat=' + c[1] + '&lng=' + c[0]); } catch (e) { res.innerHTML = ''; const w = el('div', 'mp-thinking', '⚠️ ' + e.message + ' '); const again = el('button', 'mp-sec', '🔄 Try again'); again.onclick = () => mpNearby(cat, label); w.append(again); res.append(w); return; }
+  let list = []; try { list = await mpNearbyFetch(cat, c[1], c[0]); } catch (e) { res.innerHTML = ''; const w = el('div', 'mp-thinking', '⚠️ ' + e.message + ' '); const again = el('button', 'mp-sec', '🔄 Try again'); again.onclick = () => mpNearby(cat, label); w.append(again); res.append(w); return; }
   mpClearNear(); res.innerHTML = '';
-  if (!list.length) { res.append(el('div', 'mp-thinking', 'Nothing found within 6 km.')); return; }
+  if (!list.length) { res.append(el('div', 'mp-thinking', 'No ' + label.split(' ').slice(1).join(' ').toLowerCase() + ' found within 20 km on the map yet. Try typing a name, e.g. “HP petrol bunk Chittoor”.')); return; }
   const icon = label.split(' ')[0];
   for (const p of list) {
     const name = p.name || label.split(' ').slice(1).join(' ');

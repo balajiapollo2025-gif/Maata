@@ -1472,6 +1472,7 @@ app.get('/api/maps/nearby', auth, async (req, res) => {
   const lat = Number(req.query.lat), lng = Number(req.query.lng), cat = NEAR_CATS[req.query.cat] ? req.query.cat : 'fuel';
   if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.status(400).json({ error: 'Location needed.' });
   const key = 'near:' + cat + ':' + lat.toFixed(2) + ',' + lng.toFixed(2); const hit = mapCacheGet(key); if (hit) return res.json(hit);
+  let answered = false;
   const R = 6371000, rad = Math.PI / 180;
   const distOf = (la, lo) => Math.round(2 * R * Math.asin(Math.sqrt(Math.sin((la - lat) * rad / 2) ** 2 + Math.cos(lat * rad) * Math.cos(la * rad) * Math.sin((lo - lng) * rad / 2) ** 2)));
   const finish = (list) => { const out = list.filter((x) => isFinite(x.lat) && isFinite(x.lng)).map((x) => ({ ...x, dist: distOf(x.lat, x.lng) })).sort((a, b) => a.dist - b.dist).slice(0, 25); mapCacheSet(key, out, 30 * 60000); return res.json(out); };
@@ -1489,10 +1490,12 @@ app.get('/api/maps/nearby', auth, async (req, res) => {
   for (const u of ['https://nominatim.openstreetmap.org/search?amenity=' + NOM[0] + box, 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(NOM[1]) + box]) {
     try {
       const d = await (await fetch(u, { headers: MAP_UA, signal: AbortSignal.timeout(9000) })).json();
+      if (Array.isArray(d)) answered = true;
       if (Array.isArray(d) && d.length) return finish(d.map((x) => ({ name: x.name || String(x.display_name || '').split(',')[0], lat: Number(x.lat), lng: Number(x.lon), open: '', phone: '', brand: '' })));
     } catch { /* next */ }
   }
   if (mapCache.has(key)) return res.json(mapCache.get(key).v); // an older answer is better than nothing
+  if (answered) return res.json([]);
   res.status(502).json({ error: 'Nearby search is busy. Try again in a moment.' });
 });
 // ✨ AI: understands "nearest petrol bunk", "Tirupati via Chittoor by bike", "take me home", Telugu / Hindi typed in English letters
