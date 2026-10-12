@@ -198,7 +198,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
     <button data-view="audit"><svg class="ico" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin log</button>
     <div class="spacer"></div>
-    <div style="font-size:11px;opacity:.6;padding:4px 12px">Admin version 7 Oct 2026 · features</div>
+    <div style="font-size:11.5px;opacity:.75;padding:4px 12px" id="admVer">Maata version …</div>
     <button id="logoutBtn"><svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Log out</button>
   </nav>
 
@@ -708,6 +708,7 @@ async function loadFeaturesAdmin() {
     catch (e) { cb.checked = !cb.checked; toast(e.message); }
   });
 }
+fetch('/api/version').then((r) => r.json()).then((v) => { $('#admVer').textContent = 'Maata v' + v.server + (v.android ? ' · Android app v1.0.' + v.android : ''); }).catch(() => {});
 $('#dashFeatures').onclick = () => { const b = document.querySelector('[data-view="features"]'); if (b) b.click(); };
 $('#ftAllOn').onclick = async () => { const list = await api('/admin/api/features'); const flags = {}; list.forEach((f) => (flags[f.key] = true)); await api('/admin/api/features', { method: 'POST', body: JSON.stringify({ flags }) }); toast('All features are on.'); loadFeaturesAdmin(); };
 

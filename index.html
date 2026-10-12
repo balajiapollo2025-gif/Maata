@@ -1395,6 +1395,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mp-end{padding:11px 18px;border-radius:999px;background:#E5293F;color:#fff;font-weight:800}
 .maplibregl-ctrl-bottom-right{bottom:calc(40vh + 140px)!important}.mp.navigating .maplibregl-ctrl-bottom-right{bottom:310px!important}
 @media (min-width:900px){.mp-sheet{left:10px;right:auto;width:400px;bottom:10px;border-radius:22px;max-height:calc(100vh - 160px)}.mp-fabs{bottom:24px}.maplibregl-ctrl-bottom-right{bottom:150px!important}}
+.set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 </style>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -1789,6 +1790,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
     <div class="pf-card" id="setProfile"></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setCoins">🪙 My coins <b style="margin-left:auto">🪙 0 coins</b></button></div>
 
+    <div class="set-ver" id="setVersion"></div>
     <div class="set-group" style="margin-top:4px"><div class="set-row" id="setRunning"></div></div>
     <div id="setNotifBox"></div>
     <div class="set-group" style="margin-top:4px"><button class="sheet-btn" id="setInvite">🎁 Invite a friend <span style="margin-left:auto;color:var(--muted)">Share Maata</span></button></div>
@@ -2027,6 +2029,7 @@ async function start() {
   api('/api/announcement').then(showNotice).catch(() => {});
   loadCalls();
   loadStatus();
+  setTimeout(checkVersion, 2500);
   setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
   setTimeout(checkAppUpdate, 6000);
   loadPrefs();
@@ -2487,7 +2490,7 @@ $('#ringVol').oninput = (e) => { settings.volume = Number(e.target.value); saveS
 $('#ringVol').onchange = () => { if (!ringTimer && !ringAudio) preview('voice'); };
 $('#vibrateOn').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); if (settings.vibrate && navigator.vibrate) navigator.vibrate(200); };
 $('#msgSound').onchange = (e) => { settings.msgSound = e.target.checked; saveSettings(); messageSound(); };
-function openSettings() { if (call) return toast('Settings are available after the call.'); renderSettings(); $('#settingsSheet').hidden = false; $('#settingsClose').focus(); }
+function openSettings() { if (call) return toast('Settings are available after the call.'); renderSettings(); const vv = $('#setVersion'); if (vv) { vv.textContent = versionLine(); fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()).then((v) => { SERVER_VER = v; vv.textContent = versionLine(); }).catch(() => {}); } $('#settingsSheet').hidden = false; $('#settingsClose').focus(); }
 function closeSettings() { stopRing(); $('#settingsSheet').hidden = true; }
 // Settings opens from the ⋮ menu
 $('#settingsClose').onclick = closeSettings;
@@ -9436,6 +9439,30 @@ async function mpSay(text, quiet) {
   try { const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: L }) }); if (r.audio) { const a = new Audio('data:audio/mp3;base64,' + r.audio); a.play().catch(() => {}); } } catch {}
 }
 
+// ================= Version: shown in Settings, and "What's new" once after every update =================
+const APP_VERSION = 101;
+const APP_NOTES = ["🗺️ Maata Maps: nearby places now searched from your phone (fixes “Nearby search is busy”)", "🗺️ Maata Maps: colourful map, AI search, routes, voice navigation in 5 languages", "👆 App lock with fingerprint (needs Android app update)", "🔢 Version number shown in Settings"];
+let SERVER_VER = null;
+async function checkVersion() {
+  try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
+  const seen = Number(store.get('maata_seen_ver') || 0);
+  if (seen && seen < APP_VERSION && !$('#mapPage') && !call) {
+    sheet('🎉 Maata updated to v' + APP_VERSION, (list) => {
+      const box = el('div'); box.style.padding = '14px';
+      box.append(el('p', null, 'What is new:')); const ul = el('ul', 'coin-how'); APP_NOTES.forEach((t) => ul.append(el('li', null, t))); box.append(ul);
+      const ok = el('button', 'primary', 'OK'); ok.onclick = () => closeSheet('moreSheet'); box.append(ok); list.append(box);
+    });
+  }
+  store.set('maata_seen_ver', String(APP_VERSION));
+}
+function versionLine() {
+  const av = (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1];
+  const sv = SERVER_VER && SERVER_VER.server, latestApk = SERVER_VER && SERVER_VER.android;
+  const parts = ['🦜 Maata v' + APP_VERSION];
+  parts.push(sv == null ? 'server ?' : sv === APP_VERSION ? 'server v' + sv + ' ✅' : '⚠️ server v' + sv + ' (upload the new server.js)');
+  if (av) parts.push('Android app v' + av + (latestApk && Number(String(av).split('.').pop()) < latestApk ? ' → v1.0.' + latestApk + ' ready' : ' ✅'));
+  return parts.join(' · ');
+}
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');

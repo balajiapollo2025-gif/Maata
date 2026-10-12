@@ -1434,6 +1434,13 @@ function geoLimit(req, res) {
   if (l.length > 40) { res.status(429).json({ error: 'Too many location requests. Wait a minute.' }); return false; }
   return true;
 }
+// ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
+const MAATA_VERSION = 101;
+app.get('/api/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }
+  res.json({ server: MAATA_VERSION, android });
+});
 // ---------- 🗺️ Maata Maps: routes, nearby places and AI search (free OpenStreetMap services, called from the server) ----------
 const MAP_UA = { 'User-Agent': 'MaataApp/1.0 (maataapp.com maps)', 'Accept-Language': 'en' };
 const mapCache = new Map(); // small cache so repeated requests are instant
