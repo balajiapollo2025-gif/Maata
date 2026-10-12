@@ -1472,18 +1472,27 @@ app.get('/api/maps/nearby', auth, async (req, res) => {
   const lat = Number(req.query.lat), lng = Number(req.query.lng), cat = NEAR_CATS[req.query.cat] ? req.query.cat : 'fuel';
   if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.status(400).json({ error: 'Location needed.' });
   const key = 'near:' + cat + ':' + lat.toFixed(2) + ',' + lng.toFixed(2); const hit = mapCacheGet(key); if (hit) return res.json(hit);
-  const q = '[out:json][timeout:15];(nwr[' + NEAR_CATS[cat] + '](around:6000,' + lat + ',' + lng + '););out center 40;';
-  for (const base of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']) {
+  const R = 6371000, rad = Math.PI / 180;
+  const distOf = (la, lo) => Math.round(2 * R * Math.asin(Math.sqrt(Math.sin((la - lat) * rad / 2) ** 2 + Math.cos(lat * rad) * Math.cos(la * rad) * Math.sin((lo - lng) * rad / 2) ** 2)));
+  const finish = (list) => { const out = list.filter((x) => isFinite(x.lat) && isFinite(x.lng)).map((x) => ({ ...x, dist: distOf(x.lat, x.lng) })).sort((a, b) => a.dist - b.dist).slice(0, 25); mapCacheSet(key, out, 30 * 60000); return res.json(out); };
+  // 1) Overpass: several free servers asked at the same time, the first good answer wins
+  const q = '[out:json][timeout:10];(nwr[' + NEAR_CATS[cat] + '](around:6000,' + lat + ',' + lng + '););out center 40;';
+  const ask = (base) => fetch(base, { method: 'POST', headers: { ...MAP_UA, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body: 'data=' + encodeURIComponent(q), signal: AbortSignal.timeout(11000) })
+    .then((r) => { if (!r.ok) throw new Error('http ' + r.status); return r.json(); }).then((d) => { if (!Array.isArray(d.elements)) throw new Error('bad'); return d.elements; });
+  try {
+    const els = await Promise.any(['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.osm.jp/api/interpreter'].map(ask));
+    return finish(els.map((e) => { const t = e.tags || {}; return { name: t.name || t.brand || t.operator || '', lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon, open: t.opening_hours || '', phone: t.phone || t['contact:phone'] || '', brand: t.brand || '' }; }));
+  } catch (e) { console.log('[maps] overpass busy:', (e.errors || [e]).map((x) => x.message).join(', ').slice(0, 160)); }
+  // 2) backup: OpenStreetMap place search (Nominatim) inside a box around the person
+  const NOM = { fuel: ['fuel', 'petrol pump'], ev: ['charging_station', 'charging station'], hospital: ['hospital', 'hospital'], atm: ['atm', 'atm'], food: ['restaurant', 'restaurant'], parking: ['parking', 'parking'], hotel: ['hotel', 'hotel'], temple: ['place_of_worship', 'temple'], pharmacy: ['pharmacy', 'pharmacy'], police: ['police', 'police'], toilets: ['toilets', 'toilets'], mechanic: ['car_repair', 'mechanic'] }[cat];
+  const box = '&viewbox=' + (lng - 0.06) + ',' + (lat + 0.06) + ',' + (lng + 0.06) + ',' + (lat - 0.06) + '&bounded=1&limit=40&format=jsonv2';
+  for (const u of ['https://nominatim.openstreetmap.org/search?amenity=' + NOM[0] + box, 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(NOM[1]) + box]) {
     try {
-      const d = await (await fetch(base, { method: 'POST', headers: { ...MAP_UA, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(q), signal: AbortSignal.timeout(16000) })).json();
-      const R = 6371000, rad = Math.PI / 180;
-      const out = (d.elements || []).map((e) => { const la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon; const t = e.tags || {};
-        const dist = Math.round(2 * R * Math.asin(Math.sqrt(Math.sin((la - lat) * rad / 2) ** 2 + Math.cos(lat * rad) * Math.cos(la * rad) * Math.sin((lo - lng) * rad / 2) ** 2)));
-        return { name: t.name || t.brand || t.operator || '', lat: la, lng: lo, dist, open: t.opening_hours || '', phone: t.phone || t['contact:phone'] || '', brand: t.brand || '' }; })
-        .filter((x) => isFinite(x.lat)).sort((a, b) => a.dist - b.dist).slice(0, 25);
-      mapCacheSet(key, out, 30 * 60000); return res.json(out);
+      const d = await (await fetch(u, { headers: MAP_UA, signal: AbortSignal.timeout(9000) })).json();
+      if (Array.isArray(d) && d.length) return finish(d.map((x) => ({ name: x.name || String(x.display_name || '').split(',')[0], lat: Number(x.lat), lng: Number(x.lon), open: '', phone: '', brand: '' })));
     } catch { /* next */ }
   }
+  if (mapCache.has(key)) return res.json(mapCache.get(key).v); // an older answer is better than nothing
   res.status(502).json({ error: 'Nearby search is busy. Try again in a moment.' });
 });
 // ✨ AI: understands "nearest petrol bunk", "Tirupati via Chittoor by bike", "take me home", Telugu / Hindi typed in English letters

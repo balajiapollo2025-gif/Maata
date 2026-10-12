@@ -9174,7 +9174,7 @@ function mpListen() {
 async function mpNearby(cat, label) {
   const c = MP.me || (MP.map && MP.map.getCenter().toArray()); if (!c) return toast('Waiting for your location…');
   const res = $('#mpRes'); res.hidden = false; res.innerHTML = ''; res.append(el('div', 'mp-thinking', '🔎 Finding ' + label + ' near you…'));
-  let list = []; try { list = await api('/api/maps/nearby?cat=' + cat + '&lat=' + c[1] + '&lng=' + c[0]); } catch (e) { res.innerHTML = ''; res.append(el('div', 'mp-thinking', '⚠️ ' + e.message)); return; }
+  let list = []; try { list = await api('/api/maps/nearby?cat=' + cat + '&lat=' + c[1] + '&lng=' + c[0]); } catch (e) { res.innerHTML = ''; const w = el('div', 'mp-thinking', '⚠️ ' + e.message + ' '); const again = el('button', 'mp-sec', '🔄 Try again'); again.onclick = () => mpNearby(cat, label); w.append(again); res.append(w); return; }
   mpClearNear(); res.innerHTML = '';
   if (!list.length) { res.append(el('div', 'mp-thinking', 'Nothing found within 6 km.')); return; }
   const icon = label.split(' ')[0];
