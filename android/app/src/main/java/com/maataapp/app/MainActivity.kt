@@ -25,6 +25,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -117,14 +118,26 @@ class MainActivity : Activity() {
     // 🔊 navigation voice: the phone's own text-to-speech (WebView has no speech of its own)
     private var tts: TextToSpeech? = null
     @Volatile private var ttsState = 0 // 0 starting, 1 ready, -1 failed
-    private var ttsPending: Pair<String, String>? = null
+    private var ttsPending: Triple<String, String, String>? = null
+    // speech progress → the page (so Chilaka's beak moves with each spoken word)
+    private fun ttsEvent(id: String, kind: String, a: Int, b: Int) = runOnUiThread {
+        if (::web.isInitialized) web.evaluateJavascript("window.maataTts && maataTts(" + org.json.JSONObject.quote(id) + "," + org.json.JSONObject.quote(kind) + "," + a + "," + b + ")", null)
+    }
     private fun startTts() {
         if (tts != null) return
         tts = TextToSpeech(applicationContext) { st ->
             ttsState = if (st == TextToSpeech.SUCCESS) 1 else -1
             if (ttsState == 1) {
                 tts?.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                ttsPending?.let { speakNow(it.first, it.second) }
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(id: String) { ttsEvent(id, "start", 0, 0) }
+                    override fun onDone(id: String) { ttsEvent(id, "done", 0, 0) }
+                    @Deprecated("Deprecated in Java") override fun onError(id: String) { ttsEvent(id, "done", 0, 0) }
+                    override fun onError(id: String, code: Int) { ttsEvent(id, "done", 0, 0) }
+                    override fun onStop(id: String, interrupted: Boolean) { ttsEvent(id, "done", 0, 0) }
+                    override fun onRangeStart(id: String, start: Int, end: Int, frame: Int) { ttsEvent(id, "word", start, end) }
+                })
+                ttsPending?.let { speakNow(it.first, it.second, it.third) }
             }
             ttsPending = null
         }
@@ -163,12 +176,12 @@ class MainActivity : Activity() {
         val r = tts?.isLanguageAvailable(Locale.forLanguageTag(lang)) ?: return false
         return r >= TextToSpeech.LANG_AVAILABLE
     }
-    private fun speakNow(text: String, lang: String): String {
+    private fun speakNow(text: String, lang: String, id: String = "maata" + System.nanoTime()): String {
         val t = tts ?: return "error"
         if (!langOk(lang)) return "nolang"
         t.language = Locale.forLanguageTag(lang)
         t.setSpeechRate(0.95f)
-        return if (t.speak(text, TextToSpeech.QUEUE_ADD, null, "maata" + System.nanoTime()) == TextToSpeech.SUCCESS) "ok" else "error"
+        return if (t.speak(text, TextToSpeech.QUEUE_ADD, null, id) == TextToSpeech.SUCCESS) "ok" else "error"
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -524,7 +537,11 @@ class MainActivity : Activity() {
             }
         }
         @JavascriptInterface fun speak(text: String, lang: String): String = try {
-            when (ttsState) { 1 -> speakNow(text.take(400), lang); 0 -> { ttsPending = text.take(400) to lang; startTts(); "wait" }; else -> "error" }
+            when (ttsState) { 1 -> speakNow(text.take(400), lang); 0 -> { ttsPending = Triple(text.take(400), lang, "maata" + System.nanoTime()); startTts(); "wait" }; else -> "error" }
+        } catch (_: Exception) { "error" }
+        /** same as speak, with our own id: the page then gets start / word / done events for it (lip-sync) */
+        @JavascriptInterface fun speakId(text: String, lang: String, id: String): String = try {
+            when (ttsState) { 1 -> speakNow(text.take(400), lang, id); 0 -> { ttsPending = Triple(text.take(400), lang, id); startTts(); "wait" }; else -> "error" }
         } catch (_: Exception) { "error" }
         @JavascriptInterface fun ttsCheck(lang: String): String = when (ttsState) { 1 -> if (langOk(lang)) "ok" else "nolang"; 0 -> "wait"; else -> "error" }
         @JavascriptInterface fun listen(id: String, lang: String) { runOnUiThread { try { startListening(id, lang) } catch (e: Exception) { listenReply(id, false, "error") } } }
