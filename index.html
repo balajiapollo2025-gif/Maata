@@ -529,6 +529,16 @@ html.dark .fchip[aria-pressed="true"]{color:#7CC4D4}
 .vl.ok{background:radial-gradient(circle at 50% 30%,rgba(60,200,120,.6),rgba(4,30,20,.92))}
 .vl-set{display:flex;flex-direction:column;gap:8px;margin:12px 0;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(52,184,90,.14),rgba(30,136,229,.12))}.vl-set small{line-height:1.45;opacity:.85}
 @media (prefers-reduced-motion:reduce){.vl-toon,.vl-spin{transition-duration:.01s}.vl-hop,.vl .eye{animation:none!important}}
+.upd{position:fixed;inset:0;z-index:150;background:radial-gradient(circle at 50% 20%,#1B8A7A,#0B3A44 70%);display:flex;align-items:center;justify-content:center;padding:20px;animation:updIn .35s ease}
+@keyframes updIn{from{opacity:0;transform:scale(1.04)}}
+.upd-card{width:min(420px,100%);background:#fff;color:#14324A;border-radius:28px;padding:26px 22px 18px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.upd-logo{font-size:64px;line-height:1;animation:updBob 1.6s ease-in-out infinite}@keyframes updBob{50%{transform:translateY(-8px) rotate(-6deg)}}
+.upd-card h2{margin:10px 0 2px;font-size:24px}.upd-sub{margin:0 0 12px;color:#4A6378;font-size:14px}
+.upd-list{text-align:left;margin:0 0 14px;padding:12px 14px 12px 32px;background:#F1F7F6;border-radius:16px;line-height:1.75;font-size:15px}
+.upd-bar{height:10px;border-radius:6px;background:#E3ECEB;overflow:hidden;margin:4px 0 8px}.upd-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1DB954,#1E88E5);transition:width .4s}
+.upd-msg{font-size:13.5px;color:#4A6378;min-height:18px;margin:6px 0 12px}
+.upd-go{width:100%;padding:15px;border-radius:16px;border:0;background:#0F7A6E;color:#fff;font-size:17px;font-weight:800}.upd-go:disabled{opacity:.75}
+.upd-later{margin-top:10px;color:#4A6378!important}
 .lock{position:fixed;inset:0;z-index:60;background:linear-gradient(160deg,#0F4C5C,#1B6B7F);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
 .lock h2{margin:0;font-size:22px}
 .lock .dots{display:flex;gap:14px}
@@ -2093,7 +2103,7 @@ async function start() {
   loadStatus();
   setTimeout(checkVersion, 2500);
   setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
-  setTimeout(checkAppUpdate, 6000);
+  setTimeout(checkAppUpdate, 1500);
   loadPrefs();
   aiInit();
   setTimeout(handleJoinLink, 800);
@@ -8727,7 +8737,63 @@ const APP_NEEDS = ['setSpeaker', 'audioInfo', 'startPhoneRingtone', 'getContacts
 let LATEST_APP = 0;
 const appBuild = () => Number((navigator.userAgent.match(/MaataAndroid\/[\d.]*?(\d+)(?:\s|$)/) || [])[1] || 0);
 const appKind = () => { const A = window.MaataAndroid; if (!A) return 'browser'; if (!APP_NEEDS.every((k) => typeof A[k] === 'function')) return 'old'; return LATEST_APP && appBuild() && appBuild() < LATEST_APP ? 'old' : 'new'; };
-async function checkAppUpdate() { if (!window.MaataAndroid) return; try { const v = await fetch('/app-version.json', { cache: 'no-store' }).then((r) => r.json()); LATEST_APP = Number(v.version) || 0; } catch {} if (appKind() === 'old') askAppUpdate(false); }
+async function checkAppUpdate() {
+  if (!window.MaataAndroid) return;
+  try { const v = await fetch('/app-version.json', { cache: 'no-store' }).then((r) => r.json()); LATEST_APP = Number(v.version) || 0; } catch {}
+  UPD.checkedAt = Date.now();
+  if (appKind() === 'old') updOffer(false);
+}
+// 📲 update screen that appears as soon as Maata opens (like WhatsApp / Play Store), downloads by itself
+const ANDROID_NOTES = ['👆 Fingerprint lock', '🦜 Voice password with Chilaka the parrot', '🔊 Navigation voice in Telugu with your name', '🎤 Speak to search in Maps', '🔈 Earpiece / 🔊 loudspeaker switch in calls'];
+const UPD = { state: '', pct: 0, shownAt: 0, checkedAt: 0, hidden: false };
+window.maataUpd = (kind, a) => {
+  if (kind === 'progress') { UPD.state = 'downloading'; UPD.pct = Number(a) || 0; }
+  else { UPD.state = kind; if (kind === 'ready') UPD.ver = a; if (kind === 'error') UPD.err = a; }
+  if (kind === 'ready' && UPD.hidden && $('#updSplash') == null && appKind() === 'old') toast('📲 Maata update is ready — ' + (updSilent() ? 'it installs when you close Maata.' : 'open Settings to install.'));
+  updDraw();
+};
+const updSilent = () => { try { return !!(window.MaataAndroid.silentUpdate && MaataAndroid.silentUpdate()); } catch { return false; } };
+function updStartDownload() {
+  const A = window.MaataAndroid; if (!A || typeof A.autoUpdate !== 'function') return false;
+  let r = ''; try { r = A.autoUpdate(location.origin + '/download'); } catch {}
+  if (r === 'READY') UPD.state = 'ready'; else if (r === 'STARTED' || r === 'BUSY') { if (UPD.state !== 'ready') UPD.state = 'downloading'; }
+  return true;
+}
+function updOffer(force) {
+  if (appKind() !== 'old') return;
+  const auto = updStartDownload();
+  if (!force && Date.now() - UPD.shownAt < 3 * 3600000) return; // shown a moment ago: do not nag on every switch back
+  const waitFree = (n) => { if ($('#lockScreen') || $('.vl') || call || $('#mapPage')) { if (n < 120) setTimeout(() => waitFree(n + 1), 2000); return; } updSplash(auto); };
+  waitFree(0);
+}
+function updSplash(auto) {
+  if ($('#updSplash')) return; UPD.shownAt = Date.now(); UPD.hidden = false;
+  const o = el('div', 'upd'); o.id = 'updSplash'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Update Maata');
+  o.innerHTML = '<div class="upd-card"><div class="upd-logo">🦜</div><h2>New Maata update</h2><p class="upd-sub"></p><ul class="upd-list"></ul><div class="upd-bar" hidden><i></i></div><p class="upd-msg"></p><button class="upd-go"></button><button class="upd-later linkbtn">Later</button></div>';
+  const ul = o.querySelector('.upd-list'); ANDROID_NOTES.forEach((t) => ul.append(el('li', null, t)));
+  o.querySelector('.upd-sub').textContent = (LATEST_APP ? 'Version 1.0.' + LATEST_APP + ' is ready' : 'A new version is ready') + (appVersion() ? ' · you have ' + appVersion() : '');
+  o.querySelector('.upd-later').onclick = () => { UPD.hidden = true; o.remove(); };
+  o.querySelector('.upd-go').onclick = () => {
+    const A = window.MaataAndroid;
+    if (auto && UPD.state === 'ready') { let r = 'ERROR'; try { r = A.installNow(); } catch {} if (r === 'OK') { UPD.state = 'installing'; updDraw(); return; } if (r === 'PERMISSION') { toast('Allow "Install unknown apps" for Maata, come back and tap Update again.'); return; } }
+    if (auto && UPD.state === 'downloading') return;
+    o.remove(); startAppUpdate(); // older Maata apps: download, then Android asks "Update?"
+  };
+  document.body.append(o); UPD.auto = auto; updDraw();
+}
+function updDraw() {
+  const o = $('#updSplash'); if (!o) return;
+  const go = o.querySelector('.upd-go'), bar = o.querySelector('.upd-bar'), msg = o.querySelector('.upd-msg'), st = UPD.auto ? UPD.state : '';
+  bar.hidden = st !== 'downloading'; bar.querySelector('i').style.width = UPD.pct + '%';
+  go.disabled = st === 'downloading' || st === 'installing';
+  go.textContent = st === 'downloading' ? '⬇ Downloading… ' + UPD.pct + '%' : st === 'installing' || st === 'confirm' ? '⏳ Installing…' : '📲 Update now';
+  msg.textContent = st === 'ready' ? (updSilent() ? '✅ Downloaded. Tap Update now — or just close Maata, it updates by itself.' : '✅ Downloaded. Tap Update now, then “Update” on the Android screen.')
+    : st === 'confirm' ? 'Tap “Update” on the Android screen.' : st === 'installing' ? 'Maata will close for a moment and update. Open it again in a few seconds.'
+    : st === 'error' ? '⚠️ Automatic download did not work. Tap Update now to download it the normal way.' : st === 'downloading' ? 'Downloading in the background — you can keep using Maata.' : 'Your chats stay safe. It takes less than a minute.';
+  if (st === 'error') UPD.auto = false;
+}
+// coming back to Maata after a while: check again
+document.addEventListener('visibilitychange', () => { if (!document.hidden && window.MaataAndroid && token && Date.now() - UPD.checkedAt > 3600000) checkAppUpdate(); });
 function startAppUpdate() {
   const A = window.MaataAndroid, url = location.origin + '/download';
   if (A && A.installUpdate) {
@@ -8741,6 +8807,7 @@ const appVersion = () => (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) ||
 function askAppUpdate(force) {
   if (!force && $('#mapPage')) return;
   const k = appKind(); if (k === 'new') return;
+  if (k === 'old') { updOffer(true); return; }
   if (!force && Date.now() - Number(store.get('maata_upd_asked') || 0) < 86400000) return;
   store.set('maata_upd_asked', String(Date.now()));
   sheet(k === 'old' ? '📲 Update the Maata app' : '📲 Get the Maata Android app', (list) => {
@@ -9739,8 +9806,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 105;
-const APP_NOTES = ["🦜 Voice password: Chilaka the 3D parrot asks “మీ పాస్‌వర్డ్ చెప్పండి” — say it and Maata opens", "🙅 Wrong password: the parrot shakes its head; 3 wrong tries → “Sorry, bye bye” and it flies back to its branch", "🎤 Voice search now works inside the Maata app (maps, road reports)", "Set it up: Settings → 🔒 App lock → 🎤 Set voice password"];
+const APP_VERSION = 106;
+const APP_NOTES = ["📲 Maata updates like WhatsApp: the update screen appears as soon as you open Maata", "⬇ The new app downloads by itself in the background", "🤖 Android 12+: installs by itself when you close Maata (after this one update)"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }

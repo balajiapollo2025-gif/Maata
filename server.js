@@ -1462,7 +1462,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 105;
+const MAATA_VERSION = 106;
 app.get('/api/version', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }
