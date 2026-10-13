@@ -1441,6 +1441,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 
 /* Maata Maps v3 */
+.mp-fabs.gone{opacity:0;pointer-events:none}
 .mp-chips button.sos{background:#E53935;color:#fff;font-weight:800}
 .mp-quick{grid-template-columns:repeat(3,1fr)}.mp-smart{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.mp-smart small{width:100%;color:#5D6E7C;font-weight:700}.mp-smart button{padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#ECFBF4,#EEF3FF);color:#13202B;font-weight:700;font-size:13.5px}
 .mp-nearhead{display:flex;align-items:baseline;justify-content:space-between;padding:6px 10px 2px}.mp-nearhead small{color:#5D6E7C}.mp-ri.sos{background:#FDECEA;text-decoration:none}.mp-ri.sos b{color:#C62828}
@@ -9389,7 +9390,7 @@ const MAP_STYLES = {
   light: { label: 'Light', icon: '🤍', url: 'https://tiles.openfreemap.org/styles/positron' },
 };
 const MP_CATS = [['food', '🍽️', 'Restaurants'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Hotels'], ['hospital', '🏥', 'Hospital'], ['atm', '🏧', 'ATM'], ['temple', '🛕', 'Temples'], ['mechanic', '🔧', 'Mechanic'], ['parking', '🅿️', 'Parking'], ['ev', '🔌', 'EV charge'], ['pharmacy', '💊', 'Medical'], ['police', '🚓', 'Police'], ['toilets', '🚻', 'Toilets']];
-const MP_MODES = { car: ['🚗', 'Drive'], bike: ['🏍️', 'Two-wheeler'], transit: ['🚌', 'Bus / train'], foot: ['🚶', 'Walk'] };
+const MP_MODES = { car: ['🚗', 'Drive'], bike: ['🏍️', 'Two-wheeler'], foot: ['🚶', 'Walk'] };
 let mlLoading = null;
 function loadMapLibre() {
   if (window.maplibregl) return Promise.resolve();
@@ -9718,7 +9719,7 @@ function mpHomeSheet() {
 // ----- routes -----
 async function mpRoute() {
   if (!MP.dest) return;
-  if (MP.mode === 'transit') return mpTransit();
+  if (!MP_MODES[MP.mode]) MP.mode = 'car';
   if (!MP.me && !MP.from) { MP.routes = []; MP.routeErr = '📡 Waiting for your location to find a route…'; mpPlaceSheet(); setTimeout(() => { if (MP.me && MP.dest && !MP.routes.length) mpRoute(); }, 3000); return; }
   MP.sel = 0; MP.routes = []; MP.routeErr = ''; mpPlaceSheet(true);
   try {
@@ -9956,8 +9957,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 111;
-const APP_NOTES = ["⚡ Petrol, hospital, police, hotels: answers come instantly from the map on your phone — no more “server busy”", "🎨 Brighter, colourful map with darker, easier-to-read names", "🆘 Emergency button: call 108 / 100 / 112, nearest hospital & police, send your location to family", "⛽ Every route shows the fuel cost (≈ ₹)", "✨ Smart suggestions for the time of day; Maps opens faster"];
+const APP_VERSION = 112;
+const APP_NOTES = ["🗺️ Maps: Bus / train option removed — Drive, Two-wheeler and Walk only"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10090,7 +10091,7 @@ const MPD_ICONS = {
   transit: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M8 21l1.2-4M16 21l-1.2-4"/><circle cx="8.5" cy="14" r=".6"/><circle cx="15.5" cy="14" r=".6"/></svg>',
   foot: '<svg viewBox="0 0 24 24"><circle cx="13" cy="4" r="1.8"/><path d="M11 8l-3 4 3 2v7M11 8l3.2 3.2 3 .8M11 14l-2.2 7"/></svg>',
 };
-const MPD_MODES = [['car', 'Drive'], ['bike', 'Two-wheeler'], ['transit', 'Public transport'], ['foot', 'Walk']];
+const MPD_MODES = [['car', 'Drive'], ['bike', 'Two-wheeler'], ['foot', 'Walk']];
 const meAsPlace = () => (MP.me ? { name: 'Your location', lat: MP.me[1], lng: MP.me[0], isMe: true } : null);
 function mpDirections(edit) {
   const pg = $('#mapPage'); if (!pg) return;
@@ -10210,8 +10211,17 @@ async function mpTransit() {
   }
 }
 // ----- the bottom sheet can be pulled down (minimised) and up again, like Google Maps -----
+// the round buttons (my location, directions) always sit just above the bottom panel
+function mpFabsFollow() {
+  const sh = $('#mpSheet'), fb = document.querySelector('#mapPage .mp-fabs'), pg = $('#mapPage'); if (!sh || !fb || !pg) return;
+  if (pg.classList.contains('navigating')) { fb.style.bottom = ''; fb.classList.remove('gone'); return; }
+  const top = sh.getBoundingClientRect().top, ph = pg.getBoundingClientRect().bottom, want = ph - top + 12;
+  fb.classList.toggle('gone', want > ph * 0.66); fb.style.bottom = Math.max(80, Math.min(want, ph * 0.66)) + 'px';
+}
 function mpSheetGrip() {
   const sh = $('#mpSheet'); if (!sh || sh.dataset.grip) return; sh.dataset.grip = '1';
+  try { new ResizeObserver(mpFabsFollow).observe(sh); new MutationObserver(mpFabsFollow).observe(sh, { attributes: true, attributeFilter: ['class'] }); new MutationObserver(mpFabsFollow).observe($('#mapPage'), { attributes: true, attributeFilter: ['class'] }); } catch {}
+  sh.addEventListener('transitionend', mpFabsFollow); addEventListener('resize', mpFabsFollow); setTimeout(mpFabsFollow, 50);
   let d = null;
   const inGrip = (y) => sh.classList.contains('mini') || y - sh.getBoundingClientRect().top < 38;
   const start = (y) => { if (sh.classList.contains('nav') || !inGrip(y)) return false; d = { y, moved: false, base: sh.classList.contains('mini') ? sh.offsetHeight - 70 : 0 }; return true; };
