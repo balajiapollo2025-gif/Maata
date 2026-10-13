@@ -509,13 +509,19 @@ html.dark .fchip[aria-pressed="true"]{color:#7CC4D4}
 .vl{position:fixed;inset:0;z-index:200;background:radial-gradient(circle at 50% 28%,rgba(40,120,110,.55),rgba(4,20,28,.92));backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);overflow:hidden;transition:opacity .35s}.vl.gone{opacity:0}
 .vl-perch{position:absolute;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:150px;height:30px}.vl-perch i{position:absolute;left:0;right:0;top:12px;height:12px;border-radius:8px;background:linear-gradient(#A1673A,#5D3A1C);box-shadow:0 4px 10px rgba(0,0,0,.35)}.vl-perch b{position:absolute;right:-14px;top:-6px;font-size:26px}
 .vl-stage{position:absolute;inset:0;perspective:900px}
-.vl-toon{position:absolute;left:50%;top:44%;width:200px;height:240px;margin:-140px 0 0 -100px;transform-style:preserve-3d;transform:translate3d(0,0,0) scale(1.12);transition:transform 1s cubic-bezier(.34,1.3,.5,1)}
-.vl-toon.home{transform:translate3d(0,calc(-44vh + 60px),-500px) scale(.32)}
+.vl-toon{position:absolute;left:50%;top:44%;width:200px;height:240px;margin:-140px 0 0 -100px;transform-style:preserve-3d;transform-origin:50% 100%;transform:translate(0,0) scale(1.12)}
+.vl-toon.home{transform:translateY(calc(-44vh - 30px + env(safe-area-inset-top,0px))) scale(.36)}.vl-toon.home .sh,.vl-toon.flying .sh{opacity:0}.vl .sh{transition:opacity .3s}
+.vl-toon.fly-down{animation:vlFlyDown 1.5s cubic-bezier(.45,.05,.4,1) forwards}.vl-toon.fly-up{animation:vlFlyUp 1.4s cubic-bezier(.45,.05,.4,1) forwards}
+@keyframes vlFlyDown{0%{transform:translateY(calc(-44vh - 30px + env(safe-area-inset-top,0px))) scale(.36)}12%{transform:translate(-5vw,calc(-44vh - 75px)) scale(.4) rotate(-8deg)}55%{transform:translate(22vw,-22vh) scale(.78) rotate(10deg)}85%{transform:translate(4vw,-3vh) scale(1.06) rotate(2deg)}100%{transform:translate(0,0) scale(1.12)}}
+@keyframes vlFlyUp{0%{transform:translate(0,0) scale(1.12)}15%{transform:translate(0,-5vh) scale(1.06)}50%{transform:translate(-22vw,-24vh) scale(.72) rotate(-10deg)}86%{transform:translate(3vw,calc(-44vh - 75px)) scale(.42) rotate(-4deg)}100%{transform:translateY(calc(-44vh - 30px + env(safe-area-inset-top,0px))) scale(.36)}}
+.vl-toon.flying .wl{animation:vlFlapL .13s ease-in-out infinite alternate}.vl-toon.flying .wr{animation:vlFlapR .13s ease-in-out infinite alternate}
+@keyframes vlFlapL{from{transform:rotate(10deg)}to{transform:rotate(70deg)}}@keyframes vlFlapR{from{transform:rotate(-10deg)}to{transform:rotate(-70deg)}}
+.vl .bk{transform:translateY(calc(var(--beak,0) * 9px)) scaleY(calc(1 + var(--beak,0) * 0.9));transition:transform 60ms linear}
 .vl-spin{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .7s ease}.vl-toon.turned .vl-spin{transform:rotateY(180deg)}
 .vl-hop{position:absolute;inset:0;transform-style:preserve-3d;animation:vlBreath 2.6s ease-in-out infinite}.vl-toon.walking .vl-hop{animation:vlHop .32s ease-in-out infinite alternate}.vl-toon.happy .vl-hop{animation:vlJump .55s ease-in-out 2}
 .vl-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}.vl-face.back{transform:rotateY(180deg)}.vl-face svg{width:100%;height:100%;overflow:visible;fill:initial;stroke:none;filter:drop-shadow(0 18px 18px rgba(0,0,0,.35))}
 .vl .bk,.vl .hd,.vl .eye,.vl .wr,.vl .wl,.vl .pu{transform-box:fill-box}.vl .bk{transform-origin:50% 0}.vl .hd{transform-origin:50% 95%}.vl .eye{transform-origin:50% 50%;animation:vlBlink 4.2s infinite}.vl .wr{transform-origin:20% 8%}.vl .wl{transform-origin:80% 8%}
-.vl-toon.talk .bk{animation:vlTalk .18s ease-in-out infinite alternate}.vl-toon.no .hd{animation:vlNo .55s ease-in-out 2}.vl-toon.ear .hd{transform:rotate(-8deg)}.vl-toon.ear .pu{transform:translateX(-3px)}
+.vl-toon.talk .hd{animation:vlNod 1.6s ease-in-out infinite}@keyframes vlNod{50%{transform:rotate(3deg)}}.vl-toon.no .hd{animation:vlNo .55s ease-in-out 2}.vl-toon.ear .hd{transform:rotate(-8deg)}.vl-toon.ear .pu{transform:translateX(-3px)}
 .vl-toon.wave .wr{animation:vlWave .42s ease-in-out infinite alternate}.vl-toon.sad .pu{transform:translateY(4px)}.vl-toon.happy .wl,.vl-toon.happy .wr{animation:vlFlap .2s ease-in-out 5 alternate}
 @keyframes vlBreath{50%{transform:scale(1.025,0.985) translateY(2px)}}@keyframes vlHop{from{transform:translateY(0)}to{transform:translateY(-22px)}}@keyframes vlJump{50%{transform:translateY(-40px) scale(1.05)}}
 @keyframes vlTalk{to{transform:translateY(7px) scaleY(1.5)}}@keyframes vlNo{25%{transform:rotate(-16deg)}75%{transform:rotate(16deg)}}@keyframes vlBlink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
@@ -1441,6 +1447,9 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 
 /* Maata Maps v3 */
+.mp-ctabs{display:flex;gap:8px;margin:2px 0 10px}.mp-ctabs button{flex:1;padding:10px;border-radius:14px;background:#F3F7F9;color:#13202B;font-weight:700}.mp-ctabs button.on{background:#0F7A6E;color:#fff}
+.mp-drawcount{display:block;margin:6px 2px 8px;font-size:15px;color:#C2185B}
+
 .mp-svpop{display:flex;gap:4px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.28);margin-bottom:6px}.mp-svpop button{padding:8px 12px;border-radius:999px;background:#FFC107;color:#3E2723;font-weight:800;font-size:13.5px}.mp-svpop button.x{background:#ECEFF1;color:#37474F;padding:8px 11px}
 
 .mp-loc{font-size:calc(12.5px * var(--mp-text-k,1))}.mp-loc.only{color:#111827;font-weight:700;font-size:calc(13.5px * var(--mp-text-k,1))}.mp-loc.only.city,.mp-loc.only.town{font-size:calc(16px * var(--mp-text-k,1));font-weight:800}
@@ -4923,15 +4932,51 @@ if (!window.SpeechRecognition && !window.webkitSpeechRecognition && window.Maata
   window.SpeechRecognition.maata = true;
 }
 // speak with the best voice available and wait about as long as it talks
-function sayAloud(text, code) {
-  const A = window.MaataAndroid; let spoken = false;
-  if (A && typeof A.speak === 'function') { try { const r = A.speak(text, code); spoken = r === 'ok' || r === 'wait'; } catch {} }
-  if (!spoken && window.speechSynthesis) {
-    const v = (speechSynthesis.getVoices() || []).find((x) => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(code.toLowerCase()));
-    if (v || /^en/.test(code)) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); if (v) u.voice = v; u.lang = code; speechSynthesis.speak(u); spoken = true; } catch {} }
-  }
-  if (!spoken) api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: code.slice(0, 2) }) }).then((r) => { if (r.audio) new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio).play().catch(() => {}); }).catch(() => {});
-  return new Promise((ok) => setTimeout(ok, Math.max(1500, [...text].length * 80)));
+// speak with the best voice available; mouth(0..1) follows the speech (phone voice: each word; browser: word boundaries; server voice: loudness)
+const TTS_CB = {};
+window.maataTts = (id, kind, a, b) => { const f = TTS_CB[id]; if (f) f(kind, a, b); };
+function sayAloud(text, code, mouth) {
+  mouth = mouth || (() => {});
+  return new Promise((done) => {
+    let finished = false, chat = 0; const est = Math.max(1500, [...text].length * 80);
+    const finish = () => { if (finished) return; finished = true; clearInterval(chat); mouth(0); done(); };
+    const chatter = (ms) => { clearInterval(chat); let t = 0, open = false; chat = setInterval(() => { t += 105; open = !open; mouth(open ? 0.55 + Math.random() * 0.45 : 0.08); if (t >= ms) { clearInterval(chat); mouth(0.05); } }, 105); };
+    const safety = setTimeout(finish, est * 2 + 5000);
+    const A = window.MaataAndroid;
+    if (A && typeof A.speakId === 'function') {
+      const id = 'v' + Date.now() + Math.random().toString(36).slice(2, 6); let started = false, words = false;
+      TTS_CB[id] = (kind, a, b) => {
+        if (kind === 'start') { started = true; setTimeout(() => { if (!words && !finished) chatter(est); }, 400); }
+        else if (kind === 'word') { words = true; chatter(Math.max(200, (b - a) * 80)); }
+        else if (kind === 'done') { delete TTS_CB[id]; clearTimeout(safety); setTimeout(finish, 120); }
+      };
+      let r = 'error'; try { r = A.speakId(text, code, id); } catch {}
+      if (r === 'ok' || r === 'wait') { setTimeout(() => { if (!started && !finished) { chatter(est); setTimeout(finish, est); } }, 3000); return; }
+      delete TTS_CB[id];
+    } else if (A && typeof A.speak === 'function') {
+      let r = 'error'; try { r = A.speak(text, code); } catch {}
+      if (r === 'ok' || r === 'wait') { chatter(est); setTimeout(finish, est); return; }
+    }
+    if (window.speechSynthesis) {
+      const v = (speechSynthesis.getVoices() || []).find((x) => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(code.toLowerCase()));
+      if (v || /^en/.test(code)) {
+        try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); if (v) u.voice = v; u.lang = code;
+          let bounds = false; u.onstart = () => setTimeout(() => { if (!bounds && !finished) chatter(est); }, 400);
+          u.onboundary = (e) => { if (!e.name || e.name === 'word') { bounds = true; chatter(Math.max(200, (e.charLength || 4) * 80)); } };
+          u.onend = u.onerror = () => { clearTimeout(safety); finish(); }; speechSynthesis.speak(u); return; } catch {}
+      }
+    }
+    api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: code.slice(0, 2) }) }).then((r) => {
+      if (!r.audio) { chatter(est); return setTimeout(finish, est); }
+      const au = new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio); let ctx = null, an = null;
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); const src = ctx.createMediaElementSource(au); an = ctx.createAnalyser(); an.fftSize = 512; src.connect(an); an.connect(ctx.destination); } catch { an = null; }
+      const buf = an ? new Uint8Array(an.fftSize) : null;
+      const loop = () => { if (finished || !an) return; an.getByteTimeDomainData(buf); let sum = 0; for (const x of buf) { const d = (x - 128) / 128; sum += d * d; } mouth(Math.min(1, Math.sqrt(sum / buf.length) * 7)); requestAnimationFrame(loop); };
+      au.onplay = () => { if (an) loop(); else chatter(est); };
+      au.onended = au.onerror = () => { try { ctx && ctx.close(); } catch {} clearTimeout(safety); finish(); };
+      au.play().catch(() => { chatter(est); setTimeout(finish, est); });
+    }).catch(() => { chatter(est); setTimeout(finish, est); });
+  });
 }
 const VL_LANG = { te: 'te-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', en: 'en-IN' };
 const VL_T = {
@@ -4950,7 +4995,7 @@ const CHILAKA_FRONT = `<svg viewBox="0 0 200 240" aria-hidden="true"><defs>
 <radialGradient id="vgE" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#D9E2EC"/></radialGradient>
 <linearGradient id="vgW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3FCB6B"/><stop offset="1" stop-color="#0E6A33"/></linearGradient>
 <linearGradient id="vgT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E88E5"/><stop offset="1" stop-color="#0D47A1"/></linearGradient></defs>
-<ellipse cx="100" cy="230" rx="52" ry="8" fill="rgba(0,0,0,.28)"/>
+<ellipse class="sh" cx="100" cy="230" rx="52" ry="8" fill="rgba(0,0,0,.28)"/>
 <path d="M86 196 L74 236 L96 220 L104 238 L112 220 L128 236 L114 196Z" fill="url(#vgT)"/>
 <g class="vt-feet" fill="#FF9800"><ellipse cx="84" cy="214" rx="11" ry="6"/><ellipse cx="116" cy="214" rx="11" ry="6"/></g>
 <ellipse cx="100" cy="152" rx="57" ry="64" fill="url(#vgB)"/>
@@ -4964,7 +5009,7 @@ const CHILAKA_FRONT = `<svg viewBox="0 0 200 240" aria-hidden="true"><defs>
 <g class="pu"><circle cx="81" cy="77" r="7.5" fill="#1B1B1B"/><circle cx="119" cy="77" r="7.5" fill="#1B1B1B"/><circle cx="84" cy="73" r="2.6" fill="#fff"/><circle cx="122" cy="73" r="2.6" fill="#fff"/></g></g>
 <path class="bk" d="M91 101 C95 114 105 114 109 101 C105 105 95 105 91 101Z" fill="#B23C00"/>
 <path d="M86 90 C90 78 110 78 114 90 C112 102 100 108 100 108 C100 108 88 102 86 90Z" fill="url(#vgK)"/><ellipse cx="95" cy="86" rx="4" ry="2.5" fill="#fff" opacity=".55"/></g></svg>`;
-const CHILAKA_BACK = `<svg viewBox="0 0 200 240" aria-hidden="true"><ellipse cx="100" cy="230" rx="52" ry="8" fill="rgba(0,0,0,.28)"/>
+const CHILAKA_BACK = `<svg viewBox="0 0 200 240" aria-hidden="true"><ellipse class="sh" cx="100" cy="230" rx="52" ry="8" fill="rgba(0,0,0,.28)"/>
 <g fill="#FF9800"><ellipse cx="84" cy="214" rx="11" ry="6"/><ellipse cx="116" cy="214" rx="11" ry="6"/></g>
 <ellipse cx="100" cy="152" rx="57" ry="64" fill="url(#vgB)"/>
 <g class="wl"><path d="M52 124 C26 146 30 190 60 202 C68 176 68 148 52 124Z" fill="url(#vgW)"/></g>
@@ -4983,14 +5028,16 @@ function chilaka(L) {
   const flash = (cls, ms) => { toon.classList.add(cls); return vlWait(ms).then(() => toon.classList.remove(cls)); };
   const o = {
     root, P, mic, alive: true,
-    async arrive() { await vlWait(60); toon.classList.add('walking'); toon.classList.remove('home'); await vlWait(1100); toon.classList.remove('walking'); },
-    async say(t, code) { bub.hidden = false; bub.textContent = t; toon.classList.add('talk'); await sayAloud(t, code); toon.classList.remove('talk'); },
+    async arrive() { await vlWait(1100); if (!o.alive) return; toon.classList.add('flying', 'fly-down'); toon.classList.remove('home'); await vlWait(1500); toon.classList.remove('flying', 'fly-down'); },
+    async flyHome() { toon.classList.add('turned'); await vlWait(450); toon.classList.add('flying', 'fly-up'); await vlWait(1400); toon.classList.remove('flying', 'fly-up', 'wave', 'sad', 'happy'); toon.classList.add('home'); toon.classList.remove('turned'); await vlWait(900); },
+    mouth(v) { toon.style.setProperty('--beak', v.toFixed(2)); },
+    async say(t, code) { bub.hidden = false; bub.textContent = t; toon.classList.add('talk'); await sayAloud(t, code, o.mouth); toon.classList.remove('talk'); },
     show(t) { bub.hidden = false; bub.textContent = t; },
     async listen(code) { mic.classList.add('on'); hint.textContent = P.listening; toon.classList.add('ear'); try { return await listenOnce(code); } finally { mic.classList.remove('on'); hint.textContent = ''; toon.classList.remove('ear'); } },
     no() { return flash('no', 1100); },
     happy() { root.classList.add('ok'); return flash('happy', 1100); },
-    async bye(t, code) { toon.classList.add('sad'); await vlWait(300); toon.classList.add('turned'); await vlWait(700); toon.classList.add('wave'); await o.say(t, code); await vlWait(400); toon.classList.remove('wave'); toon.classList.add('walking', 'home'); await vlWait(1200); o.remove(); },
-    async leave() { toon.classList.add('turned'); await vlWait(500); toon.classList.add('walking', 'home'); await vlWait(1000); o.remove(); },
+    async bye(t, code) { toon.classList.add('sad'); await vlWait(300); toon.classList.add('turned'); await vlWait(700); toon.classList.add('wave'); await o.say(t, code); await vlWait(300); bub.hidden = true; await o.flyHome(); o.remove(); },
+    async leave() { bub.hidden = true; await o.flyHome(); o.remove(); },
     remove() { o.alive = false; try { window.MaataAndroid && MaataAndroid.stopListening && MaataAndroid.stopListening(); } catch {} root.classList.add('gone'); setTimeout(() => root.remove(), 400); },
   };
   return o;
@@ -5015,7 +5062,7 @@ async function voiceUnlock(cfg, onPass) {
       }
       if (!c.alive) return;
       const hs = await Promise.all(alts.map((a) => sha(V.salt + vlNorm(a))));
-      if (hs.some((h) => V.hashes.includes(h))) { c.happy(); await c.say(P.ok.replace('{name}', name), V.lang); c.remove(); onPass(); return; }
+      if (hs.some((h) => V.hashes.includes(h))) { c.happy(); await c.say(P.ok.replace('{name}', name), V.lang); await c.leave(); onPass(); return; }
       if (++wrong >= 3) { window.vlCoolUntil = Date.now() + 30000; await c.no(); return c.bye(P.bye, V.lang); }
       c.no(); await c.say(P.wrong + (wrong === 2 ? ' ' + P.last : ''), V.lang);
     }
@@ -9476,7 +9523,7 @@ async function openMaps(target) {
   // Street View: never leave Maata by itself — a tap only shows a small button; Google opens only if you press it
   MP.map.on('click', (e) => {
     if (MP.svPop) { MP.svPop.remove(); MP.svPop = null; }
-    if (!mpLayersOn().has('street') || MP.nav) return;
+    if (!mpLayersOn().has('street') || MP.nav || MP.drawing) return;
     const box = el('div', 'mp-svpop'), go = el('button', null, '🧍 Street View here'), no = el('button', 'x', '✕'); box.append(go, no);
     go.onclick = (ev) => { ev.stopPropagation(); openOut('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + e.lngLat.lat.toFixed(6) + ',' + e.lngLat.lng.toFixed(6)); MP.svPop.remove(); MP.svPop = null; };
     no.onclick = (ev) => { ev.stopPropagation(); MP.svPop.remove(); MP.svPop = null; };
@@ -9484,7 +9531,7 @@ async function openMaps(target) {
   });
   MP.map.on('rotate', () => { const n = $('#mpNeedle'); if (n) n.style.transform = 'rotate(' + (-MP.map.getBearing()) + 'deg)'; });
   MP.map.on('movestart', () => { const pg = $('#mapPage'); if (pg) pg.classList.add('moving'); });
-  MP.map.on('moveend', () => { const pg = $('#mapPage'); if (pg) pg.classList.remove('moving'); clearTimeout(placeT); placeT = setTimeout(() => { mpLocalLabels(); mpLoadPlaces(); }, 250); if (!MP.nav) mpOverlays(); });
+  MP.map.on('moveend', () => { const pg = $('#mapPage'); if (pg) pg.classList.remove('moving'); clearTimeout(placeT); placeT = setTimeout(() => { mpLocalLabels(); mpLoadPlaces(); mpLoadRoads(); }, 250); if (!MP.nav) mpOverlays(); });
   MP.map.on('load', () => { MP.map.resize(); });
   MP.map.on('contextmenu', (e) => mpSetDest({ name: 'Dropped pin', lat: e.lngLat.lat, lng: e.lngLat.lng, pin: true }));
   let press = 0; MP.map.on('touchstart', (e) => { if (e.originalEvent.touches.length !== 1) return; press = setTimeout(() => mpSetDest({ name: 'Dropped pin', lat: e.lngLat.lat, lng: e.lngLat.lng, pin: true }), 600); });
@@ -9513,12 +9560,13 @@ function mpLocate(fly) {
     const c = [p.coords.longitude, p.coords.latitude]; const first = !MP.me; MP.me = c; MP.lastFix = p;
     store.set('maata_map_last', JSON.stringify(c.map((x) => +x.toFixed(4))));
     if (!MP.map) return;
-    if (!MP.puck) { const d = el('div', 'mp-puck'); d.innerHTML = '<i></i>'; d.onclick = (e) => { e.stopPropagation(); mpVehicleSheet(MP.puckKind); }; MP.puck = new maplibregl.Marker({ element: d, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(c).addTo(MP.map); mpPuckLook(); }
+    if (!MP.puck) { const d = el('div', 'mp-puck'); d.innerHTML = '<i></i>'; d.onclick = (e) => { e.stopPropagation(); if (MP.drawing && MP.drawAdd) return MP.drawAdd(MP.me); mpVehicleSheet(MP.puckKind); }; MP.puck = new maplibregl.Marker({ element: d, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(c).addTo(MP.map); mpPuckLook(); }
     MP.puck.getElement().classList.toggle('moving', p.coords.speed > 0.6);
     MP.puck.setLngLat(c);
     if (p.coords.heading != null && !isNaN(p.coords.heading) && p.coords.speed > 1) mpTurnPuck(p.coords.heading);
     if (first && fly && !MP.dest) MP.map.flyTo({ center: c, zoom: 16, speed: 1.6 });
     if (MP.nav) mpNavTick(p);
+    if (MP.rec) mpRecTick(p);
   }, (e) => { if (e.code === 1) toast('Allow location for Maata to see where you are.'); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
 }
 // ----- map styles -----
@@ -9629,7 +9677,7 @@ function mpSmartChips() {
 function mpWarmUp() {
   if (!F('maps') || window.maplibregl) return;
   const pc = document.createElement('link'); pc.rel = 'preconnect'; pc.href = 'https://tiles.openfreemap.org'; pc.crossOrigin = ''; document.head.append(pc);
-  const go = () => loadMapLibre().catch(() => {}); (window.requestIdleCallback || setTimeout)(go, 4000);
+  const go = () => loadMapLibre().catch(() => {}); if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 4000 }); else setTimeout(go, 4000);
 }
 // ----- ⚡ nearby, instantly: 1) places already inside the map on the phone, 2) places added by Maata people, 3) internet (several free services at once) -----
 const NEAR_TILE = { fuel: ['fuel'], ev: ['charging_station'], hospital: ['hospital', 'clinic', 'doctors', 'nursing_home'], atm: ['atm', 'bank'], food: ['restaurant', 'fast_food', 'cafe', 'food_court'], parking: ['parking'], hotel: ['hotel', 'guest_house', 'motel', 'hostel', 'lodging'],
@@ -9724,7 +9772,7 @@ function mpPlaceSheet(loading) {
     b.onclick = () => { MP.sel = i; mpDrawRoutes(); mpPlaceSheet(); }; rl.append(b);
   });
   s.append(rl);
-  { const rr = MP.routes[MP.sel]; if (rr && MP.dest) { const g = rr.geometry.coordinates, gapEnd = hav(g[g.length - 1], [MP.dest.lng, MP.dest.lat]); if (gapEnd > 80) s.append(el('small', 'mp-note', '🚶 The road on the map ends ' + fmtKm(gapEnd) + ' before this place — the dotted line shows the last part.')); } }
+  { const rr = MP.routes[MP.sel]; if (rr && MP.dest) { const g = rr.geometry.coordinates, gapEnd = hav(g[g.length - 1], [MP.dest.lng, MP.dest.lat]); if (gapEnd > 80) s.append(el('small', 'mp-note', '🚶 The road on the map ends ' + fmtKm(gapEnd) + ' before this place — the dotted line shows the last part. Know a road here? ➕ Contribute → 🛣️ Add a road.')); } }
   const acts = el('div', 'mp-acts');
   const go = el('button', 'mp-go', '▲ Start'); go.disabled = !MP.routes.length || !MP.me; go.onclick = MP.from || (MP.dest && MP.dest.isMe) ? async () => { if (MP.dest.isMe) return toast('You are already here 🙂'); MP.from = null; mpdFields(); await mpRoute(); mpStartNav(); } : mpStartNav;
   const share = el('button', 'mp-sec', '📤 Share'); share.onclick = () => mpShareDest();
@@ -9995,8 +10043,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 117;
-const APP_NOTES = ["🛰️ Satellite: no more “Map data not yet available” when you zoom in — sharpest photos where they exist", "🛰️ Satellite now shows roads and village / road names on top (like Google)"];
+const APP_VERSION = 119;
+const APP_NOTES = ["🦜 Chilaka sits on the branch first, flies down to ask your password, then flies back and sits on the branch", "👄 Chilaka's beak now moves with every word it speaks"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10688,7 +10736,7 @@ function mpRoadsBoost() {
 }
 function mpStyleTweaks() {
   const m = MP.map; if (!m) return;
-  MP.origTS = {}; MP.origLW = {}; mpColourise(); mpRoadsBoost(); mpTextSize(); if (store.get('maata_map_3d') === '1') mp3D(true, false);
+  MP.origTS = {}; MP.origLW = {}; MP.roadsAt = null; setTimeout(() => mpLoadRoads(true), 300); mpColourise(); mpRoadsBoost(); mpTextSize(); if (store.get('maata_map_3d') === '1') mp3D(true, false);
   try { for (const l of m.getStyle().layers) if (l.type === 'symbol' && /^poi/.test(l.id)) m.setLayerZoomRange(l.id, 13, 24); } catch {} // temples, schools… show earlier, like Google
   mpLocalLabels(); m.once('idle', mpLocalLabels); mpShowSavedPins(); mpLoadPlaces(true); mpApplyLayers();
 }
@@ -10749,8 +10797,97 @@ function mpYouSheet() {
   const sh = el('button', 'sheet-btn', '🚦 Share road speed for live traffic (no name): ' + (store.get('maata_map_share_speed') === '0' ? 'OFF' : 'ON'));
   sh.onclick = () => { store.set('maata_map_share_speed', store.get('maata_map_share_speed') === '0' ? '1' : '0'); mpYouSheet(); }; s.append(sh);
 }
-async function mpContributeSheet() {
+// ----- 🛣️ roads added by Maata people: draw on the map or record while travelling -----
+const ROAD_KIND = { road: ['🛣️', 'Village road (cars can go)', '#7E57C2'], mud: ['🛵', 'Mud road (bikes, tractors)', '#8D5A2B'], foot: ['🚶', 'Footpath', '#00897B'] };
+let roadT = 0;
+async function mpLoadRoads(force) {
+  const m = MP.map; if (!m || !m.getStyle()) return;
+  if (m.getZoom() < 11) { mpDrawCRoads([]); return; }
+  const b = m.getBounds(), key = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((x) => x.toFixed(2)).join(',');
+  if (!force && MP.roadsAt === key) return mpDrawCRoads(MP.croads || []); MP.roadsAt = key;
+  try { MP.croads = await api('/api/maps/roads?bbox=' + [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((x) => x.toFixed(4)).join(',')); } catch { MP.croads = MP.croads || []; }
+  mpDrawCRoads(MP.croads);
+}
+function mpDrawCRoads(list) {
+  const m = MP.map; if (!m || !m.getStyle()) return;
+  const data = { type: 'FeatureCollection', features: list.map((r) => ({ type: 'Feature', properties: { id: r.id, kind: r.kind }, geometry: { type: 'LineString', coordinates: r.coords } })) };
+  try {
+    if (m.getSource('mp-croads')) { m.getSource('mp-croads').setData(data); return; }
+    if (!list.length) return;
+    m.addSource('mp-croads', { type: 'geojson', data });
+    const first = (m.getStyle().layers.find((l) => l.type === 'symbol') || {}).id, before = first && m.getLayer(first) ? first : undefined;
+    const W = (a, b) => ['interpolate', ['exponential', 1.5], ['zoom'], 11, a, 17, b];
+    m.addLayer({ id: 'mp-croads-case', type: 'line', source: 'mp-croads', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#FFFFFF', 'line-width': W(3, 11) } }, before);
+    for (const [k, dash] of [['road', null], ['mud', [2.5, 1.2]], ['foot', [0.6, 1.6]]]) {
+      const id = k === 'road' ? 'mp-croads' : 'mp-croads-' + k;
+      m.addLayer({ id, type: 'line', source: 'mp-croads', filter: ['==', ['get', 'kind'], k], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ROAD_KIND[k][2], 'line-width': W(1.8, 7.5), ...(dash ? { 'line-dasharray': dash } : {}) } }, before);
+      m.on('click', id, (e) => { const f = e.features && e.features[0]; const r = f && (MP.croads || []).find((x) => x.id === f.properties.id); if (r && !MP.drawing) { e.preventDefault(); mpRoadSheet(r, e.lngLat); } });
+    }
+  } catch (e) { console.log('[maps] croads', e.message); }
+}
+function mpRoadSheet(r, at) {
+  const [ic, label] = ROAD_KIND[r.kind] || ROAD_KIND.road; let len = 0; for (let i = 1; i < r.coords.length; i++) len += hav(r.coords[i - 1], r.coords[i]);
+  sheet(ic + ' ' + (r.name || label), (list) => {
+    list.append(el('p', 'info-note', label + ' · ' + fmtKm(len) + ' · added by ' + r.byName + (r.confirms ? ' · 👍 ' + r.confirms + ' people confirmed' : '') + '\nThis road is not on the public map yet. Maata users added it.'));
+    const vote = async (ok) => { try { await api('/api/maps/roads/' + r.id + '/vote', { method: 'POST', body: JSON.stringify({ ok }) }); toast(ok ? '👍 Thanks for confirming' : '🚩 Thanks — wrong roads are removed when others agree'); mpLoadRoads(true); } catch (e) { toast(e.message); } closeSheet('moreSheet'); };
+    const y = el('button', 'sheet-btn', '👍 This road is right'); y.onclick = () => vote(true);
+    const n = el('button', 'sheet-btn', '🚩 There is no road here'); n.onclick = () => vote(false);
+    const osm = el('button', 'sheet-btn', '🗺️ Add it to OpenStreetMap too (then routes use it)'); osm.onclick = () => { const c = at || { lat: r.coords[0][1], lng: r.coords[0][0] }; openOut('https://www.openstreetmap.org/edit?editor=id#map=18/' + c.lat.toFixed(5) + '/' + c.lng.toFixed(5)); };
+    list.append(y, n, osm);
+    if (r.mine) { const d = el('button', 'sheet-btn', '🗑️ Delete my road'); d.onclick = async () => { if (!confirm('Delete this road?')) return; try { await api('/api/maps/roads/' + r.id, { method: 'DELETE' }); toast('Deleted'); mpLoadRoads(true); } catch (e) { toast(e.message); } closeSheet('moreSheet'); }; list.append(d); }
+  });
+}
+// ✏️ draw: tap along the road
+function mpDrawRoad(kind, name) {
+  const m = MP.map; MP.drawPts = []; mpTab('explore'); const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  const info = el('p', 'mp-note2', '✏️ Tap along the road on the map, from one end to the other. Tip: switch to 🛰️ Satellite (◇ button) to see the road clearly.');
+  const cnt = el('b', 'mp-drawcount', '0 points · 0 m');
+  const undo = el('button', 'mp-sec', '↩️ Undo'), save = el('button', 'mp-go', '✅ Save road'), cancel = el('button', 'mp-sec', '✕ Cancel');
+  const acts = el('div', 'mp-acts'); acts.append(save, undo, cancel); s.append(el('h3', 'mp-h3', (ROAD_KIND[kind] || ROAD_KIND.road)[0] + ' Draw the road'), info, cnt, acts);
+  const draw = () => {
+    let len = 0; for (let i = 1; i < MP.drawPts.length; i++) len += hav(MP.drawPts[i - 1], MP.drawPts[i]); cnt.textContent = MP.drawPts.length + ' points · ' + fmtKm(len);
+    const data = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: MP.drawPts.length > 1 ? MP.drawPts : [] } }, ...MP.drawPts.map((c) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: c } }))] };
+    if (m.getSource('mp-draw')) m.getSource('mp-draw').setData(data);
+    else { m.addSource('mp-draw', { type: 'geojson', data }); m.addLayer({ id: 'mp-draw-line', type: 'line', source: 'mp-draw', filter: ['==', ['geometry-type'], 'LineString'], paint: { 'line-color': '#E91E63', 'line-width': 5 } }); m.addLayer({ id: 'mp-draw-pt', type: 'circle', source: 'mp-draw', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-color': '#E91E63', 'circle-stroke-width': 3 } }); }
+  };
+  const onTap = (e) => { MP.drawPts.push([+e.lngLat.lng.toFixed(6), +e.lngLat.lat.toFixed(6)]); draw(); };
+  MP.drawAdd = (c) => { if (c) { MP.drawPts.push([+c[0].toFixed(6), +c[1].toFixed(6)]); draw(); } };
+  MP.drawing = true; m.on('click', onTap); if (m.getZoom() < 15) m.easeTo({ zoom: 16 });
+  const end = () => { MP.drawing = false; MP.drawAdd = null; m.off('click', onTap); for (const id of ['mp-draw-line', 'mp-draw-pt']) if (m.getLayer(id)) m.removeLayer(id); if (m.getSource('mp-draw')) m.removeSource('mp-draw'); mpHomeSheet(); };
+  undo.onclick = () => { MP.drawPts.pop(); draw(); };
+  cancel.onclick = end;
+  save.onclick = async () => { if (MP.drawPts.length < 2) return toast('Tap at least two points along the road'); save.disabled = true; try { await api('/api/maps/roads', { method: 'POST', body: JSON.stringify({ kind, name, coords: MP.drawPts }) }); toast('✅ Road added — every Maata user will see it. Thank you!'); end(); mpLoadRoads(true); } catch (e) { toast(e.message); save.disabled = false; } };
+  draw();
+}
+// 🔴 record: travel on the road with GPS on
+function mpRecordRoad(kind, name) {
+  if (!MP.me) return toast('Waiting for your location…'); MP.rec = { kind, name, pts: [MP.me.map((v) => +v.toFixed(6))], len: 0 }; mpTab('explore');
   const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  const st = el('b', 'mp-drawcount', '🔴 Recording… 0 m'); const stop = el('button', 'mp-go', '⏹ Stop & save'), cancel = el('button', 'mp-sec', '✕ Cancel');
+  const acts = el('div', 'mp-acts'); acts.append(stop, cancel); s.append(el('h3', 'mp-h3', '🔴 Recording the road'), el('p', 'mp-note2', 'Travel along the road. Maata draws it from your GPS. Keep Maata open. Stop when you reach the end.'), st, acts);
+  MP.recUI = st;
+  const end = () => { MP.rec = null; MP.recUI = null; if (MP.map.getLayer('mp-rec')) MP.map.removeLayer('mp-rec'); if (MP.map.getSource('mp-rec')) MP.map.removeSource('mp-rec'); mpHomeSheet(); };
+  cancel.onclick = end;
+  stop.onclick = async () => { const r = MP.rec; if (!r || r.len < 20) return toast('Travel a little more on the road first'); stop.disabled = true; try { await api('/api/maps/roads', { method: 'POST', body: JSON.stringify({ kind: r.kind, name: r.name, coords: r.pts }) }); toast('✅ Road saved (' + fmtKm(r.len) + ') — thank you!'); end(); mpLoadRoads(true); } catch (e) { toast(e.message); stop.disabled = false; } };
+}
+function mpRecTick(fix) {
+  const r = MP.rec; if (!r || fix.coords.accuracy > 35) return; const c = [+fix.coords.longitude.toFixed(6), +fix.coords.latitude.toFixed(6)], last = r.pts[r.pts.length - 1], d = hav(last, c);
+  if (d < 12) return; r.pts.push(c); r.len += d; if (MP.recUI) MP.recUI.textContent = '🔴 Recording… ' + fmtKm(r.len) + ' · ' + r.pts.length + ' points';
+  const m = MP.map, data = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: r.pts } };
+  try { if (m.getSource('mp-rec')) m.getSource('mp-rec').setData(data); else { m.addSource('mp-rec', { type: 'geojson', data }); m.addLayer({ id: 'mp-rec', type: 'line', source: 'mp-rec', paint: { 'line-color': '#E53935', 'line-width': 5, 'line-dasharray': [1, 1] } }); } } catch {}
+}
+async function mpContributeSheet(mode) {
+  const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  const tg = el('div', 'mp-ctabs'); for (const [k, l] of [['place', '📍 Add a place'], ['road', '🛣️ Add a road']]) { const b = el('button', (mode || 'place') === k ? 'on' : null, l); b.onclick = () => { if (MP.pickPin) { MP.pickPin.remove(); MP.pickPin = null; } mpContributeSheet(k); }; tg.append(b); } s.append(tg);
+  if (mode === 'road') {
+    s.append(el('h3', 'mp-h3', '🛣️ Add a missing road'), el('p', 'mp-note2', 'A village road, mud road or footpath that is not on the map? Add it — every Maata user will see it on the map.'));
+    const f2 = el('div', 'formcol');
+    const kl = el('label'); kl.append(el('span', null, 'What kind of road?')); const ks = el('select'); for (const [k, [ic, l]] of Object.entries(ROAD_KIND)) ks.add(new Option(ic + ' ' + l, k)); kl.append(ks);
+    const nl2 = el('label'); nl2.append(el('span', null, 'Road name (optional)')); const nm2 = el('input'); nm2.maxLength = 80; nm2.placeholder = 'e.g. Mangunta – Marripalli road'; nl2.append(nm2);
+    const dr = el('button', 'mp-go', '✏️ Draw it on the map'); dr.onclick = () => mpDrawRoad(ks.value, nm2.value.trim());
+    const rc = el('button', 'mp-sec', '🔴 Record while I travel on it'); rc.onclick = () => mpRecordRoad(ks.value, nm2.value.trim());
+    f2.append(kl, nl2, dr, rc); s.append(f2); return;
+  }
   s.append(el('h3', 'mp-h3', '➕ Add a missing place'), el('p', 'mp-note2', 'Village shops, temples and clinics are often missing on maps. Add them — every Maata user will see them. Move the map so the 📍 pin in the middle sits on the place.'));
   const pin = el('div', 'mp-center-pin', '📍'); $('#mapPage').append(pin); MP.pickPin = pin;
   const f = el('div', 'formcol');
@@ -10764,7 +10901,7 @@ async function mpContributeSheet() {
   const here = el('button', 'mp-sec', '📍 Use my current location'); here.onclick = () => { if (MP.me) MP.map.easeTo({ center: MP.me, zoom: 17 }); };
   const save = el('button', 'mp-go', 'Add to Maata Maps');
   save.onclick = async () => {
-    const c = MP.map.getCenter(); save.disabled = true;
+    const pr = pin.getBoundingClientRect(), mr = $('#mpMap').getBoundingClientRect(), c = MP.map.unproject([pr.left + pr.width / 2 - mr.left, pr.bottom - mr.top]); save.disabled = true;
     try { await api('/api/maps/places', { method: 'POST', body: JSON.stringify({ name: nm.value, cat: cs.value, phone: ph.value, note: nt.value, lat: c.lat, lng: c.lng, mine: !!(mine && mine.checked) }) }); toast('✅ Added — thank you!'); mpLoadPlaces(true); mpTab('explore'); }
     catch (e) { toast(e.message); save.disabled = false; }
   };

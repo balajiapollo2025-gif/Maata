@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1462,7 +1462,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 117;
+const MAATA_VERSION = 119;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -1737,6 +1737,34 @@ app.post('/api/maps/plan', auth, async (req, res) => {
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
   try { const j = aiJson(r); res.json({ title: clip(j.title, 100), tip: clip(j.tip, 200), stops: (Array.isArray(j.stops) ? j.stops : []).slice(0, 6).map((s) => ({ name: clip(s.name, 120), why: clip(s.why, 160), time: clip(s.time, 20) })).filter((s) => s.name) }); }
   catch { res.status(502).json({ error: 'AI could not plan this. Try again.' }); }
+});
+
+// ---------- 🛣️ roads added by Maata people (village roads missing on the public map) ----------
+const ROAD_KINDS = ['road', 'mud', 'foot'];
+const roadOut = (x, me) => ({ id: x.id, name: x.name || '', kind: x.kind, coords: x.coords, byName: (userById(x.by) || {}).name || 'Maata user', mine: x.by === me, confirms: (x.ok || []).length, createdAt: x.createdAt });
+app.get('/api/maps/roads', auth, (req, res) => {
+  const b = bboxOf(req.query); if (!b) return res.json([]);
+  res.json(db.mapRoads.filter((x) => !x.hidden && x.bbox[0] <= b[2] && x.bbox[2] >= b[0] && x.bbox[1] <= b[3] && x.bbox[3] >= b[1]).slice(-400).map((x) => roadOut(x, req.user.id)));
+});
+app.post('/api/maps/roads', auth, (req, res) => {
+  if (db.mapRoads.filter((x) => x.by === req.user.id && now() - x.createdAt < 86400000).length >= 30) return res.status(429).json({ error: 'You can add up to 30 roads a day.' });
+  const pts = (Array.isArray(req.body?.coords) ? req.body.coords : []).slice(0, 3000).filter(okPt).map((p) => [+Number(p[0]).toFixed(6), +Number(p[1]).toFixed(6)]);
+  if (pts.length < 2) return res.status(400).json({ error: 'Draw the road with at least two points.' });
+  let len = 0; for (let i = 1; i < pts.length; i++) len += geoDist(pts[i - 1], pts[i]);
+  if (len < 20) return res.status(400).json({ error: 'The road is too short.' }); if (len > 60000) return res.status(400).json({ error: 'Add long roads in parts (up to 60 km).' });
+  const bbox = [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+  const x = { id: newId(), by: req.user.id, name: clip(req.body?.name, 80), kind: ROAD_KINDS.includes(req.body?.kind) ? req.body.kind : 'road', coords: pts, bbox, length: Math.round(len), ok: [], reports: [], createdAt: now() };
+  db.mapRoads.push(x); save(); res.json(roadOut(x, req.user.id));
+});
+app.post('/api/maps/roads/:id/vote', auth, (req, res) => {
+  const x = db.mapRoads.find((y) => y.id === req.params.id && !y.hidden); if (!x) return res.status(404).json({ error: 'Not found.' });
+  if (req.body?.ok) x.ok = [...new Set([...(x.ok || []), req.user.id])];
+  else { x.reports = [...new Set([...(x.reports || []), req.user.id])]; if (x.reports.length >= 3 && x.reports.length > (x.ok || []).length) x.hidden = true; }
+  save(); res.json(roadOut(x, req.user.id));
+});
+app.delete('/api/maps/roads/:id', auth, (req, res) => {
+  const x = db.mapRoads.find((y) => y.id === req.params.id && y.by === req.user.id); if (!x) return res.status(404).json({ error: 'Not found.' });
+  db.mapRoads = db.mapRoads.filter((y) => y !== x); save(); res.json({ ok: true });
 });
 
 // place / address search for picking a location on a computer (no GPS there)
