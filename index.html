@@ -1441,6 +1441,8 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 
 /* Maata Maps v3 */
+.mp-svpop{display:flex;gap:4px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.28);margin-bottom:6px}.mp-svpop button{padding:8px 12px;border-radius:999px;background:#FFC107;color:#3E2723;font-weight:800;font-size:13.5px}.mp-svpop button.x{background:#ECEFF1;color:#37474F;padding:8px 11px}
+
 .mp-loc{font-size:calc(12.5px * var(--mp-text-k,1))}.mp-loc.only{color:#111827;font-weight:700;font-size:calc(13.5px * var(--mp-text-k,1))}.mp-loc.only.city,.mp-loc.only.town{font-size:calc(16px * var(--mp-text-k,1));font-weight:800}
 .mp-fab.mp3d{font-weight:900;font-size:15px;color:#0F7A6E}.mp-fab.mp3d.on{background:#0F7A6E;color:#fff}
 .mpl-themes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:6px 10px}.mpl-themes button{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;color:var(--ink);font-size:12.5px;font-weight:600}
@@ -9460,7 +9462,15 @@ async function openMaps(target) {
   MP.styleKey = store.get('maata_map_style') || 'colour';
   MP.map = new maplibregl.Map({ container: 'mpMap', style: MAP_STYLES[MP.styleKey].url || MAP_STYLES[MP.styleKey].style, center: start, zoom: MP.me ? 15 : (store.get('maata_map_last') ? 13 : 4.3), attributionControl: { compact: true }, maxPitch: 70, dragRotate: true });
   MP.map.on('style.load', () => { clearTimeout(MP.styleWait); mpDrawRoutes(); setTimeout(mpStyleTweaks, 400); });
-  MP.map.on('click', (e) => { if (mpLayersOn().has('street') && !MP.nav) openOut('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + e.lngLat.lat.toFixed(6) + ',' + e.lngLat.lng.toFixed(6)); });
+  // Street View: never leave Maata by itself — a tap only shows a small button; Google opens only if you press it
+  MP.map.on('click', (e) => {
+    if (MP.svPop) { MP.svPop.remove(); MP.svPop = null; }
+    if (!mpLayersOn().has('street') || MP.nav) return;
+    const box = el('div', 'mp-svpop'), go = el('button', null, '🧍 Street View here'), no = el('button', 'x', '✕'); box.append(go, no);
+    go.onclick = (ev) => { ev.stopPropagation(); openOut('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + e.lngLat.lat.toFixed(6) + ',' + e.lngLat.lng.toFixed(6)); MP.svPop.remove(); MP.svPop = null; };
+    no.onclick = (ev) => { ev.stopPropagation(); MP.svPop.remove(); MP.svPop = null; };
+    MP.svPop = new maplibregl.Marker({ element: box, anchor: 'bottom' }).setLngLat(e.lngLat).addTo(MP.map);
+  });
   MP.map.on('rotate', () => { const n = $('#mpNeedle'); if (n) n.style.transform = 'rotate(' + (-MP.map.getBearing()) + 'deg)'; });
   MP.map.on('movestart', () => { const pg = $('#mapPage'); if (pg) pg.classList.add('moving'); });
   MP.map.on('moveend', () => { const pg = $('#mapPage'); if (pg) pg.classList.remove('moving'); clearTimeout(placeT); placeT = setTimeout(() => { mpLocalLabels(); mpLoadPlaces(); }, 250); if (!MP.nav) mpOverlays(); });
@@ -9974,8 +9984,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 114;
-const APP_NOTES = ["🎨 Map themes: Normal, Colourful, Festival, Soft, Ocean, Sunset, Grey", "✏️ Text size on the map: A− A A+ A++", "🔤 Names on the map: English, English + తెలుగు, or తెలుగు only (and Hindi, Tamil, Kannada…)", "🏔️ 3D view: hills rise up, buildings stand, sky on the horizon — tap 3D on the map"];
+const APP_VERSION = 116;
+const APP_NOTES = ["🛣️ Main roads are darker and bolder (highways deep orange, main roads orange-yellow)", "🏘️ Village roads stand out in a dark slate colour with a white edge; field tracks dark brown dashes"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10310,7 +10320,7 @@ function mpApplyLayers(changed) {
     if (!layers.some((l) => l.type === 'fill-extrusion')) add({ id: 'mp-3d', type: 'fill-extrusion', source: vec, 'source-layer': 'building', minzoom: 14, paint: { 'fill-extrusion-color': MP.styleKey === 'night' ? '#3A4A60' : '#E4DDD3', 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': 0.9 } }, firstSym);
     if (changed === 'raised') m.easeTo({ pitch: 58, zoom: Math.max(m.getZoom(), 16.2), duration: 900 });
   } else { drop('mp-3d'); if (changed === 'raised' && !MP.nav) m.easeTo({ pitch: 0, duration: 700 }); }
-  if (changed === 'street' && on.has('street')) toast('🧍 Street View: tap any road on the map');
+  if (changed === 'street' && on.has('street')) toast('🧍 Street View: tap a road, then press “Street View here”');
   const rb = $('#mpReport'); if (rb) rb.hidden = !(on.has('traffic') || MP.nav);
   mpOverlays(changed);
 }
@@ -10555,12 +10565,12 @@ function mpLocalLabels() {
 // 🎨 map themes (colours), ✏️ text size, 🔤 names language, 🏔️ 3D view
 const MAP_THEMES = {
   normal: { label: 'Normal', sw: ['#F8F4F0', '#AAD3DF', '#D8E8C8'] },
-  colourful: { label: 'Colourful', sw: ['#F6F2EA', '#7CC8F8', '#BDE7B0'], bg: '#F6F2EA', water: '#7CC8F8', grass: '#BDE7B0', wood: '#9ED69A', farm: '#EEF4CE', resid: '#F3E9DD', bld: '#E9DCCB', bldEdge: '#CDB89E', mw: '#FF8A3D', trunk: '#FFB13B', prim: '#FFD15C', sec: '#FFF0A8', river: '#5AB7F0', t: '#111827', tr: '#2B2B2B', tp: '#3A2E25', tw: '#0B5394', halo: 'rgba(255,255,255,0.95)' },
-  festival: { label: 'Festival', sw: ['#FFF5E1', '#29B6F6', '#81C784'], bg: '#FFF5E1', water: '#29B6F6', grass: '#81C784', wood: '#4CAF50', farm: '#DCE775', resid: '#FFE0B2', bld: '#FFCC80', bldEdge: '#E0A050', mw: '#F4511E', trunk: '#FB8C00', prim: '#FFB300', sec: '#FFEE58', river: '#0288D1', t: '#0D0D0D', tr: '#1A1A1A', tp: '#3E2723', tw: '#01579B', halo: 'rgba(255,255,255,0.95)' },
-  pastel: { label: 'Soft', sw: ['#FAF7F2', '#A9DCF7', '#D7F0CF'], bg: '#FAF7F2', water: '#A9DCF7', grass: '#D7F0CF', wood: '#C4E5BD', farm: '#F5F8E3', resid: '#F7F0E8', bld: '#EFE6DB', bldEdge: '#DCCDBB', mw: '#F7A87B', trunk: '#F8C47E', prim: '#FBE29C', sec: '#FFF7CF', river: '#8FCBEE', t: '#1F2937', tr: '#374151', tp: '#4B3B30', tw: '#1E5A8A', halo: 'rgba(255,255,255,0.95)' },
-  ocean: { label: 'Ocean', sw: ['#EEF5F9', '#4FA3E0', '#B7DFC4'], bg: '#EEF5F9', water: '#4FA3E0', grass: '#B7DFC4', wood: '#8CCBA0', farm: '#E3EFD9', resid: '#E8EEF3', bld: '#D6E0E8', bldEdge: '#B6C4D0', mw: '#1565C0', trunk: '#1E88E5', prim: '#64B5F6', sec: '#BBDEFB', river: '#1976D2', t: '#0B2545', tr: '#13315C', tp: '#1B3A57', tw: '#0B3D91', halo: 'rgba(255,255,255,0.95)' },
-  sunset: { label: 'Sunset', sw: ['#FBEFE3', '#6EC1E4', '#D4E6A5'], bg: '#FBEFE3', water: '#6EC1E4', grass: '#D4E6A5', wood: '#B5D38A', farm: '#F6E7B8', resid: '#F9E4D0', bld: '#F0CFAE', bldEdge: '#D9AE85', mw: '#E64A19', trunk: '#F57C00', prim: '#FFA726', sec: '#FFE0B2', river: '#3E9BCB', t: '#3E1F0D', tr: '#4E2A14', tp: '#5D3418', tw: '#1B5E85', halo: 'rgba(255,250,244,0.95)' },
-  grey: { label: 'Grey', sw: ['#F5F5F5', '#CFD8DC', '#E0E0E0'], bg: '#F5F5F5', water: '#CFD8DC', grass: '#E3E3E3', wood: '#D6D6D6', farm: '#EEEEEE', resid: '#F0F0F0', bld: '#E0E0E0', bldEdge: '#C8C8C8', mw: '#8E8E8E', trunk: '#A8A8A8', prim: '#C4C4C4', sec: '#E4E4E4', river: '#AEBFC7', t: '#111111', tr: '#222222', tp: '#333333', tw: '#37474F', halo: 'rgba(255,255,255,0.95)' },
+  colourful: { label: 'Colourful', sw: ['#F6F2EA', '#7CC8F8', '#BDE7B0'], bg: '#F6F2EA', water: '#7CC8F8', grass: '#BDE7B0', wood: '#9ED69A', farm: '#EEF4CE', resid: '#F3E9DD', bld: '#E9DCCB', bldEdge: '#CDB89E', mw: '#E8590C', trunk: '#F76707', prim: '#FD9A2B', sec: '#FCC419', river: '#5AB7F0', vil: '#5F6B7A', t: '#111827', tr: '#2B2B2B', tp: '#3A2E25', tw: '#0B5394', halo: 'rgba(255,255,255,0.95)' },
+  festival: { label: 'Festival', sw: ['#FFF5E1', '#29B6F6', '#81C784'], bg: '#FFF5E1', water: '#29B6F6', grass: '#81C784', wood: '#4CAF50', farm: '#DCE775', resid: '#FFE0B2', bld: '#FFCC80', bldEdge: '#E0A050', mw: '#C92A2A', trunk: '#E8590C', prim: '#F08C00', sec: '#FAB005', river: '#0288D1', vil: '#5C3D2E', t: '#0D0D0D', tr: '#1A1A1A', tp: '#3E2723', tw: '#01579B', halo: 'rgba(255,255,255,0.95)' },
+  pastel: { label: 'Soft', sw: ['#FAF7F2', '#A9DCF7', '#D7F0CF'], bg: '#FAF7F2', water: '#A9DCF7', grass: '#D7F0CF', wood: '#C4E5BD', farm: '#F5F8E3', resid: '#F7F0E8', bld: '#EFE6DB', bldEdge: '#DCCDBB', mw: '#E8743B', trunk: '#F08A4B', prim: '#F4A261', sec: '#F6C177', river: '#8FCBEE', vil: '#6B7785', t: '#1F2937', tr: '#374151', tp: '#4B3B30', tw: '#1E5A8A', halo: 'rgba(255,255,255,0.95)' },
+  ocean: { label: 'Ocean', sw: ['#EEF5F9', '#4FA3E0', '#B7DFC4'], bg: '#EEF5F9', water: '#4FA3E0', grass: '#B7DFC4', wood: '#8CCBA0', farm: '#E3EFD9', resid: '#E8EEF3', bld: '#D6E0E8', bldEdge: '#B6C4D0', mw: '#0B4F9C', trunk: '#1565C0', prim: '#1E88E5', sec: '#64B5F6', river: '#1976D2', vil: '#3D5A80', t: '#0B2545', tr: '#13315C', tp: '#1B3A57', tw: '#0B3D91', halo: 'rgba(255,255,255,0.95)' },
+  sunset: { label: 'Sunset', sw: ['#FBEFE3', '#6EC1E4', '#D4E6A5'], bg: '#FBEFE3', water: '#6EC1E4', grass: '#D4E6A5', wood: '#B5D38A', farm: '#F6E7B8', resid: '#F9E4D0', bld: '#F0CFAE', bldEdge: '#D9AE85', mw: '#B91C1C', trunk: '#C2410C', prim: '#EA580C', sec: '#FB923C', river: '#3E9BCB', vil: '#6B3E26', t: '#3E1F0D', tr: '#4E2A14', tp: '#5D3418', tw: '#1B5E85', halo: 'rgba(255,250,244,0.95)' },
+  grey: { label: 'Grey', sw: ['#F5F5F5', '#CFD8DC', '#E0E0E0'], bg: '#F5F5F5', water: '#CFD8DC', grass: '#E3E3E3', wood: '#D6D6D6', farm: '#EEEEEE', resid: '#F0F0F0', bld: '#E0E0E0', bldEdge: '#C8C8C8', mw: '#374151', trunk: '#4B5563', prim: '#6B7280', sec: '#9CA3AF', river: '#AEBFC7', vil: '#4B5563', t: '#111111', tr: '#222222', tp: '#333333', tw: '#37474F', halo: 'rgba(255,255,255,0.95)' },
 };
 const mapTheme = () => (MAP_THEMES[store.get('maata_map_theme')] ? store.get('maata_map_theme') : 'colourful');
 const mapTextK = () => Number(store.get('maata_map_text')) || 1;
@@ -10579,8 +10589,12 @@ function mpColourise() {
       else if (/farm|agri|crop/.test(id)) set(id, 'fill-color', T.farm);
       else if (/residential/.test(id)) set(id, 'fill-color', T.resid);
       else if (sl === 'building' || /^building$/.test(id)) { set(id, 'fill-color', T.bld); set(id, 'fill-outline-color', T.bldEdge); }
-    } else if (l.type === 'line' && sl === 'transportation' && !/casing|outline|rail|path|pedestrian|aeroway|ferry/.test(id)) {
-      if (/motorway/.test(id)) set(id, 'line-color', T.mw); else if (/trunk/.test(id)) set(id, 'line-color', T.trunk); else if (/primary/.test(id)) set(id, 'line-color', T.prim); else if (/secondary|tertiary/.test(id)) set(id, 'line-color', T.sec);
+    } else if (l.type === 'line' && sl === 'transportation' && /motorway|trunk|primary|secondary|tertiary/.test(id) && !/rail|path|pedestrian|aeroway|ferry|link/.test(id)) {
+      // main roads: darker, bolder
+      MP.origLW = MP.origLW || {}; if (!(id in MP.origLW)) MP.origLW[id] = l.paint && l.paint['line-width'] != null ? l.paint['line-width'] : 1;
+      try { m.setPaintProperty(id, 'line-width', scaleTS(MP.origLW[id], 1.45)); } catch {}
+      if (/casing|outline/.test(id)) set(id, 'line-color', /motorway|trunk/.test(id) ? '#7A2E05' : '#9C5A12');
+      else if (/motorway/.test(id)) set(id, 'line-color', T.mw); else if (/trunk/.test(id)) set(id, 'line-color', T.trunk); else if (/primary/.test(id)) set(id, 'line-color', T.prim); else set(id, 'line-color', T.sec);
     } else if (l.type === 'line' && (sl === 'waterway' || /^waterway/.test(id))) set(id, 'line-color', T.river);
     else if (l.type === 'symbol' && l.layout && l.layout['text-field']) {
       const place = sl === 'place' || /^place|label_(city|town|village|other|state|country)/.test(id), road = sl === 'transportation_name' || /highway-name|road.*label|highway-ref/.test(id), water = /water/.test(id + sl);
@@ -10629,7 +10643,7 @@ function mpMapLook(list) { // extra sections of the Map type sheet
   const th = el('div', 'mpl-themes'), cur = mapTheme();
   for (const [k, t] of Object.entries(MAP_THEMES)) {
     const b = el('button', k === cur ? 'on' : null), sw = el('span', 'sw'); sw.style.background = 'linear-gradient(135deg,' + t.sw[0] + ' 0 34%,' + t.sw[1] + ' 34% 66%,' + t.sw[2] + ' 66%)'; b.append(sw, el('small', null, t.label));
-    b.onclick = () => { const was = mapTheme(); store.set('maata_map_theme', k); th.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (!['colour', 'terrain', 'bright'].includes(MP.styleKey)) { mpSetStyle('colour'); return; } if (k === 'normal') { if (was !== 'normal') mpSetStyle(MP.styleKey); } else mpColourise(); };
+    b.onclick = () => { const was = mapTheme(); store.set('maata_map_theme', k); th.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (!['colour', 'terrain', 'bright'].includes(MP.styleKey)) { mpSetStyle('colour'); return; } if (k === 'normal') { if (was !== 'normal') mpSetStyle(MP.styleKey); } else { mpColourise(); mpRoadsBoost(); } };
     th.append(b);
   }
   const ts = el('div', 'mpl-text');
@@ -10640,9 +10654,30 @@ function mpMapLook(list) { // extra sections of the Map type sheet
   const d3 = el('button', 'mpl-3d' + (store.get('maata_map_3d') === '1' ? ' on' : ''), '🏔️ 3D view — hills, buildings & sky'); d3.onclick = () => { const on = store.get('maata_map_3d') !== '1'; d3.classList.toggle('on', on); mp3D(on, true); };
   list.append(el('div', 'th-title', 'Map theme'), th, el('div', 'th-title', 'Text size'), ts, el('div', 'th-title', 'Names on the map'), nl, el('div', 'th-title', '3D'), d3);
 }
+
+// 🛣️ village roads, lanes and field tracks drawn clearly (the base map draws them very faint or only when zoomed far in)
+function mpRoadsBoost() {
+  const m = MP.map; if (!m) return; let st; try { st = m.getStyle(); } catch { return; }
+  const vec = Object.keys(st.sources).find((k) => st.sources[k].type === 'vector' && /openmaptiles|openfreemap/i.test(k + (st.sources[k].url || ''))) || Object.keys(st.sources).find((k) => st.sources[k].type === 'vector');
+  for (const id of ['mp-minor', 'mp-minor-case', 'mp-track']) if (m.getLayer(id)) m.removeLayer(id);
+  if (!vec) return;
+  const night = MP.styleKey === 'night', sat = MP.styleKey === 'satellite', T = MAP_THEMES[mapTheme()] || {}, vil = !sat && !night && T.vil;
+  const major = st.layers.find((l) => l.type === 'line' && l['source-layer'] === 'transportation' && /motorway|trunk|primary|secondary/.test(l.id) && !/tunnel/.test(l.id));
+  const before = major ? major.id : (st.layers.find((l) => l.type === 'symbol') || {}).id;
+  const W = (a, b) => ['interpolate', ['exponential', 1.5], ['zoom'], 11, a, 14, (a + b) / 2, 17, b];
+  const isMinor = ['match', ['get', 'class'], ['minor', 'service'], true, false];
+  try {
+    m.addLayer({ id: 'mp-minor-case', type: 'line', source: vec, 'source-layer': 'transportation', minzoom: 11, filter: isMinor, layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': night ? '#1C2733' : sat ? 'rgba(0,0,0,0.35)' : vil ? '#FFFFFF' : '#A8957A', 'line-width': W(vil ? 2.6 : 2.2, vil ? 10.5 : 10) } }, before);
+    m.addLayer({ id: 'mp-minor', type: 'line', source: vec, 'source-layer': 'transportation', minzoom: 11, filter: isMinor, layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': night ? '#4A5A70' : sat ? 'rgba(255,255,255,0.85)' : vil || '#FFFFFF', 'line-width': W(vil ? 1.5 : 1.2, vil ? 7 : 7.5) } }, before);
+    m.addLayer({ id: 'mp-track', type: 'line', source: vec, 'source-layer': 'transportation', minzoom: 12, filter: ['match', ['get', 'class'], ['track'], true, false], layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': night ? '#6B5B45' : sat ? 'rgba(255,236,200,0.85)' : vil ? '#7A4E1D' : '#B08850', 'line-width': W(1.6, 5), 'line-dasharray': [2.5, 1.2] } }, before);
+  } catch (e) { console.log('[maps] roads', e.message); }
+}
 function mpStyleTweaks() {
   const m = MP.map; if (!m) return;
-  MP.origTS = {}; mpColourise(); mpTextSize(); if (store.get('maata_map_3d') === '1') mp3D(true, false);
+  MP.origTS = {}; MP.origLW = {}; mpColourise(); mpRoadsBoost(); mpTextSize(); if (store.get('maata_map_3d') === '1') mp3D(true, false);
   try { for (const l of m.getStyle().layers) if (l.type === 'symbol' && /^poi/.test(l.id)) m.setLayerZoomRange(l.id, 13, 24); } catch {} // temples, schools… show earlier, like Google
   mpLocalLabels(); m.once('idle', mpLocalLabels); mpShowSavedPins(); mpLoadPlaces(true); mpApplyLayers();
 }
