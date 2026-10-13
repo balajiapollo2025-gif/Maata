@@ -1462,7 +1462,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 122;
+const MAATA_VERSION = 124;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -1767,21 +1767,199 @@ app.delete('/api/maps/roads/:id', auth, (req, res) => {
   db.mapRoads = db.mapRoads.filter((y) => y !== x); save(); res.json({ ok: true });
 });
 
-// place / address search for picking a location on a computer (no GPS there)
+// place / address search — Google-like: spelling fix, big cities first, many results
+// [name, state, lat, lng, population rank (1 = biggest), other spellings]
+const IN_CITIES = [
+  ['Bengaluru', 'Karnataka', 12.9716, 77.5946, 1, 'bangalore|banglore|bengalore|bangaluru|bengaluru|blr|bangalure|banglor'],
+  ['Mumbai', 'Maharashtra', 19.076, 72.8777, 1, 'bombay|mumbai|mumbay'], ['Delhi', 'Delhi', 28.6139, 77.209, 1, 'new delhi|dilli|delhi|newdelhi'],
+  ['Hyderabad', 'Telangana', 17.385, 78.4867, 1, 'hyderbad|hydrabad|hyd|hyderabad|haidarabad|hydarabad'], ['Chennai', 'Tamil Nadu', 13.0827, 80.2707, 1, 'madras|chenai|chennai|chennnai'],
+  ['Kolkata', 'West Bengal', 22.5726, 88.3639, 1, 'calcutta|kolkatta|kolkata'], ['Pune', 'Maharashtra', 18.5204, 73.8567, 2, 'poona|pune'], ['Ahmedabad', 'Gujarat', 23.0225, 72.5714, 2, 'amdavad|ahmadabad'],
+  ['Visakhapatnam', 'Andhra Pradesh', 17.6868, 83.2185, 2, 'vizag|vishakapatnam|visakapatnam|vishakhapatnam|vizagapatnam|waltair'], ['Vijayawada', 'Andhra Pradesh', 16.5062, 80.648, 2, 'bezawada|vijaywada|vijayavada|bejawada'],
+  ['Tirupati', 'Andhra Pradesh', 13.6288, 79.4192, 3, 'tirupathi|tirupaty|thirupati|thirupathi'], ['Tirumala', 'Andhra Pradesh', 13.6833, 79.3474, 4, 'thirumala|tirumalai'],
+  ['Chittoor', 'Andhra Pradesh', 13.2172, 79.1003, 3, 'chitoor|chittor|chitur|chittur'], ['Nellore', 'Andhra Pradesh', 14.4426, 79.9865, 3, 'nelore|nellure'], ['Guntur', 'Andhra Pradesh', 16.3067, 80.4365, 3, 'guntoor'],
+  ['Kurnool', 'Andhra Pradesh', 15.8281, 78.0373, 3, 'karnool|kurnul'], ['Kadapa', 'Andhra Pradesh', 14.4673, 78.8242, 3, 'cuddapah|kadappa|kadapah'], ['Anantapur', 'Andhra Pradesh', 14.6819, 77.6006, 3, 'anantapuram|ananthapur|ananthapuram'],
+  ['Rajahmundry', 'Andhra Pradesh', 17.0005, 81.804, 3, 'rajamahendravaram|rajamundry|rajahmundri'], ['Kakinada', 'Andhra Pradesh', 16.9891, 82.2475, 3, 'kakinada'], ['Eluru', 'Andhra Pradesh', 16.7107, 81.0952, 3, 'ellore'],
+  ['Ongole', 'Andhra Pradesh', 15.5057, 80.0499, 3, 'ongol'], ['Vizianagaram', 'Andhra Pradesh', 18.1067, 83.3956, 3, 'vijayanagaram|vizianagram'], ['Srikakulam', 'Andhra Pradesh', 18.2949, 83.8938, 3, 'srikakulam'],
+  ['Machilipatnam', 'Andhra Pradesh', 16.1875, 81.1389, 4, 'masulipatnam|bandar'], ['Amaravati', 'Andhra Pradesh', 16.5131, 80.5165, 4, 'amravati ap'], ['Madanapalle', 'Andhra Pradesh', 13.5503, 78.5029, 4, 'madanapalli'],
+  ['Srikalahasti', 'Andhra Pradesh', 13.7499, 79.6984, 4, 'kalahasti|sri kalahasti'], ['Puttur', 'Andhra Pradesh', 13.4416, 79.5514, 5, 'puttur'], ['Nagari', 'Andhra Pradesh', 13.3215, 79.5858, 5, 'nagari'],
+  ['Palamaner', 'Andhra Pradesh', 13.2, 78.75, 5, 'palamaneru'], ['Kuppam', 'Andhra Pradesh', 12.7495, 78.3425, 5, 'kuppam'], ['Punganur', 'Andhra Pradesh', 13.3667, 78.5833, 5, 'punganuru'],
+  ['Hindupur', 'Andhra Pradesh', 13.8283, 77.4911, 4, 'hindupuram'], ['Proddatur', 'Andhra Pradesh', 14.7502, 78.5481, 4, 'proddutur'], ['Nandyal', 'Andhra Pradesh', 15.4786, 78.4831, 4, 'nandyala'],
+  ['Tenali', 'Andhra Pradesh', 16.2379, 80.6444, 4, 'tenali'], ['Bhimavaram', 'Andhra Pradesh', 16.5449, 81.5212, 4, 'bheemavaram'], ['Gudur', 'Andhra Pradesh', 14.1453, 79.8514, 5, 'gudur'],
+  ['Warangal', 'Telangana', 17.9689, 79.5941, 2, 'warangal|orugallu'], ['Karimnagar', 'Telangana', 18.4386, 79.1288, 3, 'karimnagar'], ['Nizamabad', 'Telangana', 18.6725, 78.0941, 3, 'nizamabad'],
+  ['Khammam', 'Telangana', 17.2473, 80.1514, 3, 'khamam'], ['Secunderabad', 'Telangana', 17.4399, 78.4983, 2, 'secundrabad|sikindrabad'],
+  ['Coimbatore', 'Tamil Nadu', 11.0168, 76.9558, 2, 'kovai|coimbatur|coimbator'], ['Madurai', 'Tamil Nadu', 9.9252, 78.1198, 2, 'madhurai'], ['Vellore', 'Tamil Nadu', 12.9165, 79.1325, 3, 'velur|vellur'],
+  ['Tiruchirappalli', 'Tamil Nadu', 10.7905, 78.7047, 2, 'trichy|tiruchi|thiruchirapalli|trichi'], ['Salem', 'Tamil Nadu', 11.6643, 78.146, 3, 'salem'], ['Kanchipuram', 'Tamil Nadu', 12.8342, 79.7036, 3, 'kanchi|kancheepuram|conjeevaram'],
+  ['Hosur', 'Tamil Nadu', 12.7409, 77.8253, 3, 'hosur'], ['Krishnagiri', 'Tamil Nadu', 12.5266, 78.2141, 4, 'krishnagiri'], ['Tiruvannamalai', 'Tamil Nadu', 12.2253, 79.0747, 3, 'thiruvannamalai|arunachala'],
+  ['Pondicherry', 'Puducherry', 11.9416, 79.8083, 3, 'puducherry|pondy|pondichery'], ['Kanyakumari', 'Tamil Nadu', 8.0883, 77.5385, 4, 'kanyakumari|cape comorin'], ['Rameswaram', 'Tamil Nadu', 9.2876, 79.3129, 4, 'rameshwaram'],
+  ['Ooty', 'Tamil Nadu', 11.4102, 76.695, 4, 'udhagamandalam|ooty|uti'], ['Mysuru', 'Karnataka', 12.2958, 76.6394, 2, 'mysore|maisur|mysuru'], ['Mangaluru', 'Karnataka', 12.9141, 74.856, 2, 'mangalore|mangaluru|kudla'],
+  ['Hubballi', 'Karnataka', 15.3647, 75.124, 2, 'hubli|hubballi'], ['Belagavi', 'Karnataka', 15.8497, 74.4977, 3, 'belgaum'], ['Kolar', 'Karnataka', 13.1367, 78.1292, 4, 'kolar'],
+  ['Kochi', 'Kerala', 9.9312, 76.2673, 2, 'cochin|ernakulam|kochi'], ['Thiruvananthapuram', 'Kerala', 8.5241, 76.9366, 2, 'trivandrum|tvm'], ['Kozhikode', 'Kerala', 11.2588, 75.7804, 3, 'calicut'],
+  ['Thrissur', 'Kerala', 10.5276, 76.2144, 3, 'trichur'], ['Panaji', 'Goa', 15.4909, 73.8278, 3, 'panjim|goa'], ['Nagpur', 'Maharashtra', 21.1458, 79.0882, 2, 'nagpur'], ['Nashik', 'Maharashtra', 19.9975, 73.7898, 2, 'nasik'],
+  ['Aurangabad', 'Maharashtra', 19.8762, 75.3433, 2, 'sambhajinagar'], ['Solapur', 'Maharashtra', 17.6599, 75.9064, 3, 'sholapur'], ['Surat', 'Gujarat', 21.1702, 72.8311, 2, 'surat'], ['Vadodara', 'Gujarat', 22.3072, 73.1812, 2, 'baroda'],
+  ['Rajkot', 'Gujarat', 22.3039, 70.8022, 2, 'rajkot'], ['Jaipur', 'Rajasthan', 26.9124, 75.7873, 1, 'jaipur|pink city'], ['Jodhpur', 'Rajasthan', 26.2389, 73.0243, 2, 'jodhpur'], ['Udaipur', 'Rajasthan', 24.5854, 73.7125, 3, 'udaipur'],
+  ['Lucknow', 'Uttar Pradesh', 26.8467, 80.9462, 1, 'lakhnau'], ['Kanpur', 'Uttar Pradesh', 26.4499, 80.3319, 2, 'cawnpore'], ['Varanasi', 'Uttar Pradesh', 25.3176, 82.9739, 2, 'banaras|benares|kashi'],
+  ['Agra', 'Uttar Pradesh', 27.1767, 78.0081, 2, 'agra'], ['Prayagraj', 'Uttar Pradesh', 25.4358, 81.8463, 2, 'allahabad'], ['Noida', 'Uttar Pradesh', 28.5355, 77.391, 2, 'noida'], ['Gurugram', 'Haryana', 28.4595, 77.0266, 2, 'gurgaon'],
+  ['Chandigarh', 'Chandigarh', 30.7333, 76.7794, 2, 'chandigarh'], ['Amritsar', 'Punjab', 31.634, 74.8723, 2, 'amritsar'], ['Ludhiana', 'Punjab', 30.901, 75.8573, 2, 'ludhiana'], ['Dehradun', 'Uttarakhand', 30.3165, 78.0322, 3, 'dehradun'],
+  ['Haridwar', 'Uttarakhand', 29.9457, 78.1642, 3, 'hardwar'], ['Shimla', 'Himachal Pradesh', 31.1048, 77.1734, 3, 'simla'], ['Srinagar', 'Jammu and Kashmir', 34.0837, 74.7973, 2, 'srinagar'], ['Jammu', 'Jammu and Kashmir', 32.7266, 74.857, 3, 'jammu'],
+  ['Bhopal', 'Madhya Pradesh', 23.2599, 77.4126, 2, 'bhopal'], ['Indore', 'Madhya Pradesh', 22.7196, 75.8577, 2, 'indore'], ['Raipur', 'Chhattisgarh', 21.2514, 81.6296, 2, 'raipur'], ['Patna', 'Bihar', 25.5941, 85.1376, 2, 'patna'],
+  ['Ranchi', 'Jharkhand', 23.3441, 85.3096, 2, 'ranchi'], ['Bhubaneswar', 'Odisha', 20.2961, 85.8245, 2, 'bhubaneshwar|bbsr'], ['Puri', 'Odisha', 19.8135, 85.8312, 3, 'jagannath puri'], ['Guwahati', 'Assam', 26.1445, 91.7362, 2, 'gauhati'],
+  ['Shillong', 'Meghalaya', 25.5788, 91.8933, 3, 'shillong'], ['Gangtok', 'Sikkim', 27.3389, 88.6065, 3, 'gangtok'], ['Darjeeling', 'West Bengal', 27.041, 88.2663, 3, 'darjiling'], ['Siliguri', 'West Bengal', 26.7271, 88.3953, 3, 'siliguri'],
+  ['Agartala', 'Tripura', 23.8315, 91.2868, 3, 'agartala'], ['Imphal', 'Manipur', 24.817, 93.9368, 3, 'imphal'], ['Shirdi', 'Maharashtra', 19.7645, 74.4762, 4, 'shiridi|sai baba shirdi'],
+  ['Srisailam', 'Andhra Pradesh', 16.0726, 78.8686, 4, 'srisailam|sri sailam'], ['Bhadrachalam', 'Telangana', 17.6688, 80.8936, 4, 'badrachalam'], ['Yadagirigutta', 'Telangana', 17.5875, 78.9442, 4, 'yadadri'],
+  ['Puttaparthi', 'Andhra Pradesh', 14.1653, 77.8117, 4, 'puttaparthy|prasanthi nilayam'], ['Mantralayam', 'Andhra Pradesh', 15.9417, 77.4271, 4, 'mantralaya'], ['Kalahasti', 'Andhra Pradesh', 13.7499, 79.6984, 5, ''],
+];
+const normQ = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ऀ-෿ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function editDist(a, b, max) { // Damerau-Levenshtein (swapped letters count as one mistake)
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d = []; for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) { let best = 1e9; for (let j = 1; j <= b.length; j++) {
+    const c = a[i - 1] === b[j - 1] ? 0 : 1; d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    best = Math.min(best, d[i][j]); } if (best > max) return max + 1; }
+  return d[a.length][b.length];
+}
+const CITY_SPELL = { Bengaluru: 'bangalore', Mysuru: 'mysore', Mangaluru: 'mangalore', Hubballi: 'hubli' }; // the spelling most shop / place names use
+const citySpell = (c) => CITY_SPELL[c[0]] || normQ(c[0]);
+const CITY_KEYS = IN_CITIES.flatMap((c) => [c[0], ...String(c[5] || '').split('|')].filter(Boolean).map((k) => [normQ(k), c]));
+// "banglore palace" → { city: Bengaluru, fixed: "bangalore palace" }
+function cityFix(q) {
+  const n = normQ(q); if (!n) return null; const words = n.split(' ');
+  let best = null;
+  for (let take = Math.min(3, words.length); take >= 1; take--) {
+    const head = words.slice(0, take).join(' '), rest = words.slice(take).join(' ');
+    if (head.length < 3) continue;
+    const allow = head.length >= 8 ? 2 : head.length >= 5 ? 1 : 0;
+    for (const [k, c] of CITY_KEYS) {
+      const dist = k === head ? 0 : editDist(head, k, allow);
+      if (dist <= allow && (!best || dist < best.dist || (dist === best.dist && c[4] < best.city[4]))) best = { city: c, dist, word: k, rest, take };
+    }
+    if (best) break;
+  }
+  if (!best) { // the city name later in the text: "palace bangalore"
+    for (let i = 1; i < words.length; i++) { const w = words[i]; if (w.length < 5) continue; const allow = w.length >= 8 ? 2 : 1;
+      for (const [k, c] of CITY_KEYS) { if (k.includes(' ')) continue; const dist = editDist(w, k, allow); if (dist <= allow && (!best || dist < best.dist)) best = { city: c, dist, word: k, rest: '', at: i }; } }
+    if (!best) return null;
+    const ws = [...words]; const was = ws[best.at]; ws[best.at] = citySpell(best.city); return { city: best.city, exact: false, fixed: ws.join(' '), changed: was !== ws[best.at] && was !== normQ(best.city[0]) };
+  }
+  const head = words.slice(0, best.take).join(' '), sp = citySpell(best.city);
+  return { city: best.city, exact: !best.rest, fixed: sp + (best.rest ? ' ' + best.rest : ''), changed: head !== sp && head !== normQ(best.city[0]) };
+}
+const PLACE_ICON = (k, v) => k === 'place' ? (/city|town|state|county|district|municipality/.test(v) ? '🏙️' : '🏘️') : k === 'aeroway' ? '✈️' : k === 'railway' ? '🚆'
+  : v === 'bus_station' || v === 'bus_stop' ? '🚌' : v === 'hospital' || v === 'clinic' ? '🏥' : v === 'place_of_worship' ? '🛕' : /school|college|university/.test(v) ? '🎓'
+  : v === 'fuel' ? '⛽' : k === 'highway' ? '🛣️' : k === 'tourism' ? (v === 'hotel' ? '🏨' : '📸') : v === 'restaurant' || v === 'cafe' ? '🍽️' : k === 'shop' ? '🛒' : k === 'boundary' ? '🗺️' : '📍';
+const placeWeight = (k, v) => k === 'place' ? ({ state: 9, city: 10, county: 6, district: 6, town: 8, municipality: 7, suburb: 5, village: 5, hamlet: 3, locality: 3, neighbourhood: 3 }[v] || 3) : k === 'boundary' ? 6 : k === 'aeroway' ? 5 : k === 'railway' && v === 'station' ? 5 : 2;
+async function photonFind(q, la, lo) {
+  const near = isFinite(la) && la && lo ? '&lat=' + la + '&lon=' + lo + '&location_bias_scale=0.3&zoom=9' : '';
+  const r = await fetch('https://photon.komoot.io/api/?limit=15&lang=en&bbox=68,6,98,37.5&q=' + encodeURIComponent(q) + near, { headers: OSM_UA, signal: AbortSignal.timeout(6000) });
+  const d = await r.json();
+  return (d.features || []).filter((f) => !f.properties.countrycode || f.properties.countrycode === 'IN').map((f) => {
+    const p = f.properties, [lng, lat] = f.geometry.coordinates;
+    const sub = [p.street && p.street !== p.name ? p.street : '', p.district && p.district !== p.name ? p.district : '', p.city && p.city !== p.name ? p.city : '', p.county && p.county !== p.city && p.county !== p.name ? p.county : '', p.state && p.state !== p.name ? p.state : ''].filter(Boolean);
+    const name = p.name || [p.housenumber, p.street].filter(Boolean).join(' '); if (!name) return null;
+    return { name, sub: [...new Set(sub)].slice(0, 3).join(', '), lat, lng, k: p.osm_key, v: p.osm_value };
+  }).filter(Boolean);
+}
+async function nominatimFind(q, la, lo) {
+  const near = isFinite(la) && la && lo ? '&viewbox=' + (lo - 1.5) + ',' + (la + 1.5) + ',' + (lo + 1.5) + ',' + (la - 1.5) + '&bounded=0' : '';
+  const d = await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=0&countrycodes=in&q=' + encodeURIComponent(q) + near, { headers: OSM_UA, signal: AbortSignal.timeout(7000) })).json();
+  return (Array.isArray(d) ? d : []).map((x) => { const parts = String(x.display_name || '').split(', ').filter((s) => s !== 'India'); return { name: parts[0], sub: parts.slice(1, 4).join(', '), lat: Number(x.lat), lng: Number(x.lon), k: x.category, v: x.type, imp: Number(x.importance) || 0 }; }).filter((x) => x.name && isFinite(x.lat));
+}
 const geoSearchCache = new Map(), geoSearchHits = new Map();
-app.get('/api/geo/search', auth, async (req, res) => {
-  const q = clip(req.query.q, 120); if (q.length < 3) return res.json([]);
-  const hits = (geoSearchHits.get(req.user.id) || []).filter((t) => now() - t < 60000); if (hits.length > 20) return res.status(429).json({ error: 'Too many searches. Wait a minute.' });
-  hits.push(now()); geoSearchHits.set(req.user.id, hits);
-  const ck = q.toLowerCase() + '|' + Math.round(Number(req.query.lat) || 0) + ',' + Math.round(Number(req.query.lng) || 0);
-  if (geoSearchCache.has(ck)) return res.json(geoSearchCache.get(ck));
+// ---------- 🟢 Ola Maps (India data) — used only inside the free monthly allowance ----------
+// Free: 100,000 calls a month for each API. We stop at OLA_CAP so the bill always stays ₹0.
+const OLA_KEY = process.env.OLA_MAPS_KEY || '', OLA_CAP = Math.min(95000, Number(process.env.OLA_MONTHLY_CAP) || 90000);
+const olaMonth = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 7); // India month
+function olaUse() {
+  let m = db.meta.find((x) => x.id === 'olaUse');
+  if (!m) { m = { id: 'olaUse', month: olaMonth(), n: {}, createdAt: now() }; db.meta.push(m); }
+  if (m.month !== olaMonth()) { m.month = olaMonth(); m.n = {}; }
+  return m;
+}
+let olaSaveT = null, olaDownUntil = 0;
+function olaTake(api) { // true = allowed to call
+  if (!OLA_KEY || now() < olaDownUntil) return false;
+  const m = olaUse(); if ((m.n[api] || 0) >= OLA_CAP) return false;
+  m.n[api] = (m.n[api] || 0) + 1;
+  if (!olaSaveT) olaSaveT = setTimeout(() => { olaSaveT = null; save(); }, 30000);
+  return true;
+}
+async function olaGet(api, path, params) {
+  if (!olaTake(api)) return null;
+  const u = 'https://api.olamaps.io' + path + '?' + new URLSearchParams({ ...params, api_key: OLA_KEY });
   try {
-    const la = Number(req.query.lat), lo = Number(req.query.lng), near = isFinite(la) && isFinite(lo) && la && lo ? '&viewbox=' + (lo - 1.5) + ',' + (la + 1.5) + ',' + (lo + 1.5) + ',' + (la - 1.5) + '&bounded=0' : '';
-    const d = await (await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=0&countrycodes=in&q=' + encodeURIComponent(q) + near, { headers: OSM_UA, signal: AbortSignal.timeout(8000) })).json();
-    const out = (Array.isArray(d) ? d : []).map((x) => ({ title: String(x.display_name || '').split(', ').slice(0, 4).join(', '), lat: Number(x.lat), lng: Number(x.lon) })).filter((x) => isFinite(x.lat));
-    geoSearchCache.set(ck, out); if (geoSearchCache.size > 1000) geoSearchCache.delete(geoSearchCache.keys().next().value);
-    res.json(out);
-  } catch { res.status(502).json({ error: 'Place search is not available right now.' }); }
+    const r = await fetch(u, { headers: { 'X-Request-Id': newId() }, signal: AbortSignal.timeout(5000) });
+    if (r.status === 401 || r.status === 403) { olaDownUntil = now() + 600000; console.error('[ola] key refused', r.status); return null; }
+    if (r.status === 429 || r.status === 402) { olaDownUntil = now() + 600000; console.error('[ola] limit / credits', r.status); return null; }
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+const olaTypeKind = (types = []) => { const t = types.join(' ');
+  return /locality|sublocality|administrative|political|city|town|village|state|district|country|postal/.test(t) ? ['place', /village|sublocality/.test(t) ? 'village' : /state/.test(t) ? 'state' : 'town']
+    : /airport/.test(t) ? ['aeroway', 'aerodrome'] : /train|railway|transit/.test(t) ? ['railway', 'station'] : /bus/.test(t) ? ['amenity', 'bus_station'] : /hospital|clinic|doctor|health/.test(t) ? ['amenity', 'hospital']
+    : /temple|church|mosque|worship/.test(t) ? ['amenity', 'place_of_worship'] : /school|college|university/.test(t) ? ['amenity', 'school'] : /gas_station|petrol|fuel/.test(t) ? ['amenity', 'fuel'] : /lodging|hotel/.test(t) ? ['tourism', 'hotel']
+    : /restaurant|cafe|food/.test(t) ? ['amenity', 'restaurant'] : /route|road|street/.test(t) ? ['highway', 'road'] : /store|shop|market/.test(t) ? ['shop', 'shop'] : ['ola', 'poi']; };
+function olaPreds(d, me) {
+  return ((d && d.predictions) || []).map((p) => {
+    const loc = (p.geometry && p.geometry.location) || {}, lat = Number(loc.lat), lng = Number(loc.lng);
+    const sf = p.structured_formatting || {}, name = sf.main_text || String(p.description || '').split(',')[0];
+    let sub = sf.secondary_text || String(p.description || '').split(', ').slice(1).join(', ');
+    sub = sub.split(', ').map((s) => s.replace(/\s*\d{6}$/, '').trim()).filter((s) => s && s !== 'India').slice(-3).join(', ');
+    const [k, v] = olaTypeKind(p.types || []);
+    return { name, sub, lat, lng, k, v, ola: 1, dist: Number(p.distance_meters) || (me && isFinite(lat) ? geoDist(me, [lng, lat]) : null) };
+  }).filter((x) => x.name && isFinite(x.lat) && isFinite(x.lng) && Math.abs(x.lat) > 0.1);
+}
+async function olaFind(q, la, lo) {
+  const near = isFinite(la) && la && lo ? { location: la + ',' + lo } : {};
+  return olaPreds(await olaGet('autocomplete', '/places/v1/autocomplete', { input: q, ...near }), near.location ? [lo, la] : null);
+}
+// nearby: "petrol bunk" etc. typed around you, only places within ~25 km
+const OLA_NEAR_Q = { fuel: ['petrol bunk', 'petrol pump'], hospital: ['hospital', 'clinic'], pharmacy: ['medical shop', 'pharmacy'], hotel: ['lodge', 'hotel'] };
+app.get('/api/maps/olanear', auth, async (req, res) => {
+  const cat = String(req.query.cat || ''), la = Number(req.query.lat), lo = Number(req.query.lng);
+  if (!OLA_KEY || !OLA_NEAR_Q[cat] || !(Math.abs(la) <= 90 && Math.abs(lo) <= 180)) return res.json([]);
+  const ck = 'near|' + cat + '|' + la.toFixed(2) + ',' + lo.toFixed(2);
+  if (geoSearchCache.has(ck)) return res.json(geoSearchCache.get(ck));
+  const got = (await Promise.all(OLA_NEAR_Q[cat].map((q) => olaGet('autocomplete', '/places/v1/autocomplete', { input: q, location: la + ',' + lo, radius: 25000, strictbounds: 'true' }))))
+    .flatMap((d) => olaPreds(d, [lo, la]));
+  const out = got.filter((x) => x.dist != null && x.dist < 25000).map((x) => ({ name: x.name, lat: +x.lat.toFixed(6), lng: +x.lng.toFixed(6), dist: Math.round(x.dist), addr: x.sub, src: 'ola' }));
+  geoSearchCache.set(ck, out); res.json(out);
+});
+app.get('/api/maps/ola-status', auth, (req, res) => { const m = olaUse(); res.json({ on: !!OLA_KEY, month: m.month, used: m.n, cap: OLA_CAP, paused: now() < olaDownUntil }); });
+app.get('/api/geo/search', auth, async (req, res) => {
+  const q = clip(req.query.q, 120); if (q.trim().length < 2) return res.json([]);
+  const hits = (geoSearchHits.get(req.user.id) || []).filter((t) => now() - t < 60000); if (hits.length > 40) return res.status(429).json({ error: 'Too many searches. Wait a minute.' });
+  hits.push(now()); geoSearchHits.set(req.user.id, hits);
+  const la = Number(req.query.lat), lo = Number(req.query.lng);
+  const ck = normQ(q) + '|' + Math.round(la || 0) + ',' + Math.round(lo || 0);
+  if (geoSearchCache.has(ck)) return res.json(geoSearchCache.get(ck));
+  const fix = cityFix(q), fq = fix && fix.changed ? fix.fixed : '';
+  const jobs = [photonFind(q, la, lo), nominatimFind(fq || q, la, lo), olaFind(fq || q, la, lo)]; if (fq) jobs.push(photonFind(fq, la, lo));
+  if (fix) jobs.push(photonFind(fix.city[0], la, lo));
+  const got = (await Promise.allSettled(jobs)).flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  const nq = normQ(fq || q), nq0 = normQ(q), me = isFinite(la) && la && lo ? [lo, la] : null;
+  const seen = []; const items = [];
+  for (const x of got) {
+    const nn = normQ(x.name); if (seen.some((s) => s.n === nn && geoDist([s.lng, s.lat], [x.lng, x.lat]) < (x.k === 'place' || x.k === 'boundary' ? 30000 : 400))) continue;
+    seen.push({ n: nn, lat: x.lat, lng: x.lng });
+    let score = placeWeight(x.k, x.v) * 3 + (x.imp || 0) * 10 + (x.ola ? 6 : 0);
+    if (nn === nq || nn === nq0) score += 30; else if (nn.startsWith(nq) || nn.startsWith(nq0)) score += 14; else if (nn.includes(nq) || nn.includes(nq0)) score += 8;
+    if (fix && normQ(fix.city[0]) === nn) score += 25;
+    if (me) { const km = geoDist(me, [x.lng, x.lat]) / 1000; score -= Math.min(10, km / 60); }
+    items.push({ ...x, score });
+  }
+  if (fix) { // make sure the city itself is there, at the top
+    const c = fix.city, nc = normQ(c[0]);
+    const have = items.find((x) => (normQ(x.name) === nc || CITY_KEYS.some(([k, cc]) => cc === c && k === normQ(x.name))) && geoDist([c[3], c[2]], [x.lng, x.lat]) < 40000);
+    if (have) { have.score += fix.exact ? 60 : 20; have.k = 'place'; have.v = 'city'; }
+    else items.push({ name: c[0], sub: c[1], lat: c[2], lng: c[3], k: 'place', v: 'city', score: fix.exact ? 200 : 40 });
+  }
+  items.sort((a, b) => b.score - a.score);
+  const out = items.slice(0, 12).map((x, i) => ({ title: [x.name, x.sub].filter(Boolean).join(', '), name: x.name, sub: x.sub || '', icon: PLACE_ICON(x.k, x.v), lat: +x.lat.toFixed(6), lng: +x.lng.toFixed(6), ...(x.ola ? { src: 'ola' } : {}), ...(i === 0 && fix && fix.changed ? { fixed: fix.city[0] } : {}) }));
+  if (!out.length && got.length === 0 && !fix) return res.status(502).json({ error: 'Place search is not available right now. Check internet and try again.' });
+  if (out.length) { geoSearchCache.set(ck, out); if (geoSearchCache.size > 1000) geoSearchCache.delete(geoSearchCache.keys().next().value); }
+  res.json(out);
 });
 app.get('/api/geo/reverse', auth, async (req, res) => {
   const lat = Number(req.query.lat), lng = Number(req.query.lng);

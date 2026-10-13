@@ -1403,6 +1403,9 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mp-ri div{min-width:0;display:flex;flex-direction:column}.mp-ri b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mp-ri small{color:#5D6E7C;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp-ri.ai{background:linear-gradient(90deg,#ECFBF4,#EEF3FF)}.mp-ri.ai .ic{background:#fff}
 .mp-thinking{padding:14px;color:#3D4E5C;font-size:14px}
+.mp.searching .mp-sheet,.mp.searching .mp-tabs,.mp.searching .mp-rtop,.mp.searching .mp-fabs{display:none}.mp.searching .mp-res{max-height:calc(100vh - 110px - env(safe-area-inset-top,0px))}
+.mp-attr{order:99;padding:6px 16px 2px;font-size:11px;color:#7A8792;text-align:right}
+.mp-fixed{padding:8px 16px;font-size:13px;color:#1558B0;font-weight:600}
 .mp-chips{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}.mp-chips::-webkit-scrollbar{display:none}
 .mp-chips button{flex:none;padding:8px 13px;border-radius:999px;background:#fff;color:#1E2C38;font-size:13.5px;font-weight:600;box-shadow:0 2px 8px rgba(10,40,60,.16)}
 .mp-fabs{position:absolute;right:12px;bottom:calc(40vh + 16px);z-index:2;display:flex;flex-direction:column;gap:12px;transition:bottom .25s}
@@ -9495,7 +9498,8 @@ async function openMaps(target) {
   <nav class="mp-tabs" id="mpTabs"><button data-t="explore" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span>Explore</span></button><button data-t="you"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>You</span></button><button data-t="contribute"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Contribute</span></button><button data-t="business"><svg viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5M4 9h16v11H4zM9 20v-6h6v6"/></svg><span>Business</span></button></nav>`;
   document.body.append(pg);
   history.pushState({ maata: 'map' }, '');
-  $('#mpBack').onclick = closeMaps;
+  $('#mpBack').onclick = () => { const rs = $('#mpRes'); if (!rs.hidden) { rs.hidden = true; $('#mpQ').blur(); return; } closeMaps(); };
+  { const rs = $('#mpRes'); new MutationObserver(() => pg.classList.toggle('searching', !rs.hidden)).observe(rs, { attributes: true, attributeFilter: ['hidden'] }); }
   const meBtn = $('#mpMe'); meBtn.append(avatar(me, 'sm')); meBtn.onclick = () => mpTab('you');
   document.querySelectorAll('#mpTabs button').forEach((b) => (b.onclick = () => mpTab(b.dataset.t)));
   $('#mpDir').onclick = () => mpDirections();
@@ -9572,8 +9576,12 @@ async function mpSearch(text, fromAi) {
   let list = []; try { list = await api('/api/geo/search?q=' + encodeURIComponent(text) + (MP.me ? '&lat=' + MP.me[1] + '&lng=' + MP.me[0] : '')); } catch {}
   res.innerHTML = ''; res.hidden = false;
   const ai = el('button', 'mp-ri ai'); ai.append(el('span', 'ic', '✨'), el('div', null, 'Ask Maata AI: “' + text + '”')); ai.onclick = () => mpAsk(text); res.append(ai);
-  for (const r of list) { const b = el('button', 'mp-ri'); const tx = el('div'); const parts = r.title.split(', '); tx.append(el('b', null, parts[0]), el('small', null, parts.slice(1).join(', ') + (MP.me ? ' · ' + fmtKm(hav(MP.me, [r.lng, r.lat])) : ''))); b.append(el('span', 'ic', '📍'), tx); b.onclick = () => mpSetDest({ name: parts[0], addr: parts.slice(1).join(', '), lat: r.lat, lng: r.lng }); res.append(b); }
+  if (list[0] && list[0].fixed) res.insertBefore(el('div', 'mp-fixed', '🔤 Showing results for ' + list[0].fixed), ai);
+  for (const r of list) { const b = el('button', 'mp-ri'); const tx = el('div'); const { name, addr } = geoParts(r); tx.append(el('b', null, name), el('small', null, addr + (MP.me ? ' · ' + fmtKm(hav(MP.me, [r.lng, r.lat])) : ''))); b.append(el('span', 'ic', r.icon || '📍'), tx); b.onclick = () => mpSetDest({ name, addr, lat: r.lat, lng: r.lng }); res.append(b); }
+  if (list.some((r) => r.src === 'ola')) res.append(el('div', 'mp-attr', 'Results: Ola Maps · OpenStreetMap'));
+  if (!list.length) res.append(el('div', 'mp-thinking', 'No places found. Check the spelling or add the town name, e.g. “bus stand Puttur”.'));
 }
+const geoParts = (r) => (r.name ? { name: r.name, addr: r.sub || '' } : { name: r.title.split(', ')[0], addr: r.title.split(', ').slice(1).join(', ') });
 function mpShowHomeList() {
   const res = $('#mpRes'); if (!res) return; res.innerHTML = ''; const o = mpSaved();
   const row = (ic, name, sub, fn) => { const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, name), el('small', null, sub)); b.append(el('span', 'ic', ic), tx); b.onclick = fn; res.append(b); };
@@ -9711,7 +9719,7 @@ async function mpNearby(cat, label) {
     mpClearNear(); res.innerHTML = ''; res.hidden = false;
     const list = nearMerge([all]); const icon = label.split(' ')[0];
     if (!list.length) { res.append(el('div', 'mp-thinking', netDone ? 'No ' + what.toLowerCase() + ' found within 20 km on the map yet. Try typing a name, e.g. “HP petrol bunk Chittoor”.' : '⚡ Finding ' + label + ' near you…')); return; }
-    const head = el('div', 'mp-nearhead'); head.append(el('b', null, icon + ' ' + list.length + ' ' + what), el('small', null, netDone ? 'nearest first' : 'more loading…')); res.append(head);
+    const head = el('div', 'mp-nearhead'); head.append(el('b', null, icon + ' ' + list.length + ' ' + what), el('small', null, (netDone ? 'nearest first' : 'more loading…') + (list.some((x) => x.src === 'ola') ? ' · data: Ola Maps, OpenStreetMap' : ''))); res.append(head);
     if (cat === 'police' || cat === 'hospital') { const e = el('a', 'mp-ri sos'); e.href = 'tel:' + (cat === 'police' ? '100' : '108'); e.innerHTML = '<span class="ic">📞</span><div><b>Emergency: call ' + (cat === 'police' ? '100 (Police)' : '108 (Ambulance)') + '</b><small>Free, works 24 hours</small></div>'; res.append(e); }
     for (const p of list) {
       const name = p.name || what, b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, name), el('small', null, fmtKm(p.dist) + (p.src === 'maata' ? ' · added by Maata users' : '') + (p.open ? ' · ' + p.open : ''))); b.append(el('span', 'ic', icon), tx);
@@ -9728,7 +9736,7 @@ async function mpNearby(cat, label) {
   const cc = NEAR_COMMUNITY[cat]; if (cc) all = all.concat((MP.places || []).filter((p) => p.cat === cc).map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, phone: p.phone, dist: Math.round(hav(c, [p.lng, p.lat])), src: 'maata' })));
   if (all.length) draw();
   // 3) internet: every service at once, results added as they come
-  const jobs = [mpPhoton(cat, c[1], c[0]), mpNearbyFetch(cat, c[1], c[0])].map((pr) => pr.then((v) => { all = all.concat(v); if (v.length) draw(); return v; }));
+  const jobs = [mpPhoton(cat, c[1], c[0]), mpNearbyFetch(cat, c[1], c[0]), api('/api/maps/olanear?cat=' + cat + '&lat=' + c[1].toFixed(5) + '&lng=' + c[0].toFixed(5)).catch(() => [])].map((pr) => pr.then((v) => { all = all.concat(v); if (v.length) draw(); return v; }));
   const done = await Promise.allSettled(jobs); netDone = true;
   if (done.every((x) => x.status === 'rejected') && !all.length) {
     res.innerHTML = ''; const w = el('div', 'mp-thinking', '📶 Internet is slow right now. '); const again = el('button', 'mp-sec', '🔄 Try again'); again.onclick = () => mpNearby(cat, label); w.append(again); res.append(w); return;
@@ -10037,8 +10045,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 122;
-const APP_NOTES = ["🗺️ Maps: the chip row under the search bar (Ask Maps, SOS, Home, Work…) and the ⚠️ road report button are removed for a cleaner map. ✨ AI is still in the search bar; Home, Work and 🆘 Emergency are in the list when you tap the search box."];
+const APP_VERSION = 124;
+const APP_NOTES = ["🟢 Maps now also uses Ola Maps (India map data): search finds more Indian shops, villages and places, and Petrol / Hospital / Medical / Hotels nearby shows more results."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10240,7 +10248,9 @@ async function mpdExpand(q) {
     let list = []; try { list = await api('/api/geo/search?q=' + encodeURIComponent(q) + (MP.me ? '&lat=' + MP.me[1] + '&lng=' + MP.me[0] : '')); } catch {}
     if ((MP.dirEdit === 'from' ? $('#mpdFrom') : $('#mpdTo')).value.trim() !== q && MP.dirEdit !== 'stop') return;
     body.innerHTML = '';
-    for (const r of list) { const parts = r.title.split(', '); row('📍', parts[0], parts.slice(1).join(', ') + (MP.me ? ' · ' + fmtKm(hav(MP.me, [r.lng, r.lat])) : ''), () => mpdPick({ name: parts[0], addr: parts.slice(1).join(', '), lat: r.lat, lng: r.lng }), 'res'); }
+    if (list[0] && list[0].fixed) body.append(el('div', 'mp-fixed', '🔤 Showing results for ' + list[0].fixed));
+    if (list.some((r) => r.src === 'ola')) body.append(el('div', 'mp-attr', 'Results: Ola Maps · OpenStreetMap'));
+    for (const r of list) { const { name, addr } = geoParts(r); row(r.icon || '📍', name, addr + (MP.me ? ' · ' + fmtKm(hav(MP.me, [r.lng, r.lat])) : ''), () => mpdPick({ name, addr, lat: r.lat, lng: r.lng }), 'res'); }
     row('✨', 'Ask Maata AI: “' + q + '”', 'Understands Telugu, Hindi, English', async () => { try { const a = await api('/api/maps/ai', { method: 'POST', body: JSON.stringify({ text: q, near: MP.me ? MP.me[1].toFixed(3) + ',' + MP.me[0].toFixed(3) : '' }) }); if (a.to) { const r = await api('/api/geo/search?q=' + encodeURIComponent(a.to) + (MP.me ? '&lat=' + MP.me[1] + '&lng=' + MP.me[0] : '')); if (r[0]) { const parts = r[0].title.split(', '); return mpdPick({ name: parts[0], addr: parts.slice(1).join(', '), lat: r[0].lat, lng: r[0].lng }); } } toast(a.reply || 'Type the place name'); } catch (e) { toast(e.message); } }, 'ai');
     if (!list.length) body.prepend(el('div', 'mp-thinking', 'No places found. Try the town name too, e.g. “bus stand Puttur”.'));
     return;
