@@ -1462,7 +1462,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 125;
+const MAATA_VERSION = 127;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -1624,8 +1624,8 @@ app.post('/api/maps/ai', auth, async (req, res) => {
   const text = clip(req.body?.text, 200); if (text.length < 2) return res.status(400).json({ error: 'Say where you want to go.' });
   if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
   const sys = 'You turn a driver\'s request (English, Telugu, Hindi, Tamil or any Indian language, also typed in English letters) into JSON for a map app in India. ' +
-    'Return ONLY JSON: {"intent":"route"|"nearby"|"place"|"plan","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|ev|hospital|food|atm|police|parking|hotel|temple|pharmacy|toilets|mechanic or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
-    '"plan" = they want a trip / tour / day plan with several places. "nearby" = they want the nearest kind of place (petrol bunk = fuel, hospital, medical shop = pharmacy, lodge = hotel, restaurant/tiffin/meals = food, atm/bank = atm, police station = police, temple/church/mosque = temple, mechanic/puncture = mechanic, parking, EV charging = ev, toilet = toilets). "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
+    'Return ONLY JSON: {"intent":"route"|"nearby"|"place"|"plan","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|hospital|food|atm|police|hotel|temple|pharmacy|mechanic or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
+    '"plan" = they want a trip / tour / day plan with several places. "nearby" = they want the nearest kind of place (petrol bunk = fuel, hospital, medical shop = pharmacy, lodge = hotel, restaurant/tiffin/meals = food, atm/bank = atm, police station = police, temple/church/mosque = temple, mechanic/puncture = mechanic; for parking, toilets or EV charging use intent place with to = what they asked). "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
   const r = await gemini(sys, [{ role: 'user', parts: [{ text: text + (req.body?.near ? '\n(Person is near: ' + clip(req.body.near, 100) + ')' : '') }] }], { json: true, maxTokens: 300, temperature: 0.2 });
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
   try { const j = JSON.parse(String(r.text).replace(/^```json|```$/g, '').trim());
