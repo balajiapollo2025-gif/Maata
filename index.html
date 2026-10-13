@@ -1507,7 +1507,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 /* Maata Maps v2 (Google-style) */
 .mp-me{width:40px;height:40px;border-radius:50%;flex:none;padding:0;background:none;border:2px solid #1E88E5;overflow:hidden}.mp-me .avatar{width:100%!important;height:100%!important;font-size:15px}
 .mp-chips button.saved{font-weight:800}
-.mp-rtop{position:absolute;right:12px;top:calc(140px + env(safe-area-inset-top,0px));z-index:2;display:flex;flex-direction:column;gap:12px}
+.mp-rtop{position:absolute;right:12px;top:calc(84px + env(safe-area-inset-top,0px));z-index:2;display:flex;flex-direction:column;gap:12px}
 .mp-fab.sm{width:46px;height:46px;background:#DDF2EE;color:#0F6A5F}#mpCompass{background:#fff}#mpNeedle{transition:transform .2s}
 .mp-fab.dir{width:58px;height:58px;border-radius:18px;background:#0F7A6E;color:#fff}.mp-fab.dir svg{width:30px;height:30px}
 .mp-fabs{bottom:calc(64px + 32vh + 14px)}
@@ -9486,10 +9486,9 @@ async function openMaps(target) {
   pg.innerHTML = `<div id="mpMap"></div>
   <div class="mp-top"><div class="mp-search"><button class="mp-ib" id="mpBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <input id="mpQ" type="search" placeholder="Where to? ✨ Ask in any language" aria-label="Search places" autocomplete="off"><button class="mp-ib" id="mpMic" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button class="mp-ai" id="mpAi" aria-label="Ask Maata AI">✨</button><button class="mp-me" id="mpMe" aria-label="You"></button></div>
-    <div class="mp-res" id="mpRes" hidden></div>
-    <div class="mp-chips" id="mpChips"></div></div>
+    <div class="mp-res" id="mpRes" hidden></div></div>
   <div class="mp-rtop"><button class="mp-fab sm" id="mpLayers" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><button class="mp-fab sm mp3d" id="mp3d" aria-label="3D view">3D</button><button class="mp-fab sm" id="mpCompass" aria-label="Point north"><svg viewBox="0 0 24 24" id="mpNeedle"><path d="M12 2l4 10h-8z" fill="#E5293F" stroke="none"/><path d="M12 22l-4-10h8z" fill="#B8C2CC" stroke="none"/></svg></button></div>
-  <div class="mp-fabs"><button class="mp-fab rep" id="mpReport" aria-label="Report on the road" hidden>⚠️</button><button class="mp-fab" id="mpLocate" aria-label="My location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button><button class="mp-fab dir" id="mpDir" aria-label="Directions"><svg viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z" fill="currentColor" stroke="none"/><path d="M9 14v-3h5M12 8.5l2.5 2.5-2.5 2.5" stroke="#0F7A6E" stroke-width="2"/></svg></button></div>
+  <div class="mp-fabs"><button class="mp-fab" id="mpLocate" aria-label="My location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button><button class="mp-fab dir" id="mpDir" aria-label="Directions"><svg viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z" fill="currentColor" stroke="none"/><path d="M9 14v-3h5M12 8.5l2.5 2.5-2.5 2.5" stroke="#0F7A6E" stroke-width="2"/></svg></button></div>
   <div class="mp-turn" id="mpTurn" hidden><div class="mp-arrow" id="mpArrow"></div><div><b id="mpTurnDist"></b><span id="mpTurnText"></span></div><small id="mpThen"></small></div>
   <div class="mp-speed" id="mpSpeed" hidden><b>0</b><small>km/h</small></div>
   <div class="mp-sheet" id="mpSheet"></div>
@@ -9497,10 +9496,6 @@ async function openMaps(target) {
   document.body.append(pg);
   history.pushState({ maata: 'map' }, '');
   $('#mpBack').onclick = closeMaps;
-  const chips = $('#mpChips');
-  { const a = el('button', 'ask', '✨ Ask Maps'); a.onclick = mpAskSheet; chips.append(a); const so = el('button', 'sos', '🆘 SOS'); so.onclick = mpSOS; chips.append(so); }
-  for (const [k, ic, label] of [['home', '🏠', 'Home'], ['work', '💼', 'Work']]) { const b = el('button', 'saved', ic + ' ' + label); b.onclick = () => { const o = mpSaved(); o[k] ? mpSetDest(o[k]) : mpPickSaved(k); }; chips.append(b); }
-  for (const [k, ic, label] of MP_CATS) { const b = el('button', null, ic + ' ' + label); b.onclick = () => mpNearby(k, ic + ' ' + label); chips.append(b); }
   const meBtn = $('#mpMe'); meBtn.append(avatar(me, 'sm')); meBtn.onclick = () => mpTab('you');
   document.querySelectorAll('#mpTabs button').forEach((b) => (b.onclick = () => mpTab(b.dataset.t)));
   $('#mpDir').onclick = () => mpDirections();
@@ -9513,7 +9508,7 @@ async function openMaps(target) {
   $('#mpAi').onclick = () => mpAsk(q.value.trim());
   $('#mpMic').onclick = mpListen;
   $('#mpLocate').onclick = () => { if (MP.me) MP.map.easeTo({ center: MP.me, zoom: Math.max(MP.map.getZoom(), 15), bearing: 0, pitch: 0 }); else mpLocate(true); };
-  $('#mpLayers').onclick = mpChooseStyle; $('#mpReport').onclick = mpNewReport;
+  $('#mpLayers').onclick = mpChooseStyle;
   mpHomeSheet();
   try { await loadMapLibre(); } catch (e) { $('#mpMap').append(el('p', 'mp-err', '⚠️ ' + e.message)); return; }
   const start = MP.me || (() => { try { const s = JSON.parse(store.get('maata_map_last') || 'null'); return s; } catch { return null; } })() || [78.9629, 20.5937];
@@ -9854,7 +9849,7 @@ function mpSnap(nav, c) { // nearest point on the route, searched around the las
 async function mpStartNav() {
   const r = MP.routes[MP.sel]; if (!r || !MP.me) return;
   MP.nav = { ...mpPrepare(r), route: r, seg: 0, step: 1, said: {}, offCount: 0, follow: true, started: Date.now(), dur: r.duration };
-  $('#mapPage').classList.add('navigating'); mpClearNear(); mpPuckLook(); $('#mpReport').hidden = false; mpVoiceCheck(); navLoadName();
+  $('#mapPage').classList.add('navigating'); mpClearNear(); mpPuckLook(); mpVoiceCheck(); navLoadName();
   try { MP.wake = await navigator.wakeLock?.request('screen'); } catch {}
   mpNavSheet(); mpSay(navText('start', { dist: fmtKm(r.distance), time: fmtMin(r.duration) }));
   if (MP.lastFix) mpNavTick(MP.lastFix);
@@ -9864,7 +9859,7 @@ function mpStopNav(silent) {
   if (!MP.nav) return; MP.nav = null;
   try { MP.wake && MP.wake.release(); } catch {} MP.wake = null;
   if (MP.share) { try { socket.emit('live:stop', { id: MP.share }); } catch {} MP.share = null; }
-  const pg = $('#mapPage'); if (pg) pg.classList.remove('navigating'); setTimeout(mpPuckLook, 0); if ($('#mpReport')) $('#mpReport').hidden = !mpLayersOn().has('traffic');
+  const pg = $('#mapPage'); if (pg) pg.classList.remove('navigating'); setTimeout(mpPuckLook, 0);
   if ($('#mpTurn')) { $('#mpTurn').hidden = true; $('#mpSpeed').hidden = true; }
   mpStopVoice();
   if (!silent && MP.map) { MP.map.easeTo({ pitch: 0, bearing: 0, duration: 600 }); mpPlaceSheet(); }
@@ -10042,8 +10037,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 121;
-const APP_NOTES = ["🗺️ Maps: kept only Petrol, Hotels, Hospital and Medical nearby. Restaurants, Temples, Mechanic, Parking, EV charge and Toilets buttons removed. You can still search any place by name."];
+const APP_VERSION = 122;
+const APP_NOTES = ["🗺️ Maps: the chip row under the search bar (Ask Maps, SOS, Home, Work…) and the ⚠️ road report button are removed for a cleaner map. ✨ AI is still in the search bar; Home, Work and 🆘 Emergency are in the list when you tap the search box."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10379,7 +10374,6 @@ function mpApplyLayers(changed) {
     if (changed === 'raised') m.easeTo({ pitch: 58, zoom: Math.max(m.getZoom(), 16.2), duration: 900 });
   } else { drop('mp-3d'); if (changed === 'raised' && !MP.nav) m.easeTo({ pitch: 0, duration: 700 }); }
   if (changed === 'street' && on.has('street')) toast('🧍 Street View: tap a road, then press “Street View here”');
-  const rb = $('#mpReport'); if (rb) rb.hidden = !(on.has('traffic') || MP.nav);
   mpOverlays(changed);
 }
 // ----- live overlays that follow the map: traffic, road reports, wildfires, air quality, weather -----
