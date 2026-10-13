@@ -1462,7 +1462,13 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 109;
+const MAATA_VERSION = 111;
+// remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
+app.post('/api/app-seen', auth, (req, res) => {
+  const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
+  const prev = req.user.androidVer || ''; if (prev !== ver) { req.user.androidVer = ver; req.user.androidVerAt = now(); save(); }
+  res.json({ prev });
+});
 app.get('/api/version', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }

@@ -1441,6 +1441,11 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 
 /* Maata Maps v3 */
+.mp-chips button.sos{background:#E53935;color:#fff;font-weight:800}
+.mp-quick{grid-template-columns:repeat(3,1fr)}.mp-smart{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.mp-smart small{width:100%;color:#5D6E7C;font-weight:700}.mp-smart button{padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#ECFBF4,#EEF3FF);color:#13202B;font-weight:700;font-size:13.5px}
+.mp-nearhead{display:flex;align-items:baseline;justify-content:space-between;padding:6px 10px 2px}.mp-nearhead small{color:#5D6E7C}.mp-ri.sos{background:#FDECEA;text-decoration:none}.mp-ri.sos b{color:#C62828}
+.sos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:8px 10px 12px}.sos-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;border-radius:16px;background:#FDECEA;color:#B71C1C;text-decoration:none}.sos-btn span{font-size:26px}.sos-btn b{font-size:19px}.sos-btn small{font-size:11.5px;color:#7F1D1D;text-align:center}
+
 /* Maata Maps: directions screen + pull-down sheet */
 .mp-sheet{transition:transform .28s cubic-bezier(.2,.8,.3,1)}.mp-sheet.mini{transform:translateY(calc(100% - 70px));overflow:hidden}.mp-sheet::before{cursor:grab;width:48px;height:6px}
 .mp.dir .mp-top,.mp.dir .mp-tabs,.mp.dir #mpDir,.mp.dir .mp-sheet .mp-modes{display:none}.mp.dir .mp-sheet{bottom:0}.mp.dir .mp-rtop{top:calc(170px + env(safe-area-inset-top,0px))}
@@ -2136,7 +2141,7 @@ async function start() {
   loadStatus();
   setTimeout(checkVersion, 2500);
   setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
-  updSuccessCheck(); setTimeout(checkAppUpdate, 1500);
+  updSuccessCheck(); setTimeout(checkAppUpdate, 1500); setTimeout(mpWarmUp, 6000);
   loadPrefs();
   aiInit();
   setTimeout(handleJoinLink, 800);
@@ -8778,10 +8783,11 @@ async function checkAppUpdate() {
 }
 // ✅ first open after an app update: say so on screen
 const verNum = (v) => Number(String(v || '').split('.').pop()) || 0;
-function updSuccessCheck() {
+async function updSuccessCheck() {
   const av = appVersion(); if (!av || !window.MaataAndroid) return;
-  const prev = store.get('maata_app_ver'); store.set('maata_app_ver', av);
-  if (!prev || verNum(av) <= verNum(prev)) return;
+  let prev = store.get('maata_app_ver') || store.get('maata_upd_from') || ''; store.set('maata_app_ver', av); store.del('maata_upd_from');
+  try { const r = await api('/api/app-seen', { method: 'POST', body: JSON.stringify({ ver: av }) }); if (r.prev && verNum(r.prev) > verNum(prev)) prev = r.prev; } catch {} // the server remembers it too
+  if (!prev || verNum(av) <= verNum(prev) || $('#updDone')) return;
   const o = el('div', 'upd ok'); o.id = 'updDone'; o.setAttribute('role', 'dialog');
   o.innerHTML = '<div class="upd-card"><div class="upd-tick">✓</div><h2>Update successful!</h2><p class="upd-sub"></p><ul class="upd-list"></ul><button class="upd-go">OK</button></div>';
   o.querySelector('.upd-sub').textContent = 'Maata is now version ' + av + ' (was ' + prev + ')';
@@ -8819,7 +8825,7 @@ function updSplash(auto) {
   o.querySelector('.upd-sub').textContent = (LATEST_APP ? 'Version 1.0.' + LATEST_APP + ' is ready' : 'A new version is ready') + (appVersion() ? ' · you have ' + appVersion() : '');
   o.querySelector('.upd-later').onclick = () => { UPD.hidden = true; o.remove(); };
   o.querySelector('.upd-go').onclick = () => {
-    const A = window.MaataAndroid;
+    const A = window.MaataAndroid; store.set('maata_upd_from', appVersion());
     if (auto && UPD.state === 'ready') { let r = 'ERROR'; try { r = A.installNow(); } catch {} if (r === 'OK') { UPD.state = 'installing'; updDraw(); return; } if (r === 'PERMISSION') { toast('Allow "Install unknown apps" for Maata, come back and tap Update again.'); return; } }
     if (auto && UPD.state === 'downloading') return;
     o.remove(); startAppUpdate(); // older Maata apps: download, then Android asks "Update?"
@@ -8840,6 +8846,7 @@ function updDraw() {
 // coming back to Maata after a while: check again
 document.addEventListener('visibilitychange', () => { if (!document.hidden && window.MaataAndroid && token && Date.now() - UPD.checkedAt > 3600000) checkAppUpdate(); });
 function startAppUpdate() {
+  if (appVersion()) store.set('maata_upd_from', appVersion());
   const A = window.MaataAndroid, url = location.origin + '/download';
   if (A && A.installUpdate) {
     let r = 'ERROR'; try { r = A.installUpdate(url); } catch {}
@@ -9422,7 +9429,7 @@ async function openMaps(target) {
   history.pushState({ maata: 'map' }, '');
   $('#mpBack').onclick = closeMaps;
   const chips = $('#mpChips');
-  { const a = el('button', 'ask', '✨ Ask Maps'); a.onclick = mpAskSheet; chips.append(a); }
+  { const a = el('button', 'ask', '✨ Ask Maps'); a.onclick = mpAskSheet; chips.append(a); const so = el('button', 'sos', '🆘 SOS'); so.onclick = mpSOS; chips.append(so); }
   for (const [k, ic, label] of [['home', '🏠', 'Home'], ['work', '💼', 'Work']]) { const b = el('button', 'saved', ic + ' ' + label); b.onclick = () => { const o = mpSaved(); o[k] ? mpSetDest(o[k]) : mpPickSaved(k); }; chips.append(b); }
   for (const [k, ic, label] of MP_CATS) { const b = el('button', null, ic + ' ' + label); b.onclick = () => mpNearby(k, ic + ' ' + label); chips.append(b); }
   const meBtn = $('#mpMe'); meBtn.append(avatar(me, 'sm')); meBtn.onclick = () => mpTab('you');
@@ -9547,21 +9554,113 @@ async function mpNearbyFetch(cat, lat, lng) {
   } catch { /* phone could not reach them either: ask the Maata server */ }
   return api('/api/maps/nearby?cat=' + cat + '&lat=' + lat + '&lng=' + lng);
 }
+
+// ⛽ trip fuel cost (approximate) — your fuel price and mileage, set in Maps → You
+const fuelCfg = () => { try { return { price: 109, car: 18, bike: 45, ...JSON.parse(store.get('maata_fuel') || '{}') }; } catch { return { price: 109, car: 18, bike: 45 }; } };
+function fuelText(m) { if (!['car', 'bike'].includes(MP.mode)) return ''; const f = fuelCfg(), km = m / 1000, rs = km / (f[MP.mode] || 18) * f.price; return rs < 1 ? '' : ' · ⛽ ≈ ₹' + Math.round(rs); }
+function mpFuelSheet() {
+  const f = fuelCfg();
+  sheet('⛽ Trip fuel cost', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px';
+    const fld = (label, v) => { const l = el('label'); l.append(el('span', null, label)); const i = el('input'); i.type = 'number'; i.inputMode = 'decimal'; i.value = v; l.append(i); box.append(l); return i; };
+    const pr = fld('Petrol price (₹ per litre)', f.price), car = fld('Car mileage (km per litre)', f.car), bike = fld('Bike mileage (km per litre)', f.bike);
+    const ok = el('button', 'primary', 'Save'); ok.onclick = () => { store.set('maata_fuel', JSON.stringify({ price: Number(pr.value) || 109, car: Number(car.value) || 18, bike: Number(bike.value) || 45 })); closeSheet('moreSheet'); toast('⛽ Saved'); if (MP.routes.length) mpPlaceSheet(); };
+    box.append(ok, el('p', 'info-note', 'Maata shows “⛽ ≈ ₹…” on every car and bike route, so you know the fuel cost before you start. It is an estimate.')); list.append(box);
+  });
+}
+// 🆘 emergency: call 108 / 100 / 112, nearest hospital & police, send your location to family
+function mpSOS() {
+  const c = MP.me; const link = c ? 'https://maps.google.com/?q=' + c[1].toFixed(6) + ',' + c[0].toFixed(6) : '';
+  sheet('🆘 Emergency', (list) => {
+    const g = el('div', 'sos-grid');
+    for (const [n, t, ic] of [['108', 'Ambulance', '🚑'], ['100', 'Police', '🚓'], ['112', 'All emergencies', '🆘'], ['101', 'Fire', '🚒'], ['1091', 'Women helpline', '👩'], ['1033', 'Highway help', '🛣️']]) { const a = el('a', 'sos-btn'); a.href = 'tel:' + n; a.innerHTML = '<span>' + ic + '</span><b>' + n + '</b><small>' + t + '</small>'; g.append(a); }
+    list.append(g);
+    const h = el('button', 'sheet-btn', '🏥 Nearest hospital'); h.onclick = () => { closeSheet('moreSheet'); mpNearby('hospital', '🏥 Hospital'); };
+    const p = el('button', 'sheet-btn', '🚓 Nearest police station'); p.onclick = () => { closeSheet('moreSheet'); mpNearby('police', '🚓 Police'); };
+    const sh = el('button', 'sheet-btn', '📍 Send my location to family'); sh.onclick = async () => {
+      if (!link) return toast('Waiting for your location…'); const text = '🆘 I need help. My location: ' + link;
+      try { if (navigator.share) { await navigator.share({ text }); return; } } catch { return; }
+      location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
+    };
+    list.append(h, p, sh, el('p', 'info-note', 'Calls are free from any phone, even without balance. Stay calm — help is coming.'));
+  });
+}
+// ✨ smart suggestions for this time of day
+function mpSmartChips() {
+  const hr = new Date().getHours();
+  const set = hr >= 5 && hr < 11 ? [['food', '☕', 'Tea & tiffin'], ['fuel', '⛽', 'Petrol'], ['temple', '🛕', 'Temples']] : hr < 16 ? [['food', '🍛', 'Meals'], ['atm', '🏧', 'ATM'], ['pharmacy', '💊', 'Medical']]
+    : hr < 20 ? [['fuel', '⛽', 'Petrol on the way'], ['temple', '🛕', 'Evening darshan'], ['food', '🍽️', 'Snacks']] : hr < 23 ? [['food', '🍽️', 'Dinner'], ['hotel', '🏨', 'Hotels / lodge'], ['fuel', '⛽', 'Petrol']] : [['hospital', '🏥', '24-hour hospital'], ['police', '🚓', 'Police'], ['fuel', '⛽', 'Petrol']];
+  const row = el('div', 'mp-smart'); row.append(el('small', null, '✨ For you now'));
+  for (const [cat, ic, l] of set) { const b = el('button', null, ic + ' ' + l); b.onclick = () => (MP.routes.length && /on the way/.test(l) ? mpAlong(cat, ic + ' ' + l) : mpNearby(cat, ic + ' ' + l)); row.append(b); }
+  return row;
+}
+// open Maps quickly: load the map engine in the background soon after Maata starts
+function mpWarmUp() {
+  if (!F('maps') || window.maplibregl) return;
+  const pc = document.createElement('link'); pc.rel = 'preconnect'; pc.href = 'https://tiles.openfreemap.org'; pc.crossOrigin = ''; document.head.append(pc);
+  const go = () => loadMapLibre().catch(() => {}); (window.requestIdleCallback || setTimeout)(go, 4000);
+}
+// ----- ⚡ nearby, instantly: 1) places already inside the map on the phone, 2) places added by Maata people, 3) internet (several free services at once) -----
+const NEAR_TILE = { fuel: ['fuel'], ev: ['charging_station'], hospital: ['hospital', 'clinic', 'doctors', 'nursing_home'], atm: ['atm', 'bank'], food: ['restaurant', 'fast_food', 'cafe', 'food_court'], parking: ['parking'], hotel: ['hotel', 'guest_house', 'motel', 'hostel', 'lodging'],
+  temple: ['place_of_worship'], pharmacy: ['pharmacy', 'chemist'], police: ['police'], toilets: ['toilets'], mechanic: ['car_repair', 'motorcycle_repair', 'tyres'], busstand: ['bus_station'], rail: ['station', 'halt'] };
+const NEAR_PHOTON = { fuel: ['amenity:fuel', 'petrol'], ev: ['amenity:charging_station', 'charging'], hospital: ['amenity:hospital&osm_tag=amenity:clinic', 'hospital'], atm: ['amenity:atm&osm_tag=amenity:bank', 'atm'], food: ['amenity:restaurant&osm_tag=amenity:fast_food', 'restaurant'],
+  parking: ['amenity:parking', 'parking'], hotel: ['tourism:hotel&osm_tag=tourism:guest_house', 'hotel'], temple: ['amenity:place_of_worship', 'temple'], pharmacy: ['amenity:pharmacy', 'pharmacy'], police: ['amenity:police', 'police'], toilets: ['amenity:toilets', 'toilet'], mechanic: ['shop:car_repair&osm_tag=shop:motorcycle_repair', 'mechanic'] };
+const NEAR_COMMUNITY = { fuel: 'fuel', hospital: 'hospital', pharmacy: 'pharmacy', food: 'food', temple: 'temple', atm: 'atm', mechanic: 'mechanic', hotel: 'hotel' };
+const nearCache = new Map();
+function mpTileNearby(cat, c) {
+  const m = MP.map, want = NEAR_TILE[cat]; if (!m || !want) return [];
+  const st = m.getStyle(); if (!st) return []; const out = [];
+  for (const id of Object.keys(st.sources || {})) {
+    if (st.sources[id].type !== 'vector') continue;
+    let fs = []; try { fs = m.querySourceFeatures(id, { sourceLayer: 'poi' }); } catch { continue; }
+    for (const f of fs) { const p = f.properties || {}; if (!want.includes(p.subclass) && !want.includes(p.class)) continue; if (f.geometry.type !== 'Point') continue; const [lo, la] = f.geometry.coordinates; out.push({ name: p['name:en'] || p.name || '', lat: la, lng: lo, open: '', phone: '', dist: Math.round(hav(c, [lo, la])), src: 'map' }); }
+  }
+  return out;
+}
+async function mpPhoton(cat, lat, lng) {
+  const t = NEAR_PHOTON[cat]; if (!t) return [];
+  const r = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(t[1]) + '&lat=' + lat + '&lon=' + lng + '&limit=25&location_bias_scale=0.9&osm_tag=' + t[0], { signal: AbortSignal.timeout(9000) });
+  if (!r.ok) throw new Error('photon ' + r.status); const d = await r.json();
+  return (d.features || []).map((f) => { const p = f.properties || {}, [lo, la] = f.geometry.coordinates; return { name: p.name || '', lat: la, lng: lo, open: '', phone: '', dist: Math.round(hav([lng, lat], [lo, la])) }; }).filter((x) => x.dist < 30000);
+}
+function nearMerge(lists) {
+  const seen = new Map();
+  for (const x of lists.flat()) { if (!isFinite(x.lat)) continue; const k = (x.lat * 1500 | 0) + ':' + (x.lng * 1500 | 0); const old = seen.get(k); if (!old || (!old.name && x.name) || (x.open && !old.open)) seen.set(k, { ...old, ...x, name: x.name || (old && old.name) || '' }); }
+  return [...seen.values()].sort((a, b) => a.dist - b.dist).slice(0, 30);
+}
 async function mpNearby(cat, label) {
   const c = MP.me || (MP.map && MP.map.getCenter().toArray()); if (!c) return toast('Waiting for your location…');
-  const res = $('#mpRes'); res.hidden = false; res.innerHTML = ''; res.append(el('div', 'mp-thinking', '🔎 Finding ' + label + ' near you…'));
-  let list = []; try { list = await mpNearbyFetch(cat, c[1], c[0]); } catch (e) { res.innerHTML = ''; const w = el('div', 'mp-thinking', '⚠️ ' + e.message + ' '); const again = el('button', 'mp-sec', '🔄 Try again'); again.onclick = () => mpNearby(cat, label); w.append(again); res.append(w); return; }
-  mpClearNear(); res.innerHTML = '';
-  if (!list.length) { res.append(el('div', 'mp-thinking', 'No ' + label.split(' ').slice(1).join(' ').toLowerCase() + ' found within 20 km on the map yet. Try typing a name, e.g. “HP petrol bunk Chittoor”.')); return; }
-  const icon = label.split(' ')[0];
-  for (const p of list) {
-    const name = p.name || label.split(' ').slice(1).join(' ');
-    const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, name), el('small', null, fmtKm(p.dist) + (p.open ? ' · ' + p.open : ''))); b.append(el('span', 'ic', icon), tx);
-    b.onclick = () => mpSetDest({ name, lat: p.lat, lng: p.lng, addr: label.split(' ').slice(1).join(' ') + ' · ' + fmtKm(p.dist), phone: p.phone }); res.append(b);
-    const m = el('button', 'mp-poi', icon); m.onclick = () => b.click();
-    MP.nearMarkers.push(new maplibregl.Marker({ element: m }).setLngLat([p.lng, p.lat]).addTo(MP.map));
+  const res = $('#mpRes'); res.hidden = false; res.innerHTML = ''; res.append(el('div', 'mp-thinking', '⚡ Finding ' + label + ' near you…'));
+  const ask = (MP.nearAsk = (MP.nearAsk || 0) + 1), key = cat + ':' + c[1].toFixed(2) + ',' + c[0].toFixed(2), what = label.split(' ').slice(1).join(' ');
+  let all = [], netDone = false, fit = true;
+  const draw = () => {
+    if (ask !== MP.nearAsk || !MP.map) return;
+    mpClearNear(); res.innerHTML = ''; res.hidden = false;
+    const list = nearMerge([all]); const icon = label.split(' ')[0];
+    if (!list.length) { res.append(el('div', 'mp-thinking', netDone ? 'No ' + what.toLowerCase() + ' found within 20 km on the map yet. Try typing a name, e.g. “HP petrol bunk Chittoor”.' : '⚡ Finding ' + label + ' near you…')); return; }
+    const head = el('div', 'mp-nearhead'); head.append(el('b', null, icon + ' ' + list.length + ' ' + what), el('small', null, netDone ? 'nearest first' : 'more loading…')); res.append(head);
+    if (cat === 'police' || cat === 'hospital') { const e = el('a', 'mp-ri sos'); e.href = 'tel:' + (cat === 'police' ? '100' : '108'); e.innerHTML = '<span class="ic">📞</span><div><b>Emergency: call ' + (cat === 'police' ? '100 (Police)' : '108 (Ambulance)') + '</b><small>Free, works 24 hours</small></div>'; res.append(e); }
+    for (const p of list) {
+      const name = p.name || what, b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, name), el('small', null, fmtKm(p.dist) + (p.src === 'maata' ? ' · added by Maata users' : '') + (p.open ? ' · ' + p.open : ''))); b.append(el('span', 'ic', icon), tx);
+      b.onclick = () => mpSetDest({ name, lat: p.lat, lng: p.lng, addr: what + ' · ' + fmtKm(p.dist), phone: p.phone }); res.append(b);
+      const mk = el('button', 'mp-poi', icon); mk.onclick = () => b.click(); MP.nearMarkers.push(new maplibregl.Marker({ element: mk }).setLngLat([p.lng, p.lat]).addTo(MP.map));
+    }
+    if (fit && list.length) { fit = !netDone; const bb = new maplibregl.LngLatBounds(); bb.extend(c); list.slice(0, 6).forEach((p) => bb.extend([p.lng, p.lat])); MP.map.fitBounds(bb, { padding: { top: 170, bottom: 260, left: 40, right: 40 }, maxZoom: 15.5, duration: 500 }); }
+  };
+  const hit = nearCache.get(key); if (hit && Date.now() - hit.t < 600000) { all = hit.v; netDone = true; return draw(); }
+  // 1) instant: what the map already has on the phone (zoom in around you first so the places are loaded)
+  if (MP.map.getZoom() < 13 || hav(MP.map.getCenter().toArray(), c) > 3000) { MP.map.jumpTo({ center: c, zoom: 14 }); await new Promise((ok) => { MP.map.once('idle', ok); setTimeout(ok, 1500); }); }
+  all = mpTileNearby(cat, c);
+  // 2) places Maata people added
+  const cc = NEAR_COMMUNITY[cat]; if (cc) all = all.concat((MP.places || []).filter((p) => p.cat === cc).map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, phone: p.phone, dist: Math.round(hav(c, [p.lng, p.lat])), src: 'maata' })));
+  if (all.length) draw();
+  // 3) internet: every service at once, results added as they come
+  const jobs = [mpPhoton(cat, c[1], c[0]), mpNearbyFetch(cat, c[1], c[0])].map((pr) => pr.then((v) => { all = all.concat(v); if (v.length) draw(); return v; }));
+  const done = await Promise.allSettled(jobs); netDone = true;
+  if (done.every((x) => x.status === 'rejected') && !all.length) {
+    res.innerHTML = ''; const w = el('div', 'mp-thinking', '📶 Internet is slow right now. '); const again = el('button', 'mp-sec', '🔄 Try again'); again.onclick = () => mpNearby(cat, label); w.append(again); res.append(w); return;
   }
-  const bb = new maplibregl.LngLatBounds(); bb.extend(c); list.slice(0, 8).forEach((p) => bb.extend([p.lng, p.lat])); MP.map.fitBounds(bb, { padding: { top: 170, bottom: 260, left: 40, right: 40 }, maxZoom: 15 });
+  nearCache.set(key, { t: Date.now(), v: nearMerge([all]) }); draw();
 }
 function mpClearNear() { MP.nearMarkers.forEach((m) => m.remove()); MP.nearMarkers = []; }
 // ----- a place is chosen -----
@@ -9590,7 +9689,7 @@ function mpPlaceSheet(loading) {
     const b = el('button', 'mp-route' + (i === MP.sel ? ' on' : '')); const top = el('div'); top.append(el('b', null, fmtMin(r.duration)), el('span', null, fmtKm(r.distance)));
     if (i === 0) top.append(el('em', null, MP.routes.length > 1 ? 'Fastest' : 'Best'));
     else if (r.distance < MP.routes[0].distance) top.append(el('em', 'short', 'Shorter'));
-    b.append(top, el('small', null, (r.via.length ? 'via ' + r.via.join(', ') + ' · ' : '') + 'arrive ' + fmtClock(Date.now() + r.duration * 1000)));
+    b.append(top, el('small', null, (r.via.length ? 'via ' + r.via.join(', ') + ' · ' : '') + 'arrive ' + fmtClock(Date.now() + r.duration * 1000) + fuelText(r.distance)));
     b.onclick = () => { MP.sel = i; mpDrawRoutes(); mpPlaceSheet(); }; rl.append(b);
   });
   s.append(rl);
@@ -9613,8 +9712,8 @@ function mpHomeSheet() {
   const o = mpSaved(), row = el('div', 'mp-quick');
   const q = (ic, label, fn) => { const b = el('button'); b.append(el('span', null, ic), el('small', null, label)); b.onclick = fn; row.append(b); };
   q('🏠', 'Home', () => (o.home ? mpSetDest(o.home) : mpPickSaved('home'))); q('💼', 'Work', () => (o.work ? mpSetDest(o.work) : mpPickSaved('work')));
-  q('⛽', 'Petrol', () => mpNearby('fuel', '⛽ Petrol')); q('🏥', 'Hospital', () => mpNearby('hospital', '🏥 Hospital'));
-  s.append(row);
+  q('⛽', 'Petrol', () => mpNearby('fuel', '⛽ Petrol')); q('🏥', 'Hospital', () => mpNearby('hospital', '🏥 Hospital')); q('🚓', 'Police', () => mpNearby('police', '🚓 Police')); q('🆘', 'Emergency', mpSOS);
+  s.append(row, mpSmartChips());
 }
 // ----- routes -----
 async function mpRoute() {
@@ -9857,8 +9956,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 109;
-const APP_NOTES = ["🚗 Choose your car on the map: hatchback, sedan, SUV, taxi, sports car, auto rickshaw", "🏍️ Bikes: sports bike, scooter, bullet, delivery scooter, bicycle", "🚶 Walkers: explorer boy, explorer girl, thatha with stick, school kid — they walk when you walk", "Tap yourself on the map (or Maps → You) to change"];
+const APP_VERSION = 111;
+const APP_NOTES = ["⚡ Petrol, hospital, police, hotels: answers come instantly from the map on your phone — no more “server busy”", "🎨 Brighter, colourful map with darker, easier-to-read names", "🆘 Emergency button: call 108 / 100 / 112, nearest hospital & police, send your location to family", "⛽ Every route shows the fuel cost (≈ ₹)", "✨ Smart suggestions for the time of day; Maps opens faster"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10423,8 +10522,39 @@ function mpLocalLabels() {
     MP.labels.push(new maplibregl.Marker({ element: d, anchor: 'top', offset: [0, 9] }).setLngLat(f.geometry.coordinates).addTo(m));
   }
 }
+// 🎨 Maata colours: darker, easier-to-read names and a brighter, more colourful map (Default / Terrain / Bright)
+function mpColourise() {
+  const m = MP.map; if (!m || !['colour', 'terrain', 'bright'].includes(MP.styleKey)) return;
+  const set = (id, prop, v) => { try { m.setPaintProperty(id, prop, v); } catch {} };
+  let layers = []; try { layers = m.getStyle().layers; } catch { return; }
+  for (const l of layers) {
+    const id = l.id, sl = l['source-layer'] || '';
+    if (l.type === 'background') set(id, 'background-color', '#F6F2EA');
+    else if (l.type === 'fill') {
+      if (sl === 'water' || /^water/.test(id)) set(id, 'fill-color', '#7CC8F8');
+      else if (/park|wood|forest|grass|scrub|meadow|nature/.test(id) || /landcover/.test(sl) && /wood|grass|park|forest/.test(id)) set(id, 'fill-color', /wood|forest/.test(id) ? '#9ED69A' : '#BDE7B0');
+      else if (/farm|agri|crop/.test(id)) set(id, 'fill-color', '#EEF4CE');
+      else if (/residential/.test(id)) set(id, 'fill-color', '#F3E9DD');
+      else if (/hospital/.test(id)) set(id, 'fill-color', '#FBD9DE');
+      else if (/school|university|college/.test(id)) set(id, 'fill-color', '#FBEFC4');
+      else if (/cemetery/.test(id)) set(id, 'fill-color', '#D6E8D0');
+      else if (sl === 'building' || /^building$/.test(id)) { set(id, 'fill-color', '#E9DCCB'); set(id, 'fill-outline-color', '#CDB89E'); }
+    } else if (l.type === 'line' && sl === 'transportation' && !/casing|outline|rail|path|pedestrian|aeroway|ferry/.test(id)) {
+      if (/motorway/.test(id)) set(id, 'line-color', '#FF8A3D');
+      else if (/trunk/.test(id)) set(id, 'line-color', '#FFB13B');
+      else if (/primary/.test(id)) set(id, 'line-color', '#FFD15C');
+      else if (/secondary|tertiary/.test(id)) set(id, 'line-color', '#FFF0A8');
+    } else if (l.type === 'line' && (sl === 'waterway' || /^waterway/.test(id))) set(id, 'line-color', '#5AB7F0');
+    else if (l.type === 'symbol' && l.layout && l.layout['text-field']) {
+      const place = sl === 'place' || /^place|label_(city|town|village|other|state|country)/.test(id), road = sl === 'transportation_name' || /highway-name|road.*label|highway-ref/.test(id), water = /water/.test(id + sl);
+      set(id, 'text-color', place ? '#111827' : road ? '#2B2B2B' : water ? '#0B5394' : '#3A2E25');
+      set(id, 'text-halo-color', 'rgba(255,255,255,0.95)'); set(id, 'text-halo-width', place ? 2 : 1.6); set(id, 'text-halo-blur', 0.3);
+    }
+  }
+}
 function mpStyleTweaks() {
   const m = MP.map; if (!m) return;
+  mpColourise();
   try { for (const l of m.getStyle().layers) if (l.type === 'symbol' && /^poi/.test(l.id)) m.setLayerZoomRange(l.id, 13, 24); } catch {} // temples, schools… show earlier, like Google
   mpLocalLabels(); m.once('idle', mpLocalLabels); mpShowSavedPins(); mpLoadPlaces(true); mpApplyLayers();
 }
@@ -10479,6 +10609,7 @@ function mpYouSheet() {
   const lang = el('button', 'sheet-btn', '🔤 Village names: English + ' + ({ off: 'off', te: 'తెలుగు', hi: 'हिंदी', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', mr: 'मराठी', bn: 'বাংলা', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ', ur: 'اردو', or: 'ଓଡ଼ିଆ' })[mapLocalLang()]);
   lang.onclick = () => sheet('Village & town names', (l2) => { for (const [k, n] of [['te', 'English + తెలుగు'], ['hi', 'English + हिंदी'], ['ta', 'English + தமிழ்'], ['kn', 'English + ಕನ್ನಡ'], ['ml', 'English + മലയാളം'], ['mr', 'English + मराठी'], ['bn', 'English + বাংলা'], ['gu', 'English + ગુજરાતી'], ['off', 'English only']]) { const b = el('button', 'sheet-btn', n); b.onclick = () => { store.set('maata_map_names', k); closeSheet('moreSheet'); mpLocalLabels(); mpYouSheet(); }; l2.append(b); } });
   s.append(lang);
+  const fu = el('button', 'sheet-btn', '⛽ Fuel cost: ₹' + fuelCfg().price + '/L · car ' + fuelCfg().car + ' km/L · bike ' + fuelCfg().bike + ' km/L'); fu.onclick = mpFuelSheet; s.append(fu);
   const pk = el('button', 'sheet-btn', '🚗 You on the map: ' + puckModel('car')[1] + ' · ' + puckModel('bike')[1] + ' · ' + puckModel('foot')[1]); pk.onclick = () => mpVehicleSheet(); s.append(pk);
   const vb = el('button', 'sheet-btn', '🗣️ Navigation voice: ' + (NAV_LANGS[navLang()] || 'English') + ' · ' + (navName() || 'no name')); vb.onclick = () => mpVoiceSheet(() => mpYouSheet()); s.append(vb);
   const sh = el('button', 'sheet-btn', '🚦 Share road speed for live traffic (no name): ' + (store.get('maata_map_share_speed') === '0' ? 'OFF' : 'ON'));
