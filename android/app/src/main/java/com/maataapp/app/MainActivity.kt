@@ -553,6 +553,7 @@ class MainActivity : Activity() {
         } }
         @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
+        @JavascriptInterface fun secureAlarm(on: Boolean): Boolean = if (on) SecureAlarm.start(this@MainActivity) else { SecureAlarm.stop(this@MainActivity); true }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }
         @JavascriptInterface fun openNotificationSettings() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
