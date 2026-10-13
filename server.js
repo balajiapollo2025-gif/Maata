@@ -670,10 +670,14 @@ app.post('/api/login', rateLimit, async (req, res) => {
   const password = String(req.body?.password || '');
   if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number.' });
   const u = db.users.find((x) => x.phone === phone) || findByMobile(phone);
-  if (!u || !(await bcrypt.compare(password, u.passHash))) return res.status(401).json({ error: 'Wrong mobile number or password.' });
+  if (!u || !(await bcrypt.compare(password, u.passHash))) {
+    if (u && u.secure && u.secure.on) { secEvent(u, 'login-fail', 'Wrong password used to log in to your account.'); const bad = u.secure.events.filter((e) => e.type === 'login-fail' && now() - e.t < 3600000).length; save(); if (bad === 3) pushTo(u, { type: 'msg', title: '🛡️ Maata Secure', body: 'Someone tried to log in to your Maata account with a wrong password 3 times.', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {}); }
+    return res.status(401).json({ error: 'Wrong mobile number or password.' });
+  }
   if (u.status === 'blocked') return res.status(403).json({ error: 'This account is blocked. Contact Maata support.' });
   if (u.twoStep) { const ticket = crypto.randomBytes(18).toString('base64url'); pinTickets.set(ticket, { uid: u.id, t: now(), tries: 0 }); return res.json({ needPin: true, ticket, hint: u.twoStep.hint || '' }); }
   recordLogin(u, req, 'login');
+  if (u.secure && u.secure.on) { secEvent(u, 'login', 'New login on ' + deviceName(req.headers['user-agent']) + '.'); pushTo(u, { type: 'msg', title: '🛡️ New login to Maata', body: 'Your account was just opened on ' + deviceName(req.headers['user-agent']) + '. Not you? Open Maata Secure and log out other devices.', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {}); }
   save();
   res.json({ token: sign(u), user: publicUser(u) });
 });
@@ -807,6 +811,220 @@ app.delete('/api/devices/:id', auth, async (req, res) => {
   const u = req.user; u.devices = (u.devices || []).filter((d) => d.id !== req.params.id); save();
   for (const s of await io.in('user:' + u.id).fetchSockets()) if (s.did === req.params.id) { s.emit('force-logout', { reason: 'This device was logged out from your phone.' }); s.disconnect(true); }
   res.json({ ok: true });
+});
+
+
+// ---------- 🛡️ Maata Secure: find my phone, loud alarm, lost mode, trusted contacts, AI safety check ----------
+// Only the account owner sees and controls their own phones. Strong actions need the Maata password again.
+// Every action is written to the owner's security timeline, and the phone being found is told about it.
+const SEC_MAX_PHONES = 5, SEC_HIST = 40, SEC_HIST_LOST = 300;
+const secDevOk = (s) => /^[A-Za-z0-9_-]{10,48}$/.test(String(s || ''));
+function secOf(u) {
+  if (!u.secure) u.secure = { on: false, phones: [], trusted: [], events: [], lostMsg: '', lostCall: '', imei: '' };
+  const s = u.secure; s.phones = s.phones || []; s.trusted = s.trusted || []; s.events = s.events || [];
+  return s;
+}
+function secEvent(u, type, text, extra = {}) {
+  const s = secOf(u); s.events.push({ id: newId(), t: now(), type, text: clip(text, 220), ...extra }); s.events = s.events.slice(-150);
+}
+const secPhone = (u, id) => secOf(u).phones.find((p) => p.id === id);
+const secOnline = (u, id) => [...io.sockets.sockets.values()].some((s) => s.user && s.user.id === u.id && s.secDev === id);
+const secAgo = (t) => { const m = Math.round((now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
+const secTime = (t) => new Date(t + 5.5 * 3600000).toISOString().replace('T', ' ').slice(0, 16) + ' IST';
+const secMapLink = (l) => 'https://www.google.com/maps?q=' + l.lat + ',' + l.lng;
+// the place this phone usually is (most visited ~1 km square, outside lost mode)
+function secUsual(p) {
+  const cnt = new Map();
+  for (const h of p.hist || []) { if (h.lost) continue; const k = (h.lat * 100 | 0) + ':' + (h.lng * 100 | 0), c = cnt.get(k); if (c) c.n++; else cnt.set(k, { n: 1, h }); }
+  let best = null; for (const v of cnt.values()) if (!best || v.n > best.n) best = v;
+  return best && best.n >= 3 ? best.h : null;
+}
+// 🤖 risk engine: simple, explainable rules on the owner's own security signals
+function secRisk(u) {
+  const s = secOf(u); if (!s.on) return { score: 0, level: 'off', reasons: [], tips: ['Turn on Maata Secure to protect this phone.'] };
+  let score = 0; const reasons = [], tips = [], day = now() - 86400000;
+  for (const p of s.phones) {
+    if (p.lost) { score += 60; reasons.push('🚨 ' + p.name + ' is in lost mode since ' + secAgo(p.lostAt || now()) + '.'); }
+    if (p.lastSeen && now() - p.lastSeen > 2 * 86400000) { score += 12; reasons.push('📴 ' + p.name + ' has not been online for ' + secAgo(p.lastSeen).replace(' ago', '') + '.'); }
+    const usual = secUsual(p);
+    if (usual && p.loc && geoDist([usual.lng, usual.lat], [p.loc.lng, p.loc.lat]) > 80000 && now() - p.loc.at < day) { score += 15; reasons.push('🧭 ' + p.name + ' is ' + Math.round(geoDist([usual.lng, usual.lat], [p.loc.lng, p.loc.lat]) / 1000) + ' km away from where it usually is.'); }
+    if (p.lost && p.battery != null && p.battery < 15) { score += 5; reasons.push('🪫 ' + p.name + ' battery is low (' + p.battery + '%). Act soon.'); }
+  }
+  const ev = s.events.filter((e) => e.t > day);
+  const unl = ev.filter((e) => e.type === 'unlock-fail').length; if (unl) { score += Math.min(25, 10 * unl); reasons.push('🔐 Wrong app-lock tries on your phone ' + unl + ' time' + (unl > 1 ? 's' : '') + ' today.'); }
+  const bad = ev.filter((e) => e.type === 'login-fail').length; if (bad >= 3) { score += 15; reasons.push('🔑 ' + bad + ' wrong-password logins to your account today.'); }
+  const nl = ev.filter((e) => e.type === 'login').length; if (nl) { score += 8; reasons.push('📱 New login to your account today. Check it was you.'); }
+  if (!s.trusted.length) tips.push('Add a trusted family member. They get an alert if your phone is lost.');
+  if (!s.lostCall) tips.push('Add a phone number to show on the lost-phone screen, so a finder can call you.');
+  if (!s.imei) tips.push('Save your IMEI number (dial *#06#). Police and CEIR need it to block a stolen phone.');
+  if (!(u.twoStep)) tips.push('Turn on two-step verification, so a thief cannot log in with only your password.');
+  score = Math.min(100, score);
+  return { score, level: score >= 50 ? 'high' : score >= 20 ? 'watch' : 'safe', reasons, tips };
+}
+function secView(u, devId) {
+  const s = secOf(u);
+  return {
+    on: !!s.on, lostMsg: s.lostMsg || '', lostCall: s.lostCall || '', imei: s.imei || '',
+    trusted: s.trusted.map((id) => { const t = userById(id); return t ? { id, name: t.name } : null; }).filter(Boolean),
+    phones: s.phones.map((p) => ({ id: p.id, name: p.name, addedAt: p.addedAt, lastSeen: p.lastSeen || null, loc: p.loc || null, battery: p.battery ?? null, charging: !!p.charging, lost: !!p.lost, lostAt: p.lostAt || null, alarm: !!p.alarm, online: secOnline(u, p.id), me: p.id === devId, trail: (p.hist || []).slice(-12) })),
+    events: s.events.slice(-60).reverse(), risk: secRisk(u),
+  };
+}
+// send a command to one phone: live (socket) and as a high-priority push (wakes the Android app even when closed)
+async function secSend(u, p, cmd) {
+  p.cmds = [...(p.cmds || []).filter((c) => now() - c.t < 86400000 && c.cmd !== cmd), { cmd, t: now() }].slice(-6);
+  for (const s of await io.in('user:' + u.id).fetchSockets()) if (s.secDev === p.id) s.emit('secure:cmd', { cmd });
+  const title = { alarm: '🔔 Maata Secure alarm', lost: '🚨 This phone is reported lost', locate: '📍 Maata Secure', found: '✅ Lost mode is off', stop: '🔕 Alarm stopped' }[cmd];
+  const body = { alarm: 'The owner is looking for this phone.', lost: (u.secure.lostMsg || 'Please return this phone to its owner.') + (u.secure.lostCall ? ' Call ' + u.secure.lostCall : ''), locate: 'Your Maata account asked for this phone\'s location. Open Maata to share it.', found: 'This phone is back with its owner.', stop: '' }[cmd];
+  if (FCM && p.fcm) { try { await fcmSend(p.fcm, { type: 'secure_' + cmd, title: title || 'Maata Secure', body: body || '', tag: 'maata-secure', url: '/?secure=1' }, 3600); } catch (e) { console.error('[secure] push', e.message); } }
+}
+async function secTellTrusted(u, p, lost) {
+  const s = secOf(u); let n = 0;
+  for (const id of s.trusted) {
+    const c = canMessage(u, id); if (c.error) continue;
+    const text = lost
+      ? '⚠️ Maata Secure: ' + u.name + '\'s phone (' + p.name + ') was marked LOST at ' + secTime(now()) + '. ' + (p.loc ? 'Last seen ' + secAgo(p.loc.at) + ' at the location below.' : 'No location yet.') + ' If someone calls you about this phone, please help. ' + (s.lostCall ? 'Contact: ' + s.lostCall : '')
+      : '✅ Maata Secure: ' + u.name + '\'s phone (' + p.name + ') is found. Thank you!';
+    deliverMessage(u, c.target, { type: 'text', text: clip(text, 900) });
+    if (lost && p.loc) deliverMessage(u, c.target, { type: 'location', location: { lat: p.loc.lat, lng: p.loc.lng, acc: p.loc.acc || 0, live: false } });
+    n++;
+  }
+  return n;
+}
+const secHits = new Map();
+function secLimit(req, res, max) {
+  const k = req.user.id, list = (secHits.get(k) || []).filter((t) => now() - t < 3600000); list.push(now()); secHits.set(k, list);
+  if (list.length > max) { res.status(429).json({ error: 'Too many Maata Secure actions. Wait a few minutes.' }); return false; }
+  return true;
+}
+app.get('/api/secure', auth, (req, res) => res.json(secView(req.user, String(req.query.dev || ''))));
+app.post('/api/secure/settings', auth, async (req, res) => {
+  const u = req.user, s = secOf(u), b = req.body || {};
+  if (b.on !== undefined) {
+    if (!b.on) { // off: forget phones and locations (privacy)
+      if (!(await bcrypt.compare(String(b.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'Enter your Maata password to turn off protection.' });
+      s.on = false; s.phones = []; secEvent(u, 'off', 'Maata Secure turned off. Saved locations were deleted.');
+    } else if (!s.on) { s.on = true; secEvent(u, 'on', 'Maata Secure turned on.'); }
+  }
+  if (b.lostMsg !== undefined) s.lostMsg = clip(String(b.lostMsg).trim(), 160);
+  if (b.lostCall !== undefined) s.lostCall = String(b.lostCall).replace(/[^\d+ ]/g, '').slice(0, 16);
+  if (b.imei !== undefined) s.imei = String(b.imei).replace(/[^\d, ]/g, '').slice(0, 40);
+  if (Array.isArray(b.trusted)) s.trusted = [...new Set(b.trusted.map(String))].filter((id) => canAddTo(u, id)).slice(0, 5);
+  save(); res.json(secView(u, String(b.dev || '')));
+});
+app.post('/api/secure/enroll', auth, (req, res) => {
+  const u = req.user, s = secOf(u), b = req.body || {};
+  if (!s.on) return res.status(400).json({ error: 'Turn on Maata Secure first.' });
+  if (!secDevOk(b.dev)) return res.status(400).json({ error: 'Bad device.' });
+  let p = secPhone(u, b.dev);
+  if (!p) {
+    if (s.phones.length >= SEC_MAX_PHONES) s.phones.sort((a, c) => (a.lastSeen || 0) - (c.lastSeen || 0)).shift();
+    p = { id: b.dev, name: clip(String(b.name || 'My phone').trim(), 50) || 'My phone', addedAt: now(), hist: [], cmds: [] }; s.phones.push(p);
+    secEvent(u, 'enroll', p.name + ' is now protected.', { dev: p.id });
+  }
+  if (b.fcm && String(b.fcm).length > 20 && String(b.fcm).length < 4096) p.fcm = String(b.fcm);
+  p.lastSeen = now(); save(); res.json(secView(u, p.id));
+});
+app.post('/api/secure/rename', auth, (req, res) => {
+  const p = secPhone(req.user, String(req.body?.dev || '')); if (!p) return res.status(404).json({ error: 'Phone not found.' });
+  p.name = clip(String(req.body?.name || '').trim(), 50) || p.name; save(); res.json(secView(req.user, String(req.body?.me || '')));
+});
+app.post('/api/secure/remove', auth, async (req, res) => {
+  const u = req.user, s = secOf(u), id = String(req.body?.dev || ''), p = secPhone(u, id); if (!p) return res.status(404).json({ error: 'Phone not found.' });
+  if (p.lost && !(await bcrypt.compare(String(req.body?.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'This phone is in lost mode. Enter your Maata password to remove it.' });
+  s.phones = s.phones.filter((x) => x !== p); secEvent(u, 'remove', p.name + ' was removed from Maata Secure.'); save(); res.json(secView(u, String(req.body?.me || '')));
+});
+// the phone reports in (only while Maata Secure is on and this phone is enrolled)
+app.post('/api/secure/ping', auth, (req, res) => {
+  const u = req.user, s = secOf(u), b = req.body || {}, p = s.on && secPhone(u, String(b.dev || ''));
+  if (!p) return res.json({ enrolled: false, on: !!s.on });
+  p.lastSeen = now();
+  if (b.battery != null && isFinite(b.battery)) { const bat = Math.max(0, Math.min(100, Math.round(Number(b.battery)))); if (p.lost && bat < 15 && (p.battery == null || p.battery >= 15)) secEvent(u, 'battery', p.name + ' battery is low (' + bat + '%) while lost.', { dev: p.id }); p.battery = bat; p.charging = !!b.charging; }
+  const lat = Number(b.lat), lng = Number(b.lng);
+  if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat || lng)) {
+    const pt = { lat: +lat.toFixed(6), lng: +lng.toFixed(6), acc: Math.round(Number(b.acc) || 0), at: now(), ...(p.lost ? { lost: 1 } : {}) };
+    const last = (p.hist || [])[p.hist.length - 1];
+    const moved = !last || geoDist([last.lng, last.lat], [pt.lng, pt.lat]) > (p.lost ? 30 : 150) || now() - last.at > (p.lost ? 120000 : 1800000);
+    p.loc = pt; if (moved) { p.hist = [...(p.hist || []), pt].slice(-(p.lost ? SEC_HIST_LOST : SEC_HIST)); if (p.lost) secEvent(u, 'seen', p.name + ' was seen (lost mode).', { dev: p.id, lat: pt.lat, lng: pt.lng }); }
+  }
+  const cmds = (p.cmds || []).filter((c) => now() - c.t < 86400000).map((c) => c.cmd); p.cmds = [];
+  save();
+  res.json({ enrolled: true, on: true, lost: !!p.lost, alarm: !!p.alarm, cmds, owner: u.name, lostMsg: s.lostMsg || '', lostCall: s.lostCall || '' });
+});
+// owner's remote actions
+app.post('/api/secure/cmd', auth, async (req, res) => {
+  if (!secLimit(req, res, 40)) return;
+  const u = req.user, s = secOf(u), b = req.body || {}, cmd = String(b.cmd || ''), p = secPhone(u, String(b.dev || ''));
+  if (!s.on) return res.status(400).json({ error: 'Maata Secure is off.' });
+  if (!['alarm', 'stop', 'locate', 'lost', 'found'].includes(cmd)) return res.status(400).json({ error: 'Unknown action.' });
+  if (!p) return res.status(404).json({ error: 'Phone not found.' });
+  if (['lost', 'found'].includes(cmd) && !(await bcrypt.compare(String(b.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'Wrong Maata password.' });
+  const from = clip(String(b.from || 'another device'), 50);
+  let told = 0;
+  if (cmd === 'alarm') { p.alarm = true; secEvent(u, 'alarm', 'Alarm played on ' + p.name + ' (from ' + from + ').', { dev: p.id }); }
+  if (cmd === 'stop') { p.alarm = false; secEvent(u, 'alarm-stop', 'Alarm stopped on ' + p.name + '.', { dev: p.id }); }
+  if (cmd === 'locate') secEvent(u, 'locate', 'Location requested for ' + p.name + ' (from ' + from + ').', { dev: p.id });
+  if (cmd === 'lost') { p.lost = true; p.lostAt = now(); told = await secTellTrusted(u, p, true); secEvent(u, 'lost', p.name + ' marked LOST' + (told ? '. ' + told + ' trusted contact' + (told > 1 ? 's were' : ' was') + ' told.' : '.'), { dev: p.id }); }
+  if (cmd === 'found') { p.lost = false; p.alarm = false; told = await secTellTrusted(u, p, false); secEvent(u, 'found', p.name + ' marked FOUND. Lost mode is off.', { dev: p.id }); }
+  save(); secSend(u, p, cmd);
+  audit('customer:' + u.phone, 'secure-' + cmd, p.name);
+  res.json({ ...secView(u, String(b.me || '')), told });
+});
+// log out every other device (works even when the lost phone is offline: its login stops working at once)
+app.post('/api/secure/logout-others', auth, async (req, res) => {
+  if (!secLimit(req, res, 40)) return;
+  const u = req.user;
+  if (!(await bcrypt.compare(String(req.body?.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'Wrong Maata password.' });
+  u.tokenVersion = (u.tokenVersion || 0) + 1; u.devices = [];
+  secEvent(u, 'logout', 'All other devices were logged out.'); save();
+  const keep = String(req.body?.socket || '');
+  for (const s of await io.in('user:' + u.id).fetchSockets()) if (s.id !== keep) { s.emit('force-logout', { reason: 'You were logged out by the account owner (Maata Secure).' }); s.disconnect(true); }
+  audit('customer:' + u.phone, 'secure-logout-others', '');
+  res.json({ token: sign(u), user: publicUser(u) });
+});
+// events the phone reports: wrong app-lock tries
+app.post('/api/secure/event', auth, async (req, res) => {
+  if (!secLimit(req, res, 60)) return;
+  const u = req.user, s = secOf(u), b = req.body || {}; if (!s.on) return res.json({ ok: true });
+  const p = secPhone(u, String(b.dev || '')), name = p ? p.name : 'your phone';
+  if (b.type === 'unlock-fail') {
+    const lat = Number(b.lat), lng = Number(b.lng), loc = Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat || lng) ? { lat: +lat.toFixed(6), lng: +lng.toFixed(6) } : {};
+    secEvent(u, 'unlock-fail', 'Wrong app-lock tries on ' + name + '.', { dev: b.dev, ...loc });
+    save(); pushTo(u, { type: 'msg', title: '🛡️ Maata Secure', body: 'Someone tried to unlock Maata on ' + name + ' with the wrong PIN or voice. Was it you?', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {});
+  }
+  res.json({ ok: true });
+});
+// 🤖 AI advice on the owner's own security signals (places and numbers only, never messages)
+app.post('/api/secure/ai', auth, async (req, res) => {
+  if (!secLimit(req, res, 30)) return;
+  const u = req.user, r = secRisk(u), lang = AI_LANG_NAME[u.lang] || 'English';
+  const facts = { level: r.level, score: r.score, reasons: r.reasons, tips: r.tips, phones: secOf(u).phones.map((p) => ({ name: p.name, lost: !!p.lost, lastSeen: p.lastSeen ? secAgo(p.lastSeen) : 'never', battery: p.battery })) };
+  let text = '';
+  try {
+    if (GEMINI_KEY) { const g = await gemini('You are Maata Secure, a calm phone-safety helper in India. Give 3 to 5 short, practical steps for this person, in ' + lang + ', based only on these facts. If a phone is lost: first call the phone, then lost mode, then block it on CEIR (ceir.sancharsaathi.gov.in, Sanchar Saathi) with the IMEI and file a police complaint. Never invent facts. Plain text, one step per line, no markdown.', [{ role: 'user', parts: [{ text: JSON.stringify(facts) }] }], { maxTokens: 400, temperature: 0.3 }); text = String((g && g.text) || '').trim(); }
+  } catch (e) { console.error('[secure] ai', e.message); }
+  if (!text) text = [...r.reasons, ...r.tips].slice(0, 5).join('\n') || 'Everything looks fine. Keep Maata Secure on.';
+  res.json({ ...r, advice: clip(text, 1500) });
+});
+// 🧾 theft report: everything the police and CEIR ask for, ready to copy
+app.get('/api/secure/report', auth, (req, res) => {
+  const u = req.user, s = secOf(u), p = secPhone(u, String(req.query.dev || '')); if (!p) return res.status(404).json({ error: 'Phone not found.' });
+  const trail = (p.hist || []).slice(-8).reverse();
+  const lines = [
+    'LOST / STOLEN MOBILE PHONE – DETAILS', '',
+    'Owner name: ' + u.name, 'Owner mobile number: ' + u.phone, 'Phone: ' + p.name, 'IMEI: ' + (s.imei || '[dial *#06# on a phone with the same box, or see the phone box / bill]'),
+    'Lost / noticed missing at: ' + (p.lostAt ? secTime(p.lostAt) : '[DATE AND TIME]'), '',
+    'Last known location: ' + (p.loc ? p.loc.lat + ', ' + p.loc.lng + ' (' + secTime(p.loc.at) + ', accuracy about ' + (p.loc.acc || '?') + ' m)\n' + secMapLink(p.loc) : 'Not available'),
+    'Battery at last report: ' + (p.battery != null ? p.battery + '%' : 'not known'),
+    ...(trail.length > 1 ? ['', 'Recent locations (newest first):', ...trail.map((h) => '• ' + secTime(h.at) + ' – ' + secMapLink(h))] : []),
+    '', 'Next steps:',
+    '1. File a complaint at the nearest police station (or your state police website) and keep the complaint number.',
+    '2. Block the phone on CEIR (Sanchar Saathi): ceir.sancharsaathi.gov.in – needs the IMEI, the complaint number and your mobile number.',
+    '3. Get a duplicate SIM for your number from your mobile operator.',
+    '', 'Report made by Maata Secure on ' + secTime(now()) + '.',
+  ];
+  secEvent(u, 'report', 'Theft report made for ' + p.name + '.', { dev: p.id }); save();
+  res.json({ text: lines.join('\n') });
 });
 
 // Free backup voice: Gemini speech (uses the same GEMINI_API_KEY). Returns a WAV sound.
@@ -1462,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 127;
+const MAATA_VERSION = 128;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2666,7 +2884,7 @@ app.get('/api/search', auth, (req, res) => {
 const pinTickets = new Map();
 app.post('/api/twostep', auth, async (req, res) => {
   const b = req.body || {};
-  if (!(await bcrypt.compare(String(b.password || ''), req.user.passHash))) return res.status(401).json({ error: 'Your current password is wrong.' });
+  if (!(await bcrypt.compare(String(b.password || ''), req.user.passHash))) return res.status(400).json({ error: 'Your current password is wrong.' });
   if (b.off) { delete req.user.twoStep; save(); return res.json({ on: false }); }
   if (!/^\d{6}$/.test(String(b.pin || ''))) return res.status(400).json({ error: 'The PIN must be 6 digits.' });
   req.user.twoStep = { hash: await bcrypt.hash(String(b.pin), 10), hint: String(b.hint || '').slice(0, 60), at: now() }; save();
@@ -3798,6 +4016,7 @@ io.on('connection', (socket) => {
   const room = (id) => 'user:' + id;
   socket.join(room(me));
   markActive(socket.user); // counts the days people use Maata (for referral coins)
+  socket.on('secure:hello', (p) => { if (secDevOk(p?.dev)) socket.secDev = p.dev; });
   for (const g of db.groups) if (gMember(g, me)) socket.join('grp:' + g.id);
   for (const c of db.channels) if (!c.removed && (c.followers || []).includes(me)) socket.join('ch:' + c.id);
 

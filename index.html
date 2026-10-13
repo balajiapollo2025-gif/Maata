@@ -1406,6 +1406,63 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mp.searching .mp-sheet,.mp.searching .mp-tabs,.mp.searching .mp-rtop,.mp.searching .mp-fabs{display:none}.mp.searching .mp-res{max-height:calc(100vh - 110px - env(safe-area-inset-top,0px))}
 .mp-sheet.home{max-height:38vh}
 .mp-sec-h{margin-top:16px;font-size:13px;font-weight:800;color:#5D6E7C}.mp-more{margin-top:8px}.mp-more span{font-size:21px}
+/* 🛡️ Maata Secure — a deliberate night-navy look (single theme), like a safe-box */
+.sec{--s-bg:#0B1628;--s-card:#13243D;--s-tile:#182D4B;--s-line:#22395C;--s-ink:#E8F0FA;--s-dim:#A9BCD6;--s-blue:#5CC8FF;--s-pri:#2F80ED;--s-green:#22C55E;--s-red:#F2556B;position:fixed;inset:0;z-index:38;background:var(--s-bg);color:var(--s-ink);overflow-y:auto;color-scheme:dark}
+.sec-top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:var(--s-bg);font-size:17px}
+.sec-top button{width:44px;height:44px;border-radius:50%;background:none;border:0;color:inherit;font-size:22px}
+.sec-wrap{max-width:640px;margin:0 auto;padding:4px 16px calc(40px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sec-card{background:var(--s-card);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.sec-card h3{margin:0;font-size:18px}
+.sec-p,.sec-note{margin:0;color:var(--s-dim);line-height:1.45}.sec-note{font-size:13px}
+.sec-head{flex-direction:row;align-items:center;gap:14px}
+.sec-head h2{margin:0;font-size:23px}.sec-head small{color:var(--s-dim)}
+.sec-shield{flex:none;width:54px;height:54px;border-radius:16px;background:#1E3A5F;display:grid;place-items:center}
+.sec svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.sec-shield svg{color:var(--s-blue);width:30px;height:30px}
+.sec-pill{margin-left:auto;flex:none;padding:6px 12px;border-radius:999px;font-weight:700;font-size:13px;background:#0E3B2A;color:#4ADE80}
+.sec-pill.off{background:#26324A;color:var(--s-dim)}.sec-pill.lost{background:#4A1520;color:#FF9AAA}
+.sec-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;line-height:1.4}.sec-list.tips li{color:var(--s-dim)}
+.sec-list a{color:var(--s-blue)}
+.sec-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sec-tile{background:var(--s-tile);border:0;border-radius:18px;padding:16px;color:inherit;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:120px;font:inherit}
+.sec-tile b{font-size:16.5px}.sec-tile small{color:var(--s-dim);font-size:13px}.sec-ic{color:var(--s-blue)}
+.sec-btn{border:0;border-radius:14px;padding:11px 14px;min-height:44px;font:inherit;font-weight:700;font-size:14px;background:#1E3A5F;color:var(--s-ink);text-decoration:none;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.sec-btn.pri{background:var(--s-pri);color:#fff}.sec-btn.red{background:#A61E35;color:#fff}.sec-btn.green{background:#15803D;color:#fff}.sec-btn.big{width:100%;padding:15px;font-size:16px}
+.sec-btn:disabled{opacity:.6}
+.sec-risk-top{display:flex;align-items:center;gap:16px}
+.sec-ring{--v:100;--c:var(--s-green);flex:none;width:84px;height:84px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(closest-side,var(--s-card) 76%,transparent 78% 100%),conic-gradient(var(--c) calc(var(--v) * 1%),#26324A 0)}
+.sec-ring b{font-size:24px;line-height:1}.sec-ring small{font-size:11px;color:var(--s-dim)}
+.sec-risk.watch .sec-ring{--c:#F5B13D}.sec-risk.high .sec-ring{--c:var(--s-red)}.sec-risk.high{box-shadow:inset 0 0 0 2px #7A2433}
+.sec-risk-t small{color:var(--s-dim)}
+.sec-advice{white-space:pre-line;background:#0F1E34;border-radius:14px;padding:12px 14px;line-height:1.5}
+.sec-dev{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 12px;padding:12px 0;border-top:1px solid var(--s-line)}
+.sec-dev:first-of-type{border-top:0}
+.sec-dev-ic{width:44px;height:44px;border-radius:14px;background:var(--s-tile);display:grid;place-items:center;color:var(--s-blue)}
+.sec-dev.lost .sec-dev-ic{background:#4A1520;color:#FF9AAA}
+.sec-dev-t{display:flex;flex-direction:column;gap:2px;min-width:0}.sec-dev-t small{color:var(--s-dim)}.sec-red{color:#FF9AAA!important;font-weight:700}
+.sec-acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.sec-acts .sec-btn{flex:1 1 auto}.sec-acts .more{flex:0 0 48px}
+.sec-fld{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--s-dim)}
+.sec-fld input,.sec-fld textarea{font:inherit;font-size:15px;color:var(--s-ink);background:#0F1E34;border:1px solid var(--s-line);border-radius:12px;padding:11px 12px;min-height:44px;box-sizing:border-box;width:100%}
+.sec-fld textarea{min-height:76px;resize:vertical}
+.sec-ev{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--s-line);background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;text-align:left;width:100%}
+.sec-ev small{color:var(--s-dim);white-space:nowrap}
+.sec-foot{margin:0;color:#7F94B2;font-size:12.5px;line-height:1.5}
+.sec-report{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;background:var(--panel,#fff);margin:0 0 8px;padding:12px;border-radius:12px;max-height:46vh;overflow:auto}
+.sec-pick{display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:44px;border-bottom:1px solid var(--line)}.sec-pick input{width:20px;height:20px}
+.sec-pwform{display:flex;flex-direction:column;gap:10px;padding:8px 16px 16px}.sec-pwform input{font:inherit;font-size:16px;padding:12px;border-radius:12px;border:1px solid var(--line);min-height:44px}
+.sheet-btn.primary{background:#0F7A6E;color:#fff;justify-content:center;font-weight:700;border-radius:12px;border-bottom:0;margin:6px 0}
+.sec-lost,.sec-alarm{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff;overflow-y:auto}
+.sec-lost{background:linear-gradient(170deg,#3B0A14,#121B2E)}.sec-alarm{background:#0B1628;z-index:9999}
+.sec-lost h2,.sec-alarm h2{margin:0;font-size:30px}.sec-lost p,.sec-alarm p{margin:0;max-width:420px;line-height:1.5;font-size:17px}
+.sec-lost-ic,.sec-alarm-ic{width:88px;height:88px;border-radius:28px;display:grid;place-items:center;background:rgba(255,255,255,.1)}
+.sec-lost svg,.sec-alarm svg{width:46px;height:46px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sec-alarm-ic{animation:secShake .5s infinite}@keyframes secShake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+@media (prefers-reduced-motion:reduce){.sec-alarm-ic{animation:none}}
+.sec-lost-owner{opacity:.85}.sec-lost-num{font-size:30px;font-weight:800;letter-spacing:.04em;user-select:all}
+.sec-lost .sec-btn,.sec-alarm .sec-btn{max-width:360px}.sec-lost-note{opacity:.7}
+.sec-own{margin-top:16px;max-width:360px;width:100%}.sec-own summary{cursor:pointer;opacity:.8;padding:10px}
+.sec-own form{display:flex;flex-direction:column;gap:8px;text-align:left}.sec-own input{font:inherit;font-size:16px;padding:12px;border-radius:12px;border:0;min-height:44px}
+.sec-err{color:#FFB4BF}
 .mp-attr{order:99;padding:6px 16px 2px;font-size:11px;color:#7A8792;text-align:right}
 .mp-fixed{padding:8px 16px;font-size:13px;color:#1558B0;font-weight:600}
 .mp-chips{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}.mp-chips::-webkit-scrollbar{display:none}
@@ -2019,6 +2076,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
     <div class="set-title">Account</div>
     <div class="set-group">
       <div class="set-row" id="setAccount"></div>
+      <button class="sheet-btn" id="setSecure">🛡️ Maata Secure (anti-theft)</button>
       <button class="sheet-btn" id="setLock">🔒 App lock &amp; fingerprint</button>
       <button class="sheet-btn" id="setTwoStep">🔐 Two-step verification</button>
     </div>
@@ -2173,6 +2231,7 @@ async function start() {
   setTimeout(handleChannelLink, 900);
   setTimeout(() => { registerNativePush(); if (!isNativeApp()) { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); } handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
+  setTimeout(secStart, 2000);
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -2185,6 +2244,7 @@ function connectSocket() {
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
   socket.on('announcement', showNotice);
+  socket.on('connect', secHello); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
   socket.on('user:removed', ({ id }) => {
     users = users.filter((u) => u.id !== id);
     if (activeId === id) { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; }
@@ -4566,6 +4626,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  secure: '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6"/></svg>',
   maps: '<svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
   invite: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s4 1 6 1zm0 0c2-4 6-4 6-1s-4 1-6 1z"/></svg>',
   support: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>',
@@ -4591,6 +4652,312 @@ const MI = {
 async function loadPrefs() { try { prefs = await api('/api/prefs'); } catch {} renderChips(); renderContacts(); }
 async function savePrefs(part) { try { prefs = await api('/api/prefs', { method: 'PUT', body: JSON.stringify(part) }); } catch (e) { toast(e.message); } renderChips(); renderContacts(); }
 
+
+// ---------- 🛡️ Maata Secure: anti-theft for your own phones ----------
+const SEC = { st: null, timer: null, last: 0, fails: 0, siren: null, lostInfo: null };
+const SI = {
+  shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.6"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/><path d="M3.5 7.5A9 9 0 0 1 6 4M20.5 7.5A9 9 0 0 0 18 4"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.4"/></svg>',
+  people: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5M15.5 14.6c2.6.1 4.6 2 5 5.4"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><circle cx="12" cy="17.8" r=".9"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 12h6M9.5 15.5h6"/></svg>',
+  out: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg>',
+};
+function secDev() {
+  let d = store.get('maata_sec_dev');
+  if (!d || !/^[A-Za-z0-9_-]{10,48}$/.test(d)) { d = 'p' + Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); store.set('maata_sec_dev', d); }
+  return d;
+}
+function secName() {
+  try { const m = window.MaataAndroid && window.MaataAndroid.deviceModel && window.MaataAndroid.deviceModel(); if (m) return String(m).replace(/^(\w+) \1 /i, '$1 ').trim(); } catch {}
+  const ua = navigator.userAgent, a = /Android [\d.]+; ([^;)]+)/.exec(ua);
+  if (a && !/^K$/.test(a[1])) return a[1].replace(/ Build.*$/, '').trim();
+  if (/iPhone/.test(ua)) return 'iPhone'; if (/iPad/.test(ua)) return 'iPad';
+  return (/Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : /Android/.test(ua) ? 'Android phone' : 'This device') + (/Mobile/.test(ua) ? '' : ' computer');
+}
+const secOn = () => store.get('maata_sec_on') === '1';
+const secAgo = (t) => { if (!t) return 'never'; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; };
+function secPos() {
+  return new Promise((ok) => {
+    if (!navigator.geolocation) return ok({});
+    const t = setTimeout(() => ok({}), 14000);
+    try { navigator.geolocation.getCurrentPosition((p) => { clearTimeout(t); ok({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }); }, () => { clearTimeout(t); ok({}); }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }); } catch { clearTimeout(t); ok({}); }
+  });
+}
+async function secBattery() { try { const b = await navigator.getBattery(); return { battery: Math.round(b.level * 100), charging: b.charging }; } catch { return {}; } }
+async function secTick(force) {
+  if (!secOn() || !token) return null;
+  if (!force && Date.now() - SEC.last < 55000) return null;
+  SEC.last = Date.now();
+  const [pos, bat] = await Promise.all([secPos(), secBattery()]);
+  let r; try { r = await api('/api/secure/ping', { method: 'POST', body: JSON.stringify({ dev: secDev(), ...pos, ...bat }) }); } catch { return null; }
+  if (!r.enrolled) { store.del('maata_sec_on'); secLostOff(); return r; }
+  SEC.lostInfo = r;
+  if (r.lost) secLostOn(r); else secLostOff();
+  for (const c of r.cmds || []) secRun(c, true);
+  secSchedule(r.lost);
+  return r;
+}
+function secSchedule(lost) { clearInterval(SEC.timer); SEC.timer = setInterval(() => { if (!document.hidden || lost) secTick(true); }, lost ? 120000 : 300000); }
+function secHello() { if (socket && secOn()) socket.emit('secure:hello', { dev: secDev() }); }
+function secRun(cmd) {
+  if (cmd === 'alarm') secAlarm(true);
+  else if (cmd === 'stop') secAlarm(false);
+  else if (cmd === 'locate') secTick(true).then(() => toast('📍 Maata Secure: this phone\'s location was shared with your Maata account'));
+  else if (cmd === 'lost') secTick(true);
+  else if (cmd === 'found') { secLostOff(); secAlarm(false); toast('✅ Lost mode is off'); }
+  if ($('#secPage')) secLoad();
+}
+// 🔔 loud alarm: the Android app plays it on the alarm sound (works in silent mode); the browser plays a siren
+function secAlarm(on) {
+  let native = false;
+  try { if (window.MaataAndroid && window.MaataAndroid.secureAlarm) native = !!window.MaataAndroid.secureAlarm(!!on); } catch {}
+  if (!on) {
+    if (SEC.siren) { try { SEC.siren.stop(); } catch {} SEC.siren = null; }
+    try { navigator.vibrate && navigator.vibrate(0); } catch {}
+    const o = $('#secAlarm'); if (o) o.remove(); return;
+  }
+  if (!native && !SEC.siren) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)(), osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'square'; g.gain.value = 0.9; osc.connect(g); g.connect(ctx.destination); osc.start(); ctx.resume().catch(() => {});
+      let hi = false; const iv = setInterval(() => { hi = !hi; osc.frequency.setValueAtTime(hi ? 1400 : 880, ctx.currentTime); }, 380);
+      const stopAt = setTimeout(() => secAlarm(false), 120000);
+      SEC.siren = { stop() { clearInterval(iv); clearTimeout(stopAt); try { osc.stop(); ctx.close(); } catch {} } };
+    } catch {}
+    try { navigator.vibrate && navigator.vibrate([900, 400, 900, 400, 900, 400, 900, 400, 900]); } catch {}
+  }
+  if ($('#secAlarm')) return;
+  const o = el('div', 'sec-alarm'); o.id = 'secAlarm'; o.setAttribute('role', 'alertdialog'); o.setAttribute('aria-label', 'Maata Secure alarm');
+  const ic = el('div', 'sec-alarm-ic'); ic.innerHTML = SI.bell;
+  const stop = el('button', 'sec-btn big', 'Stop alarm');
+  stop.onclick = () => { secAlarm(false); if (secOn()) api('/api/secure/cmd', { method: 'POST', body: JSON.stringify({ dev: secDev(), cmd: 'stop', me: secDev(), from: 'this phone' }) }).catch(() => {}); };
+  o.append(ic, el('h2', null, 'Maata Secure alarm'), el('p', null, 'The owner of this phone is looking for it with Maata.'), stop);
+  document.body.append(o);
+}
+// 🚨 lost-phone screen: covers Maata, shows the owner's message and number; only the owner's password removes it
+function secLostOn(r) {
+  let o = $('#secLost');
+  if (!o) {
+    o = el('div', 'sec-lost'); o.id = 'secLost'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'This phone is lost');
+    document.body.append(o);
+  }
+  o.innerHTML = '';
+  const ic = el('div', 'sec-lost-ic'); ic.innerHTML = SI.lock;
+  o.append(ic, el('h2', null, 'This phone is lost'), el('p', 'sec-lost-msg', r.lostMsg || 'Please return this phone to its owner. Thank you.'), el('p', 'sec-lost-owner', 'Owner: ' + (r.owner || 'Maata user')));
+  if (r.lostCall) {
+    const num = el('div', 'sec-lost-num', r.lostCall); o.append(el('small', null, 'Please call the owner:'), num);
+    const a = el('a', 'sec-btn big green', '📞 Call ' + r.lostCall); a.href = 'tel:' + r.lostCall.replace(/\s/g, ''); o.append(a);
+  }
+  o.append(el('small', 'sec-lost-note', 'Maata Secure is sharing this phone\'s location with its owner.'));
+  const own = el('details', 'sec-own'); own.append(el('summary', null, 'I am the owner'));
+  const f = el('form'); const pw = el('input'); pw.type = 'password'; pw.id = 'secOwnerPw'; pw.placeholder = 'Your Maata password'; pw.autocomplete = 'current-password';
+  const lab = el('label', null, 'Maata password'); lab.htmlFor = 'secOwnerPw';
+  const go = el('button', 'sec-btn pri', 'Turn off lost mode'); go.type = 'submit'; const err = el('small', 'sec-err');
+  f.append(lab, pw, go, err);
+  f.onsubmit = async (e) => { e.preventDefault(); err.textContent = ''; try { await api('/api/secure/cmd', { method: 'POST', body: JSON.stringify({ dev: secDev(), cmd: 'found', password: pw.value, me: secDev(), from: 'this phone' }) }); secLostOff(); secAlarm(false); toast('✅ Welcome back! Lost mode is off.'); } catch (x) { err.textContent = x.message; } };
+  own.append(f); o.append(own);
+}
+function secLostOff() { const o = $('#secLost'); if (o) o.remove(); }
+function secUnlockFail() {
+  if (!secOn()) return;
+  secPos().then((pos) => api('/api/secure/event', { method: 'POST', body: JSON.stringify({ dev: secDev(), type: 'unlock-fail', ...pos }) }).catch(() => {}));
+}
+function secStart() {
+  if (/[?&]secure=1/.test(location.search)) setTimeout(openSecure, 600);
+  if (!secOn()) return;
+  secTick(true); secSchedule(false);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) secTick(); });
+  window.addEventListener('online', () => secTick(true));
+}
+// ----- the Maata Secure screen -----
+function secAskPassword(title, note) {
+  return new Promise((done) => {
+    let answered = false;
+    sheet(title, (list) => {
+      const f = el('form', 'sec-pwform'); if (note) f.append(el('p', 'info-note', note));
+      const lab = el('label', null, 'Your Maata password'); const pw = el('input'); pw.type = 'password'; pw.id = 'secPw'; pw.autocomplete = 'current-password'; lab.htmlFor = 'secPw';
+      const ok = el('button', 'sheet-btn primary', 'Continue'); ok.type = 'submit';
+      f.append(lab, pw, ok); f.onsubmit = (e) => { e.preventDefault(); if (!pw.value) return pw.focus(); answered = true; closeSheet('moreSheet'); done(pw.value); };
+      list.append(f); setTimeout(() => pw.focus(), 250);
+    });
+    const watch = setInterval(() => { if ($('#moreSheet').hidden) { clearInterval(watch); if (!answered) done(null); } }, 300);
+  });
+}
+async function secLoad() {
+  try { SEC.st = await api('/api/secure?dev=' + secDev()); } catch (e) { toast(e.message); return; }
+  if (SEC.st.on && !SEC.st.phones.some((p) => p.me) && secOn()) store.del('maata_sec_on');
+  secRender();
+}
+function openSecure() {
+  if ($('#secPage')) return secLoad();
+  if ($('#settingsSheet') && !$('#settingsSheet').hidden) closeSettings();
+  const pg = el('section', 'sec'); pg.id = 'secPage'; pg.setAttribute('aria-label', 'Maata Secure');
+  const top = el('div', 'sec-top'); const back = el('button', null, '←'); back.setAttribute('aria-label', 'Back'); back.onclick = () => pg.remove();
+  top.append(back, el('b', null, 'Maata Secure'));
+  const wrap = el('div', 'sec-wrap'); wrap.id = 'secWrap'; wrap.append(el('div', 'sec-card', 'Loading…'));
+  pg.append(top, wrap); document.body.append(pg);
+  secLoad();
+}
+function secCmd(p, cmd, password) {
+  return api('/api/secure/cmd', { method: 'POST', body: JSON.stringify({ dev: p.id, cmd, password, me: secDev(), from: secName() }) });
+}
+function secRender() {
+  const w = $('#secWrap'); if (!w || !SEC.st) return; const st = SEC.st; w.innerHTML = '';
+  const anyLost = st.phones.some((p) => p.lost);
+  const head = el('div', 'sec-card sec-head'); const sh = el('div', 'sec-shield'); sh.innerHTML = SI.shield;
+  const ht = el('div'); ht.append(el('h2', null, 'Maata Secure'), el('small', null, 'AI anti-theft protection'));
+  head.append(sh, ht, el('span', 'sec-pill' + (anyLost ? ' lost' : st.on ? '' : ' off'), anyLost ? 'Phone lost' : st.on ? 'Protected' : 'Off'));
+  w.append(head);
+  if (!st.on || !secOn()) {
+    const c = el('div', 'sec-card');
+    c.append(el('h3', null, st.on ? 'Protect this phone too' : 'Protect your phone'),
+      el('p', 'sec-p', 'If your phone is lost or stolen, use Maata on any other phone or computer to:'));
+    const ul = el('ul', 'sec-list');
+    for (const t of ['See where it was last seen, on the map', 'Ring a loud alarm, even in silent mode', 'Show "This phone is lost" with your number', 'Alert your family on Maata', 'Log out your account from the lost phone', 'Get a ready police and CEIR report']) ul.append(el('li', null, t));
+    c.append(ul, el('p', 'sec-note', 'Maata saves this phone\'s location only while protection is on. Only you can see it. You can turn it off any time and the saved locations are deleted.'));
+    const on = el('button', 'sec-btn pri big', st.on ? 'Protect this phone' : 'Turn on protection');
+    on.onclick = async () => {
+      on.disabled = true; on.textContent = 'Turning on…';
+      try {
+        if (!st.on) await api('/api/secure/settings', { method: 'POST', body: JSON.stringify({ on: true }) });
+        let fcm = ''; try { fcm = (window.MaataAndroid && window.MaataAndroid.getFcmToken && window.MaataAndroid.getFcmToken()) || ''; } catch {}
+        await api('/api/secure/enroll', { method: 'POST', body: JSON.stringify({ dev: secDev(), name: secName(), fcm }) });
+        store.set('maata_sec_on', '1'); secHello(); await secTick(true); secSchedule(false); toast('🛡️ This phone is protected'); secLoad();
+      } catch (e) { toast(e.message); on.disabled = false; on.textContent = 'Try again'; }
+    };
+    c.append(on); w.append(c);
+    if (!st.on) { secFooter(w); return; }
+  }
+  // 🤖 AI safety check
+  const r = st.risk, rc = el('div', 'sec-card sec-risk ' + r.level);
+  const ring = el('div', 'sec-ring'); ring.style.setProperty('--v', String(Math.max(4, 100 - r.score))); ring.append(el('b', null, String(100 - r.score)), el('small', null, 'safety'));
+  const rt = el('div', 'sec-risk-t'); rt.append(el('h3', null, r.level === 'high' ? 'Act now' : r.level === 'watch' ? 'Keep an eye' : 'All looks safe'), el('small', null, 'AI safety check of your phones and account'));
+  const top = el('div', 'sec-risk-top'); top.append(ring, rt); rc.append(top);
+  if (r.reasons.length) { const ul = el('ul', 'sec-list'); r.reasons.forEach((t) => ul.append(el('li', null, t))); rc.append(ul); }
+  if (r.tips.length) { const ul = el('ul', 'sec-list tips'); r.tips.forEach((t) => ul.append(el('li', null, t))); rc.append(ul); }
+  const ask = el('button', 'sec-btn', '✨ Ask Maata AI what to do'); const adv = el('div', 'sec-advice'); adv.hidden = true;
+  ask.onclick = async () => { ask.disabled = true; ask.textContent = '✨ Thinking…'; try { const a = await api('/api/secure/ai', { method: 'POST', body: '{}' }); adv.hidden = false; adv.textContent = a.advice; } catch (e) { toast(e.message); } ask.disabled = false; ask.textContent = '✨ Ask Maata AI again'; };
+  rc.append(ask, adv); w.append(rc);
+  // quick actions (like the plan's four tiles)
+  const pick = (fn) => { const ps = st.phones.filter((p) => !p.me); const list = ps.length ? ps : st.phones; if (list.length === 1) return fn(list[0]); sheet('Which phone?', (L) => list.forEach((p) => { const b = el('button', 'sheet-btn', '📱 ' + p.name + (p.me ? ' (this phone)' : '')); b.onclick = () => { closeSheet('moreSheet'); fn(p); }; L.append(b); })); };
+  const g = el('div', 'sec-grid');
+  const tile = (ic, t, s, fn) => { const b = el('button', 'sec-tile'); const i = el('span', 'sec-ic'); i.innerHTML = SI[ic]; b.append(i, el('b', null, t), el('small', null, s)); b.onclick = fn; g.append(b); };
+  tile('pin', 'Find my phone', 'Last known location', () => pick(secFind));
+  tile('bell', 'Remote alarm', 'Rings even on silent', () => pick((p) => secCmd(p, p.alarm ? 'stop' : 'alarm').then((v) => { SEC.st = v; secRender(); toast(p.alarm ? '🔕 Alarm stopped' : '🔔 Alarm sent to ' + p.name); }).catch((e) => toast(e.message))));
+  tile('lock', 'Lost mode', 'Lock Maata, show your number', () => pick(secLostToggle));
+  tile('people', 'Trusted contacts', st.trusted.length ? st.trusted.length + ' added' : 'Family gets alerts', secTrusted);
+  w.append(g);
+  // my phones
+  const dv = el('div', 'sec-card'); dv.append(el('h3', null, 'My phones'));
+  for (const p of st.phones) {
+    const d = el('div', 'sec-dev' + (p.lost ? ' lost' : ''));
+    const ic = el('div', 'sec-dev-ic'); ic.innerHTML = SI.phone;
+    const tx = el('div', 'sec-dev-t'); tx.append(el('b', null, p.name + (p.me ? ' · this phone' : '')));
+    const bits = [p.online ? '🟢 Online now' : 'Last seen ' + secAgo(p.lastSeen)];
+    if (p.battery != null) bits.push((p.charging ? '⚡ ' : '🔋 ') + p.battery + '%');
+    tx.append(el('small', null, bits.join(' · ')));
+    tx.append(el('small', null, p.loc ? '📍 Location ' + secAgo(p.loc.at) + (p.loc.acc ? ' (±' + Math.round(p.loc.acc) + ' m)' : '') : '📍 No location yet'));
+    if (p.lost) tx.append(el('small', 'sec-red', '🚨 Lost mode since ' + secAgo(p.lostAt)));
+    d.append(ic, tx);
+    const acts = el('div', 'sec-acts');
+    const a = (t, cls, fn) => { const b = el('button', 'sec-btn' + (cls ? ' ' + cls : ''), t); b.onclick = fn; acts.append(b); };
+    a('📍 Find', '', () => secFind(p));
+    a(p.alarm ? '🔕 Stop alarm' : '🔔 Alarm', '', async () => { try { SEC.st = await secCmd(p, p.alarm ? 'stop' : 'alarm'); secRender(); if (p.me) secAlarm(!p.alarm); toast(p.alarm ? '🔕 Alarm stopped' : '🔔 Alarm sent'); } catch (e) { toast(e.message); } });
+    a(p.lost ? '✅ Found' : '🚨 Lost', p.lost ? 'green' : 'red', () => secLostToggle(p));
+    a('🧾 Report', '', () => secReport(p));
+    a('⋯', 'more', () => sheet(p.name, (L) => {
+      const rn = el('button', 'sheet-btn', '✏️ Rename'); rn.onclick = async () => { const n = prompt('Phone name', p.name); if (!n) return; try { SEC.st = await api('/api/secure/rename', { method: 'POST', body: JSON.stringify({ dev: p.id, name: n, me: secDev() }) }); closeSheet('moreSheet'); secRender(); } catch (e) { toast(e.message); } };
+      const rm = el('button', 'sheet-btn warn', '🗑️ Remove from Maata Secure'); rm.onclick = async () => { closeSheet('moreSheet'); const pw = p.lost ? await secAskPassword('Remove ' + p.name, 'This phone is in lost mode.') : ''; if (pw === null) return; try { SEC.st = await api('/api/secure/remove', { method: 'POST', body: JSON.stringify({ dev: p.id, password: pw, me: secDev() }) }); if (p.me) store.del('maata_sec_on'); secRender(); } catch (e) { toast(e.message); } };
+      L.append(rn, rm);
+    }));
+    d.append(acts); dv.append(d);
+  }
+  if (!st.phones.length) dv.append(el('p', 'sec-p', 'No phones yet. Open Maata Secure on your phone and tap "Protect this phone".'));
+  w.append(dv);
+  // lost-screen details
+  const ls = el('div', 'sec-card'); ls.append(el('h3', null, 'Lost-phone screen'), el('p', 'sec-p', 'A finder sees this on your phone in lost mode.'));
+  const fld = (id, label, val, ph, type) => { const l = el('label', 'sec-fld'); l.htmlFor = id; l.append(el('span', null, label)); const i = el(type === 'area' ? 'textarea' : 'input'); i.id = id; i.value = val || ''; i.placeholder = ph; if (type === 'tel') i.type = 'tel'; if (type === 'num') i.inputMode = 'numeric'; l.append(i); ls.append(l); return i; };
+  const msg = fld('secMsg', 'Message', st.lostMsg, 'This phone is lost. Please call me. Reward offered.', 'area');
+  const call = fld('secCall', 'Number to call (a family member\'s)', st.lostCall, '98xxxxxxxx', 'tel');
+  const imei = fld('secImei', 'IMEI (dial *#06# to see it)', st.imei, '15 digits', 'num');
+  const sv = el('button', 'sec-btn pri', 'Save'); sv.onclick = async () => { try { SEC.st = await api('/api/secure/settings', { method: 'POST', body: JSON.stringify({ lostMsg: msg.value, lostCall: call.value, imei: imei.value, dev: secDev() }) }); toast('Saved ✓'); secRender(); } catch (e) { toast(e.message); } };
+  ls.append(sv); w.append(ls);
+  // account protection
+  const ac = el('div', 'sec-card'); ac.append(el('h3', null, 'Account protection'), el('p', 'sec-p', 'Phone stolen? Log out Maata everywhere else. Your chats stay safe on your account.'));
+  const lo = el('button', 'sec-btn red', '🚪 Log out all other devices'); lo.onclick = async () => {
+    const pw = await secAskPassword('Log out all other devices', 'Every other phone and computer is logged out of Maata at once, even a lost phone that is offline.'); if (pw === null) return;
+    try { const r2 = await api('/api/secure/logout-others', { method: 'POST', body: JSON.stringify({ password: pw, socket: socket && socket.id }) }); token = r2.token; store.set('maata_token', token); if (socket) { socket.disconnect(); connectSocket(); } toast('🚪 All other devices are logged out'); secLoad(); } catch (e) { toast(e.message); }
+  };
+  ac.append(lo); w.append(ac);
+  // timeline
+  const tl = el('div', 'sec-card'); tl.append(el('h3', null, 'Security timeline'));
+  const EV = { lost: '🚨', found: '✅', alarm: '🔔', 'alarm-stop': '🔕', locate: '📍', seen: '📍', login: '📱', 'login-fail': '🔑', 'unlock-fail': '🔐', logout: '🚪', enroll: '🛡️', on: '🛡️', off: '⚪', remove: '🗑️', report: '🧾', battery: '🪫' };
+  if (!st.events.length) tl.append(el('p', 'sec-p', 'Nothing yet.'));
+  for (const e of st.events.slice(0, 25)) {
+    const row = el(e.lat ? 'button' : 'div', 'sec-ev'); row.append(el('span', null, EV[e.type] || '•'), el('div', null, e.text), el('small', null, secAgo(e.t)));
+    if (e.lat) row.onclick = () => { $('#secPage').remove(); openMaps({ name: e.text.slice(0, 40), lat: e.lat, lng: e.lng, addr: secAgo(e.t) }); };
+    tl.append(row);
+  }
+  w.append(tl);
+  // stolen phone help + turn off
+  const hp = el('div', 'sec-card'); hp.append(el('h3', null, 'Phone stolen? Also do this'));
+  const ol = el('ol', 'sec-list');
+  ol.append(el('li', null, 'Turn on Lost mode here and tell your family.'), el('li', null, 'File a police complaint. Tap 🧾 Report for the details they ask for.'));
+  const li3 = el('li'); li3.append('Block the phone on CEIR (Sanchar Saathi): '); const lk = el('a', null, 'ceir.sancharsaathi.gov.in'); lk.href = 'https://ceir.sancharsaathi.gov.in'; lk.target = '_blank'; lk.rel = 'noopener'; li3.append(lk, '. It needs the IMEI and the complaint number.'); ol.append(li3);
+  ol.append(el('li', null, 'Get a duplicate SIM from your mobile operator.'));
+  hp.append(ol);
+  const off = el('button', 'sec-btn', 'Turn off Maata Secure'); off.onclick = async () => { const pw = await secAskPassword('Turn off Maata Secure', 'Saved phones and locations are deleted.'); if (pw === null) return; try { SEC.st = await api('/api/secure/settings', { method: 'POST', body: JSON.stringify({ on: false, password: pw }) }); store.del('maata_sec_on'); clearInterval(SEC.timer); toast('Maata Secure is off'); secRender(); } catch (e) { toast(e.message); } };
+  hp.append(off); w.append(hp);
+  secFooter(w);
+}
+function secFooter(w) {
+  w.append(el('p', 'sec-foot', 'How it works: Maata saves a protected phone\'s location when Maata runs on it with internet (open, or opened from a Maata Secure notification). If the phone is switched off or offline, you see its last known location. The alarm plays even in silent mode on the latest Maata Android app. Maata cannot wipe or fully lock the phone, or detect a SIM change; for a stolen phone, block it on CEIR.'));
+}
+function secFind(p) {
+  if (!p.loc) { secCmd(p, 'locate').then(() => toast('📍 Asked ' + p.name + ' for its location. It answers when it is online.')).catch((e) => toast(e.message)); return; }
+  sheet('📍 ' + p.name, (L) => {
+    L.append(el('p', 'info-note', 'Last known location: ' + secAgo(p.loc.at) + (p.loc.acc ? ', accurate to about ' + Math.round(p.loc.acc) + ' m' : '') + '.'));
+    const place = el('p', 'info-note', '…'); L.append(place);
+    api('/api/geo/reverse?lat=' + p.loc.lat + '&lng=' + p.loc.lng).then((g) => { place.textContent = '📌 Near ' + (g.title || 'unknown place'); }).catch(() => { place.textContent = p.loc.lat.toFixed(5) + ', ' + p.loc.lng.toFixed(5); });
+    const map = el('button', 'sheet-btn primary', '🗺️ Show on Maata Maps (route there)'); map.onclick = () => { closeSheet('moreSheet'); const s = $('#secPage'); if (s) s.remove(); openMaps({ name: p.name + ' (last seen)', lat: p.loc.lat, lng: p.loc.lng, addr: 'Last seen ' + secAgo(p.loc.at) }); };
+    const fresh = el('button', 'sheet-btn', '🔄 Ask for the latest location'); fresh.onclick = () => secCmd(p, 'locate').then(() => { toast('📍 Asked. It updates when the phone is online.'); closeSheet('moreSheet'); }).catch((e) => toast(e.message));
+    L.append(map, fresh);
+    if ((p.trail || []).length > 1) { L.append(el('p', 'info-note', 'Recent places:')); for (const h of p.trail.slice().reverse().slice(0, 6)) { const b = el('button', 'sheet-btn', '• ' + secAgo(h.at)); b.onclick = () => { closeSheet('moreSheet'); const s = $('#secPage'); if (s) s.remove(); openMaps({ name: p.name + ' · ' + secAgo(h.at), lat: h.lat, lng: h.lng, addr: '' }); }; L.append(b); } }
+  });
+}
+async function secLostToggle(p) {
+  const pw = await secAskPassword(p.lost ? 'Turn off lost mode' : 'Mark ' + p.name + ' as lost', p.lost ? '' : 'Maata on that phone is covered with your message and number, your trusted contacts get an alert with its last location, and it keeps sharing its location with you.');
+  if (pw === null) return;
+  try { const v = await secCmd(p, p.lost ? 'found' : 'lost', pw); SEC.st = v; secRender(); toast(p.lost ? '✅ Lost mode is off' : '🚨 Lost mode is on' + (v.told ? ' · ' + v.told + ' contact' + (v.told > 1 ? 's' : '') + ' told' : '')); if (p.me) secTick(true); } catch (e) { toast(e.message); }
+}
+async function secReport(p) {
+  let r; try { r = await api('/api/secure/report?dev=' + encodeURIComponent(p.id)); } catch (e) { return toast(e.message); }
+  sheet('🧾 Theft report', (L) => {
+    const pre = el('pre', 'sec-report', r.text); L.append(pre);
+    const cp = el('button', 'sheet-btn primary', '📋 Copy report'); cp.onclick = async () => { try { await navigator.clipboard.writeText(r.text); toast('Copied ✓'); } catch { const rg = document.createRange(); rg.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(rg); toast('Selected. Copy it.'); } };
+    const ceir = el('a', 'sheet-btn', '🛑 Block on CEIR (ceir.sancharsaathi.gov.in)'); ceir.href = 'https://ceir.sancharsaathi.gov.in'; ceir.target = '_blank'; ceir.rel = 'noopener';
+    L.append(cp, ceir);
+  });
+}
+function secTrusted() {
+  const st = SEC.st, chosen = new Set(st.trusted.map((t) => t.id));
+  sheet('👥 Trusted contacts', (L) => {
+    L.append(el('p', 'info-note', 'Pick up to 5 people. When you mark a phone as lost, Maata sends them a message with its last location.'));
+    const people = (users || []).filter((u) => u && u.phone && u.id !== (me && me.id)).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    if (!people.length) L.append(el('p', 'info-note', 'Add your family to Maata contacts first.'));
+    for (const u of people.slice(0, 200)) {
+      const row = el('label', 'sec-pick'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = chosen.has(u.id);
+      cb.onchange = () => { if (cb.checked) { if (chosen.size >= 5) { cb.checked = false; return toast('Up to 5 trusted contacts'); } chosen.add(u.id); } else chosen.delete(u.id); };
+      row.append(cb, el('span', null, nameOf(u))); L.append(row);
+    }
+    const sv = el('button', 'sheet-btn primary', 'Save'); sv.onclick = async () => { try { SEC.st = await api('/api/secure/settings', { method: 'POST', body: JSON.stringify({ trusted: [...chosen], dev: secDev() }) }); closeSheet('moreSheet'); secRender(); toast(SEC.st.trusted.length < chosen.size ? 'Some people could not be added (they blocked you or left Maata)' : 'Trusted contacts saved ✓'); } catch (e) { toast(e.message); } };
+    L.append(sv);
+  });
+}
+
 // ----- ⋮ menu -----
 function openMainMenu(btn) {
   closeMsgMenu();
@@ -4612,6 +4979,7 @@ function openMainMenu(btn) {
   item('read', i18n('markRead'), markAllRead);
   list.append(el('hr'));
   item('maps', 'Maata Maps', () => openMaps());
+  item('secure', 'Maata Secure (anti-theft)', openSecure);
   item('linked', 'Linked devices', openLinkedDevices);
   item('invite', 'Invite a friend', openInvite);
   item('support', 'Help & Support', openSupport);
@@ -4872,7 +5240,7 @@ function showLock() {
   const tryPin = async () => {
     if (pin.length < 4) return;
     if ((await sha(cfg.salt + pin)) === cfg.hash) { L.remove(); return; }
-    if (pin.length >= 6) { err.textContent = 'Wrong PIN, try again'; L.classList.add('shake'); setTimeout(() => L.classList.remove('shake'), 400); pin = ''; draw(); }
+    if (pin.length >= 6) { if (++SEC.fails % 3 === 0) secUnlockFail(); err.textContent = 'Wrong PIN, try again'; L.classList.add('shake'); setTimeout(() => L.classList.remove('shake'), 400); pin = ''; draw(); }
   };
   const pad = el('div', 'pad');
   for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫']) {
@@ -5068,7 +5436,7 @@ async function voiceUnlock(cfg, onPass) {
       if (!c.alive) return;
       const hs = await Promise.all(alts.map((a) => sha(V.salt + vlNorm(a))));
       if (hs.some((h) => V.hashes.includes(h))) { c.happy(); await c.say(P.ok.replace('{name}', name), V.lang); await c.leave(); onPass(); return; }
-      if (++wrong >= 3) { window.vlCoolUntil = Date.now() + 30000; await c.no(); return c.bye(P.bye, V.lang); }
+      if (++wrong >= 3) { window.vlCoolUntil = Date.now() + 30000; secUnlockFail(); await c.no(); return c.bye(P.bye, V.lang); }
       c.no(); await c.say(P.wrong + (wrong === 2 ? ' ' + P.last : ''), V.lang);
     }
   } finally { vlBusy = false; }
@@ -7636,6 +8004,7 @@ const BACK_LAYERS = [
   ['#addSheet', () => closeSheet('addSheet')],
   ['#moreSheet', () => closeSheet('moreSheet')],
   ['#settingsSheet', () => closeSettings()],
+  ['#secPage', () => $('#secPage').remove()],
 
   ['#ciView', () => $('#ciView').remove()],
   ['#chView', () => closeChannel()],
@@ -9286,6 +9655,7 @@ function inviteToMaata(c) {
 
 $('#setInvite').onclick = openInvite;
 $('#setLock').onclick = () => { closeSettings(); openLockSettings(); };
+$('#setSecure').onclick = () => { closeSettings(); openSecure(); };
 // ================= 🪙 Maata coins (referral rewards) =================
 let COINS = { coins: 0, friends: [], log: [], need: 3 }, coinWelcomeShown = false;
 async function loadCoins(showWelcome) {
@@ -10048,8 +10418,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 127;
-const APP_NOTES = ["🗺️ Maps: the 3D button and 3D view option are removed for a simpler, faster map."];
+const APP_VERSION = 128;
+const APP_NOTES = ["🛡️ New: Maata Secure (Settings → Maata Secure). Find your lost phone on the map, ring a loud alarm, show \"This phone is lost\" with your number, alert family, log out a stolen phone, AI safety check and a ready police / CEIR report."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
