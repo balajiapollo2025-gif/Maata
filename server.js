@@ -1462,7 +1462,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 112;
+const MAATA_VERSION = 114;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -1515,26 +1515,77 @@ function mapLimit(req, res, max = 40) {
   if (h.length > max) { res.status(429).json({ error: 'Too many map requests. Wait a minute.' }); return false; }
   return true;
 }
-const ROUTERS = { car: ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'], bike: ['https://routing.openstreetmap.de/routed-bike/route/v1/driving/'], foot: ['https://routing.openstreetmap.de/routed-foot/route/v1/driving/'] };
+// two-wheelers drive like cars on Indian roads (the "bike" OSRM profile is a bicycle, too slow), so OSRM uses the car roads for them
+const ROUTERS = { car: ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'], bike: ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'], foot: ['https://routing.openstreetmap.de/routed-foot/route/v1/driving/'] };
+const VALHALLA = ['https://valhalla1.openstreetmap.de/route'];
+function decodePoly6(str) { // Valhalla shape → [[lng, lat], …]
+  const out = []; let i = 0, lat = 0, lng = 0;
+  while (i < str.length) { for (const k of [0, 1]) { let b, shift = 0, r = 0; do { b = str.charCodeAt(i++) - 63; r |= (b & 31) << shift; shift += 5; } while (b >= 32); const d = r & 1 ? ~(r >> 1) : r >> 1; if (k === 0) lat += d; else lng += d; } out.push([lng / 1e6, lat / 1e6]); }
+  return out;
+}
+const VAL_TURN = { 1: ['depart', ''], 2: ['depart', ''], 3: ['depart', ''], 4: ['arrive', ''], 5: ['arrive', ''], 6: ['arrive', ''], 7: ['continue', 'straight'], 8: ['continue', 'straight'], 22: ['continue', 'straight'], 17: ['continue', 'straight'], 25: ['continue', 'straight'],
+  9: ['turn', 'slight right'], 18: ['turn', 'slight right'], 20: ['turn', 'slight right'], 23: ['turn', 'slight right'], 37: ['turn', 'slight right'], 10: ['turn', 'right'], 11: ['turn', 'sharp right'], 12: ['turn', 'uturn'], 13: ['turn', 'uturn'],
+  14: ['turn', 'sharp left'], 15: ['turn', 'left'], 16: ['turn', 'slight left'], 19: ['turn', 'slight left'], 21: ['turn', 'slight left'], 24: ['turn', 'slight left'], 38: ['turn', 'slight left'], 26: ['roundabout', ''] };
+function valhallaTrip(trip) {
+  const coords = [], steps = [];
+  for (const leg of trip.legs || []) {
+    const shape = decodePoly6(leg.shape || ''), base = coords.length; coords.push(...shape);
+    for (const m of leg.maneuvers || []) {
+      if (m.type === 27) continue; const [type, mod] = VAL_TURN[m.type] || ['continue', 'straight'];
+      const names = m.street_names || []; const ref = names.find((n) => /^[A-Z]{1,4}[ -]?\d/.test(n)) || '';
+      steps.push({ type, mod, exit: m.roundabout_exit_count || 0, loc: shape[m.begin_shape_index] || shape[0], name: names.find((n) => n !== ref) || '', ref, distance: Math.round((m.length || 0) * 1000), duration: Math.round(m.time || 0) });
+    }
+    void base;
+  }
+  return { distance: Math.round((trip.summary?.length || 0) * 1000), duration: Math.round(trip.summary?.time || 0), geometry: { type: 'LineString', coordinates: coords },
+    via: [...new Set(steps.filter((s) => s.distance > 1500).sort((a, b) => b.distance - a.distance).map((s) => s.ref || s.name).filter(Boolean))].slice(0, 2), steps, engine: 'valhalla' };
+}
+async function valhallaRoute(mode, pts) {
+  const costing = mode === 'foot' ? 'pedestrian' : mode === 'bike' ? 'motorcycle' : 'auto';
+  const costing_options = { auto: { use_tracks: 0.6, use_living_streets: 0.8 }, motorcycle: { use_trails: 0.6, use_highways: 0.8 } };
+  const body = { locations: pts.map(([lo, la], i) => ({ lat: la, lon: lo, type: i === 0 || i === pts.length - 1 ? 'break' : 'through', radius: 300 })), costing, costing_options, directions_options: { units: 'kilometers' }, alternates: pts.length === 2 ? 2 : 0 };
+  for (const base of VALHALLA) {
+    try {
+      const r = await fetch(base, { method: 'POST', headers: { ...MAP_UA, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(12000) });
+      const d = await r.json(); if (!d.trip) continue;
+      return [d.trip, ...(d.alternates || []).map((a) => a.trip)].filter(Boolean).map(valhallaTrip).filter((x) => x.geometry.coordinates.length > 1);
+    } catch { /* next */ }
+  }
+  return [];
+}
+async function osrmRoute(mode, pts) {
+  const path = pts.map((p) => p[0].toFixed(6) + ',' + p[1].toFixed(6)).join(';') + '?overview=full&geometries=geojson&steps=true&alternatives=' + (pts.length === 2 ? 'true' : 'false');
+  for (const base of ROUTERS[mode]) {
+    try {
+      const d = await (await fetch(base + path, { headers: MAP_UA, signal: AbortSignal.timeout(12000) })).json();
+      if (d.code === 'NoRoute') return []; if (d.code !== 'Ok' || !d.routes?.length) continue;
+      const k = mode === 'bike' ? 0.9 : 1; // bikes squeeze through traffic a little faster than cars
+      return d.routes.slice(0, 3).map((r) => ({ distance: Math.round(r.distance), duration: Math.round(r.duration * k), geometry: r.geometry, engine: 'osrm',
+        via: [...new Set(r.legs.flatMap((l) => l.steps.filter((s) => s.distance > 1500).sort((a, b) => b.distance - a.distance).map((s) => s.ref || s.name).filter(Boolean)))].slice(0, 2),
+        steps: r.legs.flatMap((l) => l.steps).map((s) => ({ type: s.maneuver.type, mod: s.maneuver.modifier || '', exit: s.maneuver.exit || 0, loc: s.maneuver.location, name: s.name || '', ref: s.ref || '', distance: Math.round(s.distance), duration: Math.round(s.duration * k) })) }));
+    } catch { /* next server */ }
+  }
+  return [];
+}
+// Two route engines at once; the one that really reaches small village roads (ends closest to the place) wins
 app.get('/api/maps/route', auth, async (req, res) => {
   if (!mapLimit(req, res)) return;
   const mode = ROUTERS[req.query.mode] ? req.query.mode : 'car';
   const pts = String(req.query.pts || '').split(';').map((p) => p.split(',').map(Number)).filter((p) => p.length === 2 && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90).slice(0, 6);
   if (pts.length < 2) return res.status(400).json({ error: 'Choose where to go.' });
-  const key = mode + ':' + pts.map((p) => p.map((x) => x.toFixed(5)).join(',')).join(';');
+  const key = 'r2:' + mode + ':' + pts.map((p) => p.map((x) => x.toFixed(5)).join(',')).join(';');
   const hit = mapCacheGet(key); if (hit) return res.json(hit);
-  const path = pts.map((p) => p[0].toFixed(6) + ',' + p[1].toFixed(6)).join(';') + '?overview=full&geometries=geojson&steps=true&alternatives=' + (pts.length === 2 ? 'true' : 'false');
-  for (const base of ROUTERS[mode]) {
-    try {
-      const d = await (await fetch(base + path, { headers: MAP_UA, signal: AbortSignal.timeout(12000) })).json();
-      if (d.code !== 'Ok' || !d.routes?.length) { if (d.code === 'NoRoute') return res.status(404).json({ error: 'No road route found between these places.' }); continue; }
-      const out = { mode, routes: d.routes.slice(0, 3).map((r) => ({ distance: Math.round(r.distance), duration: Math.round(r.duration), geometry: r.geometry,
-        via: [...new Set(r.legs.flatMap((l) => l.steps.filter((s) => s.distance > 1500).sort((a, b) => b.distance - a.distance).map((s) => s.ref || s.name).filter(Boolean)))].slice(0, 2),
-        steps: r.legs.flatMap((l) => l.steps).map((s) => ({ type: s.maneuver.type, mod: s.maneuver.modifier || '', exit: s.maneuver.exit || 0, loc: s.maneuver.location, name: s.name || '', ref: s.ref || '', distance: Math.round(s.distance), duration: Math.round(s.duration) })) })) };
-      mapCacheSet(key, out, 10 * 60000); return res.json(out);
-    } catch { /* try the next server */ }
-  }
-  res.status(502).json({ error: 'Route service is busy. Try again in a moment.' });
+  const [v, o] = await Promise.all([valhallaRoute(mode, pts).catch(() => []), osrmRoute(mode, pts).catch(() => [])]);
+  const end = pts[pts.length - 1], start = pts[0];
+  const gap = (r) => { const c = r.geometry.coordinates; return geoDist(c[c.length - 1], end) + geoDist(c[0], start); };
+  const all = [...v, ...o].map((r) => ({ ...r, gap: Math.round(gap(r)) }));
+  if (!all.length) return res.status(502).json({ error: 'Route service is busy. Try again in a moment.' });
+  // best = reaches the place (small gap), then fastest
+  all.sort((a, b) => (Math.abs(a.gap - b.gap) > 120 ? a.gap - b.gap : a.duration - b.duration));
+  const routes = [], best = all[0].gap;
+  for (const r of all) { if (r.gap > best + 300) continue; if (routes.some((x) => Math.abs(x.distance - r.distance) < Math.max(150, r.distance * 0.02) && Math.abs(x.duration - r.duration) < 60)) continue; routes.push(r); if (routes.length === 3) break; }
+  const out = { mode, routes };
+  mapCacheSet(key, out, 10 * 60000); res.json(out);
 });
 const NEAR_CATS = { fuel: 'amenity=fuel', ev: 'amenity=charging_station', hospital: 'amenity~"hospital|clinic"', atm: 'amenity~"atm|bank"', food: 'amenity~"restaurant|fast_food|cafe"', parking: 'amenity=parking', hotel: 'tourism~"hotel|guest_house"', temple: 'amenity=place_of_worship', pharmacy: 'amenity=pharmacy', police: 'amenity=police', toilets: 'amenity=toilets', mechanic: 'shop~"car_repair|motorcycle_repair|tyres"' };
 app.get('/api/maps/nearby', auth, async (req, res) => {

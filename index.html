@@ -1441,6 +1441,14 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 
 /* Maata Maps v3 */
+.mp-loc{font-size:calc(12.5px * var(--mp-text-k,1))}.mp-loc.only{color:#111827;font-weight:700;font-size:calc(13.5px * var(--mp-text-k,1))}.mp-loc.only.city,.mp-loc.only.town{font-size:calc(16px * var(--mp-text-k,1));font-weight:800}
+.mp-fab.mp3d{font-weight:900;font-size:15px;color:#0F7A6E}.mp-fab.mp3d.on{background:#0F7A6E;color:#fff}
+.mpl-themes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:6px 10px}.mpl-themes button{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;color:var(--ink);font-size:12.5px;font-weight:600}
+.mpl-themes .sw{width:50px;height:50px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}.mpl-themes button.on .sw{box-shadow:0 0 0 3px #0F7A6E}.mpl-themes button.on{color:#0F7A6E}
+.mpl-text{display:flex;gap:8px;padding:6px 10px}.mpl-text button{flex:1;padding:10px 0;border-radius:12px;background:var(--panel);border:1.5px solid var(--line);color:var(--ink);font-weight:800}.mpl-text button.on{background:#0F7A6E;color:#fff;border-color:#0F7A6E}
+.mpl-langs{display:flex;flex-wrap:wrap;gap:6px;padding:6px 10px}.mpl-langs button{padding:7px 11px;border-radius:999px;background:var(--panel);border:1.5px solid var(--line);color:var(--ink);font-size:13px;font-weight:600}.mpl-langs button.on{background:#E3F4F1;border-color:#0F7A6E;color:#0F7A6E}
+.mpl-3d{margin:6px 10px;width:calc(100% - 20px);padding:13px;border-radius:14px;background:linear-gradient(90deg,#E3F4F1,#E8F0FE);border:1.5px solid var(--line);color:#13202B;font-weight:800;font-size:15px}.mpl-3d.on{background:linear-gradient(90deg,#0F7A6E,#1E88E5);color:#fff}
+
 .mp-fabs.gone{opacity:0;pointer-events:none}
 .mp-chips button.sos{background:#E53935;color:#fff;font-weight:800}
 .mp-quick{grid-template-columns:repeat(3,1fr)}.mp-smart{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.mp-smart small{width:100%;color:#5D6E7C;font-weight:700}.mp-smart button{padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#ECFBF4,#EEF3FF);color:#13202B;font-weight:700;font-size:13.5px}
@@ -9420,7 +9428,7 @@ async function openMaps(target) {
     <input id="mpQ" type="search" placeholder="Where to? ✨ Ask in any language" aria-label="Search places" autocomplete="off"><button class="mp-ib" id="mpMic" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button class="mp-ai" id="mpAi" aria-label="Ask Maata AI">✨</button><button class="mp-me" id="mpMe" aria-label="You"></button></div>
     <div class="mp-res" id="mpRes" hidden></div>
     <div class="mp-chips" id="mpChips"></div></div>
-  <div class="mp-rtop"><button class="mp-fab sm" id="mpLayers" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><button class="mp-fab sm" id="mpCompass" aria-label="Point north"><svg viewBox="0 0 24 24" id="mpNeedle"><path d="M12 2l4 10h-8z" fill="#E5293F" stroke="none"/><path d="M12 22l-4-10h8z" fill="#B8C2CC" stroke="none"/></svg></button></div>
+  <div class="mp-rtop"><button class="mp-fab sm" id="mpLayers" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><button class="mp-fab sm mp3d" id="mp3d" aria-label="3D view">3D</button><button class="mp-fab sm" id="mpCompass" aria-label="Point north"><svg viewBox="0 0 24 24" id="mpNeedle"><path d="M12 2l4 10h-8z" fill="#E5293F" stroke="none"/><path d="M12 22l-4-10h8z" fill="#B8C2CC" stroke="none"/></svg></button></div>
   <div class="mp-fabs"><button class="mp-fab rep" id="mpReport" aria-label="Report on the road" hidden>⚠️</button><button class="mp-fab" id="mpLocate" aria-label="My location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button><button class="mp-fab dir" id="mpDir" aria-label="Directions"><svg viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z" fill="currentColor" stroke="none"/><path d="M9 14v-3h5M12 8.5l2.5 2.5-2.5 2.5" stroke="#0F7A6E" stroke-width="2"/></svg></button></div>
   <div class="mp-turn" id="mpTurn" hidden><div class="mp-arrow" id="mpArrow"></div><div><b id="mpTurnDist"></b><span id="mpTurnText"></span></div><small id="mpThen"></small></div>
   <div class="mp-speed" id="mpSpeed" hidden><b>0</b><small>km/h</small></div>
@@ -9437,6 +9445,7 @@ async function openMaps(target) {
   document.querySelectorAll('#mpTabs button').forEach((b) => (b.onclick = () => mpTab(b.dataset.t)));
   $('#mpDir').onclick = () => mpDirections();
   $('#mpCompass').onclick = () => MP.map && MP.map.easeTo({ bearing: 0, pitch: 0 });
+  $('#mp3d').onclick = () => mp3D(store.get('maata_map_3d') !== '1', true); $('#mp3d').classList.toggle('on', store.get('maata_map_3d') === '1');
   const q = $('#mpQ');
   q.oninput = () => { clearTimeout(MP.qt); MP.qt = setTimeout(() => mpSearch(q.value.trim()), 350); };
   q.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); mpAsk(q.value.trim()); } };
@@ -9694,6 +9703,7 @@ function mpPlaceSheet(loading) {
     b.onclick = () => { MP.sel = i; mpDrawRoutes(); mpPlaceSheet(); }; rl.append(b);
   });
   s.append(rl);
+  { const rr = MP.routes[MP.sel]; if (rr && MP.dest) { const g = rr.geometry.coordinates, gapEnd = hav(g[g.length - 1], [MP.dest.lng, MP.dest.lat]); if (gapEnd > 80) s.append(el('small', 'mp-note', '🚶 The road on the map ends ' + fmtKm(gapEnd) + ' before this place — the dotted line shows the last part.')); } }
   const acts = el('div', 'mp-acts');
   const go = el('button', 'mp-go', '▲ Start'); go.disabled = !MP.routes.length || !MP.me; go.onclick = MP.from || (MP.dest && MP.dest.isMe) ? async () => { if (MP.dest.isMe) return toast('You are already here 🙂'); MP.from = null; mpdFields(); await mpRoute(); mpStartNav(); } : mpStartNav;
   const share = el('button', 'mp-sec', '📤 Share'); share.onclick = () => mpShareDest();
@@ -9732,8 +9742,8 @@ async function mpRoute() {
 function mpDrawRoutes() {
   mpPuckLook();
   const m = MP.map; if (!m || !m.isStyleLoaded()) return;
-  for (const id of ['mp-alt', 'mp-sel-case', 'mp-sel']) if (m.getLayer(id)) m.removeLayer(id);
-  for (const id of ['mp-alt', 'mp-sel']) if (m.getSource(id)) m.removeSource(id);
+  for (const id of ['mp-alt', 'mp-sel-case', 'mp-sel', 'mp-last']) if (m.getLayer(id)) m.removeLayer(id);
+  for (const id of ['mp-alt', 'mp-sel', 'mp-last']) if (m.getSource(id)) m.removeSource(id);
   const r = MP.routes; if (!r.length) return;
   const alt = r.map((x, i) => ({ type: 'Feature', properties: { i }, geometry: x.geometry })).filter((f) => f.properties.i !== MP.sel);
   m.addSource('mp-alt', { type: 'geojson', data: { type: 'FeatureCollection', features: alt } });
@@ -9742,6 +9752,13 @@ function mpDrawRoutes() {
   m.addSource('mp-sel', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', properties: {}, geometry: r[MP.sel].geometry } });
   m.addLayer({ id: 'mp-sel-case', type: 'line', source: 'mp-sel', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 12 } });
   m.addLayer({ id: 'mp-sel', type: 'line', source: 'mp-sel', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-width': 8, 'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, '#00B37E', 0.5, '#1E88E5', 1, '#7C4DFF'] } });
+  { // dotted line for the last bit the road map does not reach (walk to the house / field / small lane), like Google
+    const g = r[MP.sel].geometry.coordinates, start = MP.from ? [MP.from.lng, MP.from.lat] : MP.me, end = MP.dest ? [MP.dest.lng, MP.dest.lat] : null, segs = [];
+    if (end && hav(g[g.length - 1], end) > 20) segs.push([g[g.length - 1], end]);
+    if (start && hav(g[0], start) > 20) segs.push([start, g[0]]);
+    if (segs.length) { m.addSource('mp-last', { type: 'geojson', data: { type: 'FeatureCollection', features: segs.map((c) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: c } })) } });
+      m.addLayer({ id: 'mp-last', type: 'line', source: 'mp-last', layout: { 'line-cap': 'round' }, paint: { 'line-color': '#5B6B78', 'line-width': 4, 'line-dasharray': [0.1, 2] } }); }
+  }
 }
 // ----- navigation -----
 function mpPrepare(route) {
@@ -9957,8 +9974,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 112;
-const APP_NOTES = ["🗺️ Maps: Bus / train option removed — Drive, Two-wheeler and Walk only"];
+const APP_VERSION = 114;
+const APP_NOTES = ["🎨 Map themes: Normal, Colourful, Festival, Soft, Ocean, Sunset, Grey", "✏️ Text size on the map: A− A A+ A++", "🔤 Names on the map: English, English + తెలుగు, or తెలుగు only (and Hindi, Tamil, Kannada…)", "🏔️ 3D view: hills rise up, buildings stand, sky on the horizon — tap 3D on the map"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10261,7 +10278,7 @@ function mpChooseStyle() {
       const b = el('button', on.has(k) ? 'on' : null), th = el('span', 'th', ic); th.style.background = bg; b.append(th, el('span', null, label));
       b.onclick = () => { const s2 = mpLayersOn(); s2.has(k) ? s2.delete(k) : s2.add(k); store.set('maata_map_layers', JSON.stringify([...s2])); b.classList.toggle('on', s2.has(k)); mpApplyLayers(k); }; d.append(b);
     }
-    list.append(g, el('div', 'th-title', 'Map details'), d, el('p', 'info-note', '🚦 Traffic = live road speeds shared (without names) by Maata drivers while they navigate, plus road reports like accidents and police checks. 🍃 Air quality and 🌦️ weather come from Open-Meteo, 🔥 wildfires from NASA.'));
+    list.append(g); mpMapLook(list); list.append(el('div', 'th-title', 'Map details'), d, el('p', 'info-note', '🚦 Traffic = live road speeds shared (without names) by Maata drivers while they navigate, plus road reports like accidents and police checks. 🍃 Air quality and 🌦️ weather come from Open-Meteo, 🔥 wildfires from NASA.'));
   });
 }
 // draw the chosen map details on the map (called again after every map style change)
@@ -10514,10 +10531,12 @@ function mpLocalLabels() {
   const m = MP.map; if (!m || !m.getStyle()) return;
   const L = mapLocalLang(); MP.labels = MP.labels || [];
   MP.labels.forEach((x) => x.remove()); MP.labels = [];
-  if (L === 'off' || MP.nav) return;
   const st = m.getStyle(), layers = st.layers.filter((l) => l.type === 'symbol' && (l['source-layer'] === 'place' || /^place|label_(village|town|city|other)/.test(l.id))).map((l) => l.id);
+  const only = L !== 'off' && store.get('maata_map_names_only') === '1' && !MP.nav;
+  for (const id of layers) { try { m.setLayoutProperty(id, 'visibility', only ? 'none' : 'visible'); } catch {} }
+  if (L === 'off' || MP.nav) return;
   let feats = [];
-  try { if (layers.length) feats = m.queryRenderedFeatures({ layers }); } catch {}
+  try { if (layers.length && !only) feats = m.queryRenderedFeatures({ layers }); } catch {}
   if (!feats.length) { // read tile data directly (works even before labels are drawn)
     const b = m.getBounds();
     for (const id of Object.keys(st.sources || {})) if (/vector|geojson/.test(st.sources[id].type)) { try { feats = feats.concat(m.querySourceFeatures(id, st.sources[id].type === 'vector' ? { sourceLayer: 'place' } : {}).filter((f) => f.geometry.type === 'Point' && b.contains(f.geometry.coordinates))); } catch {} }
@@ -10526,45 +10545,104 @@ function mpLocalLabels() {
   const seen = new Set();
   for (const f of feats) {
     const p = f.properties || {}, local = p['name:' + L], en = p['name:en'] || p['name:latin'] || p.name;
-    if (!local || local === en || seen.has(local) || f.geometry.type !== 'Point') continue;
-    seen.add(local); if (seen.size > 70) break;
-    const d = el('div', 'mp-loc', local);
-    MP.labels.push(new maplibregl.Marker({ element: d, anchor: 'top', offset: [0, 9] }).setLngLat(f.geometry.coordinates).addTo(m));
+    const show = only ? local || en : local;
+    if (!show || (!only && local === en) || seen.has(show) || f.geometry.type !== 'Point') continue;
+    seen.add(show); if (seen.size > (only ? 90 : 70)) break;
+    const d = el('div', 'mp-loc' + (only ? ' only ' + (p.class || '') : ''), show);
+    MP.labels.push(new maplibregl.Marker({ element: d, anchor: only ? 'center' : 'top', offset: [0, only ? 0 : 9] }).setLngLat(f.geometry.coordinates).addTo(m));
   }
 }
-// 🎨 Maata colours: darker, easier-to-read names and a brighter, more colourful map (Default / Terrain / Bright)
+// 🎨 map themes (colours), ✏️ text size, 🔤 names language, 🏔️ 3D view
+const MAP_THEMES = {
+  normal: { label: 'Normal', sw: ['#F8F4F0', '#AAD3DF', '#D8E8C8'] },
+  colourful: { label: 'Colourful', sw: ['#F6F2EA', '#7CC8F8', '#BDE7B0'], bg: '#F6F2EA', water: '#7CC8F8', grass: '#BDE7B0', wood: '#9ED69A', farm: '#EEF4CE', resid: '#F3E9DD', bld: '#E9DCCB', bldEdge: '#CDB89E', mw: '#FF8A3D', trunk: '#FFB13B', prim: '#FFD15C', sec: '#FFF0A8', river: '#5AB7F0', t: '#111827', tr: '#2B2B2B', tp: '#3A2E25', tw: '#0B5394', halo: 'rgba(255,255,255,0.95)' },
+  festival: { label: 'Festival', sw: ['#FFF5E1', '#29B6F6', '#81C784'], bg: '#FFF5E1', water: '#29B6F6', grass: '#81C784', wood: '#4CAF50', farm: '#DCE775', resid: '#FFE0B2', bld: '#FFCC80', bldEdge: '#E0A050', mw: '#F4511E', trunk: '#FB8C00', prim: '#FFB300', sec: '#FFEE58', river: '#0288D1', t: '#0D0D0D', tr: '#1A1A1A', tp: '#3E2723', tw: '#01579B', halo: 'rgba(255,255,255,0.95)' },
+  pastel: { label: 'Soft', sw: ['#FAF7F2', '#A9DCF7', '#D7F0CF'], bg: '#FAF7F2', water: '#A9DCF7', grass: '#D7F0CF', wood: '#C4E5BD', farm: '#F5F8E3', resid: '#F7F0E8', bld: '#EFE6DB', bldEdge: '#DCCDBB', mw: '#F7A87B', trunk: '#F8C47E', prim: '#FBE29C', sec: '#FFF7CF', river: '#8FCBEE', t: '#1F2937', tr: '#374151', tp: '#4B3B30', tw: '#1E5A8A', halo: 'rgba(255,255,255,0.95)' },
+  ocean: { label: 'Ocean', sw: ['#EEF5F9', '#4FA3E0', '#B7DFC4'], bg: '#EEF5F9', water: '#4FA3E0', grass: '#B7DFC4', wood: '#8CCBA0', farm: '#E3EFD9', resid: '#E8EEF3', bld: '#D6E0E8', bldEdge: '#B6C4D0', mw: '#1565C0', trunk: '#1E88E5', prim: '#64B5F6', sec: '#BBDEFB', river: '#1976D2', t: '#0B2545', tr: '#13315C', tp: '#1B3A57', tw: '#0B3D91', halo: 'rgba(255,255,255,0.95)' },
+  sunset: { label: 'Sunset', sw: ['#FBEFE3', '#6EC1E4', '#D4E6A5'], bg: '#FBEFE3', water: '#6EC1E4', grass: '#D4E6A5', wood: '#B5D38A', farm: '#F6E7B8', resid: '#F9E4D0', bld: '#F0CFAE', bldEdge: '#D9AE85', mw: '#E64A19', trunk: '#F57C00', prim: '#FFA726', sec: '#FFE0B2', river: '#3E9BCB', t: '#3E1F0D', tr: '#4E2A14', tp: '#5D3418', tw: '#1B5E85', halo: 'rgba(255,250,244,0.95)' },
+  grey: { label: 'Grey', sw: ['#F5F5F5', '#CFD8DC', '#E0E0E0'], bg: '#F5F5F5', water: '#CFD8DC', grass: '#E3E3E3', wood: '#D6D6D6', farm: '#EEEEEE', resid: '#F0F0F0', bld: '#E0E0E0', bldEdge: '#C8C8C8', mw: '#8E8E8E', trunk: '#A8A8A8', prim: '#C4C4C4', sec: '#E4E4E4', river: '#AEBFC7', t: '#111111', tr: '#222222', tp: '#333333', tw: '#37474F', halo: 'rgba(255,255,255,0.95)' },
+};
+const mapTheme = () => (MAP_THEMES[store.get('maata_map_theme')] ? store.get('maata_map_theme') : 'colourful');
+const mapTextK = () => Number(store.get('maata_map_text')) || 1;
 function mpColourise() {
   const m = MP.map; if (!m || !['colour', 'terrain', 'bright'].includes(MP.styleKey)) return;
+  const T = MAP_THEMES[mapTheme()]; if (!T || !T.bg) return; // Normal: the map's own colours
   const set = (id, prop, v) => { try { m.setPaintProperty(id, prop, v); } catch {} };
   let layers = []; try { layers = m.getStyle().layers; } catch { return; }
   for (const l of layers) {
     const id = l.id, sl = l['source-layer'] || '';
-    if (l.type === 'background') set(id, 'background-color', '#F6F2EA');
+    if (/^mp-/.test(id)) continue;
+    if (l.type === 'background') set(id, 'background-color', T.bg);
     else if (l.type === 'fill') {
-      if (sl === 'water' || /^water/.test(id)) set(id, 'fill-color', '#7CC8F8');
-      else if (/park|wood|forest|grass|scrub|meadow|nature/.test(id) || /landcover/.test(sl) && /wood|grass|park|forest/.test(id)) set(id, 'fill-color', /wood|forest/.test(id) ? '#9ED69A' : '#BDE7B0');
-      else if (/farm|agri|crop/.test(id)) set(id, 'fill-color', '#EEF4CE');
-      else if (/residential/.test(id)) set(id, 'fill-color', '#F3E9DD');
-      else if (/hospital/.test(id)) set(id, 'fill-color', '#FBD9DE');
-      else if (/school|university|college/.test(id)) set(id, 'fill-color', '#FBEFC4');
-      else if (/cemetery/.test(id)) set(id, 'fill-color', '#D6E8D0');
-      else if (sl === 'building' || /^building$/.test(id)) { set(id, 'fill-color', '#E9DCCB'); set(id, 'fill-outline-color', '#CDB89E'); }
+      if (sl === 'water' || /^water/.test(id)) set(id, 'fill-color', T.water);
+      else if (/park|wood|forest|grass|scrub|meadow|nature/.test(id)) set(id, 'fill-color', /wood|forest/.test(id) ? T.wood : T.grass);
+      else if (/farm|agri|crop/.test(id)) set(id, 'fill-color', T.farm);
+      else if (/residential/.test(id)) set(id, 'fill-color', T.resid);
+      else if (sl === 'building' || /^building$/.test(id)) { set(id, 'fill-color', T.bld); set(id, 'fill-outline-color', T.bldEdge); }
     } else if (l.type === 'line' && sl === 'transportation' && !/casing|outline|rail|path|pedestrian|aeroway|ferry/.test(id)) {
-      if (/motorway/.test(id)) set(id, 'line-color', '#FF8A3D');
-      else if (/trunk/.test(id)) set(id, 'line-color', '#FFB13B');
-      else if (/primary/.test(id)) set(id, 'line-color', '#FFD15C');
-      else if (/secondary|tertiary/.test(id)) set(id, 'line-color', '#FFF0A8');
-    } else if (l.type === 'line' && (sl === 'waterway' || /^waterway/.test(id))) set(id, 'line-color', '#5AB7F0');
+      if (/motorway/.test(id)) set(id, 'line-color', T.mw); else if (/trunk/.test(id)) set(id, 'line-color', T.trunk); else if (/primary/.test(id)) set(id, 'line-color', T.prim); else if (/secondary|tertiary/.test(id)) set(id, 'line-color', T.sec);
+    } else if (l.type === 'line' && (sl === 'waterway' || /^waterway/.test(id))) set(id, 'line-color', T.river);
     else if (l.type === 'symbol' && l.layout && l.layout['text-field']) {
       const place = sl === 'place' || /^place|label_(city|town|village|other|state|country)/.test(id), road = sl === 'transportation_name' || /highway-name|road.*label|highway-ref/.test(id), water = /water/.test(id + sl);
-      set(id, 'text-color', place ? '#111827' : road ? '#2B2B2B' : water ? '#0B5394' : '#3A2E25');
-      set(id, 'text-halo-color', 'rgba(255,255,255,0.95)'); set(id, 'text-halo-width', place ? 2 : 1.6); set(id, 'text-halo-blur', 0.3);
+      set(id, 'text-color', place ? T.t : road ? T.tr : water ? T.tw : T.tp); set(id, 'text-halo-color', T.halo); set(id, 'text-halo-width', place ? 2 : 1.6); set(id, 'text-halo-blur', 0.3);
     }
   }
 }
+// ✏️ bigger / smaller names on the map
+const scaleTS = (v, k) => (typeof v === 'number' ? +(v * k).toFixed(2)
+  : Array.isArray(v) && /^interpolate/.test(v[0]) ? v.map((x, i) => (i >= 4 && i % 2 === 0 ? scaleTS(x, k) : x))
+  : Array.isArray(v) && v[0] === 'step' ? v.map((x, i) => (i >= 2 && i % 2 === 0 ? scaleTS(x, k) : x))
+  : v && typeof v === 'object' && v.stops ? { ...v, stops: v.stops.map(([z, s]) => [z, typeof s === 'number' ? s * k : s]) }
+  : Array.isArray(v) ? ['*', v, k] : v);
+function mpTextSize() {
+  const m = MP.map; if (!m) return; const k = mapTextK();
+  document.documentElement.style.setProperty('--mp-text-k', k);
+  let layers = []; try { layers = m.getStyle().layers; } catch { return; }
+  MP.origTS = MP.origTS || {};
+  for (const l of layers) {
+    if (l.type !== 'symbol' || !l.layout || !l.layout['text-field'] || /^mp-/.test(l.id)) continue;
+    if (!(l.id in MP.origTS)) MP.origTS[l.id] = l.layout['text-size'] ?? 16;
+    try { m.setLayoutProperty(l.id, 'text-size', k === 1 ? MP.origTS[l.id] : scaleTS(MP.origTS[l.id], k)); } catch {}
+  }
+}
+// 🏔️ real 3D: hills rise up, buildings stand up, sky on the horizon
+function mp3D(on, fly) {
+  const m = MP.map; if (!m) return; store.set('maata_map_3d', on ? '1' : '0');
+  const b = $('#mp3d'); if (b) b.classList.toggle('on', on);
+  try {
+    if (on) {
+      if (!m.getSource('mp-dem3d')) m.addSource('mp-dem3d', { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, encoding: 'terrarium', maxzoom: 14, attribution: 'Terrain © Mapzen, AWS' });
+      m.setTerrain({ source: 'mp-dem3d', exaggeration: 1.5 });
+      try { m.setSky({ 'sky-color': '#6EC1F5', 'horizon-color': '#D9EEFC', 'fog-color': '#F1F6FA', 'sky-horizon-blend': 0.55, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.7, 'atmosphere-blend': 0.8 }); } catch {}
+      const st = m.getStyle(), vec = Object.keys(st.sources).find((k) => st.sources[k].type === 'vector'), first = (st.layers.find((l) => l.type === 'symbol') || {}).id;
+      if (vec && !m.getLayer('mp-3d') && !st.layers.some((l) => l.type === 'fill-extrusion')) m.addLayer({ id: 'mp-3d', type: 'fill-extrusion', source: vec, 'source-layer': 'building', minzoom: 14, paint: { 'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, '#EBDDCB', 30, '#D7C3A8', 100, '#B9A385'], 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': 0.92 } }, first);
+      if (fly) m.easeTo({ pitch: 62, bearing: m.getBearing() || -20, zoom: Math.max(m.getZoom(), 14.5), duration: 1200 });
+    } else {
+      m.setTerrain(null); try { m.setSky({}); } catch {}
+      if (!mpLayersOn().has('raised') && m.getLayer('mp-3d')) m.removeLayer('mp-3d');
+      if (fly && !MP.nav) m.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+    }
+  } catch (e) { console.log('[maps] 3D', e.message); }
+}
+const NAME_LANGS = [['off', 'English'], ['te', 'తెలుగు'], ['hi', 'हिंदी'], ['ta', 'தமிழ்'], ['kn', 'ಕನ್ನಡ'], ['ml', 'മലയാളം'], ['mr', 'मराठी'], ['bn', 'বাংলা'], ['gu', 'ગુજરાતી']];
+function mpMapLook(list) { // extra sections of the Map type sheet
+  const th = el('div', 'mpl-themes'), cur = mapTheme();
+  for (const [k, t] of Object.entries(MAP_THEMES)) {
+    const b = el('button', k === cur ? 'on' : null), sw = el('span', 'sw'); sw.style.background = 'linear-gradient(135deg,' + t.sw[0] + ' 0 34%,' + t.sw[1] + ' 34% 66%,' + t.sw[2] + ' 66%)'; b.append(sw, el('small', null, t.label));
+    b.onclick = () => { const was = mapTheme(); store.set('maata_map_theme', k); th.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (!['colour', 'terrain', 'bright'].includes(MP.styleKey)) { mpSetStyle('colour'); return; } if (k === 'normal') { if (was !== 'normal') mpSetStyle(MP.styleKey); } else mpColourise(); };
+    th.append(b);
+  }
+  const ts = el('div', 'mpl-text');
+  for (const [k, l] of [[0.85, 'A−'], [1, 'A'], [1.2, 'A+'], [1.45, 'A++']]) { const b = el('button', mapTextK() === k ? 'on' : null, l); b.style.fontSize = 13 * k + 'px'; b.onclick = () => { store.set('maata_map_text', String(k)); ts.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); mpTextSize(); mpLocalLabels(); }; ts.append(b); }
+  const nl = el('div', 'mpl-langs'), only = store.get('maata_map_names_only') === '1', L = mapLocalLang();
+  const opts = [['off', false, 'English only'], ...NAME_LANGS.slice(1).flatMap(([c, n]) => [[c, false, 'English + ' + n], [c, true, n + ' only']])];
+  for (const [c, o, label] of opts) { const b = el('button', (c === L && (c === 'off' || o === only)) ? 'on' : null, label); b.onclick = () => { store.set('maata_map_names', c); store.set('maata_map_names_only', o ? '1' : '0'); nl.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); mpLocalLabels(); }; nl.append(b); }
+  const d3 = el('button', 'mpl-3d' + (store.get('maata_map_3d') === '1' ? ' on' : ''), '🏔️ 3D view — hills, buildings & sky'); d3.onclick = () => { const on = store.get('maata_map_3d') !== '1'; d3.classList.toggle('on', on); mp3D(on, true); };
+  list.append(el('div', 'th-title', 'Map theme'), th, el('div', 'th-title', 'Text size'), ts, el('div', 'th-title', 'Names on the map'), nl, el('div', 'th-title', '3D'), d3);
+}
 function mpStyleTweaks() {
   const m = MP.map; if (!m) return;
-  mpColourise();
+  MP.origTS = {}; mpColourise(); mpTextSize(); if (store.get('maata_map_3d') === '1') mp3D(true, false);
   try { for (const l of m.getStyle().layers) if (l.type === 'symbol' && /^poi/.test(l.id)) m.setLayerZoomRange(l.id, 13, 24); } catch {} // temples, schools… show earlier, like Google
   mpLocalLabels(); m.once('idle', mpLocalLabels); mpShowSavedPins(); mpLoadPlaces(true); mpApplyLayers();
 }
