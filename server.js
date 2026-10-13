@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -809,8 +809,35 @@ app.delete('/api/devices/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Free backup voice: Gemini speech (uses the same GEMINI_API_KEY). Returns a WAV sound.
+const pcmToWav = (pcm, rate) => { const h = Buffer.alloc(44); h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVE', 8); h.write('fmt ', 12); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(rate, 24); h.writeUInt32LE(rate * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40); return Buffer.concat([h, pcm]); };
+async function geminiTts(text) {
+  if (!GEMINI_KEY) return null;
+  for (const model of ['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts']) {
+    if (busyUntil.get(model) > now()) continue;
+    try {
+      const r = await geminiFetch('models/' + model + ':generateContent', geminiAuthOk || 'header', { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } } }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 429 || r.status >= 500) { busyUntil.set(model, now() + 60000); console.error('[tts] ' + model + ' busy ' + r.status); continue; }
+      const part = (d.candidates?.[0]?.content?.parts || []).find((x) => x.inlineData?.data);
+      if (!part) { console.error('[tts] ' + model + ': ' + r.status + ' ' + String(d.error?.message || 'no audio').slice(0, 120)); continue; }
+      const rate = Number((/rate=(\d+)/.exec(part.inlineData.mimeType || '') || [])[1]) || 24000;
+      return pcmToWav(Buffer.from(part.inlineData.data, 'base64'), rate).toString('base64');
+    } catch (e) { console.error('[tts] ' + model + ': ' + e.message); }
+  }
+  return null;
+}
 app.post('/api/tts', auth, async (req, res) => {
-  if (!TTS_KEY) return res.status(501).json({ error: 'Server voice is not set up.' });
+  if (!TTS_KEY) { // no Google Cloud voice key: use Gemini speech
+    if (!GEMINI_KEY) return res.status(501).json({ error: 'Server voice is not set up.' });
+    const text = String(req.body?.text || '').trim().slice(0, 400); if (!text) return res.status(400).json({ error: 'Nothing to speak.' });
+    const list = (ttsHits.get(req.user.id) || []).filter((t) => now() - t < 60_000); list.push(now()); ttsHits.set(req.user.id, list);
+    if (list.length > 25) return res.status(429).json({ error: 'Too many voice requests. Wait a minute.' });
+    const key = 'g|' + text; if (ttsCache.has(key)) return res.json({ audio: ttsCache.get(key), mime: 'audio/wav' });
+    const audio = await geminiTts(text); if (!audio) return res.status(502).json({ error: 'Voice not available right now.' });
+    ttsCache.set(key, audio); if (ttsCache.size > 300) ttsCache.delete(ttsCache.keys().next().value);
+    return res.json({ audio, mime: 'audio/wav' });
+  }
   const list = (ttsHits.get(req.user.id) || []).filter((t) => now() - t < 60_000);
   list.push(now()); ttsHits.set(req.user.id, list);
   if (list.length > 40) return res.status(429).json({ error: 'Too many voice requests. Wait a minute.' });
@@ -1435,12 +1462,42 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 101;
+const MAATA_VERSION = 105;
 app.get('/api/version', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }
   res.json({ server: MAATA_VERSION, android });
 });
+// ---------- 🗺️ Maata Maps: places added by Maata people (villages often miss shops on public maps) + Maata shops ----------
+const PLACE_CATS = ['shop', 'food', 'fuel', 'hospital', 'pharmacy', 'temple', 'school', 'atm', 'mechanic', 'hotel', 'office', 'other'];
+const placeOut = (x, me) => { const o = userById(x.by) || {}; const biz = x.biz && o.business ? { ownerId: o.id, name: o.business.name, category: o.business.category, phone: o.phone } : null;
+  return { id: x.id, name: x.name, cat: x.cat, lat: x.lat, lng: x.lng, phone: x.phone || '', note: x.note || '', byName: o.name || 'Maata user', mine: x.by === me, biz, createdAt: x.createdAt }; };
+app.get('/api/maps/places', auth, (req, res) => {
+  const lat = Number(req.query.lat), lng = Number(req.query.lng); if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.json([]);
+  const dLat = 0.3, dLng = 0.3 / Math.max(0.2, Math.cos(lat * Math.PI / 180));
+  res.json(db.mapPlaces.filter((x) => !x.hidden && Math.abs(x.lat - lat) < dLat && Math.abs(x.lng - lng) < dLng).slice(-300).map((x) => placeOut(x, req.user.id)));
+});
+app.get('/api/maps/places/mine', auth, (req, res) => res.json(db.mapPlaces.filter((x) => x.by === req.user.id && !x.hidden).map((x) => placeOut(x, req.user.id))));
+app.post('/api/maps/places', auth, (req, res) => {
+  const today = db.mapPlaces.filter((x) => x.by === req.user.id && now() - x.createdAt < 86400000).length;
+  if (today >= 20) return res.status(429).json({ error: 'You can add up to 20 places a day.' });
+  const name = clip(req.body?.name, 80), lat = Number(req.body?.lat), lng = Number(req.body?.lng);
+  if (name.length < 2) return res.status(400).json({ error: 'Enter the place name.' });
+  if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return res.status(400).json({ error: 'Choose the place on the map.' });
+  const biz = !!req.body?.mine && !!req.user.business;
+  if (biz && db.mapPlaces.some((x) => x.by === req.user.id && x.biz && !x.hidden)) return res.status(400).json({ error: 'Your shop is already on the map. Delete the old pin first to move it.' });
+  const x = { id: newId(), by: req.user.id, name, cat: PLACE_CATS.includes(req.body?.cat) ? req.body.cat : 'other', lat: +lat.toFixed(6), lng: +lng.toFixed(6), phone: clip(req.body?.phone, 20).replace(/[^\d+ ]/g, ''), note: clip(req.body?.note, 200), biz, createdAt: now() };
+  db.mapPlaces.push(x); save(); res.json(placeOut(x, req.user.id));
+});
+app.delete('/api/maps/places/:id', auth, (req, res) => {
+  const x = db.mapPlaces.find((y) => y.id === req.params.id && y.by === req.user.id); if (!x) return res.status(404).json({ error: 'Not found.' });
+  db.mapPlaces = db.mapPlaces.filter((y) => y !== x); save(); res.json({ ok: true });
+});
+app.post('/api/maps/places/:id/report', auth, (req, res) => {
+  const x = db.mapPlaces.find((y) => y.id === req.params.id); if (!x) return res.status(404).json({ error: 'Not found.' });
+  x.reports = [...new Set([...(x.reports || []), req.user.id])]; if (x.reports.length >= 3) x.hidden = true; save(); res.json({ ok: true });
+});
+
 // ---------- 🗺️ Maata Maps: routes, nearby places and AI search (free OpenStreetMap services, called from the server) ----------
 const MAP_UA = { 'User-Agent': 'MaataApp/1.0 (maataapp.com maps)', 'Accept-Language': 'en' };
 const mapCache = new Map(); // small cache so repeated requests are instant
@@ -1510,13 +1567,119 @@ app.post('/api/maps/ai', auth, async (req, res) => {
   const text = clip(req.body?.text, 200); if (text.length < 2) return res.status(400).json({ error: 'Say where you want to go.' });
   if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
   const sys = 'You turn a driver\'s request (English, Telugu, Hindi, Tamil or any Indian language, also typed in English letters) into JSON for a map app in India. ' +
-    'Return ONLY JSON: {"intent":"route"|"nearby"|"place","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|ev|hospital|atm|food|parking|hotel|temple|pharmacy|police|toilets|mechanic or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
-    '"nearby" = they want the nearest kind of place (petrol bunk = fuel, ATM, hospital, hotel/food, mechanic/puncture = mechanic). "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
+    'Return ONLY JSON: {"intent":"route"|"nearby"|"place"|"plan","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|ev|hospital|atm|food|parking|hotel|temple|pharmacy|police|toilets|mechanic or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
+    '"plan" = they want a trip / tour / day plan with several places. "nearby" = they want the nearest kind of place (petrol bunk = fuel, ATM, hospital, hotel/food, mechanic/puncture = mechanic). "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
   const r = await gemini(sys, [{ role: 'user', parts: [{ text: text + (req.body?.near ? '\n(Person is near: ' + clip(req.body.near, 100) + ')' : '') }] }], { json: true, maxTokens: 300, temperature: 0.2 });
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
   try { const j = JSON.parse(String(r.text).replace(/^```json|```$/g, '').trim());
-    res.json({ intent: ['route', 'nearby', 'place'].includes(j.intent) ? j.intent : 'place', to: clip(j.to, 120), via: (Array.isArray(j.via) ? j.via : []).slice(0, 3).map((v) => clip(v, 80)), category: NEAR_CATS[j.category] ? j.category : '', mode: ROUTERS[j.mode] ? j.mode : 'car', saved: ['home', 'work'].includes(j.saved) ? j.saved : '', reply: clip(j.reply, 160) });
+    res.json({ intent: ['route', 'nearby', 'place', 'plan'].includes(j.intent) ? j.intent : 'place', to: clip(j.to, 120), via: (Array.isArray(j.via) ? j.via : []).slice(0, 3).map((v) => clip(v, 80)), category: NEAR_CATS[j.category] ? j.category : '', mode: ROUTERS[j.mode] ? j.mode : 'car', saved: ['home', 'work'].includes(j.saved) ? j.saved : '', reply: clip(j.reply, 160) });
   } catch { res.status(502).json({ error: 'AI could not understand. Try typing the place name.' }); }
+});
+
+// ---------- 🚦 Maata live traffic: road speeds shared without names by Maata drivers while they navigate ----------
+const geoDist = (a, b) => { const R = 6371000, r = Math.PI / 180, dl = (b[1] - a[1]) * r, dg = (b[0] - a[0]) * r; const x = Math.sin(dl / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+const okPt = (p) => Array.isArray(p) && p.length === 2 && Math.abs(Number(p[0])) <= 180 && Math.abs(Number(p[1])) <= 90;
+const trafficCells = new Map(); const TRAFFIC_AGE = 20 * 60000;
+app.post('/api/maps/speed', auth, (req, res) => {
+  if (!mapLimit(req, res, 30)) return;
+  for (const s of (Array.isArray(req.body?.segs) ? req.body.segs : []).slice(0, 20)) {
+    if (!okPt(s?.a) || !okPt(s?.b)) continue; const a = s.a.map(Number), b = s.b.map(Number), r = Number(s.r), d = geoDist(a, b);
+    if (!(r >= 0) || d < 15 || d > 800) continue;
+    const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], dir = Math.round(((Math.atan2(b[0] - a[0], b[1] - a[1]) * 180 / Math.PI + 360) % 360) / 45) % 8;
+    const key = mid[1].toFixed(3) + ',' + mid[0].toFixed(3) + ':' + dir;
+    const c = trafficCells.get(key) || { a, b, rs: [] }; c.a = a.map((x) => +x.toFixed(5)); c.b = b.map((x) => +x.toFixed(5));
+    c.rs = [...c.rs.filter((x) => now() - x.t < TRAFFIC_AGE && x.u !== req.user.id), { r: Math.min(1.5, r), t: now(), u: req.user.id }].slice(-12);
+    trafficCells.delete(key); trafficCells.set(key, c); if (trafficCells.size > 30000) trafficCells.delete(trafficCells.keys().next().value);
+  }
+  res.json({ ok: true });
+});
+// road reports (like Waze): accident, police check, road closed, pothole, water on road, traffic jam
+const REPORT_TYPES = { jam: 90, accident: 120, police: 90, closed: 720, pothole: 4320, water: 360, hazard: 120 };
+const reportOut = (x, me) => ({ id: x.id, type: x.type, lat: x.lat, lng: x.lng, note: x.note || '', at: x.createdAt, until: x.until, still: (x.still || []).length, mine: x.by === me, byName: (userById(x.by) || {}).name || 'Maata user' });
+const liveReports = () => { const t = now(); if (db.mapReports.some((x) => x.until < t)) { db.mapReports = db.mapReports.filter((x) => x.until >= t); save(); } return db.mapReports; };
+function bboxOf(q) { const b = String(q.bbox || '').split(',').map(Number); return b.length === 4 && b.every(isFinite) && b[2] - b[0] < 6 && b[3] - b[1] < 6 ? b : null; } // west,south,east,north
+const inBox = (b, lng, lat) => lng >= b[0] && lng <= b[2] && lat >= b[1] && lat <= b[3];
+app.get('/api/maps/traffic', auth, (req, res) => {
+  const b = bboxOf(req.query); if (!b) return res.json({ roads: [], reports: [] });
+  const roads = [];
+  for (const c of trafficCells.values()) {
+    if (!inBox(b, c.a[0], c.a[1]) && !inBox(b, c.b[0], c.b[1])) continue;
+    const rs = c.rs.filter((x) => now() - x.t < TRAFFIC_AGE); if (!rs.length) continue;
+    const r = rs.reduce((s, x) => s + x.r, 0) / rs.length; roads.push({ a: c.a, b: c.b, l: r < 0.35 ? 3 : r < 0.65 ? 2 : 1, n: rs.length });
+    if (roads.length >= 2500) break;
+  }
+  res.json({ roads, reports: liveReports().filter((x) => inBox(b, x.lng, x.lat)).slice(-300).map((x) => reportOut(x, req.user.id)) });
+});
+app.post('/api/maps/reports', auth, async (req, res) => {
+  const lat = Number(req.body?.lat), lng = Number(req.body?.lng); if (!okPt([lng, lat])) return res.status(400).json({ error: 'Location needed.' });
+  if (db.mapReports.filter((x) => x.by === req.user.id && now() - x.createdAt < 86400000).length >= 20) return res.status(429).json({ error: 'You can send up to 20 road reports a day.' });
+  let type = REPORT_TYPES[req.body?.type] ? req.body.type : '', note = clip(req.body?.note, 120);
+  const said = clip(req.body?.text, 200);
+  if (!type && said) { // ✨ spoken report → type + short note
+    if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+    const r = await gemini('A driver in India spoke a road report (any Indian language, maybe typed in English letters). Return ONLY JSON {"type":"jam|accident|police|closed|pothole|water|hazard","note":"very short English note, max 8 words"}.', [{ role: 'user', parts: [{ text: said }] }], { json: true, maxTokens: 80, temperature: 0.1 });
+    try { const j = JSON.parse(String(r.text).replace(/^```json|```$/g, '').trim()); type = REPORT_TYPES[j.type] ? j.type : 'hazard'; note = note || clip(j.note, 120); } catch { type = 'hazard'; note = note || clip(said, 120); }
+  }
+  if (!type) return res.status(400).json({ error: 'Choose what is on the road.' });
+  const same = liveReports().find((x) => x.type === type && geoDist([x.lng, x.lat], [lng, lat]) < 250);
+  if (same) { same.still = [...new Set([...(same.still || []), req.user.id])]; same.until = Math.max(same.until, now() + REPORT_TYPES[type] * 60000); save(); return res.json(reportOut(same, req.user.id)); }
+  const x = { id: newId(), by: req.user.id, type, lat: +lat.toFixed(6), lng: +lng.toFixed(6), note, createdAt: now(), until: now() + REPORT_TYPES[type] * 60000, still: [], gone: [] };
+  db.mapReports.push(x); save(); res.json(reportOut(x, req.user.id));
+});
+app.post('/api/maps/reports/:id/vote', auth, (req, res) => {
+  const x = liveReports().find((y) => y.id === req.params.id); if (!x) return res.json({ ok: true, gone: true });
+  if (req.body?.still) { x.still = [...new Set([...(x.still || []), req.user.id])]; x.until = Math.max(x.until, now() + Math.min(REPORT_TYPES[x.type], 120) * 60000); }
+  else { x.gone = [...new Set([...(x.gone || []), req.user.id])]; if (x.by === req.user.id || x.gone.length >= 2) x.until = 0; }
+  liveReports(); save(); res.json({ ok: true, gone: !x.until });
+});
+// 🔥 wildfires (NASA EONET, free) and 🌫️ air quality / 🌦️ weather backup (Open-Meteo, free) for the map layers
+app.get('/api/maps/fires', auth, async (req, res) => {
+  const b = String(req.query.bbox || '').split(',').map(Number); if (b.length !== 4 || !b.every(isFinite)) return res.json([]);
+  const key = 'fires:' + b.map((x) => Math.round(x)).join(','); const hit = mapCacheGet(key); if (hit) return res.json(hit);
+  try {
+    const d = await (await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?category=wildfires&status=open&days=45&limit=300&bbox=' + [b[0], b[3], b[2], b[1]].map((x) => x.toFixed(2)).join(','), { headers: MAP_UA, signal: AbortSignal.timeout(12000) })).json();
+    const out = (d.events || []).map((e) => { const g = (e.geometry || []).slice(-1)[0] || {}; let c = g.coordinates; while (Array.isArray(c) && Array.isArray(c[0])) c = c[0]; return Array.isArray(c) ? { title: clip(e.title, 100), lng: Number(c[0]), lat: Number(c[1]), date: g.date || '' } : null; }).filter((x) => x && isFinite(x.lat));
+    mapCacheSet(key, out, 60 * 60000); res.json(out);
+  } catch { res.status(502).json({ error: 'Wildfire data is not available right now.' }); }
+});
+app.get('/api/maps/air', auth, async (req, res) => {
+  const la = String(req.query.lat || '').split(',').map(Number).slice(0, 16), lo = String(req.query.lng || '').split(',').map(Number).slice(0, 16), kind = req.query.kind === 'weather' ? 'weather' : 'air';
+  if (!la.length || la.length !== lo.length || !la.every(isFinite) || !lo.every(isFinite)) return res.status(400).json({ error: 'Location needed.' });
+  const q = 'latitude=' + la.map((x) => x.toFixed(2)).join(',') + '&longitude=' + lo.map((x) => x.toFixed(2)).join(',');
+  const key = kind + ':' + q; const hit = mapCacheGet(key); if (hit) return res.json(hit);
+  const u = kind === 'air' ? 'https://air-quality-api.open-meteo.com/v1/air-quality?' + q + '&current=us_aqi,pm2_5,pm10' : 'https://api.open-meteo.com/v1/forecast?' + q + '&current=temperature_2m,weather_code,precipitation,wind_speed_10m&timezone=auto';
+  try { const d = await (await fetch(u, { headers: MAP_UA, signal: AbortSignal.timeout(10000) })).json(); const out = Array.isArray(d) ? d : [d]; mapCacheSet(key, out, 20 * 60000); res.json(out); }
+  catch { res.status(502).json({ error: 'Air quality data is not available right now.' }); }
+});
+// ✨ AI: "About this place" and "Plan my trip"
+const AI_LANG_NAME = { en: 'English', te: 'Telugu', hi: 'Hindi', ta: 'Tamil', kn: 'Kannada', ml: 'Malayalam', mr: 'Marathi', bn: 'Bengali', gu: 'Gujarati', pa: 'Punjabi', ur: 'Urdu', or: 'Odia' };
+const aiJson = (r) => JSON.parse(String(r.text).replace(/^```json|```$/g, '').trim());
+app.post('/api/maps/about', auth, async (req, res) => {
+  const name = clip(req.body?.name, 100), addr = clip(req.body?.addr, 160), lang = AI_LANG_NAME[req.body?.lang] ? req.body.lang : 'en';
+  if (name.length < 2) return res.status(400).json({ error: 'Choose a place.' });
+  const key = 'about:' + lang + ':' + name.toLowerCase() + ':' + Number(req.body?.lat || 0).toFixed(2) + ',' + Number(req.body?.lng || 0).toFixed(2); const hit = mapCacheGet(key); if (hit) return res.json(hit);
+  if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
+  const r = await gemini('You are a helpful local guide for India inside a map app. Write in ' + AI_LANG_NAME[lang] + '. Return ONLY JSON {"summary":"2-3 short sentences about what this place is and why people go there","tips":["up to 3 short practical tips: best time, what to carry, parking, crowd, dress code"],"known":true or false}. If you do not really know this exact place, set known=false and give only general tips for this kind of place — never invent facts, phone numbers, prices or timings.',
+    [{ role: 'user', parts: [{ text: 'Place: ' + name + (addr ? '\nArea: ' + addr : '') }] }], { json: true, maxTokens: 400, temperature: 0.3 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
+  try { const j = aiJson(r); const out = { summary: clip(j.summary, 500), tips: (Array.isArray(j.tips) ? j.tips : []).slice(0, 3).map((t) => clip(t, 140)), known: j.known !== false }; mapCacheSet(key, out, 7 * 86400000); res.json(out); }
+  catch { res.status(502).json({ error: 'AI could not answer. Try again.' }); }
+});
+app.post('/api/maps/voicename', auth, async (req, res) => {
+  const lang = AI_LANG_NAME[req.body?.lang] ? req.body.lang : 'en', name = clip(req.body?.name, 40).trim();
+  if (!name || lang === 'en') return res.json({ name });
+  const key = 'vname:' + lang + ':' + name.toLowerCase(); const hit = mapCacheGet(key); if (hit) return res.json({ name: hit });
+  const r = await gemini('Write the given Indian person name in ' + AI_LANG_NAME[lang] + ' script exactly as it is pronounced (transliterate, do not translate). Return ONLY JSON {"name":"..."}.', [{ role: 'user', parts: [{ text: name }] }], { json: true, maxTokens: 60, temperature: 0 });
+  try { const n = clip(aiJson(r).name, 40).trim(); if (!n) throw 0; mapCacheSet(key, n, 30 * 86400000); res.json({ name: n }); } catch { res.json({ name }); }
+});
+app.post('/api/maps/plan', auth, async (req, res) => {
+  const text = clip(req.body?.text, 300), lang = AI_LANG_NAME[req.body?.lang] ? req.body.lang : 'en'; if (text.length < 4) return res.status(400).json({ error: 'Say what trip you want.' });
+  if (!aiQuota(req.user, 2)) return res.status(429).json({ error: AI_ERR.quota });
+  const r = await gemini('You plan short road trips in India for a map app. Return ONLY JSON {"title":"short trip title in ' + AI_LANG_NAME[lang] + '","stops":[{"name":"real, well-known place name with town and state in English so a map search finds it","why":"one short line in ' + AI_LANG_NAME[lang] + '","time":"suggested time like 7:00 AM or empty"}],"tip":"one short travel tip in ' + AI_LANG_NAME[lang] + '"}. 2 to 6 stops in a sensible driving order. Only real places you are sure exist.',
+    [{ role: 'user', parts: [{ text: text + (req.body?.near ? '\n(Starting near: ' + clip(req.body.near, 100) + ')' : '') }] }], { json: true, maxTokens: 700, temperature: 0.4 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
+  try { const j = aiJson(r); res.json({ title: clip(j.title, 100), tip: clip(j.tip, 200), stops: (Array.isArray(j.stops) ? j.stops : []).slice(0, 6).map((s) => ({ name: clip(s.name, 120), why: clip(s.why, 160), time: clip(s.time, 20) })).filter((s) => s.name) }); }
+  catch { res.status(502).json({ error: 'AI could not plan this. Try again.' }); }
 });
 
 // place / address search for picking a location on a computer (no GPS there)

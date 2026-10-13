@@ -506,6 +506,29 @@ html.dark .fchip[aria-pressed="true"]{color:#7CC4D4}
 .contact.picked .ck{background:var(--leaf);border-color:var(--leaf)}
 .contact.picked{background:var(--peacock-soft)}
 .fav-star{color:var(--turmeric);font-size:12px;margin-left:4px}
+.vl{position:fixed;inset:0;z-index:200;background:radial-gradient(circle at 50% 28%,rgba(40,120,110,.55),rgba(4,20,28,.92));backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);overflow:hidden;transition:opacity .35s}.vl.gone{opacity:0}
+.vl-perch{position:absolute;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:150px;height:30px}.vl-perch i{position:absolute;left:0;right:0;top:12px;height:12px;border-radius:8px;background:linear-gradient(#A1673A,#5D3A1C);box-shadow:0 4px 10px rgba(0,0,0,.35)}.vl-perch b{position:absolute;right:-14px;top:-6px;font-size:26px}
+.vl-stage{position:absolute;inset:0;perspective:900px}
+.vl-toon{position:absolute;left:50%;top:44%;width:200px;height:240px;margin:-140px 0 0 -100px;transform-style:preserve-3d;transform:translate3d(0,0,0) scale(1.12);transition:transform 1s cubic-bezier(.34,1.3,.5,1)}
+.vl-toon.home{transform:translate3d(0,calc(-44vh + 60px),-500px) scale(.32)}
+.vl-spin{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .7s ease}.vl-toon.turned .vl-spin{transform:rotateY(180deg)}
+.vl-hop{position:absolute;inset:0;transform-style:preserve-3d;animation:vlBreath 2.6s ease-in-out infinite}.vl-toon.walking .vl-hop{animation:vlHop .32s ease-in-out infinite alternate}.vl-toon.happy .vl-hop{animation:vlJump .55s ease-in-out 2}
+.vl-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}.vl-face.back{transform:rotateY(180deg)}.vl-face svg{width:100%;height:100%;overflow:visible;fill:initial;stroke:none;filter:drop-shadow(0 18px 18px rgba(0,0,0,.35))}
+.vl .bk,.vl .hd,.vl .eye,.vl .wr,.vl .wl,.vl .pu{transform-box:fill-box}.vl .bk{transform-origin:50% 0}.vl .hd{transform-origin:50% 95%}.vl .eye{transform-origin:50% 50%;animation:vlBlink 4.2s infinite}.vl .wr{transform-origin:20% 8%}.vl .wl{transform-origin:80% 8%}
+.vl-toon.talk .bk{animation:vlTalk .18s ease-in-out infinite alternate}.vl-toon.no .hd{animation:vlNo .55s ease-in-out 2}.vl-toon.ear .hd{transform:rotate(-8deg)}.vl-toon.ear .pu{transform:translateX(-3px)}
+.vl-toon.wave .wr{animation:vlWave .42s ease-in-out infinite alternate}.vl-toon.sad .pu{transform:translateY(4px)}.vl-toon.happy .wl,.vl-toon.happy .wr{animation:vlFlap .2s ease-in-out 5 alternate}
+@keyframes vlBreath{50%{transform:scale(1.025,0.985) translateY(2px)}}@keyframes vlHop{from{transform:translateY(0)}to{transform:translateY(-22px)}}@keyframes vlJump{50%{transform:translateY(-40px) scale(1.05)}}
+@keyframes vlTalk{to{transform:translateY(7px) scaleY(1.5)}}@keyframes vlNo{25%{transform:rotate(-16deg)}75%{transform:rotate(16deg)}}@keyframes vlBlink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes vlWave{from{transform:rotate(-10deg)}to{transform:rotate(-115deg)}}@keyframes vlFlap{to{transform:rotate(-35deg)}}
+.vl-bubble{position:absolute;left:50%;top:calc(44% + 116px);transform:translateX(-50%);width:max-content;max-width:min(86vw,420px);background:#fff;color:#14324A;border-radius:22px;padding:13px 20px;font-weight:700;font-size:17px;line-height:1.4;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.vl-bubble::before{content:"";position:absolute;left:50%;top:-9px;margin-left:-10px;border:10px solid transparent;border-top:0;border-bottom-color:#fff}
+.vl-mic{position:absolute;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));width:74px;height:74px;margin-left:-37px;border-radius:50%;background:#37474F;color:#fff;font-size:32px;display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.4);transition:background .2s}
+.vl-mic.on{background:#E53935;animation:vlPulse 1.1s infinite}@keyframes vlPulse{0%{box-shadow:0 0 0 0 rgba(229,57,53,.6)}100%{box-shadow:0 0 0 26px rgba(229,57,53,0)}}
+.vl-hint{position:absolute;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff;font-weight:700;font-size:15px}
+.vl-pin{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));color:#CFE8E4!important;font-size:15px}
+.vl.ok{background:radial-gradient(circle at 50% 30%,rgba(60,200,120,.6),rgba(4,30,20,.92))}
+.vl-set{display:flex;flex-direction:column;gap:8px;margin:12px 0;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(52,184,90,.14),rgba(30,136,229,.12))}.vl-set small{line-height:1.45;opacity:.85}
+@media (prefers-reduced-motion:reduce){.vl-toon,.vl-spin{transition-duration:.01s}.vl-hop,.vl .eye{animation:none!important}}
 .lock{position:fixed;inset:0;z-index:60;background:linear-gradient(160deg,#0F4C5C,#1B6B7F);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
 .lock h2{margin:0;font-size:22px}
 .lock .dots{display:flex;gap:14px}
@@ -1382,7 +1405,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mp-poi{width:34px;height:34px;border-radius:50%;background:#fff;font-size:17px;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2px solid #fff}
 .mp-styles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.mp-styles button{display:flex;align-items:center;gap:10px;padding:14px;border-radius:14px;background:var(--panel);border:2px solid var(--line);color:var(--ink);font-weight:700}.mp-styles button.on{border-color:var(--leaf)}.mp-styles .ic{font-size:24px}
 /* driving */
-.mp.navigating .mp-top{display:none}.mp.navigating .mp-fabs{bottom:180px}
+.mp.navigating .mp-top{display:none}.mp.navigating #mpDir{display:none}.mp.navigating .mp-fabs{bottom:180px}
 .mp-turn{position:absolute;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 16px;border-radius:20px;color:#fff;background:linear-gradient(135deg,#0E7A4F,#0B5E44);box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:560px}
 .mp-arrow svg{width:46px;height:46px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .mp-turn>div:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column}.mp-turn b{font-size:28px;line-height:1.05}.mp-turn span{font-size:16px;font-weight:600;opacity:.95}
@@ -1396,6 +1419,45 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .maplibregl-ctrl-bottom-right{bottom:calc(40vh + 140px)!important}.mp.navigating .maplibregl-ctrl-bottom-right{bottom:310px!important}
 @media (min-width:900px){.mp-sheet{left:10px;right:auto;width:400px;bottom:10px;border-radius:22px;max-height:calc(100vh - 160px)}.mp-fabs{bottom:24px}.maplibregl-ctrl-bottom-right{bottom:150px!important}}
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
+
+/* Maata Maps v3 */
+.mp-types{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px;padding:6px 8px 4px}.mp-types.det{grid-template-columns:repeat(4,1fr)}
+.mp-types button{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;color:var(--ink);font-size:12.5px;font-weight:600;text-align:center;padding:0;line-height:1.2}
+.mp-types .th{width:70px;height:70px;border-radius:16px;overflow:hidden;display:grid;place-items:center;font-size:30px;border:3px solid transparent;box-shadow:0 1px 4px rgba(0,0,0,.14)}.mp-types.det .th{width:60px;height:60px;font-size:27px}
+.mp-types .th svg{width:100%;height:100%;display:block;stroke:none;fill:none}.mp-types button.on .th{border-color:#0F7A6E}.mp-types button.on{color:#0F7A6E}
+.mp-chips button.ask{box-shadow:inset 0 0 0 2px #1E88E5,0 2px 8px rgba(10,40,60,.16);color:#1558B0;font-weight:800}
+.mp-fab.rep{background:#FF8F00;color:#fff;font-size:22px}
+.mp-aqi{min-width:40px;padding:3px 8px;border-radius:14px;color:#fff;font-weight:800;font-size:14px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.28);text-align:center;line-height:1.05}.mp-aqi small{display:block;font-size:9px;font-weight:700;opacity:.9}
+.mp-aqi-big{display:flex;align-items:center;gap:14px;margin:6px 12px;padding:14px 18px;border-radius:18px;color:#fff}.mp-aqi-big b{font-size:40px}.mp-aqi-big span{font-size:17px;font-weight:700}
+.mp-wx{padding:5px 10px;border-radius:14px;background:#fff;color:#16324F;font-weight:800;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.28);white-space:nowrap}
+.mp-fire{font-size:26px;background:none;border:0;padding:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+.mp-rep{width:38px;height:38px;border-radius:50%;background:#fff;border:3px solid #FF8F00;font-size:19px;box-shadow:0 2px 7px rgba(0,0,0,.3);display:grid;place-items:center;padding:0}.mp-rep.closed,.mp-rep.accident{border-color:#E53935}.mp-rep.police{border-color:#1E63D6}
+.mp-plan-n{width:30px;height:30px;border-radius:50%;background:#7C4DFF;color:#fff;font-weight:800;display:grid;place-items:center;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.mp-about{margin:10px 2px 4px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#EEF4FF,#F4EEFF);color:#1D2B44;font-size:14px;line-height:1.45}.mp-about p{margin:0}.mp-about ul{margin:6px 0 0 18px;padding:0}.mp-about small{display:block;margin-top:6px;opacity:.65}
+.mp-rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 6px}.mp-rgrid button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:11.5px;font-weight:600;line-height:1.2}.mp-rgrid span{font-size:26px}
+.mp-askbox{display:flex;gap:8px;padding:4px 10px 10px}.mp-askbox input{flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font-size:15px}.mp-askbox .mp-go{flex:none;padding:0 18px}
+/* Maata Maps v2 (Google-style) */
+.mp-me{width:40px;height:40px;border-radius:50%;flex:none;padding:0;background:none;border:2px solid #1E88E5;overflow:hidden}.mp-me .avatar{width:100%!important;height:100%!important;font-size:15px}
+.mp-chips button.saved{font-weight:800}
+.mp-rtop{position:absolute;right:12px;top:calc(140px + env(safe-area-inset-top,0px));z-index:2;display:flex;flex-direction:column;gap:12px}
+.mp-fab.sm{width:46px;height:46px;background:#DDF2EE;color:#0F6A5F}#mpCompass{background:#fff}#mpNeedle{transition:transform .2s}
+.mp-fab.dir{width:58px;height:58px;border-radius:18px;background:#0F7A6E;color:#fff}.mp-fab.dir svg{width:30px;height:30px}
+.mp-fabs{bottom:calc(64px + 32vh + 14px)}
+.mp-sheet{bottom:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:14px;max-height:52vh}
+.mp-tabs{position:absolute;left:0;right:0;bottom:0;z-index:4;display:grid;grid-template-columns:repeat(4,1fr);background:#F4F7F8;border-top:1px solid #E1E8EC;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.mp-tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;color:#40505C;font-size:12.5px;font-weight:600;padding:4px 0}
+.mp-tabs svg{width:26px;height:26px;padding:3px 16px;border-radius:999px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;box-sizing:content-box}
+.mp-tabs button[aria-selected="true"]{color:#0B4F47;font-weight:800}.mp-tabs button[aria-selected="true"] svg{background:#CDEDE8}
+.mp.navigating .mp-tabs,.mp.navigating .mp-rtop{display:none}.mp.navigating .mp-sheet{bottom:0}
+.mp-loc{font-size:12.5px;font-weight:600;color:#3B4A55;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff;white-space:nowrap;pointer-events:none;transition:opacity .15s}
+.mp.moving .mp-loc{opacity:0}
+.mp-saved-pin{display:flex;align-items:center;gap:4px;padding:3px 9px 3px 3px;border-radius:999px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:12.5px;color:#1E5FD8}.mp-saved-pin span{width:24px;height:24px;border-radius:50%;background:#1E88E5;display:grid;place-items:center;font-size:13px}
+.mp-cplace{width:32px;height:32px;border-radius:50%;background:#fff;border:2.5px solid #00B37E;font-size:16px;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3)}.mp-cplace.biz{border-color:#7C4DFF;width:36px;height:36px}
+.mp-center-pin{position:absolute;left:50%;top:38%;z-index:2;transform:translate(-50%,-100%);font-size:40px;pointer-events:none;filter:drop-shadow(0 3px 3px rgba(0,0,0,.3))}
+.mp-h3{margin:0 0 4px;font-size:18px}.mp-note2{color:#4C5D6A;font-size:13.5px;line-height:1.45;margin:4px 0 10px}
+.mp-you{display:flex;align-items:center;gap:12px;margin-bottom:6px}.mp-you div{display:flex;flex-direction:column}.mp-you small{color:#5D6E7C}
+.mp-sheet .th-title{margin-top:12px}.mp-sheet .formcol label{color:#13202B}
+@media (min-width:900px){.mp-sheet{bottom:74px}.mp-fabs{bottom:84px}}
 </style>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -2805,7 +2867,7 @@ async function speakServer(text, code) {
   try {
     const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: code, gender: settings.voiceGender }) });
     return await new Promise((res) => {
-      const a = new Audio('data:audio/mp3;base64,' + r.audio); curAudio = a;
+      const a = new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio); curAudio = a;
       a.onended = () => { curAudio = null; res(true); }; a.onerror = () => { curAudio = null; res(false); };
       a.play().catch(() => { curAudio = null; res(false); });
     });
@@ -4705,8 +4767,8 @@ function openLockSettings() {
       if (!/^\d{4,6}$/.test(p1.value)) return toast('PIN must be 4 to 6 digits.');
       if (p1.value !== p2.value) return toast('The two PINs do not match.');
       const salt = Math.random().toString(36).slice(2);
-      const prevBio = (lockCfg() || {}).bio;
-      store.set(LOCK_KEY, JSON.stringify({ salt, hash: await sha(salt + p1.value), minutes: Number(sel.value), ...(prevBio ? { bio: prevBio } : {}) }));
+      const prevBio = (lockCfg() || {}).bio, prevVoice = (lockCfg() || {}).voice;
+      store.set(LOCK_KEY, JSON.stringify({ salt, hash: await sha(salt + p1.value), minutes: Number(sel.value), ...(prevBio ? { bio: prevBio } : {}), ...(prevVoice ? { voice: prevVoice } : {}) }));
       if (!cfg && !prevBio && (await bioAvailable()) && confirm('Also unlock Maata with your fingerprint?')) {
         try { const c2 = lockCfg(); c2.bio = await bioRegister(); store.set(LOCK_KEY, JSON.stringify(c2)); toast('App lock on 🔒 with fingerprint 👆'); closeSheet('moreSheet'); return; }
         catch { toast('Fingerprint not set up. PIN lock is on.'); }
@@ -4714,6 +4776,13 @@ function openLockSettings() {
       closeSheet('moreSheet'); toast('App lock is on 🔒');
     };
     if (cfg) { const ph = el('div'); box.append(ph); bioSettingRow(ph); }
+    if (cfg) {
+      const vb = el('div', 'vl-set');
+      vb.append(el('b', null, '🦜 Voice password ' + (cfg.voice ? '— ON ✅' : '')), el('small', null, 'Chilaka the parrot comes forward and asks for your password. Say it → Maata opens. 3 wrong tries → it says sorry and goes back (use PIN). It checks the WORDS you say, not your voice sound — choose 3–4 secret words and do not say them in front of others.'));
+      const go = el('button', 'primary', cfg.voice ? '🎤 Change voice password' : '🎤 Set voice password'); go.onclick = () => { closeSheet('moreSheet'); voiceSetup(); }; vb.append(go);
+      if (cfg.voice) { const tr = el('button', 'sheet-btn', '▶️ Try it now'); tr.onclick = () => { closeSheet('moreSheet'); voiceUnlock(lockCfg(), () => toast('✅ Voice password works')); }; const vo = el('button', 'danger-btn', 'Turn off voice password'); vo.onclick = () => { const c2 = lockCfg(); delete c2.voice; store.set(LOCK_KEY, JSON.stringify(c2)); closeSheet('moreSheet'); toast('Voice password turned off'); }; vb.append(tr, vo); }
+      box.append(vb);
+    }
     box.append(a, b, t, save2);
     if (cfg) { const off = el('button', 'danger-btn', 'Turn off app lock'); off.onclick = () => { store.del(LOCK_KEY); closeSheet('moreSheet'); toast('App lock turned off'); }; box.append(off); }
     list.append(box);
@@ -4743,7 +4812,11 @@ function showLock() {
     const fp = el('button', 'fp-btn'); fp.innerHTML = '<span aria-hidden="true">👆</span> Unlock with fingerprint'; fp.setAttribute('aria-label', 'Unlock with fingerprint');
     const tryBio = async () => { err.textContent = ''; try { if (await bioCheck(cfg.bio)) { L.remove(); return; } } catch {} err.textContent = 'Fingerprint not recognised. Use your PIN.'; };
     fp.onclick = tryBio; L.append(fp);
-    setTimeout(tryBio, 350);
+    if (!cfg.voice) setTimeout(tryBio, 350);
+  }
+  if (cfg.voice) {
+    const vb = el('button', 'fp-btn'); vb.innerHTML = '<span aria-hidden="true">🦜</span> Voice password'; vb.onclick = () => voiceUnlock(lockCfg(), () => L.remove()); L.append(vb);
+    setTimeout(() => { if ($('#lockScreen')) voiceUnlock(cfg, () => { const x = $('#lockScreen'); if (x) x.remove(); }); }, 400);
   }
   const forgot = el('button', 'linkbtn', 'Forgot PIN? Log out'); forgot.onclick = () => { if (confirm('Log out? You can log in again with your mobile number and password.')) { store.del(LOCK_KEY); logout(); } };
   L.append(forgot);
@@ -4756,6 +4829,163 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
   else if (hiddenAt && Date.now() - hiddenAt >= cfg.minutes * 60000) showLock();
 });
+
+// ================= 🎤 Voice password with Chilaka, the 3D cartoon parrot =================
+// Speech → text: the Maata Android app's own recognizer (WebView has none), or the browser's.
+const LISTEN_CB = {};
+window.maataListenResult = (id, ok, data) => { const cb = LISTEN_CB[id]; if (!cb) return; delete LISTEN_CB[id]; delete LISTEN_CB[id + ':ready']; cb(ok, data); };
+window.maataListenReady = (id) => { const cb = LISTEN_CB[id + ':ready']; if (cb) { delete LISTEN_CB[id + ':ready']; cb(); } };
+function listenOnce(code, onReady) {
+  return new Promise((ok, bad) => {
+    const A = window.MaataAndroid;
+    if (A && typeof A.listen === 'function') {
+      const id = 'L' + Date.now() + Math.random().toString(36).slice(2, 6);
+      LISTEN_CB[id] = (good, data) => { if (good) { try { ok(JSON.parse(data)); } catch { ok([String(data)]); } } else bad(new Error(data || 'error')); };
+      if (onReady) LISTEN_CB[id + ':ready'] = onReady;
+      try { A.listen(id, code); } catch { delete LISTEN_CB[id]; return bad(new Error('unsupported')); }
+      setTimeout(() => { if (LISTEN_CB[id]) { delete LISTEN_CB[id]; try { A.stopListening(); } catch {} bad(new Error('nohear')); } }, 25000);
+      return;
+    }
+    const SR = window.webkitSpeechRecognition || (window.SpeechRecognition && !window.SpeechRecognition.maata && window.SpeechRecognition); if (!SR) return bad(new Error('unsupported'));
+    const r = new SR(); r.lang = code; r.maxAlternatives = 5; r.interimResults = false; let done = false;
+    r.onstart = () => onReady && onReady();
+    r.onresult = (e) => { if (done) return; done = true; const res = e.results[0]; const out = []; for (let i = 0; i < res.length; i++) out.push(res[i].transcript); ok(out); };
+    r.onerror = (e) => { if (done) return; done = true; bad(new Error(e.error === 'not-allowed' ? 'perm' : e.error === 'no-speech' ? 'nohear' : e.error || 'error')); };
+    r.onend = () => { if (!done) { done = true; bad(new Error('nohear')); } };
+    try { r.start(); } catch { bad(new Error('unsupported')); }
+  });
+}
+// inside the Maata Android app, give every voice button (maps 🎤, road reports…) a working speech recognizer
+if (!window.SpeechRecognition && !window.webkitSpeechRecognition && window.MaataAndroid && typeof MaataAndroid.listen === 'function') {
+  window.SpeechRecognition = class { constructor() { this.lang = 'en-IN'; }
+    start() { listenOnce(this.lang, () => this.onstart && this.onstart()).then((alts) => { const res = alts.map((t) => ({ transcript: t, confidence: 1 })); res.isFinal = true; this.onresult && this.onresult({ results: [res], resultIndex: 0 }); })
+      .catch((e) => this.onerror && this.onerror({ error: e.message === 'nohear' ? 'no-speech' : e.message === 'perm' ? 'not-allowed' : e.message })).finally(() => this.onend && this.onend()); }
+    stop() { try { MaataAndroid.stopListening(); } catch {} } abort() { this.stop(); } };
+  window.SpeechRecognition.maata = true;
+}
+// speak with the best voice available and wait about as long as it talks
+function sayAloud(text, code) {
+  const A = window.MaataAndroid; let spoken = false;
+  if (A && typeof A.speak === 'function') { try { const r = A.speak(text, code); spoken = r === 'ok' || r === 'wait'; } catch {} }
+  if (!spoken && window.speechSynthesis) {
+    const v = (speechSynthesis.getVoices() || []).find((x) => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(code.toLowerCase()));
+    if (v || /^en/.test(code)) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); if (v) u.voice = v; u.lang = code; speechSynthesis.speak(u); spoken = true; } catch {} }
+  }
+  if (!spoken) api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: code.slice(0, 2) }) }).then((r) => { if (r.audio) new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio).play().catch(() => {}); }).catch(() => {});
+  return new Promise((ok) => setTimeout(ok, Math.max(1500, [...text].length * 80)));
+}
+const VL_LANG = { te: 'te-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', en: 'en-IN' };
+const VL_T = {
+  en: { hello: 'Hello {name}! Please say your voice password.', wrong: 'That is wrong. Please say the correct password.', last: 'One more chance.', ok: 'Correct! Welcome {name}.', bye: 'Sorry! Bye bye.', nohear: 'I could not hear you. Please say it again.', s1: 'Say your new voice password.', s2: 'Say the same again.', sOk: 'Great! Your voice password is saved.', sBad: 'The two did not match. Let us try again.', short: 'That is too short. Say three or four words.', listening: 'Listening…', heard: 'I heard', perm: 'Allow the microphone for Maata, then try again.', pin: 'Use PIN instead' },
+  te: { hello: '{name}, నమస్తే! మీ వాయిస్ పాస్‌వర్డ్ చెప్పండి.', wrong: 'తప్పు చెప్పారు. సరిగ్గా చెప్పండి.', last: 'ఇంకా ఒక్క అవకాశమే ఉంది.', ok: 'సరైనది! స్వాగతం {name}.', bye: 'సారీ! బై బై.', nohear: 'నాకు వినిపించలేదు. మళ్ళీ చెప్పండి.', s1: 'మీ కొత్త వాయిస్ పాస్‌వర్డ్ చెప్పండి.', s2: 'ఇంకోసారి అదే చెప్పండి.', sOk: 'బాగుంది! మీ వాయిస్ పాస్‌వర్డ్ సేవ్ అయింది.', sBad: 'రెండు సార్లు ఒకేలా రాలేదు. మళ్ళీ ప్రయత్నిద్దాం.', short: 'చాలా చిన్నది. మూడు నాలుగు మాటలు చెప్పండి.', listening: 'వింటున్నాను…', heard: 'నేను విన్నది', perm: 'Maata కి మైక్ అనుమతి ఇవ్వండి, తర్వాత మళ్ళీ ప్రయత్నించండి.', pin: 'PIN తో తెరవండి' },
+  hi: { hello: 'नमस्ते {name}! अपना वॉइस पासवर्ड बोलिए।', wrong: 'गलत है। सही पासवर्ड बोलिए।', last: 'बस एक मौका बाकी है।', ok: 'सही है! स्वागत है {name}।', bye: 'सॉरी! बाय बाय।', nohear: 'मुझे सुनाई नहीं दिया। फिर से बोलिए।', s1: 'अपना नया वॉइस पासवर्ड बोलिए।', s2: 'वही फिर से बोलिए।', sOk: 'बढ़िया! आपका वॉइस पासवर्ड सेव हो गया।', sBad: 'दोनों बार एक जैसा नहीं आया। फिर से कोशिश करते हैं।', short: 'बहुत छोटा है। तीन चार शब्द बोलिए।', listening: 'सुन रही हूँ…', heard: 'मैंने सुना', perm: 'Maata को माइक की अनुमति दें, फिर कोशिश करें।', pin: 'PIN से खोलें' },
+  ta: { hello: 'வணக்கம் {name}! உங்கள் குரல் கடவுச்சொல்லைச் சொல்லுங்கள்.', wrong: 'தவறு. சரியான கடவுச்சொல்லைச் சொல்லுங்கள்.', last: 'இன்னும் ஒரு வாய்ப்பு மட்டுமே.', ok: 'சரி! வரவேற்கிறேன் {name}.', bye: 'மன்னிக்கவும்! பை பை.', nohear: 'எனக்குக் கேட்கவில்லை. மீண்டும் சொல்லுங்கள்.', s1: 'உங்கள் புதிய குரல் கடவுச்சொல்லைச் சொல்லுங்கள்.', s2: 'அதையே மீண்டும் சொல்லுங்கள்.', sOk: 'அருமை! உங்கள் குரல் கடவுச்சொல் சேமிக்கப்பட்டது.', sBad: 'இரண்டும் ஒரே மாதிரி இல்லை. மீண்டும் முயற்சிப்போம்.', short: 'மிகவும் சிறியது. மூன்று நான்கு வார்த்தைகள் சொல்லுங்கள்.', listening: 'கேட்கிறேன்…', heard: 'நான் கேட்டது', perm: 'Maata-க்கு மைக் அனுமதி கொடுங்கள்.', pin: 'PIN மூலம் திற' },
+  kn: { hello: 'ನಮಸ್ಕಾರ {name}! ನಿಮ್ಮ ಧ್ವನಿ ಪಾಸ್‌ವರ್ಡ್ ಹೇಳಿ.', wrong: 'ತಪ್ಪು. ಸರಿಯಾದ ಪಾಸ್‌ವರ್ಡ್ ಹೇಳಿ.', last: 'ಇನ್ನೂ ಒಂದೇ ಅವಕಾಶ.', ok: 'ಸರಿ! ಸ್ವಾಗತ {name}.', bye: 'ಕ್ಷಮಿಸಿ! ಬೈ ಬೈ.', nohear: 'ನನಗೆ ಕೇಳಿಸಲಿಲ್ಲ. ಮತ್ತೆ ಹೇಳಿ.', s1: 'ನಿಮ್ಮ ಹೊಸ ಧ್ವನಿ ಪಾಸ್‌ವರ್ಡ್ ಹೇಳಿ.', s2: 'ಅದನ್ನೇ ಮತ್ತೊಮ್ಮೆ ಹೇಳಿ.', sOk: 'ಚೆನ್ನಾಗಿದೆ! ನಿಮ್ಮ ಧ್ವನಿ ಪಾಸ್‌ವರ್ಡ್ ಉಳಿಸಲಾಗಿದೆ.', sBad: 'ಎರಡೂ ಒಂದೇ ಆಗಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸೋಣ.', short: 'ತುಂಬಾ ಚಿಕ್ಕದು. ಮೂರು ನಾಲ್ಕು ಪದಗಳನ್ನು ಹೇಳಿ.', listening: 'ಕೇಳುತ್ತಿದ್ದೇನೆ…', heard: 'ನಾನು ಕೇಳಿದ್ದು', perm: 'Maata ಗೆ ಮೈಕ್ ಅನುಮತಿ ನೀಡಿ.', pin: 'PIN ಮೂಲಕ ತೆರೆಯಿರಿ' },
+};
+const vlNorm = (t) => String(t || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{M}\p{N}]/gu, '');
+function vlName(L) { const f = navFirstName(); if (!f) return ''; return (NAV_HON[L] || NAV_HON.en)(store.get('maata_nav_vname_' + L + ':' + f) || f); }
+const CHILAKA_FRONT = `<svg viewBox="0 0 200 240" aria-hidden="true"><defs>
+<radialGradient id="vgB" cx="40%" cy="30%" r="75%"><stop offset="0" stop-color="#9BF28C"/><stop offset=".55" stop-color="#34B85A"/><stop offset="1" stop-color="#16743A"/></radialGradient>
+<radialGradient id="vgY" cx="45%" cy="35%" r="70%"><stop offset="0" stop-color="#FBFFB8"/><stop offset="1" stop-color="#A9D84E"/></radialGradient>
+<radialGradient id="vgK" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#FFD180"/><stop offset=".6" stop-color="#FF8F1F"/><stop offset="1" stop-color="#C24E00"/></radialGradient>
+<radialGradient id="vgE" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#D9E2EC"/></radialGradient>
+<linearGradient id="vgW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3FCB6B"/><stop offset="1" stop-color="#0E6A33"/></linearGradient>
+<linearGradient id="vgT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E88E5"/><stop offset="1" stop-color="#0D47A1"/></linearGradient></defs>
+<ellipse cx="100" cy="230" rx="52" ry="8" fill="rgba(0,0,0,.28)"/>
+<path d="M86 196 L74 236 L96 220 L104 238 L112 220 L128 236 L114 196Z" fill="url(#vgT)"/>
+<g class="vt-feet" fill="#FF9800"><ellipse cx="84" cy="214" rx="11" ry="6"/><ellipse cx="116" cy="214" rx="11" ry="6"/></g>
+<ellipse cx="100" cy="152" rx="57" ry="64" fill="url(#vgB)"/>
+<ellipse cx="100" cy="164" rx="36" ry="45" fill="url(#vgY)"/>
+<g class="wl"><path d="M52 124 C26 146 30 190 60 202 C68 176 68 148 52 124Z" fill="url(#vgW)"/><path d="M46 160 C44 176 50 190 60 196" stroke="#0B5A2B" stroke-width="2.5" fill="none"/></g>
+<g class="wr"><path d="M148 124 C174 146 170 190 140 202 C132 176 132 148 148 124Z" fill="url(#vgW)"/><path d="M154 160 C156 176 150 190 140 196" stroke="#0B5A2B" stroke-width="2.5" fill="none"/></g>
+<g class="hd"><path d="M90 34 C84 14 98 4 104 20 C108 4 124 10 113 36Z" fill="#E53935"/>
+<circle cx="100" cy="80" r="52" fill="url(#vgB)"/><ellipse cx="82" cy="48" rx="18" ry="9" fill="#fff" opacity=".35" transform="rotate(-20 82 48)"/>
+<ellipse cx="64" cy="100" rx="10" ry="6.5" fill="#FF8A80" opacity=".75"/><ellipse cx="136" cy="100" rx="10" ry="6.5" fill="#FF8A80" opacity=".75"/>
+<g class="eye"><ellipse cx="79" cy="74" rx="14" ry="16" fill="url(#vgE)"/><ellipse cx="121" cy="74" rx="14" ry="16" fill="url(#vgE)"/>
+<g class="pu"><circle cx="81" cy="77" r="7.5" fill="#1B1B1B"/><circle cx="119" cy="77" r="7.5" fill="#1B1B1B"/><circle cx="84" cy="73" r="2.6" fill="#fff"/><circle cx="122" cy="73" r="2.6" fill="#fff"/></g></g>
+<path class="bk" d="M91 101 C95 114 105 114 109 101 C105 105 95 105 91 101Z" fill="#B23C00"/>
+<path d="M86 90 C90 78 110 78 114 90 C112 102 100 108 100 108 C100 108 88 102 86 90Z" fill="url(#vgK)"/><ellipse cx="95" cy="86" rx="4" ry="2.5" fill="#fff" opacity=".55"/></g></svg>`;
+const CHILAKA_BACK = `<svg viewBox="0 0 200 240" aria-hidden="true"><ellipse cx="100" cy="230" rx="52" ry="8" fill="rgba(0,0,0,.28)"/>
+<g fill="#FF9800"><ellipse cx="84" cy="214" rx="11" ry="6"/><ellipse cx="116" cy="214" rx="11" ry="6"/></g>
+<ellipse cx="100" cy="152" rx="57" ry="64" fill="url(#vgB)"/>
+<g class="wl"><path d="M52 124 C26 146 30 190 60 202 C68 176 68 148 52 124Z" fill="url(#vgW)"/></g>
+<g class="wr"><path d="M148 124 C174 146 170 190 140 202 C132 176 132 148 148 124Z" fill="url(#vgW)"/></g>
+<path d="M80 150 C84 130 116 130 120 150 L114 210 L100 236 L86 210Z" fill="url(#vgW)"/><path d="M88 196 L76 238 L98 222 L104 240 L112 222 L126 238 L112 196Z" fill="url(#vgT)"/>
+<g class="hd"><path d="M90 34 C84 14 98 4 104 20 C108 4 124 10 113 36Z" fill="#E53935"/><circle cx="100" cy="80" r="52" fill="url(#vgB)"/><ellipse cx="116" cy="50" rx="16" ry="8" fill="#fff" opacity=".3" transform="rotate(20 116 50)"/></g></svg>`;
+const vlWait = (ms) => new Promise((r) => setTimeout(r, ms));
+// the cartoon on screen: comes forward from its branch, talks, listens, shakes its head, waves bye
+function chilaka(L) {
+  const P = VL_T[L] || VL_T.en;
+  const root = el('div', 'vl'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Voice password');
+  root.innerHTML = '<div class="vl-perch" aria-hidden="true"><i></i><b>🌿</b></div><div class="vl-stage"><div class="vl-toon home"><div class="vl-spin"><div class="vl-hop"><div class="vl-face front">' + CHILAKA_FRONT + '</div><div class="vl-face back">' + CHILAKA_BACK + '</div></div></div></div></div><div class="vl-bubble" hidden></div><button class="vl-mic" aria-label="Speak">🎤</button><div class="vl-hint"></div><button class="vl-pin linkbtn"></button>';
+  document.body.append(root);
+  const toon = root.querySelector('.vl-toon'), bub = root.querySelector('.vl-bubble'), mic = root.querySelector('.vl-mic'), hint = root.querySelector('.vl-hint');
+  root.querySelector('.vl-pin').textContent = P.pin;
+  const flash = (cls, ms) => { toon.classList.add(cls); return vlWait(ms).then(() => toon.classList.remove(cls)); };
+  const o = {
+    root, P, mic, alive: true,
+    async arrive() { await vlWait(60); toon.classList.add('walking'); toon.classList.remove('home'); await vlWait(1100); toon.classList.remove('walking'); },
+    async say(t, code) { bub.hidden = false; bub.textContent = t; toon.classList.add('talk'); await sayAloud(t, code); toon.classList.remove('talk'); },
+    show(t) { bub.hidden = false; bub.textContent = t; },
+    async listen(code) { mic.classList.add('on'); hint.textContent = P.listening; toon.classList.add('ear'); try { return await listenOnce(code); } finally { mic.classList.remove('on'); hint.textContent = ''; toon.classList.remove('ear'); } },
+    no() { return flash('no', 1100); },
+    happy() { root.classList.add('ok'); return flash('happy', 1100); },
+    async bye(t, code) { toon.classList.add('sad'); await vlWait(300); toon.classList.add('turned'); await vlWait(700); toon.classList.add('wave'); await o.say(t, code); await vlWait(400); toon.classList.remove('wave'); toon.classList.add('walking', 'home'); await vlWait(1200); o.remove(); },
+    async leave() { toon.classList.add('turned'); await vlWait(500); toon.classList.add('walking', 'home'); await vlWait(1000); o.remove(); },
+    remove() { o.alive = false; try { window.MaataAndroid && MaataAndroid.stopListening && MaataAndroid.stopListening(); } catch {} root.classList.add('gone'); setTimeout(() => root.remove(), 400); },
+  };
+  return o;
+}
+// unlock: up to 3 wrong tries, then "Sorry, bye bye" and back to its branch (PIN / fingerprint still work)
+let vlBusy = false;
+async function voiceUnlock(cfg, onPass) {
+  const V = cfg && cfg.voice; if (!V || vlBusy || $('.vl')) return; if (Date.now() < (window.vlCoolUntil || 0)) return toast('Wait a few seconds, then try the voice password again.');
+  vlBusy = true; const L = V.lang.slice(0, 2), name = vlName(L), c = chilaka(L), P = c.P; let wrong = 0, miss = 0;
+  c.root.querySelector('.vl-pin').onclick = () => c.leave();
+  c.mic.onclick = () => {};
+  try {
+    await c.arrive(); if (!c.alive) return;
+    await c.say(P.hello.replace('{name}', name), V.lang);
+    while (c.alive) {
+      let alts; try { alts = await c.listen(V.lang); } catch (e) {
+        if (!c.alive) return;
+        if (e.message === 'perm') { await c.say(P.perm, V.lang); return c.leave(); }
+        if (e.message === 'unsupported') { toast('Voice password needs the Maata app update (or Chrome).'); return c.leave(); }
+        if (++miss > 3) { window.vlCoolUntil = Date.now() + 30000; return c.bye(P.bye, V.lang); }
+        await c.say(P.nohear, V.lang); continue;
+      }
+      if (!c.alive) return;
+      const hs = await Promise.all(alts.map((a) => sha(V.salt + vlNorm(a))));
+      if (hs.some((h) => V.hashes.includes(h))) { c.happy(); await c.say(P.ok.replace('{name}', name), V.lang); c.remove(); onPass(); return; }
+      if (++wrong >= 3) { window.vlCoolUntil = Date.now() + 30000; await c.no(); return c.bye(P.bye, V.lang); }
+      c.no(); await c.say(P.wrong + (wrong === 2 ? ' ' + P.last : ''), V.lang);
+    }
+  } finally { vlBusy = false; }
+}
+// set up: say the new password two times
+async function voiceSetup() {
+  const cfg = lockCfg(); if (!cfg) return toast('Turn on the PIN lock first.');
+  const L = VL_LANG[appLang] ? appLang : 'en', code = VL_LANG[L], c = chilaka(L), P = c.P;
+  c.root.querySelector('.vl-pin').textContent = '✕'; c.root.querySelector('.vl-pin').onclick = () => c.leave();
+  const ask = async (t) => { await c.say(t, code); for (let i = 0; i < 3 && c.alive; i++) { try { return await c.listen(code); } catch (e) { if (e.message === 'perm') { await c.say(P.perm, code); throw e; } if (e.message === 'unsupported') { toast('Voice password needs the Maata app update (or Chrome).'); throw e; } if (c.alive) await c.say(P.nohear, code); } } throw new Error('nohear'); };
+  try {
+    await c.arrive();
+    for (let round = 0; round < 3 && c.alive; round++) {
+      const a = await ask(P.s1); if (!c.alive) return;
+      const n1 = [...new Set(a.map(vlNorm))].filter((x) => x.length >= 4);
+      if (!n1.length) { c.no(); await c.say(P.short, code); continue; }
+      c.show(P.heard + ': “' + a[0] + '”'); await vlWait(1200);
+      const b = await ask(P.s2); if (!c.alive) return;
+      const n2 = new Set(b.map(vlNorm));
+      if (!n1.some((x) => n2.has(x))) { c.no(); await c.say(P.sBad, code); continue; }
+      const salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      const all = [...new Set([...n1, ...n2].filter((x) => x.length >= 4))];
+      const c2 = lockCfg(); c2.voice = { lang: code, salt, hashes: await Promise.all(all.map((x) => sha(salt + x))), at: Date.now() }; store.set(LOCK_KEY, JSON.stringify(c2));
+      c.happy(); await c.say(P.sOk, code); await c.leave(); toast('🎤 Voice password is on'); return;
+    }
+    if (c.alive) await c.bye(P.bye, code);
+  } catch { if (c.alive) c.leave(); }
+}
 
 // ================= emoji data (category, emoji + search words) =================
 const EMOJI_CATS = [
@@ -7095,7 +7325,7 @@ function mtPickLang(m) {
 async function mtListen(text, lang) {
   try {
     const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 400), lang, gender: settings.voiceGender === 'MALE' ? 'MALE' : 'FEMALE' }) });
-    const a = new Audio('data:audio/mp3;base64,' + r.audio); await a.play(); return;
+    const a = new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio); await a.play(); return;
   } catch { /* fall back to the phone's own voice */ }
   if (!('speechSynthesis' in window)) return toast('Listening is not available on this device.');
   const u2 = new SpeechSynthesisUtterance(text); u2.lang = SPEECH_LANG[lang] || 'en-IN'; speechSynthesis.cancel(); speechSynthesis.speak(u2);
@@ -8208,7 +8438,7 @@ function stTool(id) {
         let text = ta.value.trim();
         if (trc.checked) { try { text = (await api('/api/translate', { method: 'POST', body: JSON.stringify({ text, to: sel.value }) })).translated || text; } catch {} }
         const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text: text.slice(0, 400), lang: sel.value, gender: gsel.value }) });
-        const a = new Audio('data:audio/mp3;base64,' + r.audio); const au = stAudio(); try { au.ac.createMediaElementSource(a).connect(au.voice); } catch {}
+        const a = new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio); const au = stAudio(); try { au.ac.createMediaElementSource(a).connect(au.voice); } catch {}
         await new Promise((ok) => { a.onloadedmetadata = ok; setTimeout(ok, 1500); });
         ST.voice = { el: a, text: ta.value.trim(), lang: sel.value, gender: gsel.value, at: Math.max(0, ST.t - ST.trimS), vol: 1 };
         toast('🗣️ Voice added at ' + stFmt(ST.voice.at)); if (!ST.playing) stPlay(); else stVoiceSync(true);
@@ -9032,12 +9262,14 @@ function minimizeCall(on) { callEl.classList.toggle('mini', !!on); }
 // ================= 🗺️ Maata Maps: colourful map, AI search, routes, voice turn-by-turn navigation =================
 const MP = { map: null, me: null, dest: null, mode: 'car', routes: [], sel: 0, nav: null, styleKey: null, puck: null, destMarker: null, nearMarkers: [], watch: null, lastFix: null };
 const MAP_STYLES = {
-  colour: { label: 'Colourful', icon: '🎨', url: 'https://tiles.openfreemap.org/styles/liberty' },
+  colour: { label: 'Default', icon: '🎨', url: 'https://tiles.openfreemap.org/styles/liberty' },
+  satellite: { label: 'Satellite', icon: '🛰️', style: { version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf', sources: { sat: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri' } }, layers: [{ id: 'sat', type: 'raster', source: 'sat' }] } },
+  terrain: { label: 'Terrain', icon: '⛰️', url: 'https://tiles.openfreemap.org/styles/liberty', terrain: true },
+  night: { label: 'Night', icon: '🌙', url: 'https://tiles.openfreemap.org/styles/dark' },
   bright: { label: 'Bright', icon: '☀️', url: 'https://tiles.openfreemap.org/styles/bright' },
   light: { label: 'Light', icon: '🤍', url: 'https://tiles.openfreemap.org/styles/positron' },
-  satellite: { label: 'Satellite', icon: '🛰️', style: { version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf', sources: { sat: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri' } }, layers: [{ id: 'sat', type: 'raster', source: 'sat' }] } },
 };
-const MP_CATS = [['fuel', '⛽', 'Petrol'], ['hospital', '🏥', 'Hospital'], ['atm', '🏧', 'ATM'], ['food', '🍽️', 'Food'], ['mechanic', '🔧', 'Mechanic'], ['parking', '🅿️', 'Parking'], ['ev', '🔌', 'EV charge'], ['pharmacy', '💊', 'Medical'], ['hotel', '🏨', 'Hotel'], ['temple', '🛕', 'Temple'], ['police', '🚓', 'Police'], ['toilets', '🚻', 'Toilets']];
+const MP_CATS = [['food', '🍽️', 'Restaurants'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Hotels'], ['hospital', '🏥', 'Hospital'], ['atm', '🏧', 'ATM'], ['temple', '🛕', 'Temples'], ['mechanic', '🔧', 'Mechanic'], ['parking', '🅿️', 'Parking'], ['ev', '🔌', 'EV charge'], ['pharmacy', '💊', 'Medical'], ['police', '🚓', 'Police'], ['toilets', '🚻', 'Toilets']];
 const MP_MODES = { car: ['🚗', 'Car'], bike: ['🏍️', 'Bike'], foot: ['🚶', 'Walk'] };
 let mlLoading = null;
 function loadMapLibre() {
@@ -9065,18 +9297,26 @@ async function openMaps(target) {
   const pg = el('section', 'mp'); pg.id = 'mapPage';
   pg.innerHTML = `<div id="mpMap"></div>
   <div class="mp-top"><div class="mp-search"><button class="mp-ib" id="mpBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-    <input id="mpQ" type="search" placeholder="Where to? ✨ Ask in any language" aria-label="Search places" autocomplete="off"><button class="mp-ib" id="mpMic" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button class="mp-ai" id="mpAi" aria-label="Ask Maata AI">✨</button></div>
+    <input id="mpQ" type="search" placeholder="Where to? ✨ Ask in any language" aria-label="Search places" autocomplete="off"><button class="mp-ib" id="mpMic" aria-label="Speak"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button class="mp-ai" id="mpAi" aria-label="Ask Maata AI">✨</button><button class="mp-me" id="mpMe" aria-label="You"></button></div>
     <div class="mp-res" id="mpRes" hidden></div>
     <div class="mp-chips" id="mpChips"></div></div>
-  <div class="mp-fabs"><button class="mp-fab" id="mpLayers" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><button class="mp-fab" id="mpLocate" aria-label="My location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button></div>
+  <div class="mp-rtop"><button class="mp-fab sm" id="mpLayers" aria-label="Map style"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><button class="mp-fab sm" id="mpCompass" aria-label="Point north"><svg viewBox="0 0 24 24" id="mpNeedle"><path d="M12 2l4 10h-8z" fill="#E5293F" stroke="none"/><path d="M12 22l-4-10h8z" fill="#B8C2CC" stroke="none"/></svg></button></div>
+  <div class="mp-fabs"><button class="mp-fab rep" id="mpReport" aria-label="Report on the road" hidden>⚠️</button><button class="mp-fab" id="mpLocate" aria-label="My location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg></button><button class="mp-fab dir" id="mpDir" aria-label="Directions"><svg viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z" fill="currentColor" stroke="none"/><path d="M9 14v-3h5M12 8.5l2.5 2.5-2.5 2.5" stroke="#0F7A6E" stroke-width="2"/></svg></button></div>
   <div class="mp-turn" id="mpTurn" hidden><div class="mp-arrow" id="mpArrow"></div><div><b id="mpTurnDist"></b><span id="mpTurnText"></span></div><small id="mpThen"></small></div>
   <div class="mp-speed" id="mpSpeed" hidden><b>0</b><small>km/h</small></div>
-  <div class="mp-sheet" id="mpSheet"></div>`;
+  <div class="mp-sheet" id="mpSheet"></div>
+  <nav class="mp-tabs" id="mpTabs"><button data-t="explore" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span>Explore</span></button><button data-t="you"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>You</span></button><button data-t="contribute"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Contribute</span></button><button data-t="business"><svg viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5M4 9h16v11H4zM9 20v-6h6v6"/></svg><span>Business</span></button></nav>`;
   document.body.append(pg);
   history.pushState({ maata: 'map' }, '');
   $('#mpBack').onclick = closeMaps;
   const chips = $('#mpChips');
+  { const a = el('button', 'ask', '✨ Ask Maps'); a.onclick = mpAskSheet; chips.append(a); }
+  for (const [k, ic, label] of [['home', '🏠', 'Home'], ['work', '💼', 'Work']]) { const b = el('button', 'saved', ic + ' ' + label); b.onclick = () => { const o = mpSaved(); o[k] ? mpSetDest(o[k]) : mpPickSaved(k); }; chips.append(b); }
   for (const [k, ic, label] of MP_CATS) { const b = el('button', null, ic + ' ' + label); b.onclick = () => mpNearby(k, ic + ' ' + label); chips.append(b); }
+  const meBtn = $('#mpMe'); meBtn.append(avatar(me, 'sm')); meBtn.onclick = () => mpTab('you');
+  document.querySelectorAll('#mpTabs button').forEach((b) => (b.onclick = () => mpTab(b.dataset.t)));
+  $('#mpDir').onclick = () => { if (MP.dest) mpSetDest(MP.dest); else { const q2 = $('#mpQ'); q2.placeholder = 'Directions to…'; q2.focus(); } };
+  $('#mpCompass').onclick = () => MP.map && MP.map.easeTo({ bearing: 0, pitch: 0 });
   const q = $('#mpQ');
   q.oninput = () => { clearTimeout(MP.qt); MP.qt = setTimeout(() => mpSearch(q.value.trim()), 350); };
   q.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); mpAsk(q.value.trim()); } };
@@ -9084,14 +9324,17 @@ async function openMaps(target) {
   $('#mpAi').onclick = () => mpAsk(q.value.trim());
   $('#mpMic').onclick = mpListen;
   $('#mpLocate').onclick = () => { if (MP.me) MP.map.easeTo({ center: MP.me, zoom: Math.max(MP.map.getZoom(), 15), bearing: 0, pitch: 0 }); else mpLocate(true); };
-  $('#mpLayers').onclick = mpChooseStyle;
+  $('#mpLayers').onclick = mpChooseStyle; $('#mpReport').onclick = mpNewReport;
   mpHomeSheet();
   try { await loadMapLibre(); } catch (e) { $('#mpMap').append(el('p', 'mp-err', '⚠️ ' + e.message)); return; }
   const start = MP.me || (() => { try { const s = JSON.parse(store.get('maata_map_last') || 'null'); return s; } catch { return null; } })() || [78.9629, 20.5937];
   MP.styleKey = store.get('maata_map_style') || 'colour';
   MP.map = new maplibregl.Map({ container: 'mpMap', style: MAP_STYLES[MP.styleKey].url || MAP_STYLES[MP.styleKey].style, center: start, zoom: MP.me ? 15 : (store.get('maata_map_last') ? 13 : 4.3), attributionControl: { compact: true }, maxPitch: 70, dragRotate: true });
-  MP.map.addControl(new maplibregl.NavigationControl({ showZoom: false, visualizePitch: true }), 'bottom-right');
-  MP.map.on('style.load', mpDrawRoutes);
+  MP.map.on('style.load', () => { clearTimeout(MP.styleWait); mpDrawRoutes(); setTimeout(mpStyleTweaks, 400); });
+  MP.map.on('click', (e) => { if (mpLayersOn().has('street') && !MP.nav) openOut('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + e.lngLat.lat.toFixed(6) + ',' + e.lngLat.lng.toFixed(6)); });
+  MP.map.on('rotate', () => { const n = $('#mpNeedle'); if (n) n.style.transform = 'rotate(' + (-MP.map.getBearing()) + 'deg)'; });
+  MP.map.on('movestart', () => { const pg = $('#mapPage'); if (pg) pg.classList.add('moving'); });
+  MP.map.on('moveend', () => { const pg = $('#mapPage'); if (pg) pg.classList.remove('moving'); clearTimeout(placeT); placeT = setTimeout(() => { mpLocalLabels(); mpLoadPlaces(); }, 250); if (!MP.nav) mpOverlays(); });
   MP.map.on('load', () => { MP.map.resize(); });
   MP.map.on('contextmenu', (e) => mpSetDest({ name: 'Dropped pin', lat: e.lngLat.lat, lng: e.lngLat.lng, pin: true }));
   let press = 0; MP.map.on('touchstart', (e) => { if (e.originalEvent.touches.length !== 1) return; press = setTimeout(() => mpSetDest({ name: 'Dropped pin', lat: e.lngLat.lat, lng: e.lngLat.lng, pin: true }), 600); });
@@ -9101,11 +9344,13 @@ async function openMaps(target) {
   if (target) mpSetDest(target);
 }
 function closeMaps() {
+  if (MP.pickPin) { MP.pickPin.remove(); MP.pickPin = null; }
+  (MP.labels || []).forEach((x) => x.remove()); MP.labels = []; MP.placeMarkers = []; MP.savedPins = [];
   if (MP.nav && !confirm('Stop navigation?')) return;
   mpStopNav(true);
   if (MP.watch !== null) { navigator.geolocation.clearWatch(MP.watch); MP.watch = null; }
   try { MP.map && MP.map.remove(); } catch {}
-  Object.assign(MP, { map: null, routes: [], dest: null, puck: null, destMarker: null, nearMarkers: [] });
+  Object.assign(MP, { map: null, routes: [], dest: null, puck: null, destMarker: null, nearMarkers: [], ovl: {}, stops: [], reports: [] }); clearTimeout(MP.styleWait);
   const p = $('#mapPage'); if (p) p.remove();
 }
 // ----- my location (blue arrow) -----
@@ -9124,13 +9369,6 @@ function mpLocate(fly) {
   }, (e) => { if (e.code === 1) toast('Allow location for Maata to see where you are.'); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
 }
 // ----- map styles -----
-function mpChooseStyle() {
-  sheet('🗺️ Map style', (list) => {
-    const row = el('div', 'mp-styles');
-    for (const [k, s] of Object.entries(MAP_STYLES)) { const b = el('button', k === MP.styleKey ? 'on' : null); b.append(el('span', 'ic', s.icon), el('span', null, s.label)); b.onclick = () => { MP.styleKey = k; store.set('maata_map_style', k); MP.map && MP.map.setStyle(s.url || s.style); closeSheet('moreSheet'); }; row.append(b); }
-    list.append(row, el('p', 'info-note', 'Long-press anywhere on the map to drop a pin and get directions there.'));
-  });
-}
 // ----- search: places + ✨ AI -----
 async function mpSearch(text, fromAi) {
   const res = $('#mpRes'); if (!res) return; if (!fromAi) MP.askId = (MP.askId || 0) + 1;
@@ -9157,6 +9395,7 @@ async function mpAsk(text) {
   if (ask !== MP.askId) return;
   if (a.reply) mpSay(a.reply, true);
   if (a.mode) MP.mode = a.mode;
+  if (a.intent === 'plan') { $('#mpRes').hidden = true; return mpPlan(text); }
   const saved = a.saved && mpSaved()[a.saved];
   if (saved) return mpSetDest(saved);
   if (a.intent === 'nearby' && a.category) { const c = MP_CATS.find((x) => x[0] === a.category); return mpNearby(a.category, c ? c[1] + ' ' + c[2] : a.category); }
@@ -9212,7 +9451,7 @@ async function mpNearby(cat, label) {
 function mpClearNear() { MP.nearMarkers.forEach((m) => m.remove()); MP.nearMarkers = []; }
 // ----- a place is chosen -----
 async function mpSetDest(p) {
-  $('#mpRes').hidden = true; MP.dest = p; mpRemember({ name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng });
+  $('#mpRes').hidden = true; if (!p.keepStops) MP.stops = []; MP.dest = p; mpRemember({ name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng });
   if (MP.pendingSave) { const o = mpSaved(); o[MP.pendingSave] = { name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng }; mpSave(o); toast('Saved as ' + (MP.pendingSave === 'home' ? '🏠 Home' : '💼 Work')); MP.pendingSave = null; }
   if (!MP.map) return;
   if (MP.destMarker) MP.destMarker.remove();
@@ -9242,10 +9481,14 @@ function mpPlaceSheet(loading) {
   const acts = el('div', 'mp-acts');
   const go = el('button', 'mp-go', '▲ Start'); go.disabled = !MP.routes.length || !MP.me; go.onclick = mpStartNav;
   const share = el('button', 'mp-sec', '📤 Share'); share.onclick = () => mpShareDest();
-  const save = el('button', 'mp-sec', '⭐ Save'); save.onclick = () => { sheet('Save place', (list) => { for (const [k, l] of [['home', '🏠 Save as Home'], ['work', '💼 Save as Work']]) { const b = el('button', 'sheet-btn', l); b.onclick = () => { const o = mpSaved(); o[k] = { name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng }; mpSave(o); closeSheet('moreSheet'); toast('Saved ✅'); }; list.append(b); } }); };
+  const save = el('button', 'mp-sec', '⭐ Save'); save.onclick = () => { sheet('Save place', (list) => { for (const [k, l] of [['starred', '⭐ Save to my places'], ['home', '🏠 Save as Home'], ['work', '💼 Save as Work']]) { const b = el('button', 'sheet-btn', l); b.onclick = () => { const o = mpSaved(), v = { name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng }; if (k === 'starred') o.starred = [v, ...(o.starred || []).filter((x) => x.name !== v.name)].slice(0, 50); else o[k] = v; mpSave(o); mpShowSavedPins(); closeSheet('moreSheet'); toast('Saved ✅'); }; list.append(b); } }); };
   acts.append(go, share, save);
   if (p.phone) { const c = el('a', 'mp-sec', '📞 Call'); c.href = 'tel:' + p.phone; acts.append(c); }
+  const about = el('button', 'mp-sec', '✨ About'); acts.append(about);
+  if (MP.routes.length) { const ow = el('button', 'mp-sec', '🔍 On the way'); ow.onclick = mpAlongSheet; acts.append(ow); }
   s.append(acts);
+  if ((MP.stops || []).length) { const sv = el('div', 'mp-note'); sv.append(el('span', null, '🛑 Stops: ' + MP.stops.map((x) => x.name).join(' → ') + ' ')); const rm = el('button', 'linkbtn', 'Remove stops'); rm.onclick = () => { MP.stops = []; mpRoute(); }; sv.append(rm); s.append(sv); }
+  const ab = el('div', 'mp-about'); ab.hidden = true; s.append(ab); about.onclick = () => { ab.hidden = false; mpAbout(p, ab); };
   if (!MP.me) s.append(el('small', 'mp-note', '📡 Turn on location to start navigation.'));
 }
 function mpHomeSheet() {
@@ -9263,7 +9506,7 @@ async function mpRoute() {
   if (!MP.me) { MP.routes = []; MP.routeErr = '📡 Waiting for your location to find a route…'; mpPlaceSheet(); setTimeout(() => { if (MP.me && MP.dest && !MP.routes.length) mpRoute(); }, 3000); return; }
   MP.sel = 0; MP.routes = []; MP.routeErr = ''; mpPlaceSheet(true);
   try {
-    const r = await api('/api/maps/route?mode=' + MP.mode + '&pts=' + MP.me.join(',') + ';' + MP.dest.lng + ',' + MP.dest.lat);
+    const r = await api('/api/maps/route?mode=' + MP.mode + '&pts=' + mpRoutePts());
     MP.routes = r.routes;
   } catch (e) { MP.routeErr = '⚠️ ' + e.message; }
   mpDrawRoutes(); mpPlaceSheet();
@@ -9288,7 +9531,8 @@ function mpPrepare(route) {
   for (let i = 1; i < g.length; i++) cum.push(cum[i - 1] + hav(g[i - 1], g[i]));
   const steps = route.steps.map((s) => { let best = 0, bd = 1e12; for (let i = 0; i < g.length; i++) { const d = hav(g[i], s.loc); if (d < bd) { bd = d; best = i; } } return { ...s, at: cum[best] }; });
   for (let i = 1; i < steps.length; i++) if (steps[i].at < steps[i - 1].at) steps[i].at = steps[i - 1].at;
-  return { g, cum, steps, total: cum[cum.length - 1] };
+  const st2 = steps.filter((x, i) => !(x.type === 'depart' && i > 0)).map((x, i, a) => (x.type === 'arrive' && i < a.length - 1 ? { ...x, type: 'continue', mod: 'straight' } : x));
+  return { g, cum, steps: st2, total: cum[cum.length - 1] };
 }
 function mpSnap(nav, c) { // nearest point on the route, searched around the last position
   let best = nav.seg, bd = 1e12, bt = 0;
@@ -9307,7 +9551,7 @@ function mpSnap(nav, c) { // nearest point on the route, searched around the las
 async function mpStartNav() {
   const r = MP.routes[MP.sel]; if (!r || !MP.me) return;
   MP.nav = { ...mpPrepare(r), route: r, seg: 0, step: 1, said: {}, offCount: 0, follow: true, started: Date.now(), dur: r.duration };
-  $('#mapPage').classList.add('navigating'); mpClearNear();
+  $('#mapPage').classList.add('navigating'); mpClearNear(); $('#mpReport').hidden = false; mpVoiceCheck(); navLoadName();
   try { MP.wake = await navigator.wakeLock?.request('screen'); } catch {}
   mpNavSheet(); mpSay(navText('start', { dist: fmtKm(r.distance), time: fmtMin(r.duration) }));
   if (MP.lastFix) mpNavTick(MP.lastFix);
@@ -9317,9 +9561,9 @@ function mpStopNav(silent) {
   if (!MP.nav) return; MP.nav = null;
   try { MP.wake && MP.wake.release(); } catch {} MP.wake = null;
   if (MP.share) { try { socket.emit('live:stop', { id: MP.share }); } catch {} MP.share = null; }
-  const pg = $('#mapPage'); if (pg) pg.classList.remove('navigating');
+  const pg = $('#mapPage'); if (pg) pg.classList.remove('navigating'); if ($('#mpReport')) $('#mpReport').hidden = !mpLayersOn().has('traffic');
   if ($('#mpTurn')) { $('#mpTurn').hidden = true; $('#mpSpeed').hidden = true; }
-  try { speechSynthesis.cancel(); } catch {}
+  mpStopVoice();
   if (!silent && MP.map) { MP.map.easeTo({ pitch: 0, bearing: 0, duration: 600 }); mpPlaceSheet(); }
 }
 function mpNavTick(fix) {
@@ -9343,17 +9587,19 @@ function mpNavTick(fix) {
   // bottom bar
   const frac = nav.total ? remain / nav.total : 0, secs = nav.dur * frac;
   const bar = $('#mpNavBar'); if (bar) { bar.querySelector('.eta').textContent = fmtClock(Date.now() + secs * 1000); bar.querySelector('.rem').textContent = fmtMin(secs) + ' · ' + fmtKm(remain); }
+  mpNavExtras(nav, fix, s, c);
   if (MP.share && Date.now() - (MP.shareAt || 0) > 10000) { MP.shareAt = Date.now(); socket.emit('live:update', { id: MP.share, lat: c[1], lng: c[0], acc: fix.coords.accuracy }); }
   // camera follows the car, pointing the way you drive
   if (nav.follow) MP.map.easeTo({ center: s.off < 40 ? s.p : c, bearing: sp > 1.5 && fix.coords.heading != null && !isNaN(fix.coords.heading) ? fix.coords.heading : s.heading, zoom: sp > 22 ? 15.6 : sp > 12 ? 16.4 : 17.2, pitch: 55, duration: 900, easing: (t) => t });
   if (MP.puck) { MP.puck.setLngLat(s.off < 40 ? s.p : c); MP.puck.setRotation(s.heading); }
 }
 async function mpReroute() {
-  const nav = MP.nav; if (!nav || !MP.me) return; nav.rerouting = true; mpSay(navText('reroute', {}));
+  const nav = MP.nav; if (!nav || !MP.me) return; nav.rerouting = true; const t0 = Date.now(); mpSay(navText('missed', {})); toast('↩️ Route missed — finding a new route');
   try {
-    const r = await api('/api/maps/route?mode=' + MP.mode + '&pts=' + MP.me.join(',') + ';' + MP.dest.lng + ',' + MP.dest.lat);
+    const r = await api('/api/maps/route?mode=' + MP.mode + '&pts=' + mpRoutePts());
     if (!MP.nav) return; MP.routes = [r.routes[0]]; MP.sel = 0; mpDrawRoutes();
-    Object.assign(MP.nav, mpPrepare(r.routes[0]), { route: r.routes[0], seg: 0, step: 1, said: {}, offCount: 0, dur: r.routes[0].duration });
+    Object.assign(MP.nav, mpPrepare(r.routes[0]), { route: r.routes[0], seg: 0, step: 1, said: {}, offCount: 0, dur: r.routes[0].duration, reps: (MP.nav.reps || []).filter((x) => x.warned), repAt: 0 });
+    const dur = r.routes[0].duration; setTimeout(() => { if (MP.nav) mpSay(navText('newroute', { time: fmtMin(dur) })); }, Math.max(300, 4500 - (Date.now() - t0)));
   } catch {}
   if (MP.nav) MP.nav.rerouting = false;
 }
@@ -9366,11 +9612,12 @@ function mpNavSheet() {
   const bar = el('div', 'mp-navbar'); bar.id = 'mpNavBar';
   const info = el('div', 'info'); info.append(el('b', 'eta', '--'), el('small', 'rem', ''));
   const btns = el('div', 'btns');
-  const mute = el('button', 'mp-sec', store.get('maata_nav_mute') === '1' ? '🔇' : '🔊'); mute.setAttribute('aria-label', 'Voice on or off'); mute.onclick = () => { const m = store.get('maata_nav_mute') === '1' ? '0' : '1'; store.set('maata_nav_mute', m); mute.textContent = m === '1' ? '🔇' : '🔊'; if (m === '1') try { speechSynthesis.cancel(); } catch {} };
-  const lang = el('button', 'mp-sec', '🗣️ ' + (NAV_LANGS[navLang()] || 'English')); lang.onclick = () => sheet('Voice language', (list) => { for (const [k, l] of Object.entries(NAV_LANGS)) { const b = el('button', 'sheet-btn', l); b.onclick = () => { store.set('maata_nav_lang', k); lang.textContent = '🗣️ ' + l; closeSheet('moreSheet'); mpSay(navText('test', {})); }; list.append(b); } });
+  const mute = el('button', 'mp-sec', store.get('maata_nav_mute') === '1' ? '🔇' : '🔊'); mute.setAttribute('aria-label', 'Voice on or off'); mute.onclick = () => { const m = store.get('maata_nav_mute') === '1' ? '0' : '1'; store.set('maata_nav_mute', m); mute.textContent = m === '1' ? '🔇' : '🔊'; if (m === '1') mpStopVoice(); };
+  const lang = el('button', 'mp-sec', '🗣️ ' + (NAV_LANGS[navLang()] || 'English')); lang.onclick = () => mpVoiceSheet(() => { lang.textContent = '🗣️ ' + (NAV_LANGS[navLang()] || 'English'); });
   const share = el('button', 'mp-sec', '📤 ETA'); share.onclick = () => mpShareDest(true);
+  const along = el('button', 'mp-sec', '🔍'); along.setAttribute('aria-label', 'Search along route'); along.onclick = mpAlongSheet;
   const end = el('button', 'mp-end', 'End'); end.onclick = () => mpStopNav();
-  btns.append(mute, lang, share, end); bar.append(info, btns); s.append(bar);
+  btns.append(mute, lang, along, share, end); bar.append(info, btns); s.append(bar);
 }
 // ----- share with a Maata friend: destination, or live trip with ETA -----
 function mpShareDest(trip) {
@@ -9402,6 +9649,16 @@ const NAV_T = {
   ta: { km: ' கிலோமீட்டர்', m: ' மீட்டர்', min: ' நிமிடம்', h: ' மணி', left: 'இடது பக்கம் திரும்புங்கள்', right: 'வலது பக்கம் திரும்புங்கள்', sl: 'சற்று இடது பக்கம் செல்லுங்கள்', sr: 'சற்று வலது பக்கம் செல்லுங்கள்', shl: 'கூர்மையாக இடது திரும்புங்கள்', shr: 'கூர்மையாக வலது திரும்புங்கள்', u: 'யு-டர்ன் எடுங்கள்', straight: 'நேராகச் செல்லுங்கள்', round: 'சுற்றுவட்டத்தில் {n}வது வழியை எடுங்கள்', arrive: 'உங்கள் இலக்கு', on: ', {road}', in: '{dist} பிறகு {turn}', start: 'பயணம் தொடங்குகிறது. {dist}, சுமார் {time}.', arrived: 'நீங்கள் இலக்கை அடைந்துவிட்டீர்கள்.', reroute: 'புதிய வழியைத் தேடுகிறேன்.', test: 'தமிழில் வழி சொல்கிறேன்.' },
   kn: { km: ' ಕಿಲೋಮೀಟರ್', m: ' ಮೀಟರ್', min: ' ನಿಮಿಷ', h: ' ಗಂಟೆ', left: 'ಎಡಕ್ಕೆ ತಿರುಗಿ', right: 'ಬಲಕ್ಕೆ ತಿರುಗಿ', sl: 'ಸ್ವಲ್ಪ ಎಡಕ್ಕೆ ಇರಿ', sr: 'ಸ್ವಲ್ಪ ಬಲಕ್ಕೆ ಇರಿ', shl: 'ತೀಕ್ಷ್ಣವಾಗಿ ಎಡಕ್ಕೆ ತಿರುಗಿ', shr: 'ತೀಕ್ಷ್ಣವಾಗಿ ಬಲಕ್ಕೆ ತಿರುಗಿ', u: 'ಯು-ಟರ್ನ್ ತೆಗೆದುಕೊಳ್ಳಿ', straight: 'ನೇರವಾಗಿ ಹೋಗಿ', round: 'ವೃತ್ತದಲ್ಲಿ {n}ನೇ ದಾರಿ ತೆಗೆದುಕೊಳ್ಳಿ', arrive: 'ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನ', on: ', {road}', in: '{dist} ನಂತರ {turn}', start: 'ಪ್ರಯಾಣ ಆರಂಭ. {dist}, ಸುಮಾರು {time}.', arrived: 'ನೀವು ಗಮ್ಯಸ್ಥಾನ ತಲುಪಿದ್ದೀರಿ.', reroute: 'ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇನೆ.', test: 'ಕನ್ನಡದಲ್ಲಿ ದಾರಿ ಹೇಳುತ್ತೇನೆ.' },
 };
+const NAV_EXTRA = {
+  en: { missed: 'You have missed the route. Finding a new route.', newroute: 'New route ready. {time} to go.' },
+  te: { missed: 'మీరు రూట్ మిస్ అయ్యారు. కొత్త దారి చూస్తున్నాను.', newroute: 'కొత్త దారి సిద్ధం. ఇంకా {time} పడుతుంది.' },
+  hi: { missed: 'आप रास्ता भटक गए हैं। नया रास्ता ढूँढ रही हूँ।', newroute: 'नया रास्ता तैयार। अभी {time} लगेंगे।' },
+  ta: { missed: 'நீங்கள் வழியைத் தவறவிட்டீர்கள். புதிய வழியைத் தேடுகிறேன்.', newroute: 'புதிய வழி தயார். இன்னும் {time} ஆகும்.' },
+  kn: { missed: 'ನೀವು ದಾರಿ ತಪ್ಪಿದ್ದೀರಿ. ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇನೆ.', newroute: 'ಹೊಸ ದಾರಿ ಸಿದ್ಧ. ಇನ್ನೂ {time} ಬೇಕು.' },
+};
+for (const [k, v] of Object.entries(NAV_EXTRA)) Object.assign(NAV_T[k], v);
+const NAV_NAMED = new Set(['in', 'now', 'start', 'arrived', 'missed', 'test']);
+function navText(kind, o) { const t = navTextBase(kind, o); return NAV_NAMED.has(kind) ? navNamed(t) : t; }
 function turnKey(st) {
   if (st.type === 'arrive') return 'arrive';
   if (st.type === 'roundabout' || st.type === 'rotary' || st.type === 'roundabout turn') return 'round';
@@ -9413,14 +9670,15 @@ function turnWords(st, L) {
   return w;
 }
 const sayUnits = (txt, T) => String(txt).replace(/(\d) km\b/g, '$1' + T.km).replace(/(\d) m\b/g, '$1' + T.m).replace(/(\d) min\b/g, '$1' + T.min).replace(/(\d) h\b/g, '$1' + T.h);
-function navText(kind, o) {
+function navTextBase(kind, o) {
   const L = navLang(), T = NAV_T[L] || NAV_T.en;
-  if (kind === 'in') return T.in.replace('{dist}', sayUnits(o.dist, T)).replace('{turn}', turnWords(o.st, L));
+  if (kind === 'in') { const w = turnWords(o.st, L); return T.in.replace('{dist}', sayUnits(o.dist, T)).replace('{turn}', L === 'en' ? w[0].toLowerCase() + w.slice(1) : w); }
   if (kind === 'start') return T.start.replace('{dist}', sayUnits(o.dist, T)).replace('{time}', sayUnits(o.time, T));
   if (kind === 'turn') return turnWords(o.st, L);
   if (kind === 'in') return T.in.replace('{dist}', o.dist).replace('{turn}', turnWords(o.st, L));
   if (kind === 'now') return turnWords(o.st, L);
   if (kind === 'start') return T.start.replace('{dist}', o.dist).replace('{time}', o.time);
+  if (kind === 'newroute') return T.newroute.replace('{time}', sayUnits(o.time, T));
   return T[kind] || '';
 }
 function turnIcon(st) {
@@ -9431,17 +9689,58 @@ function turnIcon(st) {
 const NAV_VOICE = { en: 'en-IN', te: 'te-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN' };
 async function mpSay(text, quiet) {
   if (!text || store.get('maata_nav_mute') === '1') return;
-  const L = navLang(), code = NAV_VOICE[L] || 'en-IN';
-  const voices = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
-  const v = voices.find((x) => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(code.toLowerCase())) || (L === 'en' && voices.find((x) => /^en/i.test(x.lang)));
-  if (v || (!quiet && L === 'en' && window.speechSynthesis)) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); if (v) u.voice = v; u.lang = code; u.rate = 1; speechSynthesis.speak(u); return; } catch {} }
-  // phone has no voice for this language: use the Maata server voice (Google), if it is set up
-  try { const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: L }) }); if (r.audio) { const a = new Audio('data:audio/mp3;base64,' + r.audio); a.play().catch(() => {}); } } catch {}
+  const L = navLang(), code = NAV_VOICE[L] || 'en-IN', A = window.MaataAndroid;
+  // 1) Maata Android app: the phone's own voice (works offline, clear, any Indian language the phone has)
+  if (A && typeof A.speak === 'function') { let r = 'error'; try { r = A.speak(text, code); } catch {} if (r === 'ok' || r === 'wait') return; }
+  // 2) browser voice
+  else if (window.speechSynthesis) {
+    const voices = speechSynthesis.getVoices() || [];
+    const v = voices.find((x) => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(code.toLowerCase())) || (L === 'en' && voices.find((x) => /^en/i.test(x.lang)));
+    if (v || (!quiet && L === 'en')) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); if (v) u.voice = v; u.lang = code; u.rate = 1; speechSynthesis.speak(u); return; } catch {} }
+  }
+  // 3) Maata server voice (internet)
+  try { const r = await api('/api/tts', { method: 'POST', body: JSON.stringify({ text, lang: L }) }); if (r.audio) { try { MP.voiceAudio && MP.voiceAudio.pause(); } catch {} const a = new Audio('data:' + (r.mime || 'audio/mp3') + ';base64,' + r.audio); MP.voiceAudio = a; a.play().catch(() => {}); } } catch {}
+}
+function mpStopVoice() { try { window.MaataAndroid && MaataAndroid.stopSpeaking && MaataAndroid.stopSpeaking(); } catch {} try { speechSynthesis.cancel(); } catch {} try { MP.voiceAudio && MP.voiceAudio.pause(); } catch {} }
+// before driving: is the voice for this language on the phone?
+function mpVoiceCheck() {
+  const A = window.MaataAndroid, L = navLang(); if (!A || typeof A.ttsCheck !== 'function' || store.get('maata_voice_ok_' + L) === '1') return;
+  let r = 'wait'; try { r = A.ttsCheck(NAV_VOICE[L] || 'en-IN'); } catch {}
+  if (r === 'ok') return store.set('maata_voice_ok_' + L, '1');
+  if (r !== 'nolang' || MP.voiceAsked === L) return; MP.voiceAsked = L;
+  sheet('🔊 ' + NAV_LANGS[L] + ' voice', (list) => {
+    list.append(el('p', 'info-note', 'Your phone does not have the ' + NAV_LANGS[L] + ' voice yet. Install it once (free, from Google) for a clear voice that works even without internet. Until then Maata speaks using the internet voice.'));
+    const b = el('button', 'primary', '⬇️ Install ' + NAV_LANGS[L] + ' voice'); b.onclick = () => { closeSheet('moreSheet'); try { A.installTtsVoice(); } catch {} toast('In the screen that opens choose ' + NAV_LANGS[L] + ' and tap download ⬇️'); };
+    list.append(b);
+  });
+}
+// the voice calls you by name: "Balaji గారు, ఎడమవైపు తిరగండి"
+const NAV_HON = { te: (n) => n + ' గారు', hi: (n) => n + ' जी', ta: (n) => n + ' அவர்களே', kn: (n) => n + ' ಅವರೇ', en: (n) => n };
+function navFirstName() { const w = String((me && me.name) || '').split(/\s+/).filter((x) => x.replace(/\./g, '').length > 1); return w[0] || ''; }
+function navName(L = navLang()) {
+  if (store.get('maata_nav_callme_off') === '1') return '';
+  const own = store.get('maata_nav_callme_' + L); if (own) return own;
+  const f = navFirstName(); if (!f) return '';
+  return (NAV_HON[L] || NAV_HON.en)(store.get('maata_nav_vname_' + L + ':' + f) || f);
+}
+async function navLoadName() {
+  const L = navLang(), f = navFirstName(); if (!f || L === 'en' || store.get('maata_nav_vname_' + L + ':' + f)) return;
+  try { const r = await api('/api/maps/voicename', { method: 'POST', body: JSON.stringify({ name: f, lang: L }) }); if (r.name && r.name !== f) store.set('maata_nav_vname_' + L + ':' + f, r.name); } catch {}
+}
+const navNamed = (txt) => { const n = navName(); if (!n || !txt) return txt; return n + ', ' + (navLang() === 'en' ? txt[0].toLowerCase() + txt.slice(1) : txt); };
+function mpVoiceSheet(after) {
+  sheet('🗣️ Navigation voice', (list) => {
+    for (const [k, l] of Object.entries(NAV_LANGS)) { const b = el('button', 'sheet-btn', (k === navLang() ? '✅ ' : '') + l); b.onclick = async () => { store.set('maata_nav_lang', k); closeSheet('moreSheet'); after && after(); await navLoadName(); mpVoiceCheck(); mpSay(navText('test', {})); }; list.append(b); }
+    const nm = el('button', 'sheet-btn', '🙋 Call me: ' + (navName() || 'no name') + '  ✏️');
+    nm.onclick = () => { const v = prompt('How should the voice call you? (empty = no name)', navName()); if (v === null) return; const L = navLang(); if (v.trim()) { store.set('maata_nav_callme_' + L, v.trim().slice(0, 40)); store.set('maata_nav_callme_off', '0'); } else store.set('maata_nav_callme_off', '1'); closeSheet('moreSheet'); mpSay(navText('test', {})); };
+    const t = el('button', 'sheet-btn', '🔊 Test the voice'); t.onclick = () => { store.set('maata_nav_mute', '0'); mpSay(navText('test', {})); };
+    list.append(nm, t);
+  });
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 101;
-const APP_NOTES = ["🗺️ Maata Maps: nearby places now searched from your phone (fixes “Nearby search is busy”)", "🗺️ Maata Maps: colourful map, AI search, routes, voice navigation in 5 languages", "👆 App lock with fingerprint (needs Android app update)", "🔢 Version number shown in Settings"];
+const APP_VERSION = 105;
+const APP_NOTES = ["🦜 Voice password: Chilaka the 3D parrot asks “మీ పాస్‌వర్డ్ చెప్పండి” — say it and Maata opens", "🙅 Wrong password: the parrot shakes its head; 3 wrong tries → “Sorry, bye bye” and it flies back to its branch", "🎤 Voice search now works inside the Maata app (maps, road reports)", "Set it up: Settings → 🔒 App lock → 🎤 Set voice password"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -9463,6 +9762,399 @@ function versionLine() {
   if (av) parts.push('Android app v' + av + (latestApk && Number(String(av).split('.').pop()) < latestApk ? ' → v1.0.' + latestApk + ' ready' : ' ✅'));
   return parts.join(' · ');
 }
+// ================= Maata Maps v3: map type & details (like Google), live traffic + road reports, air quality, weather, wildfires, ✨ AI =================
+const MP_THUMBS = {
+  colour: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#F4F1EA"/><path d="M0 0h30c-6 14-4 26 4 40-10 10-20 18-34 20z" fill="#AAD7F5"/><path d="M40 0h32v34c-12-2-22-12-32-34z" fill="#CDEBC5"/><path d="M8 72C20 50 44 40 72 30" stroke="#fff" stroke-width="7" fill="none"/><path d="M8 72C20 50 44 40 72 30" stroke="#F6C453" stroke-width="3" fill="none"/></svg>',
+  satellite: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#4B5A3C"/><path d="M0 20c20 6 40-6 72 4v14C48 30 22 44 0 36z" fill="#6E7B5B"/><circle cx="16" cy="56" r="10" fill="#3A4630"/><circle cx="54" cy="58" r="8" fill="#5F6E4A"/><path d="M0 52C24 40 48 34 72 10" stroke="#B9B9B0" stroke-width="7" fill="none"/></svg>',
+  terrain: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#DCE5CF"/><path d="M0 46l16-18 12 10 18-24 26 30v28H0z" fill="#A9B993"/><path d="M0 60l20-14 14 8 16-16 22 18v16H0z" fill="#8FA27A"/><path d="M10 72c8-14 26-12 30-26s16-20 28-22" stroke="#fff" stroke-width="5" fill="none"/></svg>',
+  night: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#1F2A3A"/><path d="M0 0h28c-6 14-2 26 6 40-10 10-20 18-34 20z" fill="#2C3E58"/><path d="M8 72C20 50 44 40 72 30" stroke="#F2B544" stroke-width="5" fill="none"/><circle cx="56" cy="14" r="7" fill="#F6E7A6"/></svg>',
+  bright: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#FFF8E7"/><path d="M0 0h30c-6 14-4 26 4 40-10 10-20 18-34 20z" fill="#9ED2FF"/><path d="M8 72C20 50 44 40 72 30" stroke="#FF8A3D" stroke-width="6" fill="none"/></svg>',
+  light: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#F5F6F7"/><path d="M0 0h30c-6 14-4 26 4 40-10 10-20 18-34 20z" fill="#DDE3EA"/><path d="M8 72C20 50 44 40 72 30" stroke="#C9CED6" stroke-width="6" fill="none"/></svg>',
+};
+const MP_DETAILS = [['transit', '🚇', 'Public transit', '#ECE6FF'], ['traffic', '🚦', 'Traffic', '#E3F6EC'], ['bike', '🚲', 'Bicycling', '#DFF3E4'], ['raised', '🏙️', 'Raised buildings', '#EEF1F4'], ['street', '🧍', 'Street View', '#E1EEFF'], ['fires', '🔥', 'Wildfires', '#FFE6E1'], ['air', '🍃', 'Air Quality', '#E5F4DD'], ['weather', '🌦️', 'Weather', '#E1F0FF']];
+const mpLayersOn = () => { try { return new Set(JSON.parse(store.get('maata_map_layers') || '[]')); } catch { return new Set(); } };
+function mpSetStyle(k) {
+  const s = MAP_STYLES[k]; if (!s || !MP.map) return; MP.styleKey = k; store.set('maata_map_style', k);
+  clearTimeout(MP.styleWait); MP.styleWait = setTimeout(() => { if (MP.map && k !== 'colour' && MP.styleKey === k) { toast('That map style is not loading — showing Default.'); mpSetStyle('colour'); } }, 12000);
+  MP.map.setStyle(s.url || s.style, { diff: false });
+}
+function mpChooseStyle() {
+  sheet('Map type', (list) => {
+    const g = el('div', 'mp-types');
+    for (const [k, s] of Object.entries(MAP_STYLES)) {
+      const b = el('button', k === MP.styleKey ? 'on' : null), th = el('span', 'th'); th.innerHTML = MP_THUMBS[k] || s.icon; b.append(th, el('span', null, s.label));
+      b.onclick = () => { if (k !== MP.styleKey) mpSetStyle(k); g.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; g.append(b);
+    }
+    const d = el('div', 'mp-types det'), on = mpLayersOn();
+    for (const [k, ic, label, bg] of MP_DETAILS) {
+      const b = el('button', on.has(k) ? 'on' : null), th = el('span', 'th', ic); th.style.background = bg; b.append(th, el('span', null, label));
+      b.onclick = () => { const s2 = mpLayersOn(); s2.has(k) ? s2.delete(k) : s2.add(k); store.set('maata_map_layers', JSON.stringify([...s2])); b.classList.toggle('on', s2.has(k)); mpApplyLayers(k); }; d.append(b);
+    }
+    list.append(g, el('div', 'th-title', 'Map details'), d, el('p', 'info-note', '🚦 Traffic = live road speeds shared (without names) by Maata drivers while they navigate, plus road reports like accidents and police checks. 🍃 Air quality and 🌦️ weather come from Open-Meteo, 🔥 wildfires from NASA.'));
+  });
+}
+// draw the chosen map details on the map (called again after every map style change)
+function mpApplyLayers(changed) {
+  const m = MP.map; if (!m || !m.getStyle()) return;
+  const on = mpLayersOn(), st = MAP_STYLES[MP.styleKey] || {}, layers = m.getStyle().layers;
+  const vec = m.getSource('openmaptiles') ? 'openmaptiles' : Object.keys(m.getStyle().sources).find((k) => m.getStyle().sources[k].type === 'vector');
+  const firstSym = (layers.find((l) => l.type === 'symbol') || {}).id;
+  const drop = (...ids) => ids.forEach((id) => { try { if (m.getLayer(id)) m.removeLayer(id); } catch {} });
+  const add = (layer, before) => { try { if (!m.getLayer(layer.id)) m.addLayer(layer, before && m.getLayer(before) ? before : undefined); } catch (e) { console.log('[maps] layer', layer.id, e.message); } };
+  const is = (k) => ['match', ['get', 'class'], k, true, false];
+  // ⛰️ terrain: hills and valleys shading
+  if (st.terrain) {
+    try { if (!m.getSource('mp-dem')) m.addSource('mp-dem', { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, encoding: 'terrarium', maxzoom: 14, attribution: 'Terrain © Mapzen, AWS' }); } catch {}
+    add({ id: 'mp-hill', type: 'hillshade', source: 'mp-dem', paint: { 'hillshade-exaggeration': 0.6, 'hillshade-shadow-color': '#3D4F2A', 'hillshade-highlight-color': '#FFFDF2', 'hillshade-accent-color': '#5E6B3A' } }, firstSym);
+  } else drop('mp-hill');
+  const needVec = (k, label) => { if (changed === k && !vec) toast(label + ' shows on Default, Terrain, Night, Bright and Light maps.'); return !!vec; };
+  // 🚇 trains and bus stops
+  if (on.has('transit') && needVec('transit', 'Public transit')) {
+    add({ id: 'mp-rail', type: 'line', source: vec, 'source-layer': 'transportation', filter: ['match', ['get', 'class'], ['rail', 'transit'], true, false], paint: { 'line-color': '#7B3FE4', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.2, 12, 3, 16, 5] } }, firstSym);
+    add({ id: 'mp-stops', type: 'circle', source: vec, 'source-layer': 'poi', minzoom: 12, filter: ['match', ['get', 'class'], ['bus', 'railway'], true, false], paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3.5, 16, 7], 'circle-color': ['match', ['get', 'class'], 'railway', '#7B3FE4', '#1E88E5'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+    add({ id: 'mp-stops-name', type: 'symbol', source: vec, 'source-layer': 'poi', minzoom: 13, filter: ['match', ['get', 'class'], ['bus', 'railway'], true, false], layout: { 'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name']], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-offset': [0, 1], 'text-anchor': 'top', 'text-optional': true }, paint: { 'text-color': ['match', ['get', 'class'], 'railway', '#5B2BB5', '#1565C0'], 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
+  } else drop('mp-stops-name', 'mp-stops', 'mp-rail');
+  // 🚲 cycle paths
+  if (on.has('bike') && needVec('bike', 'Bicycling')) add({ id: 'mp-cycle', type: 'line', source: vec, 'source-layer': 'transportation', filter: ['all', is('path'), ['==', ['get', 'subclass'], 'cycleway']], paint: { 'line-color': '#1B8E3E', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 16, 4], 'line-dasharray': [2, 1] } }, firstSym);
+  else drop('mp-cycle');
+  // 🏙️ raised (3D) buildings
+  if (on.has('raised') && needVec('raised', 'Raised buildings')) {
+    if (!layers.some((l) => l.type === 'fill-extrusion')) add({ id: 'mp-3d', type: 'fill-extrusion', source: vec, 'source-layer': 'building', minzoom: 14, paint: { 'fill-extrusion-color': MP.styleKey === 'night' ? '#3A4A60' : '#E4DDD3', 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': 0.9 } }, firstSym);
+    if (changed === 'raised') m.easeTo({ pitch: 58, zoom: Math.max(m.getZoom(), 16.2), duration: 900 });
+  } else { drop('mp-3d'); if (changed === 'raised' && !MP.nav) m.easeTo({ pitch: 0, duration: 700 }); }
+  if (changed === 'street' && on.has('street')) toast('🧍 Street View: tap any road on the map');
+  const rb = $('#mpReport'); if (rb) rb.hidden = !(on.has('traffic') || MP.nav);
+  mpOverlays(changed);
+}
+// ----- live overlays that follow the map: traffic, road reports, wildfires, air quality, weather -----
+let ovlT = 0;
+function mpOverlays(changed) { clearTimeout(ovlT); ovlT = setTimeout(() => mpOverlaysNow(changed), changed ? 0 : 500); }
+function mpClearOvl(k) { MP.ovl = MP.ovl || {}; (MP.ovl[k] || []).forEach((x) => x.remove()); MP.ovl[k] = []; }
+const mpGrid = (b, n) => { const pts = []; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) pts.push([b.getWest() + (b.getEast() - b.getWest()) * (i + 0.5) / n, b.getSouth() + (b.getNorth() - b.getSouth()) * (j + 0.5) / n]); return pts; };
+async function mpMeteo(kind, pts) {
+  const la = pts.map((p) => p[1].toFixed(2)).join(','), lo = pts.map((p) => p[0].toFixed(2)).join(',');
+  const u = kind === 'air' ? 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + la + '&longitude=' + lo + '&current=us_aqi,pm2_5,pm10' : 'https://api.open-meteo.com/v1/forecast?latitude=' + la + '&longitude=' + lo + '&current=temperature_2m,weather_code,precipitation,wind_speed_10m&timezone=auto';
+  try { const r = await fetch(u, { signal: AbortSignal.timeout(9000) }); if (!r.ok) throw 0; const d = await r.json(); return Array.isArray(d) ? d : [d]; }
+  catch { return api('/api/maps/air?kind=' + kind + '&lat=' + la + '&lng=' + lo); } // phone could not reach it: ask the Maata server
+}
+async function mpOverlaysNow(changed) {
+  const m = MP.map; if (!m) return; const on = mpLayersOn(), b = m.getBounds(), z = m.getZoom();
+  const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((x) => +x.toFixed(4)).join(',');
+  // 🚦 traffic + road reports
+  if (on.has('traffic') || MP.nav) {
+    if (z >= 8.5) { try { const t = await api('/api/maps/traffic?bbox=' + bbox); if (MP.map !== m) return; mpDrawTraffic(on.has('traffic') ? t.roads : []); mpDrawReports(t.reports); if (changed === 'traffic') toast(t.roads.length || t.reports.length ? '🚦 Live traffic from Maata drivers' : '🚦 No live traffic here yet — it fills in as Maata drivers navigate'); } catch {} }
+    else if (changed === 'traffic') toast('Zoom in to see traffic');
+  } else { mpDrawTraffic([]); mpDrawReports([]); }
+  // 🔥 wildfires
+  if (on.has('fires')) {
+    try { const f = await api('/api/maps/fires?bbox=' + [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((x) => x.toFixed(1)).join(',')); if (MP.map !== m) return; mpClearOvl('fires');
+      for (const x of f) { const d = el('button', 'mp-fire', '🔥'); d.setAttribute('aria-label', x.title); d.onclick = (e) => { e.stopPropagation(); sheet('🔥 ' + x.title, (l) => l.append(el('p', 'info-note', 'Reported ' + (x.date ? new Date(x.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'recently') + ' · source: NASA EONET. Stay away and follow local fire service advice.'))); }; MP.ovl.fires.push(new maplibregl.Marker({ element: d }).setLngLat([x.lng, x.lat]).addTo(m)); }
+      if (changed === 'fires') toast(f.length ? '🔥 ' + f.length + ' wildfire' + (f.length > 1 ? 's' : '') + ' in this area' : '🔥 No big wildfires reported here now 👍');
+    } catch (e) { if (changed === 'fires') toast(e.message); }
+  } else mpClearOvl('fires');
+  // 🍃 air quality and 🌦️ weather, a few points across the screen
+  for (const kind of ['air', 'weather']) {
+    if (!on.has(kind)) { mpClearOvl(kind); continue; }
+    const pts = mpGrid(b, z > 11 ? 2 : 3);
+    try { const d = await mpMeteo(kind, pts); if (MP.map !== m) return; mpClearOvl(kind);
+      d.forEach((x, i) => { const c = x.current || {}; let node;
+        if (kind === 'air') { if (c.us_aqi == null) return; const lv = aqiLevel(c.us_aqi); node = el('button', 'mp-aqi'); node.style.background = lv[1]; node.append(el('b', null, String(Math.round(c.us_aqi))), el('small', null, 'AQI')); node.onclick = (e) => { e.stopPropagation(); mpAirSheet(c); }; }
+        else { if (c.temperature_2m == null) return; node = el('button', 'mp-wx', wxIcon(c.weather_code) + ' ' + Math.round(c.temperature_2m) + '°'); node.onclick = (e) => { e.stopPropagation(); mpWeatherSheet(c); }; }
+        MP.ovl[kind].push(new maplibregl.Marker({ element: node, anchor: kind === 'air' ? 'bottom' : 'top', offset: [0, kind === 'air' ? -3 : 3] }).setLngLat(pts[i]).addTo(m)); });
+    } catch (e) { if (changed === kind) toast((kind === 'air' ? 'Air quality' : 'Weather') + ' is not available right now.'); }
+  }
+}
+function mpDrawTraffic(roads) {
+  const m = MP.map; if (!m || !m.getStyle() || (!roads.length && !m.getSource('mp-traffic'))) return;
+  const data = { type: 'FeatureCollection', features: roads.map((r) => ({ type: 'Feature', properties: { l: r.l }, geometry: { type: 'LineString', coordinates: [r.a, r.b] } })) };
+  try {
+    if (m.getSource('mp-traffic')) m.getSource('mp-traffic').setData(data);
+    else { m.addSource('mp-traffic', { type: 'geojson', data }); const firstSym = (m.getStyle().layers.find((l) => l.type === 'symbol') || {}).id; m.addLayer({ id: 'mp-traffic', type: 'line', source: 'mp-traffic', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['match', ['get', 'l'], 3, '#D93025', 2, '#F9A825', '#1DB954'], 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3, 16, 7], 'line-opacity': 0.9 } }, firstSym && m.getLayer(firstSym) ? firstSym : undefined); }
+  } catch {}
+}
+const REP = { jam: ['🚗', 'Traffic jam'], accident: ['💥', 'Accident'], police: ['🚓', 'Police check'], closed: ['⛔', 'Road closed'], pothole: ['🕳️', 'Bad road / potholes'], water: ['🌊', 'Water on road'], hazard: ['⚠️', 'Hazard on road'] };
+const REP_SAY = {
+  en: { ahead: 'Careful! {what} reported {dist} ahead', jam: 'traffic jam', accident: 'an accident', police: 'police check', closed: 'road closed', pothole: 'bad road', water: 'water on the road', hazard: 'a hazard' },
+  te: { ahead: 'జాగ్రత్త! {dist} ముందు {what}', jam: 'ట్రాఫిక్ జామ్', accident: 'ప్రమాదం జరిగింది', police: 'పోలీస్ చెకింగ్', closed: 'రోడ్డు మూసివేశారు', pothole: 'గుంతల రోడ్డు', water: 'రోడ్డుపై నీళ్ళు', hazard: 'రోడ్డుపై ప్రమాదం' },
+  hi: { ahead: 'सावधान! {dist} आगे {what}', jam: 'ट्रैफिक जाम', accident: 'दुर्घटना', police: 'पुलिस चेकिंग', closed: 'सड़क बंद', pothole: 'खराब सड़क', water: 'सड़क पर पानी', hazard: 'सड़क पर खतरा' },
+  ta: { ahead: 'கவனம்! {dist} முன்னால் {what}', jam: 'போக்குவரத்து நெரிசல்', accident: 'விபத்து', police: 'போலீஸ் சோதனை', closed: 'சாலை மூடப்பட்டுள்ளது', pothole: 'மோசமான சாலை', water: 'சாலையில் தண்ணீர்', hazard: 'சாலையில் ஆபத்து' },
+  kn: { ahead: 'ಎಚ್ಚರಿಕೆ! {dist} ಮುಂದೆ {what}', jam: 'ಟ್ರಾಫಿಕ್ ಜಾಮ್', accident: 'ಅಪಘಾತ', police: 'ಪೊಲೀಸ್ ತಪಾಸಣೆ', closed: 'ರಸ್ತೆ ಬಂದ್', pothole: 'ಕೆಟ್ಟ ರಸ್ತೆ', water: 'ರಸ್ತೆಯಲ್ಲಿ ನೀರು', hazard: 'ರಸ್ತೆಯಲ್ಲಿ ಅಪಾಯ' },
+};
+function mpDrawReports(list) {
+  mpClearOvl('reps'); MP.reports = list || []; if (!MP.map) return;
+  for (const r of MP.reports) { const d = el('button', 'mp-rep ' + r.type, (REP[r.type] || REP.hazard)[0]); d.setAttribute('aria-label', (REP[r.type] || REP.hazard)[1]); d.onclick = (e) => { e.stopPropagation(); mpReportSheet(r); }; MP.ovl.reps.push(new maplibregl.Marker({ element: d }).setLngLat([r.lng, r.lat]).addTo(MP.map)); }
+}
+const agoText = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+function mpReportSheet(r) {
+  const [ic, label] = REP[r.type] || REP.hazard;
+  sheet(ic + ' ' + label, (list) => {
+    list.append(el('p', 'info-note', 'Reported ' + agoText(r.at) + ' by ' + r.byName + (r.still ? ' · ' + r.still + ' more driver' + (r.still > 1 ? 's' : '') + ' said it is still there' : '') + (r.note ? '\n“' + r.note + '”' : '')));
+    const vote = async (still) => { try { await api('/api/maps/reports/' + r.id + '/vote', { method: 'POST', body: JSON.stringify({ still }) }); toast(still ? '👍 Thanks — drivers will keep getting warned' : '👍 Thanks — removed when others agree'); } catch (e) { toast(e.message); } closeSheet('moreSheet'); mpOverlays(); };
+    const y = el('button', 'sheet-btn', '👍 Still there'); y.onclick = () => vote(true);
+    const n = el('button', 'sheet-btn', r.mine ? '🗑️ Remove my report' : '👎 Not there any more'); n.onclick = () => vote(false);
+    list.append(y, n);
+  });
+}
+function mpNewReport() {
+  const at = MP.me || (MP.map && MP.map.getCenter().toArray()); if (!at) return toast('Waiting for your location…');
+  const send = async (body) => { closeSheet('moreSheet'); try { const r = await api('/api/maps/reports', { method: 'POST', body: JSON.stringify({ ...body, lat: at[1], lng: at[0] }) }); toast((REP[r.type] || REP.hazard)[0] + ' Reported — Maata drivers coming this way will be warned. Thank you!'); mpOverlays(); if (MP.nav) MP.nav.repAt = 0; } catch (e) { toast(e.message); } };
+  sheet('⚠️ What is on the road?', (list) => {
+    list.append(el('p', 'info-note', MP.me ? 'Reported at your current location.' : 'Reported at the centre of the map.'));
+    const g = el('div', 'mp-rgrid');
+    for (const [k, [ic, label]] of Object.entries(REP)) { const b = el('button'); b.append(el('span', null, ic), el('small', null, label)); b.onclick = () => send({ type: k }); g.append(b); }
+    const mic = el('button'); mic.append(el('span', null, '🎤'), el('small', null, '✨ Say it')); mic.onclick = () => {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { const t = prompt('What is on the road?'); if (t) send({ text: t }); return; }
+      const rec = new SR(); rec.lang = ({ te: 'te-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN' })[navLang()] || 'en-IN';
+      mic.querySelector('small').textContent = 'Listening…'; rec.onresult = (e) => send({ text: e.results[0][0].transcript }); rec.onend = () => { mic.querySelector('small').textContent = '✨ Say it'; }; try { rec.start(); } catch {}
+    };
+    g.append(mic); list.append(g);
+  });
+}
+// air quality & weather details
+const aqiLevel = (v) => v <= 50 ? ['Good', '#2E9E4F', 'Air is clean — good for a walk or outdoor work.', 'గాలి శుభ్రంగా ఉంది — బయట నడకకు మంచిది.'] : v <= 100 ? ['Moderate', '#E0A800', 'Okay for most people. If you have asthma, take it easy.', 'చాలా మందికి పర్వాలేదు. ఆస్తమా ఉన్నవాళ్ళు జాగ్రత్త.'] : v <= 150 ? ['Unhealthy for sensitive people', '#F57C00', 'Children, elders and asthma patients: do not stay outside for long.', 'పిల్లలు, పెద్దలు, ఆస్తమా ఉన్నవాళ్ళు బయట ఎక్కువసేపు ఉండకండి.'] : v <= 200 ? ['Unhealthy', '#E53935', 'Wear a mask outside. Avoid running or heavy work outdoors.', 'బయట మాస్క్ పెట్టుకోండి. బయట పరుగు, బరువు పనులు వద్దు.'] : v <= 300 ? ['Very unhealthy', '#8E24AA', 'Stay indoors if you can. Keep windows closed.', 'వీలైతే ఇంట్లోనే ఉండండి. కిటికీలు మూసి ఉంచండి.'] : ['Hazardous', '#7B1E2E', 'Dangerous air. Stay indoors; wear an N95 mask if you must go out.', 'ప్రమాదకరమైన గాలి. ఇంట్లోనే ఉండండి, బయటకు వెళ్తే N95 మాస్క్ పెట్టుకోండి.'];
+function mpAirSheet(c) {
+  const lv = aqiLevel(c.us_aqi);
+  sheet('🍃 Air quality here', (list) => {
+    const big = el('div', 'mp-aqi-big'); big.style.background = lv[1]; big.append(el('b', null, String(Math.round(c.us_aqi))), el('span', null, lv[0])); list.append(big);
+    list.append(el('p', 'info-note', lv[2] + (appLang === 'te' ? '\n' + lv[3] : '') + '\nPM2.5: ' + (c.pm2_5 ?? '–') + ' µg/m³ · PM10: ' + (c.pm10 ?? '–') + ' µg/m³ · US AQI from Open-Meteo'));
+  });
+}
+const wxIcon = (c) => c === 0 ? '☀️' : c <= 2 ? '🌤️' : c === 3 ? '☁️' : c <= 48 ? '🌫️' : c <= 57 ? '🌦️' : c <= 67 ? '🌧️' : c <= 77 ? '❄️' : c <= 82 ? '🌧️' : '⛈️';
+function mpWeatherSheet(c) {
+  const rain = c.weather_code >= 51 && c.weather_code <= 99, storm = c.weather_code >= 95;
+  sheet(wxIcon(c.weather_code) + ' Weather here', (list) => list.append(el('p', 'info-note', Math.round(c.temperature_2m) + '°C · rain ' + (c.precipitation ?? 0) + ' mm · wind ' + Math.round(c.wind_speed_10m || 0) + ' km/h' +
+    (storm ? '\n⛈️ Thunderstorm — avoid open fields and two-wheeler travel if you can.' + (appLang === 'te' ? '\nఉరుములు — వీలైతే బైక్ ప్రయాణం వద్దు.' : '') : rain ? '\n🌧️ Rain — drive slowly, roads may be slippery.' + (appLang === 'te' ? '\nవర్షం — నెమ్మదిగా వెళ్ళండి, రోడ్డు జారుతుంది.' : '') : c.temperature_2m >= 38 ? '\n🥵 Very hot — carry water, avoid 12–3 PM travel on bike.' + (appLang === 'te' ? '\nచాలా ఎండ — నీళ్ళు తీసుకెళ్ళండి.' : '') : ''))));
+}
+// ----- ✨ Ask Maps & AI trip planner -----
+function mpAskSheet() {
+  sheet('✨ Ask Maps', (list) => {
+    list.append(el('p', 'info-note', 'Ask anything in your language — Telugu, Hindi, English, typed or spoken.'));
+    const box = el('div', 'mp-askbox'); const inp = el('input'); inp.placeholder = 'e.g. Tirupati ki bike lo, petrol bunk on the way…'; const go = el('button', 'mp-go', 'Ask'); box.append(inp, go); list.append(box);
+    const ask = (t) => { if (!t) return inp.focus(); closeSheet('moreSheet'); $('#mpQ').value = t; mpAsk(t); };
+    go.onclick = () => ask(inp.value.trim()); inp.onkeydown = (e) => { if (e.key === 'Enter') ask(inp.value.trim()); };
+    const plan = el('button', 'sheet-btn', '🧳 Plan a trip with AI — e.g. “1 day temple trip from Chittoor”'); plan.onclick = () => { const t = inp.value.trim(); if (!t) { inp.placeholder = 'Type your trip, then tap 🧳 again'; return inp.focus(); } closeSheet('moreSheet'); mpPlan(t); };
+    list.append(plan);
+    for (const [ic, t] of [['⛽', 'Nearest petrol bunk'], ['🏥', 'Hospital near me'], ['🛕', 'Famous temples near me'], ['🍽️', 'Good veg restaurant near me'], ['🏠', 'Take me home']]) { const b = el('button', 'sheet-btn', ic + ' ' + t); b.onclick = () => ask(t); list.append(b); }
+    setTimeout(() => inp.focus(), 200);
+  });
+}
+async function mpPlan(text) {
+  const s = $('#mpSheet'); if (!s) return; s.className = 'mp-sheet open'; s.innerHTML = ''; s.append(el('div', 'mp-thinking', '🧳 Maata AI is planning your trip…'));
+  let p; try { p = await api('/api/maps/plan', { method: 'POST', body: JSON.stringify({ text, lang: appLang, near: MP.me ? MP.me[1].toFixed(3) + ',' + MP.me[0].toFixed(3) : '' }) }); }
+  catch (e) { s.innerHTML = ''; s.append(el('div', 'mp-thinking', '⚠️ ' + e.message)); return; }
+  s.innerHTML = ''; s.append(el('div', 'mp-thinking', '📍 Finding the places on the map…'));
+  const near = MP.me ? '&lat=' + MP.me[1] + '&lng=' + MP.me[0] : '';
+  const stops = [];
+  for (const st of p.stops) { let r = []; try { r = await api('/api/geo/search?q=' + encodeURIComponent(st.name) + near); } catch {} stops.push(r[0] ? { ...st, lat: r[0].lat, lng: r[0].lng, addr: r[0].title.split(', ').slice(1).join(', ') } : st); }
+  mpClearOvl('plan'); s.innerHTML = '';
+  const h = el('div', 'mp-ph'); const tx = el('div'); tx.append(el('h3', null, '🧳 ' + (p.title || 'Your trip')), el('small', null, '✨ Planned by Maata AI — check timings before you go')); h.append(tx);
+  const x = el('button', 'mp-ib', '✕'); x.onclick = () => { mpClearOvl('plan'); mpHomeSheet(); }; h.append(x); s.append(h);
+  const list = el('div', 'mp-list'), bb = new maplibregl.LngLatBounds(); let n = 0;
+  stops.forEach((st) => {
+    const ok = isFinite(st.lat); if (ok) n++;
+    const b = el('button', 'mp-ri'); const t2 = el('div'); t2.append(el('b', null, (st.time ? st.time + ' · ' : '') + st.name.split(',')[0]), el('small', null, (st.why || '') + (ok ? '' : ' · not found on map'))); b.append(el('span', 'ic', ok ? String(n) : '❔'), t2);
+    if (ok) { b.onclick = () => { mpClearOvl('plan'); mpSetDest({ name: st.name.split(',')[0], addr: st.addr, lat: st.lat, lng: st.lng }); }; const mk = el('div', 'mp-plan-n', String(n)); MP.ovl.plan.push(new maplibregl.Marker({ element: mk }).setLngLat([st.lng, st.lat]).addTo(MP.map)); bb.extend([st.lng, st.lat]); }
+    list.append(b);
+  });
+  s.append(list); if (p.tip) s.append(el('p', 'info-note', '💡 ' + p.tip));
+  const okStops = stops.filter((st) => isFinite(st.lat));
+  if (okStops.length) {
+    const acts = el('div', 'mp-acts'); const all = el('button', 'mp-go', '🛣️ Route all stops'); all.onclick = () => { mpClearOvl('plan'); const last = okStops[okStops.length - 1]; MP.stops = okStops.slice(0, -1).slice(0, 4).map((q) => ({ name: q.name.split(',')[0], lat: q.lat, lng: q.lng })); mpSetDest({ name: last.name.split(',')[0], addr: last.addr, lat: last.lat, lng: last.lng, keepStops: true }); };
+    acts.append(all); s.append(acts);
+    if (MP.me) bb.extend(MP.me); MP.map.fitBounds(bb, { padding: { top: 160, bottom: Math.min(innerHeight * 0.5, 400), left: 40, right: 60 }, maxZoom: 14 });
+  }
+}
+async function mpAbout(p, box) {
+  box.innerHTML = ''; box.append(el('div', 'mp-thinking', '✨ Maata AI is reading about this place…'));
+  try { const a = await api('/api/maps/about', { method: 'POST', body: JSON.stringify({ name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng, lang: appLang }) });
+    box.innerHTML = ''; box.append(el('p', null, a.summary)); if (a.tips.length) { const ul = el('ul'); a.tips.forEach((t) => ul.append(el('li', null, t))); box.append(ul); } box.append(el('small', null, a.known ? '✨ Maata AI · may have mistakes' : '✨ Maata AI does not know this exact place well — general tips only'));
+  } catch (e) { box.innerHTML = ''; box.append(el('div', 'mp-thinking', '⚠️ ' + e.message)); }
+}
+// ----- 🔍 search along my route (petrol, food, toilets… on the way) -----
+const routeLine = () => (MP.nav ? MP.nav.g : MP.routes[MP.sel] && MP.routes[MP.sel].geometry.coordinates) || null;
+function mpAlongSheet() {
+  sheet('🔍 On the way', (list) => { const g = el('div', 'mp-rgrid');
+    for (const k of ['fuel', 'food', 'toilets', 'atm', 'hospital', 'mechanic', 'ev', 'hotel']) { const c = MP_CATS.find((x) => x[0] === k); const b = el('button'); b.append(el('span', null, c[1]), el('small', null, c[2])); b.onclick = () => { closeSheet('moreSheet'); mpAlong(k, c[1] + ' ' + c[2]); }; g.append(b); }
+    list.append(g); });
+}
+async function mpAlong(cat, label) {
+  const g = routeLine(); if (!g) return mpNearby(cat, label);
+  const cum = [0]; for (let i = 1; i < g.length; i++) cum.push(cum[i - 1] + hav(g[i - 1], g[i]));
+  const from = MP.nav ? MP.nav.seg : 0, pts = []; let last = -1e9;
+  for (let i = from; i < g.length && cum[i] - cum[from] < 120000; i++) if (cum[i] - last >= 2500) { pts.push(g[i]); last = cum[i]; }
+  if (pts.length < 2) pts.push(g[g.length - 1]);
+  toast('🔍 Looking for ' + label.split(' ').slice(1).join(' ').toLowerCase() + ' on your way…');
+  const q = '[out:json][timeout:15];(nwr[' + MP_OSM[cat] + '](around:1200,' + pts.slice(0, 50).map((p) => p[1].toFixed(5) + ',' + p[0].toFixed(5)).join(',') + '););out center 60;';
+  const one = (base) => fetch(base, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: AbortSignal.timeout(15000) }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((d) => { if (!Array.isArray(d.elements)) throw new Error('bad'); return d.elements; });
+  let els; try { els = await Promise.any(['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'].map(one)); }
+  catch { toast('Route search is busy — showing places near you'); return mpNearby(cat, label); }
+  const here = MP.nav ? cum[from] : 0;
+  const list = els.map((e) => { const t = e.tags || {}, la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon; let bi = from, bd = 1e12; for (let i = from; i < g.length; i++) { const d = hav(g[i], [lo, la]); if (d < bd) { bd = d; bi = i; } } return { name: t.name || t.brand || '', lat: la, lng: lo, phone: t.phone || '', ahead: cum[bi] - here, off: bd }; })
+    .filter((x) => isFinite(x.lat) && x.ahead >= 0).sort((a, b) => a.ahead - b.ahead).slice(0, 20);
+  mpClearNear(); const icon = label.split(' ')[0], what = label.split(' ').slice(1).join(' ');
+  const openOne = (p, name) => sheet(icon + ' ' + name, (l) => {
+    l.append(el('p', 'info-note', fmtKm(p.ahead) + ' ahead on your route · ' + fmtKm(p.off) + ' off the road'));
+    const a = el('button', 'sheet-btn', '➕ Add as a stop on my route'); a.onclick = () => { closeSheet('moreSheet'); const here = MP.me || [p.lng, p.lat]; MP.stops = [...(MP.stops || []), { name, lat: p.lat, lng: p.lng }].sort((x, y) => hav(here, [x.lng, x.lat]) - hav(here, [y.lng, y.lat])).slice(0, 4); mpClearNear(); toast('➕ Stop added: ' + name); if (MP.nav) mpReroute(); else mpRoute(); };
+    const o = el('button', 'sheet-btn', '📍 Go only here'); o.onclick = () => { closeSheet('moreSheet'); mpClearNear(); mpStopNav(true); mpSetDest({ name, lat: p.lat, lng: p.lng, addr: what + ' · on your way', phone: p.phone }); };
+    const bk = el('button', 'sheet-btn', '← Back to the list'); bk.onclick = show; l.append(a, o, bk); });
+  function show() { sheet(icon + ' ' + what + ' on your way', (l) => {
+    if (!list.length) return l.append(el('p', 'info-note', 'Nothing found on your way in the next 120 km.'));
+    for (const p of list) { const name = p.name || what; const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, name), el('small', null, fmtKm(p.ahead) + ' ahead · ' + fmtKm(p.off) + ' off the road')); b.append(el('span', 'ic', icon), tx); b.onclick = () => openOne(p, name); l.append(b); }
+  }); }
+  for (const p of list) { const m = el('button', 'mp-poi', icon); m.onclick = (e) => { e.stopPropagation(); openOne(p, p.name || what); }; MP.nearMarkers.push(new maplibregl.Marker({ element: m }).setLngLat([p.lng, p.lat]).addTo(MP.map)); }
+  show();
+}
+const mpRoutePts = () => [MP.me, ...(MP.stops || []).map((s) => [s.lng, s.lat]), [MP.dest.lng, MP.dest.lat]].map((p) => p.map((v) => (+v).toFixed(6)).join(',')).join(';');
+// ----- navigation helpers: share road speed (no name), warn about reports ahead, pass stops -----
+function mpNavExtras(nav, fix, s, c) {
+  const t = Date.now(), pnt = s.off < 40 ? s.p : c;
+  if (MP.mode !== 'foot' && store.get('maata_map_share_speed') !== '0') {
+    if (!nav.sp) nav.sp = { p: pnt, t, along: s.along, segs: [], sent: t };
+    else if (t - nav.sp.t > 20000) {
+      const d = s.along - nav.sp.along, secs = (t - nav.sp.t) / 1000, cs = nav.steps[Math.max(0, nav.step - 1)], exp = cs && cs.duration > 0 ? cs.distance / cs.duration : 0;
+      if (exp > 3 && d >= 0 && d < 2000 && s.off < 50) nav.sp.segs.push({ a: nav.sp.p.map((v) => +v.toFixed(5)), b: pnt.map((v) => +v.toFixed(5)), r: +((d / secs) / exp).toFixed(2) });
+      Object.assign(nav.sp, { p: pnt, t, along: s.along });
+      if (nav.sp.segs.length && t - nav.sp.sent > 60000) { const segs = nav.sp.segs.splice(0); nav.sp.sent = t; api('/api/maps/speed', { method: 'POST', body: JSON.stringify({ segs }) }).catch(() => {}); }
+    }
+  }
+  if (!nav.repAt || t - nav.repAt > 180000) { nav.repAt = t; mpNavReports(nav); }
+  for (const r of nav.reps || []) {
+    if (r.warned || r.along == null) continue; const ahead = r.along - s.along;
+    if (ahead > 0 && ahead < (fix.coords.speed > 16 ? 1000 : 500)) { r.warned = 1; const L = navLang(), W = REP_SAY[L] || REP_SAY.en, T = NAV_T[L] || NAV_T.en, dist = fmtKm(Math.round(ahead / 50) * 50 || ahead);
+      mpSay(navNamed(W.ahead.replace('{what}', W[r.type] || W.hazard).replace('{dist}', sayUnits(dist, T)))); toast((REP[r.type] || REP.hazard)[0] + ' ' + (REP[r.type] || REP.hazard)[1] + ' ahead · ' + dist); }
+  }
+  if (MP.stops && MP.stops.length && hav(c, [MP.stops[0].lng, MP.stops[0].lat]) < 80) { const st = MP.stops.shift(); toast('✅ Reached stop: ' + st.name); }
+}
+async function mpNavReports(nav) {
+  const g = nav.g; let w = 180, so = 90, e = -180, n = -90; for (const p of g) { if (p[0] < w) w = p[0]; if (p[0] > e) e = p[0]; if (p[1] < so) so = p[1]; if (p[1] > n) n = p[1]; }
+  if (e - w > 5.5 || n - so > 5.5) return;
+  try { const t = await api('/api/maps/traffic?bbox=' + [w - 0.01, so - 0.01, e + 0.01, n + 0.01].map((x) => x.toFixed(4)).join(',')); if (MP.nav !== nav) return;
+    const old = new Set((nav.reps || []).filter((r) => r.warned).map((r) => r.id));
+    nav.reps = t.reports.map((r) => { let bi = 0, bd = 1e12; for (let i = 0; i < g.length; i += 2) { const d = hav(g[i], [r.lng, r.lat]); if (d < bd) { bd = d; bi = i; } } return { ...r, along: bd < 70 ? nav.cum[bi] : null, warned: old.has(r.id) }; });
+    mpDrawReports(t.reports); if (mpLayersOn().has('traffic')) mpDrawTraffic(t.roads);
+  } catch {}
+}
+// ================= Maata Maps v2: bilingual names, Explore / You / Contribute / Business =================
+const PLACE_ICONS = { shop: ['🛒', 'Shop'], food: ['🍽️', 'Hotel / food'], fuel: ['⛽', 'Petrol bunk'], hospital: ['🏥', 'Hospital / clinic'], pharmacy: ['💊', 'Medical shop'], temple: ['🛕', 'Temple / church / mosque'], school: ['🏫', 'School'], atm: ['🏧', 'ATM / bank'], mechanic: ['🔧', 'Mechanic'], hotel: ['🏨', 'Lodge'], office: ['🏢', 'Office'], other: ['📍', 'Other'] };
+const LOCAL_SCRIPT = { te: 'te', hi: 'hi', ta: 'ta', kn: 'kn', ml: 'ml', mr: 'mr', bn: 'bn', gu: 'gu', pa: 'pa', ur: 'ur', or: 'or' };
+const mapLocalLang = () => store.get('maata_map_names') || (LOCAL_SCRIPT[appLang] || 'te');
+// Village / town names in the local script are written by the phone (map engines cannot join Telugu letters correctly)
+function mpLocalLabels() {
+  const m = MP.map; if (!m || !m.getStyle()) return;
+  const L = mapLocalLang(); MP.labels = MP.labels || [];
+  MP.labels.forEach((x) => x.remove()); MP.labels = [];
+  if (L === 'off' || MP.nav) return;
+  const st = m.getStyle(), layers = st.layers.filter((l) => l.type === 'symbol' && (l['source-layer'] === 'place' || /^place|label_(village|town|city|other)/.test(l.id))).map((l) => l.id);
+  let feats = [];
+  try { if (layers.length) feats = m.queryRenderedFeatures({ layers }); } catch {}
+  if (!feats.length) { // read tile data directly (works even before labels are drawn)
+    const b = m.getBounds();
+    for (const id of Object.keys(st.sources || {})) if (/vector|geojson/.test(st.sources[id].type)) { try { feats = feats.concat(m.querySourceFeatures(id, st.sources[id].type === 'vector' ? { sourceLayer: 'place' } : {}).filter((f) => f.geometry.type === 'Point' && b.contains(f.geometry.coordinates))); } catch {} }
+    const rank = { city: 0, town: 1, village: 2, suburb: 3, hamlet: 4 }; feats.sort((a, b2) => (rank[a.properties.class] ?? 5) - (rank[b2.properties.class] ?? 5));
+  }
+  const seen = new Set();
+  for (const f of feats) {
+    const p = f.properties || {}, local = p['name:' + L], en = p['name:en'] || p['name:latin'] || p.name;
+    if (!local || local === en || seen.has(local) || f.geometry.type !== 'Point') continue;
+    seen.add(local); if (seen.size > 70) break;
+    const d = el('div', 'mp-loc', local);
+    MP.labels.push(new maplibregl.Marker({ element: d, anchor: 'top', offset: [0, 9] }).setLngLat(f.geometry.coordinates).addTo(m));
+  }
+}
+function mpStyleTweaks() {
+  const m = MP.map; if (!m) return;
+  try { for (const l of m.getStyle().layers) if (l.type === 'symbol' && /^poi/.test(l.id)) m.setLayerZoomRange(l.id, 13, 24); } catch {} // temples, schools… show earlier, like Google
+  mpLocalLabels(); m.once('idle', mpLocalLabels); mpShowSavedPins(); mpLoadPlaces(true); mpApplyLayers();
+}
+// ----- Home / Work pins -----
+function mpShowSavedPins() {
+  if (!MP.map) return; (MP.savedPins || []).forEach((x) => x.remove()); MP.savedPins = [];
+  const o = mpSaved();
+  for (const [k, ic] of [['home', '🏠'], ['work', '💼']]) if (o[k]) { const d = el('button', 'mp-saved-pin'); d.innerHTML = '<span>' + ic + '</span><b>' + (k === 'home' ? 'Home' : 'Work') + '</b>'; d.onclick = () => mpSetDest(o[k]); MP.savedPins.push(new maplibregl.Marker({ element: d }).setLngLat([o[k].lng, o[k].lat]).addTo(MP.map)); }
+}
+// ----- places added by Maata people + Maata shops -----
+let placeT = 0;
+async function mpLoadPlaces(force) {
+  const m = MP.map; if (!m || m.getZoom() < 11) { (MP.placeMarkers || []).forEach((x) => x.remove()); MP.placeMarkers = []; MP.placesAt = null; return; }
+  const c = m.getCenter(), key = c.lat.toFixed(1) + ',' + c.lng.toFixed(1);
+  if (!force && MP.placesAt === key) return; MP.placesAt = key;
+  let list = []; try { list = await api('/api/maps/places?lat=' + c.lat + '&lng=' + c.lng); } catch { return; }
+  MP.places = list; (MP.placeMarkers || []).forEach((x) => x.remove()); MP.placeMarkers = [];
+  for (const p of list) { const d = el('button', 'mp-cplace' + (p.biz ? ' biz' : ''), p.biz ? '🏪' : (PLACE_ICONS[p.cat] || PLACE_ICONS.other)[0]); d.setAttribute('aria-label', p.name); d.onclick = (e) => { e.stopPropagation(); mpCommunitySheet(p); }; MP.placeMarkers.push(new maplibregl.Marker({ element: d }).setLngLat([p.lng, p.lat]).addTo(m)); }
+}
+function mpCommunitySheet(p) {
+  MP.dest = { name: p.name, lat: p.lat, lng: p.lng, addr: (PLACE_ICONS[p.cat] || PLACE_ICONS.other)[1], phone: p.phone }; MP.routes = []; mpDrawRoutes();
+  const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  const h = el('div', 'mp-ph'); const tx = el('div'); tx.append(el('h3', null, (p.biz ? '🏪 ' : (PLACE_ICONS[p.cat] || PLACE_ICONS.other)[0] + ' ') + p.name), el('small', null, (p.biz ? (p.biz.category || 'Shop') + ' on Maata' : (PLACE_ICONS[p.cat] || PLACE_ICONS.other)[1] + ' · added by ' + p.byName) + (MP.me ? ' · ' + fmtKm(hav(MP.me, [p.lng, p.lat])) : ''))); h.append(tx);
+  const x = el('button', 'mp-ib', '✕'); x.onclick = () => { MP.dest = null; mpTab('explore'); }; h.append(x); s.append(h);
+  if (p.note) s.append(el('p', 'mp-note2', p.note));
+  const acts = el('div', 'mp-acts');
+  const go = el('button', 'mp-go', '➦ Directions'); go.onclick = () => mpSetDest(MP.dest); acts.append(go);
+  if (p.biz && p.biz.ownerId !== me.id) { const ch = el('button', 'mp-sec', '💬 Chat'); ch.onclick = async () => { try { if (!userById(p.biz.ownerId)) { await api('/api/contacts', { method: 'POST', body: JSON.stringify({ phone: p.biz.phone, name: p.biz.name }) }); await reloadUsers(); } } catch (e) { return toast(e.message); } closeMaps(); setTimeout(() => openChat(p.biz.ownerId), 300); }; acts.append(ch); }
+  if (p.phone) { const c = el('a', 'mp-sec', '📞 Call'); c.href = 'tel:' + p.phone; acts.append(c); }
+  if (p.mine) { const del = el('button', 'mp-sec', '🗑'); del.setAttribute('aria-label', 'Delete my pin'); del.onclick = async () => { if (!confirm('Delete this place from the map?')) return; await api('/api/maps/places/' + p.id, { method: 'DELETE' }).catch(() => {}); toast('Deleted'); mpLoadPlaces(true); mpTab('explore'); }; acts.append(del); }
+  else { const rp = el('button', 'mp-sec', '🚩'); rp.setAttribute('aria-label', 'Report wrong place'); rp.onclick = async () => { await api('/api/maps/places/' + p.id + '/report', { method: 'POST' }).catch(() => {}); toast('Thanks — we will check it.'); }; acts.append(rp); }
+  s.append(acts);
+}
+// ----- bottom tabs -----
+function mpTab(t) {
+  if (MP.nav) return;
+  if (MP.pickPin) { MP.pickPin.remove(); MP.pickPin = null; }
+  document.querySelectorAll('#mpTabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
+  ({ explore: () => (MP.dest ? mpPlaceSheet() : mpHomeSheet()), you: mpYouSheet, contribute: mpContributeSheet, business: mpBusinessSheet })[t]();
+}
+function mpYouSheet() {
+  const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  const h = el('div', 'mp-you'); h.append(avatar(me, 'sm')); const t = el('div'); t.append(el('b', null, me.name), el('small', null, 'Your saved places stay on this phone')); h.append(t); s.append(h);
+  const o = mpSaved(), list = el('div', 'mp-list');
+  const row = (ic, name, sub, fn, extra) => { const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, name), el('small', null, sub)); b.append(el('span', 'ic', ic), tx); b.onclick = fn; if (extra) b.append(extra); list.append(b); };
+  row('🏠', 'Home', o.home ? o.home.name : 'Not set — search a place and tap ⭐ Save', () => (o.home ? mpSetDest(o.home) : mpPickSaved('home')));
+  row('💼', 'Work', o.work ? o.work.name : 'Not set', () => (o.work ? mpSetDest(o.work) : mpPickSaved('work')));
+  for (const p of o.starred || []) row('⭐', p.name, p.addr || '', () => mpSetDest(p));
+  s.append(el('div', 'th-title', 'Saved'), list);
+  const rec = el('div', 'mp-list'); for (const p of mpRecent()) { const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, p.name), el('small', null, p.addr || '')); b.append(el('span', 'ic', '🕘'), tx); b.onclick = () => mpSetDest(p); rec.append(b); }
+  if (mpRecent().length) { const clr = el('button', 'linkbtn', 'Clear history'); clr.onclick = () => { const x = mpSaved(); x.recent = []; mpSave(x); mpYouSheet(); }; s.append(el('div', 'th-title', 'Recent'), rec, clr); }
+  const lang = el('button', 'sheet-btn', '🔤 Village names: English + ' + ({ off: 'off', te: 'తెలుగు', hi: 'हिंदी', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', mr: 'मराठी', bn: 'বাংলা', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ', ur: 'اردو', or: 'ଓଡ଼ିଆ' })[mapLocalLang()]);
+  lang.onclick = () => sheet('Village & town names', (l2) => { for (const [k, n] of [['te', 'English + తెలుగు'], ['hi', 'English + हिंदी'], ['ta', 'English + தமிழ்'], ['kn', 'English + ಕನ್ನಡ'], ['ml', 'English + മലയാളം'], ['mr', 'English + मराठी'], ['bn', 'English + বাংলা'], ['gu', 'English + ગુજરાતી'], ['off', 'English only']]) { const b = el('button', 'sheet-btn', n); b.onclick = () => { store.set('maata_map_names', k); closeSheet('moreSheet'); mpLocalLabels(); mpYouSheet(); }; l2.append(b); } });
+  s.append(lang);
+  const vb = el('button', 'sheet-btn', '🗣️ Navigation voice: ' + (NAV_LANGS[navLang()] || 'English') + ' · ' + (navName() || 'no name')); vb.onclick = () => mpVoiceSheet(() => mpYouSheet()); s.append(vb);
+  const sh = el('button', 'sheet-btn', '🚦 Share road speed for live traffic (no name): ' + (store.get('maata_map_share_speed') === '0' ? 'OFF' : 'ON'));
+  sh.onclick = () => { store.set('maata_map_share_speed', store.get('maata_map_share_speed') === '0' ? '1' : '0'); mpYouSheet(); }; s.append(sh);
+}
+async function mpContributeSheet() {
+  const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  s.append(el('h3', 'mp-h3', '➕ Add a missing place'), el('p', 'mp-note2', 'Village shops, temples and clinics are often missing on maps. Add them — every Maata user will see them. Move the map so the 📍 pin in the middle sits on the place.'));
+  const pin = el('div', 'mp-center-pin', '📍'); $('#mapPage').append(pin); MP.pickPin = pin;
+  const f = el('div', 'formcol');
+  const nl = el('label'); nl.append(el('span', null, 'Place name')); const nm = el('input'); nm.maxLength = 80; nm.placeholder = 'e.g. Sri Venkateswara Kirana Store'; nl.append(nm);
+  const cl = el('label'); cl.append(el('span', null, 'What is it?')); const cs = el('select'); for (const [k, [ic, l]] of Object.entries(PLACE_ICONS)) cs.add(new Option(ic + ' ' + l, k)); cl.append(cs);
+  const pl = el('label'); pl.append(el('span', null, 'Phone (optional)')); const ph = el('input'); ph.type = 'tel'; ph.maxLength = 15; pl.append(ph);
+  const ol = el('label'); ol.append(el('span', null, 'Note (optional)')); const nt = el('input'); nt.maxLength = 200; nt.placeholder = 'Open 7 AM – 9 PM, near bus stop'; ol.append(nt);
+  f.append(nl, cl, pl, ol);
+  let mine = null;
+  if (me.business || myBiz) { const r = el('label', 'inv-en'); mine = el('input'); mine.type = 'checkbox'; r.append(mine, el('span', null, '🏪 This is MY shop — customers can chat with me from the map')); f.append(r); mine.onchange = () => { if (mine.checked && !nm.value) nm.value = (myBiz && myBiz.name) || ''; }; }
+  const here = el('button', 'mp-sec', '📍 Use my current location'); here.onclick = () => { if (MP.me) MP.map.easeTo({ center: MP.me, zoom: 17 }); };
+  const save = el('button', 'mp-go', 'Add to Maata Maps');
+  save.onclick = async () => {
+    const c = MP.map.getCenter(); save.disabled = true;
+    try { await api('/api/maps/places', { method: 'POST', body: JSON.stringify({ name: nm.value, cat: cs.value, phone: ph.value, note: nt.value, lat: c.lat, lng: c.lng, mine: !!(mine && mine.checked) }) }); toast('✅ Added — thank you!'); mpLoadPlaces(true); mpTab('explore'); }
+    catch (e) { toast(e.message); save.disabled = false; }
+  };
+  const acts = el('div', 'mp-acts'); acts.append(save, here); f.append(acts); s.append(f);
+  if (MP.map.getZoom() < 15) MP.map.easeTo({ zoom: 16 });
+  let mineList = []; try { mineList = await api('/api/maps/places/mine'); } catch {}
+  if (mineList.length) { s.append(el('div', 'th-title', 'Places you added (' + mineList.length + ')')); for (const p of mineList) { const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, p.name), el('small', null, (PLACE_ICONS[p.cat] || PLACE_ICONS.other)[1])); b.append(el('span', 'ic', p.biz ? '🏪' : (PLACE_ICONS[p.cat] || PLACE_ICONS.other)[0]), tx); b.onclick = () => { MP.map.flyTo({ center: [p.lng, p.lat], zoom: 17 }); mpCommunitySheet(p); }; s.append(b); } }
+}
+async function mpBusinessSheet() {
+  const s = $('#mpSheet'); s.className = 'mp-sheet open'; s.innerHTML = '';
+  s.append(el('h3', 'mp-h3', '🏪 Maata shops near you'), el('p', 'mp-note2', 'Shops on Maata — tap to get directions or chat with the shop owner.'));
+  const c = MP.me ? { lat: MP.me[1], lng: MP.me[0] } : MP.map.getCenter();
+  let list = []; try { list = (await api('/api/maps/places?lat=' + c.lat + '&lng=' + c.lng)).filter((p) => p.biz); } catch {}
+  if (!list.length) s.append(el('p', 'mp-thinking', 'No Maata shops on the map here yet.'));
+  for (const p of list.map((x) => ({ ...x, d: hav([c.lng, c.lat], [x.lng, x.lat]) })).sort((a, b) => a.d - b.d)) { const b = el('button', 'mp-ri'); const tx = el('div'); tx.append(el('b', null, p.biz.name || p.name), el('small', null, (p.biz.category || 'Shop') + ' · ' + fmtKm(p.d))); b.append(el('span', 'ic', '🏪'), tx); b.onclick = () => { MP.map.flyTo({ center: [p.lng, p.lat], zoom: 17 }); mpCommunitySheet(p); }; s.append(b); }
+  if (me.business || myBiz) { const add = el('button', 'mp-go', '📍 Put my shop on the map'); add.style.marginTop = '12px'; add.onclick = () => mpTab('contribute'); s.append(add); }
+}
+
 // ---------------- go ----------------
 applyAppLang();
 setMode('login');
