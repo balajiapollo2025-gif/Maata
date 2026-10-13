@@ -1926,7 +1926,6 @@ app.get('/api/maps/olanear', auth, async (req, res) => {
   const out = got.filter((x) => x.dist != null && x.dist < 25000).map((x) => ({ name: x.name, lat: +x.lat.toFixed(6), lng: +x.lng.toFixed(6), dist: Math.round(x.dist), addr: x.sub, src: 'ola' }));
   geoSearchCache.set(ck, out); res.json(out);
 });
-console.log(OLA_KEY ? '[maps] Ola Maps: on (search + nearby, stops at ' + OLA_CAP + ' calls a month per API, so no bill)' : '[maps] Ola Maps: off (add OLA_MAPS_KEY for better Indian place search)');
 app.get('/api/maps/ola-status', auth, (req, res) => { const m = olaUse(); res.json({ on: !!OLA_KEY, month: m.month, used: m.n, cap: OLA_CAP, paused: now() < olaDownUntil }); });
 app.get('/api/geo/search', auth, async (req, res) => {
   const q = clip(req.query.q, 120); if (q.trim().length < 2) return res.json([]);
