@@ -1462,7 +1462,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 124;
+const MAATA_VERSION = 125;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -1624,8 +1624,8 @@ app.post('/api/maps/ai', auth, async (req, res) => {
   const text = clip(req.body?.text, 200); if (text.length < 2) return res.status(400).json({ error: 'Say where you want to go.' });
   if (!aiQuota(req.user)) return res.status(429).json({ error: AI_ERR.quota });
   const sys = 'You turn a driver\'s request (English, Telugu, Hindi, Tamil or any Indian language, also typed in English letters) into JSON for a map app in India. ' +
-    'Return ONLY JSON: {"intent":"route"|"nearby"|"place"|"plan","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|hospital|hotel|pharmacy or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
-    '"plan" = they want a trip / tour / day plan with several places. "nearby" = they want the nearest petrol bunk (fuel), hospital, lodge/hotel (hotel) or medical shop (pharmacy); for anything else (ATM, police, restaurant, temple, mechanic, parking, toilet, EV charging) use intent place with to = what they asked. "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
+    'Return ONLY JSON: {"intent":"route"|"nearby"|"place"|"plan","to":"destination place name with town and state if known, in English","via":["optional stop place names"],"category":"fuel|ev|hospital|food|atm|police|parking|hotel|temple|pharmacy|toilets|mechanic or empty","mode":"car|bike|foot","saved":"home|work or empty","reply":"one short friendly sentence in the same language the person used, saying what you will do"}. ' +
+    '"plan" = they want a trip / tour / day plan with several places. "nearby" = they want the nearest kind of place (petrol bunk = fuel, hospital, medical shop = pharmacy, lodge = hotel, restaurant/tiffin/meals = food, atm/bank = atm, police station = police, temple/church/mosque = temple, mechanic/puncture = mechanic, parking, EV charging = ev, toilet = toilets). "route" = go to a named place. bike for two-wheeler/scooter, foot for walking, else car. Never invent addresses.';
   const r = await gemini(sys, [{ role: 'user', parts: [{ text: text + (req.body?.near ? '\n(Person is near: ' + clip(req.body.near, 100) + ')' : '') }] }], { json: true, maxTokens: 300, temperature: 0.2 });
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
   try { const j = JSON.parse(String(r.text).replace(/^```json|```$/g, '').trim());
@@ -1915,7 +1915,8 @@ async function olaFind(q, la, lo) {
   return olaPreds(await olaGet('autocomplete', '/places/v1/autocomplete', { input: q, ...near }), near.location ? [lo, la] : null);
 }
 // nearby: "petrol bunk" etc. typed around you, only places within ~25 km
-const OLA_NEAR_Q = { fuel: ['petrol bunk', 'petrol pump'], hospital: ['hospital', 'clinic'], pharmacy: ['medical shop', 'pharmacy'], hotel: ['lodge', 'hotel'] };
+const OLA_NEAR_Q = { fuel: ['petrol bunk', 'petrol pump'], hospital: ['hospital', 'clinic'], pharmacy: ['medical shop', 'pharmacy'], hotel: ['lodge', 'hotel rooms'], food: ['restaurant', 'tiffin centre'], atm: ['atm', 'bank'],
+  police: ['police station'], temple: ['temple', 'church', 'mosque'], mechanic: ['bike mechanic', 'car mechanic'], parking: ['parking'], ev: ['ev charging station'], toilets: ['public toilet'] };
 app.get('/api/maps/olanear', auth, async (req, res) => {
   const cat = String(req.query.cat || ''), la = Number(req.query.lat), lo = Number(req.query.lng);
   if (!OLA_KEY || !OLA_NEAR_Q[cat] || !(Math.abs(la) <= 90 && Math.abs(lo) <= 180)) return res.json([]);

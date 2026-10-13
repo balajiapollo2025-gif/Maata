@@ -1404,6 +1404,8 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mp-ri.ai{background:linear-gradient(90deg,#ECFBF4,#EEF3FF)}.mp-ri.ai .ic{background:#fff}
 .mp-thinking{padding:14px;color:#3D4E5C;font-size:14px}
 .mp.searching .mp-sheet,.mp.searching .mp-tabs,.mp.searching .mp-rtop,.mp.searching .mp-fabs{display:none}.mp.searching .mp-res{max-height:calc(100vh - 110px - env(safe-area-inset-top,0px))}
+.mp-sheet.home{max-height:38vh}
+.mp-sec-h{margin-top:16px;font-size:13px;font-weight:800;color:#5D6E7C}.mp-more{margin-top:8px}.mp-more span{font-size:21px}
 .mp-attr{order:99;padding:6px 16px 2px;font-size:11px;color:#7A8792;text-align:right}
 .mp-fixed{padding:8px 16px;font-size:13px;color:#1558B0;font-weight:600}
 .mp-chips{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}.mp-chips::-webkit-scrollbar{display:none}
@@ -9460,7 +9462,7 @@ const MAP_STYLES = {
   bright: { label: 'Bright', icon: '☀️', url: 'https://tiles.openfreemap.org/styles/bright' },
   light: { label: 'Light', icon: '🤍', url: 'https://tiles.openfreemap.org/styles/positron' },
 };
-const MP_CATS = [['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Hotels'], ['hospital', '🏥', 'Hospital'], ['pharmacy', '💊', 'Medical']];
+const MP_CATS = [['fuel', '⛽', 'Petrol'], ['hospital', '🏥', 'Hospital'], ['pharmacy', '💊', 'Medical'], ['hotel', '🏨', 'Hotels'], ['food', '🍽️', 'Restaurants'], ['atm', '🏧', 'ATM'], ['police', '👮', 'Police'], ['temple', '🛕', 'Temples'], ['mechanic', '🔧', 'Mechanic'], ['parking', '🅿️', 'Parking'], ['ev', '🔌', 'EV charge'], ['toilets', '🚻', 'Toilets']];
 const MP_MODES = { car: ['🚗', 'Drive'], bike: ['🏍️', 'Two-wheeler'], foot: ['🚶', 'Walk'] };
 let mlLoading = null;
 function loadMapLibre() {
@@ -9658,19 +9660,20 @@ function mpSOS() {
     for (const [n, t, ic] of [['108', 'Ambulance', '🚑'], ['100', 'Police', '🚓'], ['112', 'All emergencies', '🆘'], ['101', 'Fire', '🚒'], ['1091', 'Women helpline', '👩'], ['1033', 'Highway help', '🛣️']]) { const a = el('a', 'sos-btn'); a.href = 'tel:' + n; a.innerHTML = '<span>' + ic + '</span><b>' + n + '</b><small>' + t + '</small>'; g.append(a); }
     list.append(g);
     const h = el('button', 'sheet-btn', '🏥 Nearest hospital'); h.onclick = () => { closeSheet('moreSheet'); mpNearby('hospital', '🏥 Hospital'); };
+    const po = el('button', 'sheet-btn', '👮 Nearest police station'); po.onclick = () => { closeSheet('moreSheet'); mpNearby('police', '👮 Police'); };
     const sh = el('button', 'sheet-btn', '📍 Send my location to family'); sh.onclick = async () => {
       if (!link) return toast('Waiting for your location…'); const text = '🆘 I need help. My location: ' + link;
       try { if (navigator.share) { await navigator.share({ text }); return; } } catch { return; }
       location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
     };
-    list.append(h, sh, el('p', 'info-note', 'Calls are free from any phone, even without balance. Stay calm — help is coming.'));
+    list.append(h, po, sh, el('p', 'info-note', 'Calls are free from any phone, even without balance. Stay calm — help is coming.'));
   });
 }
 // ✨ smart suggestions for this time of day
 function mpSmartChips() {
   const hr = new Date().getHours();
-  const set = hr >= 6 && hr < 20 ? [['fuel', '⛽', 'Petrol on the way'], ['pharmacy', '💊', 'Medical'], ['hospital', '🏥', 'Hospital']]
-    : hr < 23 ? [['hotel', '🏨', 'Hotels / lodge'], ['fuel', '⛽', 'Petrol'], ['pharmacy', '💊', 'Medical']] : [['hospital', '🏥', '24-hour hospital'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Lodge']];
+  const set = hr >= 5 && hr < 11 ? [['food', '☕', 'Tea & tiffin'], ['fuel', '⛽', 'Petrol'], ['temple', '🛕', 'Temples']] : hr < 16 ? [['food', '🍛', 'Meals'], ['atm', '🏧', 'ATM'], ['fuel', '⛽', 'Petrol']]
+    : hr < 20 ? [['fuel', '⛽', 'Petrol on the way'], ['temple', '🛕', 'Evening darshan'], ['food', '🍽️', 'Snacks']] : hr < 23 ? [['food', '🍽️', 'Dinner'], ['hotel', '🏨', 'Hotels / lodge'], ['fuel', '⛽', 'Petrol']] : [['hospital', '🏥', '24-hour hospital'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Lodge']];
   const row = el('div', 'mp-smart'); row.append(el('small', null, '✨ For you now'));
   for (const [cat, ic, l] of set) { const b = el('button', null, ic + ' ' + l); b.onclick = () => (MP.routes.length && /on the way/.test(l) ? mpAlong(cat, ic + ' ' + l) : mpNearby(cat, ic + ' ' + l)); row.append(b); }
   return row;
@@ -9789,13 +9792,14 @@ function mpPlaceSheet(loading) {
   if (!MP.me) s.append(el('small', 'mp-note', '📡 Turn on location to start navigation.'));
 }
 function mpHomeSheet() {
-  const s = $('#mpSheet'); if (!s) return; s.className = 'mp-sheet'; s.innerHTML = '';
+  const s = $('#mpSheet'); if (!s) return; s.className = 'mp-sheet home'; s.innerHTML = '';
   const h = el('div', 'mp-hello'); h.append(el('b', null, '🦜 Maata Maps'), el('small', null, 'Say or type where you want to go — in Telugu, Hindi, English… e.g. “nearest petrol bunk”, “Tirupati by bike”.')); s.append(h);
   const o = mpSaved(), row = el('div', 'mp-quick');
   const q = (ic, label, fn) => { const b = el('button'); b.append(el('span', null, ic), el('small', null, label)); b.onclick = fn; row.append(b); };
   q('🏠', 'Home', () => (o.home ? mpSetDest(o.home) : mpPickSaved('home'))); q('💼', 'Work', () => (o.work ? mpSetDest(o.work) : mpPickSaved('work')));
   q('⛽', 'Petrol', () => mpNearby('fuel', '⛽ Petrol')); q('🏥', 'Hospital', () => mpNearby('hospital', '🏥 Hospital')); q('💊', 'Medical', () => mpNearby('pharmacy', '💊 Medical')); q('🆘', 'Emergency', mpSOS);
-  s.append(row, mpSmartChips());
+  const more = el('div', 'mp-quick mp-more'); for (const [k, ic, l] of MP_CATS) { if (['fuel', 'hospital', 'pharmacy'].includes(k)) continue; const b = el('button'); b.append(el('span', null, ic), el('small', null, l)); b.onclick = () => mpNearby(k, ic + ' ' + l); more.append(b); }
+  s.append(row, el('div', 'mp-sec-h', '📍 Near you'), more, mpSmartChips());
 }
 // ----- routes -----
 async function mpRoute() {
@@ -10045,8 +10049,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 124;
-const APP_NOTES = ["🟢 Maps now also uses Ola Maps (India map data): search finds more Indian shops, villages and places, and Petrol / Hospital / Medical / Hotels nearby shows more results."];
+const APP_VERSION = 125;
+const APP_NOTES = ["🗺️ Maps: ATM, Police, Restaurants, Temples, Mechanic, Parking, EV charge and Toilets are back — now with Ola Maps India data, so many more nearby places are found. Find them under 📍 Near you."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10306,7 +10310,9 @@ function mpFabsFollow() {
   const sh = $('#mpSheet'), fb = document.querySelector('#mapPage .mp-fabs'), pg = $('#mapPage'); if (!sh || !fb || !pg) return;
   if (pg.classList.contains('navigating')) { fb.style.bottom = ''; fb.classList.remove('gone'); return; }
   const top = sh.getBoundingClientRect().top, ph = pg.getBoundingClientRect().bottom, want = ph - top + 12;
-  fb.classList.toggle('gone', want > ph * 0.66); fb.style.bottom = Math.max(80, Math.min(want, ph * 0.66)) + 'px';
+  const rt = document.querySelector('#mapPage .mp-rtop'), rtB = rt && rt.offsetParent ? rt.getBoundingClientRect().bottom - pg.getBoundingClientRect().top : 0, room = ph - pg.getBoundingClientRect().top - rtB - fb.offsetHeight - 8;
+  const lim = Math.min(ph * 0.66, rtB ? room : ph * 0.66);
+  fb.classList.toggle('gone', want > lim); fb.style.bottom = Math.max(80, Math.min(want, lim)) + 'px';
 }
 function mpSheetGrip() {
   const sh = $('#mpSheet'); if (!sh || sh.dataset.grip) return; sh.dataset.grip = '1';
@@ -10494,7 +10500,7 @@ function mpAskSheet() {
     go.onclick = () => ask(inp.value.trim()); inp.onkeydown = (e) => { if (e.key === 'Enter') ask(inp.value.trim()); };
     const plan = el('button', 'sheet-btn', '🧳 Plan a trip with AI — e.g. “1 day trip from Chittoor”'); plan.onclick = () => { const t = inp.value.trim(); if (!t) { inp.placeholder = 'Type your trip, then tap 🧳 again'; return inp.focus(); } closeSheet('moreSheet'); mpPlan(t); };
     list.append(plan);
-    for (const [ic, t] of [['⛽', 'Nearest petrol bunk'], ['🏥', 'Hospital near me'], ['💊', 'Medical shop near me'], ['🏨', 'Lodge near me'], ['🏠', 'Take me home']]) { const b = el('button', 'sheet-btn', ic + ' ' + t); b.onclick = () => ask(t); list.append(b); }
+    for (const [ic, t] of [['⛽', 'Nearest petrol bunk'], ['🏧', 'ATM near me'], ['🛕', 'Famous temples near me'], ['🍽️', 'Good veg restaurant near me'], ['🏠', 'Take me home']]) { const b = el('button', 'sheet-btn', ic + ' ' + t); b.onclick = () => ask(t); list.append(b); }
     setTimeout(() => inp.focus(), 200);
   });
 }
@@ -10534,7 +10540,7 @@ async function mpAbout(p, box) {
 const routeLine = () => (MP.nav ? MP.nav.g : MP.routes[MP.sel] && MP.routes[MP.sel].geometry.coordinates) || null;
 function mpAlongSheet() {
   sheet('🔍 On the way', (list) => { const g = el('div', 'mp-rgrid');
-    for (const k of ['fuel', 'hospital', 'pharmacy', 'hotel']) { const c = MP_CATS.find((x) => x[0] === k); const b = el('button'); b.append(el('span', null, c[1]), el('small', null, c[2])); b.onclick = () => { closeSheet('moreSheet'); mpAlong(k, c[1] + ' ' + c[2]); }; g.append(b); }
+    for (const k of ['fuel', 'food', 'atm', 'toilets', 'hospital', 'mechanic', 'ev', 'hotel']) { const c = MP_CATS.find((x) => x[0] === k); const b = el('button'); b.append(el('span', null, c[1]), el('small', null, c[2])); b.onclick = () => { closeSheet('moreSheet'); mpAlong(k, c[1] + ' ' + c[2]); }; g.append(b); }
     list.append(g); });
 }
 async function mpAlong(cat, label) {
