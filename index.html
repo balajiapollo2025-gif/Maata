@@ -529,6 +529,10 @@ html.dark .fchip[aria-pressed="true"]{color:#7CC4D4}
 .vl.ok{background:radial-gradient(circle at 50% 30%,rgba(60,200,120,.6),rgba(4,30,20,.92))}
 .vl-set{display:flex;flex-direction:column;gap:8px;margin:12px 0;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(52,184,90,.14),rgba(30,136,229,.12))}.vl-set small{line-height:1.45;opacity:.85}
 @media (prefers-reduced-motion:reduce){.vl-toon,.vl-spin{transition-duration:.01s}.vl-hop,.vl .eye{animation:none!important}}
+.upd.ok{background:radial-gradient(circle at 50% 20%,#2EC27E,#0B5134 70%)}.upd-tick{width:84px;height:84px;margin:0 auto;border-radius:50%;background:#1DB954;color:#fff;font-size:52px;font-weight:900;line-height:84px;box-shadow:0 0 0 10px rgba(29,185,84,.18);animation:updPop .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes updPop{from{transform:scale(.2);opacity:0}}
+.mp-puck.veh{width:auto;height:auto;background:none;border-radius:0}.mp-puck.veh i{display:none}.mp-puck .pk-veh{width:36px;height:58px;fill:initial;stroke:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}.mp-puck.bike .pk-veh{width:30px;height:48px}
+.mp-puck .pk-walk{width:38px;height:38px;fill:initial;stroke:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
 .upd{position:fixed;inset:0;z-index:150;background:radial-gradient(circle at 50% 20%,#1B8A7A,#0B3A44 70%);display:flex;align-items:center;justify-content:center;padding:20px;animation:updIn .35s ease}
 @keyframes updIn{from{opacity:0;transform:scale(1.04)}}
 .upd-card{width:min(420px,100%);background:#fff;color:#14324A;border-radius:28px;padding:26px 22px 18px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
@@ -1431,6 +1435,29 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .set-ver{margin:6px 2px 2px;padding:9px 12px;border-radius:12px;background:var(--peacock-soft);font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 
 /* Maata Maps v3 */
+/* Maata Maps: directions screen + pull-down sheet */
+.mp-sheet{transition:transform .28s cubic-bezier(.2,.8,.3,1)}.mp-sheet.mini{transform:translateY(calc(100% - 70px));overflow:hidden}.mp-sheet::before{cursor:grab;width:48px;height:6px}
+.mp.dir .mp-top,.mp.dir .mp-tabs,.mp.dir #mpDir,.mp.dir .mp-sheet .mp-modes{display:none}.mp.dir .mp-sheet{bottom:0}.mp.dir .mp-rtop{top:calc(170px + env(safe-area-inset-top,0px))}
+.mpd{position:absolute;left:0;right:0;top:0;z-index:5;background:#fff;color:#13202B;box-shadow:0 6px 20px rgba(10,40,60,.18);padding:calc(8px + env(safe-area-inset-top,0px)) 8px 0;border-radius:0 0 20px 20px}
+.mpd.full{bottom:0;border-radius:0;display:flex;flex-direction:column}
+.mpd-head{display:flex;align-items:center;gap:6px}.mpd-head .mp-ib{flex:none}
+.mpd-dots{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;width:18px}.mpd-dots i.a{width:12px;height:12px;border-radius:50%;background:#1A73E8;box-shadow:0 0 0 3px #D2E3FC}.mpd-dots span{width:3px;height:3px;border-radius:50%;background:#9AA7B2}
+.mpd-dots i.b{width:12px;height:14px;background:#EA4335;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-top:2px}
+.mpd-fields{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}.mpd-fields input{width:100%;padding:11px 14px;border:1.5px solid #DADCE0;border-radius:12px;font-size:16px;background:#fff;color:#13202B}
+.mpd-fields input:focus{border-color:#1A73E8;outline:none}.mpd-fields input.me{color:#1A73E8}
+.mpd-side{display:flex;flex-direction:column;gap:4px}
+.mpd-modes{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-top:6px;border-bottom:1px solid #E6EBEF}.mpd-modes::-webkit-scrollbar{display:none}
+.mpd-modes button{flex:1 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 10px 9px;background:none;color:#3C4A57;font-size:13px;font-weight:600;border-bottom:3px solid transparent}
+.mpd-modes button svg{width:24px;height:24px}.mpd-modes button.on{color:#0F7A6E;border-bottom-color:#0F7A6E}
+.mpd-body{display:none}.mpd.full .mpd-body{display:block;flex:1;overflow-y:auto;padding:8px 4px calc(16px + env(safe-area-inset-bottom,0px))}
+.mpd-chips{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;border-bottom:8px solid #F3F5F7;margin:0 -4px 6px}.mpd-chips button{flex:none;display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:14px;background:none;color:#13202B;text-align:left}
+.mpd-chips .ic{width:40px;height:40px;border-radius:50%;background:#E3F1EF;display:grid;place-items:center;font-size:18px}.mpd-chips b{display:block;font-size:15px}.mpd-chips small{display:block;color:#5D6E7C;font-size:12.5px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mpd-title{font-weight:800;font-size:15px;margin:12px 6px 4px}
+.mpd.picking{opacity:.97}.mpd-pickbar{position:absolute;left:12px;right:12px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;gap:10px}.mpd-pickbar .mp-go{flex:2}.mpd-pickbar .mp-sec{flex:1}
+.mpd-from-pin{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #1A73E8;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.mpd-fromrow{display:flex;align-items:center;gap:8px;width:100%;margin:6px 0 2px;padding:8px 10px;border-radius:12px;background:#F3F7FB;color:#13202B;font-size:14px;text-align:left}.mpd-fromrow i{width:10px;height:10px;border-radius:50%;background:#1A73E8;box-shadow:0 0 0 3px #D2E3FC;flex:none}.mpd-fromrow span{flex:1}.mpd-fromrow b{color:#1A73E8;font-size:13px}
+.mp-modes button small{white-space:nowrap}
+
 .mp-types{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px;padding:6px 8px 4px}.mp-types.det{grid-template-columns:repeat(4,1fr)}
 .mp-types button{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;color:var(--ink);font-size:12.5px;font-weight:600;text-align:center;padding:0;line-height:1.2}
 .mp-types .th{width:70px;height:70px;border-radius:16px;overflow:hidden;display:grid;place-items:center;font-size:30px;border:3px solid transparent;box-shadow:0 1px 4px rgba(0,0,0,.14)}.mp-types.det .th{width:60px;height:60px;font-size:27px}
@@ -2103,7 +2130,7 @@ async function start() {
   loadStatus();
   setTimeout(checkVersion, 2500);
   setTimeout(() => loadCoins(true), 1200); // coin count + welcome card on every login / app open
-  setTimeout(checkAppUpdate, 1500);
+  updSuccessCheck(); setTimeout(checkAppUpdate, 1500);
   loadPrefs();
   aiInit();
   setTimeout(handleJoinLink, 800);
@@ -2483,7 +2510,7 @@ function renderSettings() {
   { // which Maata is this? (the Android app can switch speaker/earpiece and keeps calls working when locked; the browser cannot)
     const box = $('#setRunning'); if (box) {
       const av = (navigator.userAgent.match(/MaataAndroid\/([\w.]+)/) || [])[1];
-      box.innerHTML = ''; const kind = appKind(); if (kind !== 'new') { box.style.cursor = 'pointer'; box.onclick = () => askAppUpdate(true); }
+      box.innerHTML = ''; const kind = appKind(); box.parentElement.hidden = kind !== 'browser'; box.onclick = null; if (kind === 'browser') { box.style.cursor = 'pointer'; box.onclick = () => askAppUpdate(true); }
       const t = el('div', 'txt'); t.append(el('b', null, kind === 'new' ? '📱 Running in: Maata Android app v' + av + ' ✅ latest' : kind === 'old' ? '⚠️ Old Maata Android app v' + av + ' — tap to update' : '🌐 Running in: browser (' + (inApp() ? 'installed from Chrome' : 'Chrome tab') + ') — tap to get the app'),
         el('small', null, kind === 'new' ? 'All call features work: loudspeaker switch, phone ringtone, voice when the phone is locked, full-screen incoming calls.' : kind === 'old' ? 'Update to get: earpiece / loudspeaker switch, your phone ringtone, voice when the phone is locked, all phone contacts.' : 'Loudspeaker switch, phone ringtone, voice when the phone is locked and full-screen calls need the Maata Android app.'));
       box.append(t);
@@ -8743,6 +8770,18 @@ async function checkAppUpdate() {
   UPD.checkedAt = Date.now();
   if (appKind() === 'old') updOffer(false);
 }
+// ✅ first open after an app update: say so on screen
+const verNum = (v) => Number(String(v || '').split('.').pop()) || 0;
+function updSuccessCheck() {
+  const av = appVersion(); if (!av || !window.MaataAndroid) return;
+  const prev = store.get('maata_app_ver'); store.set('maata_app_ver', av);
+  if (!prev || verNum(av) <= verNum(prev)) return;
+  const o = el('div', 'upd ok'); o.id = 'updDone'; o.setAttribute('role', 'dialog');
+  o.innerHTML = '<div class="upd-card"><div class="upd-tick">✓</div><h2>Update successful!</h2><p class="upd-sub"></p><ul class="upd-list"></ul><button class="upd-go">OK</button></div>';
+  o.querySelector('.upd-sub').textContent = 'Maata is now version ' + av + ' (was ' + prev + ')';
+  const ul = o.querySelector('.upd-list'); ANDROID_NOTES.forEach((t) => ul.append(el('li', null, t)));
+  o.querySelector('.upd-go').onclick = () => o.remove(); document.body.append(o); setTimeout(() => o.remove(), 9000);
+}
 // 📲 update screen that appears as soon as Maata opens (like WhatsApp / Play Store), downloads by itself
 const ANDROID_NOTES = ['👆 Fingerprint lock', '🦜 Voice password with Chilaka the parrot', '🔊 Navigation voice in Telugu with your name', '🎤 Speak to search in Maps', '🔈 Earpiece / 🔊 loudspeaker switch in calls'];
 const UPD = { state: '', pct: 0, shownAt: 0, checkedAt: 0, hidden: false };
@@ -9337,7 +9376,7 @@ const MAP_STYLES = {
   light: { label: 'Light', icon: '🤍', url: 'https://tiles.openfreemap.org/styles/positron' },
 };
 const MP_CATS = [['food', '🍽️', 'Restaurants'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Hotels'], ['hospital', '🏥', 'Hospital'], ['atm', '🏧', 'ATM'], ['temple', '🛕', 'Temples'], ['mechanic', '🔧', 'Mechanic'], ['parking', '🅿️', 'Parking'], ['ev', '🔌', 'EV charge'], ['pharmacy', '💊', 'Medical'], ['police', '🚓', 'Police'], ['toilets', '🚻', 'Toilets']];
-const MP_MODES = { car: ['🚗', 'Car'], bike: ['🏍️', 'Bike'], foot: ['🚶', 'Walk'] };
+const MP_MODES = { car: ['🚗', 'Drive'], bike: ['🏍️', 'Two-wheeler'], transit: ['🚌', 'Bus / train'], foot: ['🚶', 'Walk'] };
 let mlLoading = null;
 function loadMapLibre() {
   if (window.maplibregl) return Promise.resolve();
@@ -9382,7 +9421,7 @@ async function openMaps(target) {
   for (const [k, ic, label] of MP_CATS) { const b = el('button', null, ic + ' ' + label); b.onclick = () => mpNearby(k, ic + ' ' + label); chips.append(b); }
   const meBtn = $('#mpMe'); meBtn.append(avatar(me, 'sm')); meBtn.onclick = () => mpTab('you');
   document.querySelectorAll('#mpTabs button').forEach((b) => (b.onclick = () => mpTab(b.dataset.t)));
-  $('#mpDir').onclick = () => { if (MP.dest) mpSetDest(MP.dest); else { const q2 = $('#mpQ'); q2.placeholder = 'Directions to…'; q2.focus(); } };
+  $('#mpDir').onclick = () => mpDirections();
   $('#mpCompass').onclick = () => MP.map && MP.map.easeTo({ bearing: 0, pitch: 0 });
   const q = $('#mpQ');
   q.oninput = () => { clearTimeout(MP.qt); MP.qt = setTimeout(() => mpSearch(q.value.trim()), 350); };
@@ -9406,7 +9445,8 @@ async function openMaps(target) {
   MP.map.on('contextmenu', (e) => mpSetDest({ name: 'Dropped pin', lat: e.lngLat.lat, lng: e.lngLat.lng, pin: true }));
   let press = 0; MP.map.on('touchstart', (e) => { if (e.originalEvent.touches.length !== 1) return; press = setTimeout(() => mpSetDest({ name: 'Dropped pin', lat: e.lngLat.lat, lng: e.lngLat.lng, pin: true }), 600); });
   for (const ev of ['touchend', 'touchmove', 'dragstart']) MP.map.on(ev, () => clearTimeout(press));
-  MP.map.on('dragstart', () => { if (MP.nav) MP.nav.follow = false; mpRecentreBtn(); });
+  MP.map.on('dragstart', () => { if (MP.nav) { MP.nav.follow = false; mpRecentreBtn(); return; } const sh = $('#mpSheet'); if (sh && !sh.classList.contains('nav') && sh.offsetHeight > 160) sh.classList.add('mini'); });
+  mpSheetGrip();
   mpLocate(!target);
   if (target) mpSetDest(target);
 }
@@ -9417,6 +9457,7 @@ function closeMaps() {
   mpStopNav(true);
   if (MP.watch !== null) { navigator.geolocation.clearWatch(MP.watch); MP.watch = null; }
   try { MP.map && MP.map.remove(); } catch {}
+  MP.from = null; MP.fromMarker = null;
   Object.assign(MP, { map: null, routes: [], dest: null, puck: null, destMarker: null, nearMarkers: [], ovl: {}, stops: [], reports: [] }); clearTimeout(MP.styleWait);
   const p = $('#mapPage'); if (p) p.remove();
 }
@@ -9428,9 +9469,9 @@ function mpLocate(fly) {
     const c = [p.coords.longitude, p.coords.latitude]; const first = !MP.me; MP.me = c; MP.lastFix = p;
     store.set('maata_map_last', JSON.stringify(c.map((x) => +x.toFixed(4))));
     if (!MP.map) return;
-    if (!MP.puck) { const d = el('div', 'mp-puck'); d.innerHTML = '<i></i>'; MP.puck = new maplibregl.Marker({ element: d, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(c).addTo(MP.map); }
+    if (!MP.puck) { const d = el('div', 'mp-puck'); d.innerHTML = '<i></i>'; MP.puck = new maplibregl.Marker({ element: d, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(c).addTo(MP.map); mpPuckLook(); }
     MP.puck.setLngLat(c);
-    if (p.coords.heading != null && !isNaN(p.coords.heading) && p.coords.speed > 1) MP.puck.setRotation(p.coords.heading);
+    if (p.coords.heading != null && !isNaN(p.coords.heading) && p.coords.speed > 1) mpTurnPuck(p.coords.heading);
     if (first && fly && !MP.dest) MP.map.flyTo({ center: c, zoom: 16, speed: 1.6 });
     if (MP.nav) mpNavTick(p);
   }, (e) => { if (e.code === 1) toast('Allow location for Maata to see where you are.'); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
@@ -9482,7 +9523,7 @@ function mpListen() {
 // ----- nearby (petrol, hospital, ATM…) -----
 // The phone asks the free OpenStreetMap place servers itself (cloud servers like Render are often blocked by them);
 // the Maata server is the backup.
-const MP_OSM = { fuel: 'amenity=fuel', ev: 'amenity=charging_station', hospital: 'amenity~"hospital|clinic|doctors"', atm: 'amenity~"atm|bank"', food: 'amenity~"restaurant|fast_food|cafe"', parking: 'amenity=parking', hotel: 'tourism~"hotel|guest_house|motel"', temple: 'amenity=place_of_worship', pharmacy: 'amenity=pharmacy', police: 'amenity=police', toilets: 'amenity=toilets', mechanic: 'shop~"car_repair|motorcycle_repair|tyres"' };
+const MP_OSM = { busstand: 'amenity=bus_station', rail: 'railway~"station|halt"', fuel: 'amenity=fuel', ev: 'amenity=charging_station', hospital: 'amenity~"hospital|clinic|doctors"', atm: 'amenity~"atm|bank"', food: 'amenity~"restaurant|fast_food|cafe"', parking: 'amenity=parking', hotel: 'tourism~"hotel|guest_house|motel"', temple: 'amenity=place_of_worship', pharmacy: 'amenity=pharmacy', police: 'amenity=police', toilets: 'amenity=toilets', mechanic: 'shop~"car_repair|motorcycle_repair|tyres"' };
 async function mpNearbyFetch(cat, lat, lng) {
   const near = (radius) => {
     const q = '[out:json][timeout:12];(nwr[' + MP_OSM[cat] + '](around:' + radius + ',' + lat + ',' + lng + '););out center 40;';
@@ -9518,7 +9559,7 @@ async function mpNearby(cat, label) {
 function mpClearNear() { MP.nearMarkers.forEach((m) => m.remove()); MP.nearMarkers = []; }
 // ----- a place is chosen -----
 async function mpSetDest(p) {
-  $('#mpRes').hidden = true; if (!p.keepStops) MP.stops = []; MP.dest = p; mpRemember({ name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng });
+  $('#mpRes').hidden = true; if (!p.keepStops) MP.stops = []; MP.dest = p; if (!p.isMe) mpRemember({ name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng });
   if (MP.pendingSave) { const o = mpSaved(); o[MP.pendingSave] = { name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng }; mpSave(o); toast('Saved as ' + (MP.pendingSave === 'home' ? '🏠 Home' : '💼 Work')); MP.pendingSave = null; }
   if (!MP.map) return;
   if (MP.destMarker) MP.destMarker.remove();
@@ -9532,8 +9573,9 @@ function mpPlaceSheet(loading) {
   const s = $('#mpSheet'), p = MP.dest; if (!s || !p) return; s.innerHTML = ''; s.className = 'mp-sheet open';
   const h = el('div', 'mp-ph'); const tx = el('div'); tx.append(el('h3', null, p.name), el('small', null, p.addr || (MP.me ? fmtKm(hav(MP.me, [p.lng, p.lat])) + ' away' : ''))); h.append(tx);
   const x = el('button', 'mp-ib', '✕'); x.setAttribute('aria-label', 'Close'); x.onclick = () => { MP.dest = null; MP.routes = []; mpDrawRoutes(); if (MP.destMarker) MP.destMarker.remove(); mpHomeSheet(); }; h.append(x); s.append(h);
+  if (!$('#mapPage.dir')) { const fr = el('button', 'mpd-fromrow'); fr.append(el('i'), el('span', null, 'From: ' + (MP.from ? MP.from.name : 'Your location')), el('b', null, 'Change')); fr.onclick = () => mpDirections('from'); s.append(fr); }
   const modes = el('div', 'mp-modes');
-  for (const [k, [ic, label]] of Object.entries(MP_MODES)) { const b = el('button', k === MP.mode ? 'on' : null); b.append(el('span', null, ic), el('small', null, label)); b.onclick = () => { MP.mode = k; mpRoute(); }; modes.append(b); }
+  for (const [k, [ic, label]] of Object.entries(MP_MODES)) { const b = el('button', k === MP.mode ? 'on' : null); b.append(el('span', null, ic), el('small', null, label)); b.onclick = () => { MP.mode = k; mpdDrawModes(); mpRoute(); }; modes.append(b); }
   s.append(modes);
   const rl = el('div', 'mp-routes'); rl.id = 'mpRoutes';
   if (loading || !MP.routes.length) rl.append(el('div', 'mp-thinking', loading ? '🛣️ Finding the best roads…' : (MP.routeErr || '')));
@@ -9546,7 +9588,7 @@ function mpPlaceSheet(loading) {
   });
   s.append(rl);
   const acts = el('div', 'mp-acts');
-  const go = el('button', 'mp-go', '▲ Start'); go.disabled = !MP.routes.length || !MP.me; go.onclick = mpStartNav;
+  const go = el('button', 'mp-go', '▲ Start'); go.disabled = !MP.routes.length || !MP.me; go.onclick = MP.from || (MP.dest && MP.dest.isMe) ? async () => { if (MP.dest.isMe) return toast('You are already here 🙂'); MP.from = null; mpdFields(); await mpRoute(); mpStartNav(); } : mpStartNav;
   const share = el('button', 'mp-sec', '📤 Share'); share.onclick = () => mpShareDest();
   const save = el('button', 'mp-sec', '⭐ Save'); save.onclick = () => { sheet('Save place', (list) => { for (const [k, l] of [['starred', '⭐ Save to my places'], ['home', '🏠 Save as Home'], ['work', '💼 Save as Work']]) { const b = el('button', 'sheet-btn', l); b.onclick = () => { const o = mpSaved(), v = { name: p.name, addr: p.addr || '', lat: p.lat, lng: p.lng }; if (k === 'starred') o.starred = [v, ...(o.starred || []).filter((x) => x.name !== v.name)].slice(0, 50); else o[k] = v; mpSave(o); mpShowSavedPins(); closeSheet('moreSheet'); toast('Saved ✅'); }; list.append(b); } }); };
   acts.append(go, share, save);
@@ -9570,16 +9612,18 @@ function mpHomeSheet() {
 // ----- routes -----
 async function mpRoute() {
   if (!MP.dest) return;
-  if (!MP.me) { MP.routes = []; MP.routeErr = '📡 Waiting for your location to find a route…'; mpPlaceSheet(); setTimeout(() => { if (MP.me && MP.dest && !MP.routes.length) mpRoute(); }, 3000); return; }
+  if (MP.mode === 'transit') return mpTransit();
+  if (!MP.me && !MP.from) { MP.routes = []; MP.routeErr = '📡 Waiting for your location to find a route…'; mpPlaceSheet(); setTimeout(() => { if (MP.me && MP.dest && !MP.routes.length) mpRoute(); }, 3000); return; }
   MP.sel = 0; MP.routes = []; MP.routeErr = ''; mpPlaceSheet(true);
   try {
     const r = await api('/api/maps/route?mode=' + MP.mode + '&pts=' + mpRoutePts());
     MP.routes = r.routes;
   } catch (e) { MP.routeErr = '⚠️ ' + e.message; }
   mpDrawRoutes(); mpPlaceSheet();
-  if (MP.routes.length && MP.map) { const bb = new maplibregl.LngLatBounds(); MP.routes[MP.sel].geometry.coordinates.forEach((c) => bb.extend(c)); MP.map.fitBounds(bb, { padding: { top: 150, bottom: Math.min(innerHeight * 0.48, 380), left: 40, right: 60 }, duration: 800 }); }
+  if (MP.routes.length && MP.map) { const bb = new maplibregl.LngLatBounds(); MP.routes[MP.sel].geometry.coordinates.forEach((c) => bb.extend(c)); MP.map.fitBounds(bb, { padding: { top: $('#mapPage.dir') ? 210 : 150, bottom: Math.min(innerHeight * 0.48, 380), left: 40, right: 60 }, duration: 800 }); }
 }
 function mpDrawRoutes() {
+  mpPuckLook();
   const m = MP.map; if (!m || !m.isStyleLoaded()) return;
   for (const id of ['mp-alt', 'mp-sel-case', 'mp-sel']) if (m.getLayer(id)) m.removeLayer(id);
   for (const id of ['mp-alt', 'mp-sel']) if (m.getSource(id)) m.removeSource(id);
@@ -9618,7 +9662,7 @@ function mpSnap(nav, c) { // nearest point on the route, searched around the las
 async function mpStartNav() {
   const r = MP.routes[MP.sel]; if (!r || !MP.me) return;
   MP.nav = { ...mpPrepare(r), route: r, seg: 0, step: 1, said: {}, offCount: 0, follow: true, started: Date.now(), dur: r.duration };
-  $('#mapPage').classList.add('navigating'); mpClearNear(); $('#mpReport').hidden = false; mpVoiceCheck(); navLoadName();
+  $('#mapPage').classList.add('navigating'); mpClearNear(); mpPuckLook(); $('#mpReport').hidden = false; mpVoiceCheck(); navLoadName();
   try { MP.wake = await navigator.wakeLock?.request('screen'); } catch {}
   mpNavSheet(); mpSay(navText('start', { dist: fmtKm(r.distance), time: fmtMin(r.duration) }));
   if (MP.lastFix) mpNavTick(MP.lastFix);
@@ -9628,7 +9672,7 @@ function mpStopNav(silent) {
   if (!MP.nav) return; MP.nav = null;
   try { MP.wake && MP.wake.release(); } catch {} MP.wake = null;
   if (MP.share) { try { socket.emit('live:stop', { id: MP.share }); } catch {} MP.share = null; }
-  const pg = $('#mapPage'); if (pg) pg.classList.remove('navigating'); if ($('#mpReport')) $('#mpReport').hidden = !mpLayersOn().has('traffic');
+  const pg = $('#mapPage'); if (pg) pg.classList.remove('navigating'); setTimeout(mpPuckLook, 0); if ($('#mpReport')) $('#mpReport').hidden = !mpLayersOn().has('traffic');
   if ($('#mpTurn')) { $('#mpTurn').hidden = true; $('#mpSpeed').hidden = true; }
   mpStopVoice();
   if (!silent && MP.map) { MP.map.easeTo({ pitch: 0, bearing: 0, duration: 600 }); mpPlaceSheet(); }
@@ -9658,7 +9702,7 @@ function mpNavTick(fix) {
   if (MP.share && Date.now() - (MP.shareAt || 0) > 10000) { MP.shareAt = Date.now(); socket.emit('live:update', { id: MP.share, lat: c[1], lng: c[0], acc: fix.coords.accuracy }); }
   // camera follows the car, pointing the way you drive
   if (nav.follow) MP.map.easeTo({ center: s.off < 40 ? s.p : c, bearing: sp > 1.5 && fix.coords.heading != null && !isNaN(fix.coords.heading) ? fix.coords.heading : s.heading, zoom: sp > 22 ? 15.6 : sp > 12 ? 16.4 : 17.2, pitch: 55, duration: 900, easing: (t) => t });
-  if (MP.puck) { MP.puck.setLngLat(s.off < 40 ? s.p : c); MP.puck.setRotation(s.heading); }
+  if (MP.puck) { MP.puck.setLngLat(s.off < 40 ? s.p : c); mpTurnPuck(s.heading); }
 }
 async function mpReroute() {
   const nav = MP.nav; if (!nav || !MP.me) return; nav.rerouting = true; const t0 = Date.now(); mpSay(navText('missed', {})); toast('↩️ Route missed — finding a new route');
@@ -9806,8 +9850,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 106;
-const APP_NOTES = ["📲 Maata updates like WhatsApp: the update screen appears as soon as you open Maata", "⬇ The new app downloads by itself in the background", "🤖 Android 12+: installs by itself when you close Maata (after this one update)"];
+const APP_VERSION = 108;
+const APP_NOTES = ["🚗 Drive shows a car on the map, 🏍️ Two-wheeler shows a bike, 🚶 Walk shows a walking person", "✅ After an app update: “Update successful!” screen", "⚙️ Settings shows only your version — no update buttons"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -9826,9 +9870,168 @@ function versionLine() {
   const sv = SERVER_VER && SERVER_VER.server, latestApk = SERVER_VER && SERVER_VER.android;
   const parts = ['🦜 Maata v' + APP_VERSION];
   parts.push(sv == null ? 'server ?' : sv === APP_VERSION ? 'server v' + sv + ' ✅' : '⚠️ server v' + sv + ' (upload the new server.js)');
-  if (av) parts.push('Android app v' + av + (latestApk && Number(String(av).split('.').pop()) < latestApk ? ' → v1.0.' + latestApk + ' ready' : ' ✅'));
+  if (av) parts.push('Android app v' + av);
   return parts.join(' · ');
 }
+
+// 🚗 / 🏍️ / 🚶 your vehicle on the map, matching the travel mode (blue arrow when just looking around)
+const PUCK_SVG = {
+  car: '<svg viewBox="0 0 40 64" class="pk-veh"><defs><linearGradient id="pkC" x1="0" x2="1"><stop offset="0" stop-color="#0D47A1"/><stop offset=".5" stop-color="#2E8BFF"/><stop offset="1" stop-color="#0D47A1"/></linearGradient></defs><ellipse cx="20" cy="34" rx="17" ry="29" fill="rgba(0,0,0,.25)"/><rect x="6" y="9" width="5" height="11" rx="2" fill="#222"/><rect x="29" y="9" width="5" height="11" rx="2" fill="#222"/><rect x="6" y="42" width="5" height="11" rx="2" fill="#222"/><rect x="29" y="42" width="5" height="11" rx="2" fill="#222"/><rect x="8" y="4" width="24" height="54" rx="10" fill="url(#pkC)" stroke="#fff" stroke-width="2"/><path d="M11 20 Q20 14 29 20 L27 27 H13Z" fill="#BFE3FF"/><rect x="12" y="29" width="16" height="13" rx="3" fill="#1565C0"/><path d="M13 47 H27 L28 52 Q20 55 12 52Z" fill="#BFE3FF" opacity=".8"/><rect x="10" y="5" width="5" height="3" rx="1.5" fill="#FFF59D"/><rect x="25" y="5" width="5" height="3" rx="1.5" fill="#FFF59D"/><rect x="10" y="55" width="5" height="2" rx="1" fill="#FF5252"/><rect x="25" y="55" width="5" height="2" rx="1" fill="#FF5252"/></svg>',
+  bike: '<svg viewBox="0 0 40 64" class="pk-veh"><ellipse cx="20" cy="34" rx="11" ry="28" fill="rgba(0,0,0,.25)"/><rect x="16.5" y="3" width="7" height="13" rx="3.5" fill="#222"/><rect x="16.5" y="47" width="7" height="14" rx="3.5" fill="#222"/><path d="M8 17 H32" stroke="#37474F" stroke-width="3" stroke-linecap="round"/><rect x="14" y="14" width="12" height="34" rx="6" fill="#E53935" stroke="#fff" stroke-width="2"/><ellipse cx="20" cy="30" rx="9" ry="8" fill="#455A64"/><circle cx="20" cy="27" r="6.5" fill="#FFC107" stroke="#fff" stroke-width="1.5"/><path d="M15.5 25 Q20 21 24.5 25" stroke="#263238" stroke-width="2" fill="none"/><circle cx="20" cy="5" r="1.6" fill="#FFF59D"/></svg>',
+  foot: '<svg viewBox="0 0 44 44" class="pk-walk"><circle cx="22" cy="22" r="19" fill="#1E88E5" stroke="#fff" stroke-width="3"/><circle cx="23.5" cy="11.5" r="3" fill="#fff"/><path d="M22 16 l-4 6 3.5 2.5 v8.5 M22 16 l4.5 4.5 4 1 M21.5 24.5 l-3 8.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
+};
+function mpPuckLook() {
+  if (!MP.puck) return; const d = MP.puck.getElement(); const kind = (MP.dest || MP.nav) && PUCK_SVG[MP.mode] ? MP.mode : 'dot';
+  if (d.dataset.kind !== kind) {
+    d.dataset.kind = kind; d.className = 'mp-puck' + (kind === 'dot' ? '' : ' veh ' + kind);
+    d.innerHTML = kind === 'dot' ? '<i></i>' : PUCK_SVG[kind];
+    MP.puck.setRotationAlignment(kind === 'foot' ? 'viewport' : 'map');
+  }
+  MP.puckKind = kind;
+  if (kind === 'foot') MP.puck.setRotation(0);
+  else if (!MP.nav && MP.routes.length && MP.routes[MP.sel]) { const g = MP.routes[MP.sel].geometry.coordinates; if (g.length > 1) MP.puck.setRotation(bearingTo(g[0], g[Math.min(3, g.length - 1)])); }
+}
+const mpTurnPuck = (deg) => { if (MP.puck && MP.puckKind !== 'foot') MP.puck.setRotation(deg); };
+// ================= ➦ Directions screen like Google Maps: Your location → Choose destination, Drive / Two-wheeler / Public transport / Walk =================
+const MPD_ICONS = {
+  car: '<svg viewBox="0 0 24 24"><path d="M4 13l2-5.5h12L20 13v4.5H4z"/><path d="M6.5 17.5v2M17.5 17.5v2"/><circle cx="8" cy="14.5" r="1"/><circle cx="16" cy="14.5" r="1"/></svg>',
+  bike: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="16" r="3"/><circle cx="18.5" cy="16" r="3"/><path d="M5.5 16l4.5-6h5l3.5 6M10 10l-1.5-3H6M14 7h3.5l-2.5 3"/></svg>',
+  transit: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M8 21l1.2-4M16 21l-1.2-4"/><circle cx="8.5" cy="14" r=".6"/><circle cx="15.5" cy="14" r=".6"/></svg>',
+  foot: '<svg viewBox="0 0 24 24"><circle cx="13" cy="4" r="1.8"/><path d="M11 8l-3 4 3 2v7M11 8l3.2 3.2 3 .8M11 14l-2.2 7"/></svg>',
+};
+const MPD_MODES = [['car', 'Drive'], ['bike', 'Two-wheeler'], ['transit', 'Public transport'], ['foot', 'Walk']];
+const meAsPlace = () => (MP.me ? { name: 'Your location', lat: MP.me[1], lng: MP.me[0], isMe: true } : null);
+function mpDirections(edit) {
+  const pg = $('#mapPage'); if (!pg) return;
+  let p = $('#mpDirP');
+  if (!p) {
+    p = el('div', 'mpd'); p.id = 'mpDirP';
+    p.innerHTML = '<div class="mpd-head"><button class="mp-ib" id="mpdBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>'
+      + '<div class="mpd-dots" aria-hidden="true"><i class="a"></i><span></span><span></span><span></span><i class="b"></i></div>'
+      + '<div class="mpd-fields"><input id="mpdFrom" autocomplete="off" aria-label="Start"><input id="mpdTo" autocomplete="off" placeholder="Choose destination" aria-label="Destination"></div>'
+      + '<div class="mpd-side"><button class="mp-ib" id="mpdSwap" aria-label="Swap start and destination"><svg viewBox="0 0 24 24"><path d="M8 4v15M4.5 7.5L8 4l3.5 3.5M16 20V5M12.5 16.5L16 20l3.5-3.5"/></svg></button><button class="mp-ib" id="mpdStop" aria-label="Add stop">＋</button></div></div>'
+      + '<div class="mpd-modes" id="mpdModes"></div><div class="mpd-body" id="mpdBody"></div>';
+    pg.append(p);
+    const modes = $('#mpdModes');
+    for (const [k, label] of MPD_MODES) { const b = el('button'); b.dataset.m = k; b.innerHTML = MPD_ICONS[k]; b.append(el('span', null, label)); b.onclick = () => { MP.mode = k; mpdDrawModes(); if (MP.dest) mpRoute(); }; modes.append(b); }
+    $('#mpdBack').onclick = mpdClose;
+    $('#mpdSwap').onclick = mpdSwap;
+    $('#mpdStop').onclick = () => { if (!MP.dest) return toast('Choose the destination first'); MP.dirEdit = 'stop'; mpdExpand(''); };
+    for (const [id, which] of [['mpdFrom', 'from'], ['mpdTo', 'to']]) {
+      const inp = $('#' + id);
+      inp.onfocus = () => { MP.dirEdit = which; inp.select(); mpdExpand(''); };
+      inp.oninput = () => { clearTimeout(MP.dqt); MP.dqt = setTimeout(() => mpdExpand(inp.value.trim()), 350); };
+      inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); const f = $('#mpdBody .mp-ri.res'); if (f) f.click(); } };
+    }
+  }
+  p.hidden = false; pg.classList.add('dir'); $('#mpRes').hidden = true;
+  mpdFields(); mpdDrawModes();
+  if (edit || !MP.dest) { MP.dirEdit = edit || 'to'; mpdExpand(''); setTimeout(() => { const f = $(MP.dirEdit === 'from' ? '#mpdFrom' : '#mpdTo'); if (f && !MP.dest) f.focus(); }, 120); }
+  else mpdCompact();
+}
+function mpdFields() {
+  const f = $('#mpdFrom'), t = $('#mpdTo'); if (!f) return;
+  f.value = MP.from ? MP.from.name : 'Your location'; f.classList.toggle('me', !MP.from);
+  t.value = MP.dest ? (MP.dest.isMe ? 'Your location' : MP.dest.name) : ''; t.classList.toggle('me', !!(MP.dest && MP.dest.isMe));
+  const st = $('#mpdStop'); if (st) st.textContent = (MP.stops || []).length ? '🛑' + MP.stops.length : '＋';
+  if (MP.fromMarker) { MP.fromMarker.remove(); MP.fromMarker = null; }
+  if (MP.from && MP.map) { const d = el('div', 'mpd-from-pin'); MP.fromMarker = new maplibregl.Marker({ element: d }).setLngLat([MP.from.lng, MP.from.lat]).addTo(MP.map); }
+}
+function mpdDrawModes() { setTimeout(mpPuckLook, 0); document.querySelectorAll('#mpdModes button').forEach((b) => b.classList.toggle('on', b.dataset.m === MP.mode)); }
+function mpdCompact() { const p = $('#mpDirP'); if (!p) return; p.classList.remove('full'); document.activeElement && document.activeElement.blur && document.activeElement.blur(); }
+function mpdClose() {
+  const p = $('#mpDirP'); if (p) p.hidden = true; const pg = $('#mapPage'); if (pg) pg.classList.remove('dir');
+  const hadFrom = !!MP.from; MP.from = null; if (MP.fromMarker) { MP.fromMarker.remove(); MP.fromMarker = null; }
+  if (MP.dest && MP.dest.isMe) { MP.dest = null; MP.routes = []; mpDrawRoutes(); if (MP.destMarker) MP.destMarker.remove(); }
+  if (MP.dest) { if (hadFrom) mpRoute(); else mpPlaceSheet(); } else mpHomeSheet();
+}
+async function mpdSwap() {
+  if (!MP.dest) return toast('Choose the destination first');
+  const a = MP.from || meAsPlace(), b = MP.dest; if (!a) return toast('Waiting for your location…');
+  MP.from = b.isMe ? null : { name: b.name, lat: b.lat, lng: b.lng, addr: b.addr };
+  MP.stops = [...(MP.stops || [])].reverse();
+  await mpSetDest({ ...a, keepStops: true });
+  mpdFields();
+}
+// choose a place for the field being edited
+function mpdPick(p) {
+  const w = MP.dirEdit || 'to';
+  if (w === 'stop') { MP.stops = [...(MP.stops || []), { name: p.name, lat: p.lat, lng: p.lng }].slice(0, 4); mpdCompact(); mpdFields(); return mpRoute(); }
+  if (w === 'from') { MP.from = p.isMe ? null : p; mpdFields(); if (MP.dest) { mpdCompact(); mpRoute(); } else { MP.dirEdit = 'to'; $('#mpdTo').focus(); } return; }
+  mpdCompact(); mpSetDest({ ...p, keepStops: true }).then(mpdFields); mpdFields();
+}
+async function mpdExpand(q) {
+  const p = $('#mpDirP'), body = $('#mpdBody'); if (!p) return; p.classList.add('full'); body.innerHTML = '';
+  const row = (ic, name, sub, fn, cls) => { const b = el('button', 'mp-ri' + (cls ? ' ' + cls : '')); const tx = el('div'); tx.append(el('b', null, name)); if (sub) tx.append(el('small', null, sub)); b.append(el('span', 'ic', ic), tx); b.onclick = fn; body.append(b); return b; };
+  if (q.length >= 3) {
+    body.append(el('div', 'mp-thinking', '🔎 Searching…'));
+    let list = []; try { list = await api('/api/geo/search?q=' + encodeURIComponent(q) + (MP.me ? '&lat=' + MP.me[1] + '&lng=' + MP.me[0] : '')); } catch {}
+    if ((MP.dirEdit === 'from' ? $('#mpdFrom') : $('#mpdTo')).value.trim() !== q && MP.dirEdit !== 'stop') return;
+    body.innerHTML = '';
+    for (const r of list) { const parts = r.title.split(', '); row('📍', parts[0], parts.slice(1).join(', ') + (MP.me ? ' · ' + fmtKm(hav(MP.me, [r.lng, r.lat])) : ''), () => mpdPick({ name: parts[0], addr: parts.slice(1).join(', '), lat: r.lat, lng: r.lng }), 'res'); }
+    row('✨', 'Ask Maata AI: “' + q + '”', 'Understands Telugu, Hindi, English', async () => { try { const a = await api('/api/maps/ai', { method: 'POST', body: JSON.stringify({ text: q, near: MP.me ? MP.me[1].toFixed(3) + ',' + MP.me[0].toFixed(3) : '' }) }); if (a.to) { const r = await api('/api/geo/search?q=' + encodeURIComponent(a.to) + (MP.me ? '&lat=' + MP.me[1] + '&lng=' + MP.me[0] : '')); if (r[0]) { const parts = r[0].title.split(', '); return mpdPick({ name: parts[0], addr: parts.slice(1).join(', '), lat: r[0].lat, lng: r[0].lng }); } } toast(a.reply || 'Type the place name'); } catch (e) { toast(e.message); } }, 'ai');
+    if (!list.length) body.prepend(el('div', 'mp-thinking', 'No places found. Try the town name too, e.g. “bus stand Puttur”.'));
+    return;
+  }
+  const o = mpSaved(), chips = el('div', 'mpd-chips');
+  const chip = (ic, label, sub, fn) => { const b = el('button'); b.append(el('span', 'ic', ic)); const t = el('div'); t.append(el('b', null, label)); if (sub) t.append(el('small', null, sub)); b.append(t); b.onclick = fn; chips.append(b); };
+  chip('🏠', 'Home', o.home ? o.home.name : 'Set', () => (o.home ? mpdPick(o.home) : (mpdClose(), mpPickSaved('home'))));
+  chip('💼', 'Work', o.work ? (MP.me ? fmtKm(hav(MP.me, [o.work.lng, o.work.lat])) : o.work.name) : 'Set', () => (o.work ? mpdPick(o.work) : (mpdClose(), mpPickSaved('work'))));
+  chip('⋯', 'More', 'Saved', () => mpdMore());
+  body.append(chips);
+  if (MP.dirEdit !== 'to' && MP.me) row('🔵', 'Your location', 'Use where you are now', () => mpdPick(meAsPlace()));
+  if (MP.dirEdit === 'to' && MP.from && MP.me) row('🔵', 'Your location', 'Go back to where you are', () => mpdPick(meAsPlace()));
+  row('📌', 'Choose on map', 'Move the map to the place', mpdChooseOnMap);
+  const rec = mpRecent(); if (rec.length) { body.append(el('div', 'mpd-title', 'Recent')); for (const r of rec) row('🕘', r.name, (r.addr || '') + (MP.me ? ' · ' + fmtKm(hav(MP.me, [r.lng, r.lat])) : ''), () => mpdPick(r)); }
+}
+function mpdMore() {
+  const o = mpSaved();
+  sheet('⭐ Your places', (list) => {
+    const all = [...(o.home ? [['🏠', o.home]] : []), ...(o.work ? [['💼', o.work]] : []), ...(o.starred || []).map((x) => ['⭐', x])];
+    if (!all.length) list.append(el('p', 'info-note', 'No saved places yet. Open a place and tap ⭐ Save.'));
+    for (const [ic, pl] of all) { const b = el('button', 'sheet-btn', ic + ' ' + pl.name); b.onclick = () => { closeSheet('moreSheet'); mpdPick(pl); }; list.append(b); }
+  });
+}
+function mpdChooseOnMap() {
+  const p = $('#mpDirP'); mpdCompact(); p.classList.add('picking');
+  const pin = el('div', 'mp-center-pin', '📍'), bar = el('div', 'mpd-pickbar'); const ok = el('button', 'mp-go', '✓ Choose this place'), no = el('button', 'mp-sec', 'Cancel');
+  bar.append(no, ok); $('#mapPage').append(pin, bar);
+  const end = () => { pin.remove(); bar.remove(); p.classList.remove('picking'); };
+  no.onclick = () => { end(); mpdExpand(''); };
+  ok.onclick = async () => { const pr = pin.getBoundingClientRect(), mr = $('#mpMap').getBoundingClientRect(), c = MP.map.unproject([pr.left + pr.width / 2 - mr.left, pr.bottom - mr.top]); end(); let name = 'Dropped pin'; try { const g = await api('/api/geo/reverse?lat=' + c.lat + '&lng=' + c.lng); name = (g.title || g.address || name).split(',')[0]; } catch {} mpdPick({ name, lat: c.lat, lng: c.lng, pin: true }); };
+}
+// 🚌 Public transport: Maata has no bus / train timetable yet — show the nearest bus stands and stations, and open the timetable in Google Maps
+async function mpTransit() {
+  const s = $('#mpSheet'), d = MP.dest; if (!s || !d) return; const from = MP.from || meAsPlace(); s.className = 'mp-sheet open'; s.innerHTML = '';
+  MP.routes = []; mpDrawRoutes();
+  const h = el('div', 'mp-ph'); const tx = el('div'); tx.append(el('h3', null, '🚌 Public transport'), el('small', null, (from ? from.name : 'Your location') + ' → ' + (d.isMe ? 'Your location' : d.name))); h.append(tx); s.append(h);
+  const modes = el('div', 'mp-modes'); for (const [k, [ic, label]] of Object.entries(MP_MODES)) { const b = el('button', k === MP.mode ? 'on' : null); b.append(el('span', null, ic), el('small', null, label)); b.onclick = () => { MP.mode = k; mpdDrawModes(); mpRoute(); }; modes.append(b); } s.append(modes);
+  const g = el('a', 'mp-go', '🕘 Bus & train times (Google Maps)'); g.href = 'https://www.google.com/maps/dir/?api=1' + (from ? '&origin=' + from.lat + ',' + from.lng : '') + '&destination=' + d.lat + ',' + d.lng + '&travelmode=transit'; g.target = '_blank'; g.rel = 'noopener'; g.style.cssText = 'display:block;text-align:center;text-decoration:none;margin:6px 0 4px';
+  s.append(g, el('small', 'mp-note', 'Maata does not have bus and train timetables yet. Below: the nearest bus stands and railway stations — tap one for walking or driving directions.'));
+  for (const [title, at] of [['Near you', from], ['Near ' + (d.isMe ? 'you' : d.name), d]]) {
+    if (!at) continue; const sec = el('div', 'mp-list'); sec.append(el('div', 'mpd-title', title), el('div', 'mp-thinking', '🔎 Finding bus stands and stations…')); s.append(sec);
+    Promise.allSettled([mpNearbyFetch('busstand', at.lat, at.lng), mpNearbyFetch('rail', at.lat, at.lng)]).then(([b, r]) => {
+      sec.querySelector('.mp-thinking').remove();
+      const items = [...(b.value || []).slice(0, 3).map((x) => ['🚌', x, 'Bus stand']), ...(r.value || []).slice(0, 3).map((x) => ['🚆', x, 'Railway station'])];
+      if (!items.length) sec.append(el('div', 'mp-thinking', 'No bus stand or station found nearby on the map.'));
+      for (const [ic, x, kind] of items) { const b2 = el('button', 'mp-ri'); const t = el('div'); t.append(el('b', null, x.name || kind), el('small', null, kind + ' · ' + fmtKm(x.dist))); b2.append(el('span', 'ic', ic), t); b2.onclick = () => { MP.mode = 'foot'; mpdDrawModes(); MP.from = null; mpSetDest({ name: x.name || kind, lat: x.lat, lng: x.lng, addr: kind }); }; sec.append(b2); }
+    });
+  }
+}
+// ----- the bottom sheet can be pulled down (minimised) and up again, like Google Maps -----
+function mpSheetGrip() {
+  const sh = $('#mpSheet'); if (!sh || sh.dataset.grip) return; sh.dataset.grip = '1';
+  let d = null;
+  const inGrip = (y) => sh.classList.contains('mini') || y - sh.getBoundingClientRect().top < 38;
+  const start = (y) => { if (sh.classList.contains('nav') || !inGrip(y)) return false; d = { y, moved: false, base: sh.classList.contains('mini') ? sh.offsetHeight - 70 : 0 }; return true; };
+  const move = (y) => { if (!d) return; const dy = y - d.y; if (Math.abs(dy) > 6) d.moved = true; if (d.moved) { sh.style.transition = 'none'; sh.style.transform = 'translateY(' + Math.max(0, Math.min(sh.offsetHeight - 70, d.base + dy)) + 'px)'; } };
+  const end = (y) => { if (!d) return; const dy = y - d.y; sh.style.transition = ''; sh.style.transform = ''; if (!d.moved) sh.classList.toggle('mini'); else if (dy > 40) sh.classList.add('mini'); else if (dy < -30) sh.classList.remove('mini'); const was = d; d = null; return was.moved; };
+  sh.addEventListener('touchstart', (e) => { if (e.touches.length === 1 && start(e.touches[0].clientY)) sh.dataset.touch = '1'; }, { passive: true });
+  sh.addEventListener('touchmove', (e) => { if (!d) return; e.preventDefault(); move(e.touches[0].clientY); }, { passive: false });
+  sh.addEventListener('touchend', (e) => { if (!d) return; const moved = end(e.changedTouches[0].clientY); if (moved || sh.classList.contains('mini')) e.preventDefault(); });
+  sh.addEventListener('mousedown', (e) => { if (sh.dataset.touch) return; if (!start(e.clientY)) return; const mm = (ev) => move(ev.clientY), mu = (ev) => { removeEventListener('mousemove', mm); removeEventListener('mouseup', mu); end(ev.clientY); }; addEventListener('mousemove', mm); addEventListener('mouseup', mu); });
+}
+
 // ================= Maata Maps v3: map type & details (like Google), live traffic + road reports, air quality, weather, wildfires, ✨ AI =================
 const MP_THUMBS = {
   colour: '<svg viewBox="0 0 72 72"><rect width="72" height="72" fill="#F4F1EA"/><path d="M0 0h30c-6 14-4 26 4 40-10 10-20 18-34 20z" fill="#AAD7F5"/><path d="M40 0h32v34c-12-2-22-12-32-34z" fill="#CDEBC5"/><path d="M8 72C20 50 44 40 72 30" stroke="#fff" stroke-width="7" fill="none"/><path d="M8 72C20 50 44 40 72 30" stroke="#F6C453" stroke-width="3" fill="none"/></svg>',
@@ -10071,7 +10274,7 @@ async function mpAlong(cat, label) {
   for (const p of list) { const m = el('button', 'mp-poi', icon); m.onclick = (e) => { e.stopPropagation(); openOne(p, p.name || what); }; MP.nearMarkers.push(new maplibregl.Marker({ element: m }).setLngLat([p.lng, p.lat]).addTo(MP.map)); }
   show();
 }
-const mpRoutePts = () => [MP.me, ...(MP.stops || []).map((s) => [s.lng, s.lat]), [MP.dest.lng, MP.dest.lat]].map((p) => p.map((v) => (+v).toFixed(6)).join(',')).join(';');
+const mpRoutePts = () => [MP.from ? [MP.from.lng, MP.from.lat] : MP.me, ...(MP.stops || []).map((s) => [s.lng, s.lat]), [MP.dest.lng, MP.dest.lat]].map((p) => p.map((v) => (+v).toFixed(6)).join(',')).join(';');
 // ----- navigation helpers: share road speed (no name), warn about reports ahead, pass stops -----
 function mpNavExtras(nav, fix, s, c) {
   const t = Date.now(), pnt = s.off < 40 ? s.p : c;
