@@ -22,6 +22,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import java.util.Locale
 import android.webkit.*
 import android.widget.Toast
 import com.google.firebase.messaging.FirebaseMessaging
@@ -44,11 +49,68 @@ class MainActivity : Activity() {
     private var pendingWebPermission: PermissionRequest? = null
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
     private var pageReady = false
+    // 🔊 navigation voice: the phone's own text-to-speech (WebView has no speech of its own)
+    private var tts: TextToSpeech? = null
+    @Volatile private var ttsState = 0 // 0 starting, 1 ready, -1 failed
+    private var ttsPending: Pair<String, String>? = null
+    private fun startTts() {
+        if (tts != null) return
+        tts = TextToSpeech(applicationContext) { st ->
+            ttsState = if (st == TextToSpeech.SUCCESS) 1 else -1
+            if (ttsState == 1) {
+                tts?.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                ttsPending?.let { speakNow(it.first, it.second) }
+            }
+            ttsPending = null
+        }
+    }
+    // 🎤 speech to text for the voice password and voice search (WebView has no speech recognition of its own)
+    private var recognizer: SpeechRecognizer? = null
+    private var pendingListen: Pair<String, String>? = null
+    private fun listenReply(id: String, ok: Boolean, data: String) = runOnUiThread {
+        web.evaluateJavascript("window.maataListenResult && maataListenResult(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(data) + ")", null)
+    }
+    private fun startListening(id: String, lang: String) {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { pendingListen = id to lang; requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQ_PERMS); return }
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) { listenReply(id, false, "unsupported"); return }
+        try { recognizer?.destroy() } catch (_: Exception) { }
+        val r = SpeechRecognizer.createSpeechRecognizer(this); recognizer = r
+        val done = { try { r.destroy() } catch (_: Exception) { }; if (recognizer === r) recognizer = null }
+        r.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(p: Bundle?) { runOnUiThread { web.evaluateJavascript("window.maataListenReady && maataListenReady(" + org.json.JSONObject.quote(id) + ")", null) } }
+            override fun onResults(b: Bundle?) { val list = b?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) ?: arrayListOf<String>(); listenReply(id, list.isNotEmpty(), if (list.isEmpty()) "nohear" else org.json.JSONArray(list).toString()); done() }
+            override fun onError(e: Int) {
+                listenReply(id, false, when (e) { SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "nohear"; SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "perm"; SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network"; SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"; else -> "error$e" }); done()
+            }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(v: Float) {}
+            override fun onBufferReceived(b: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onPartialResults(b: Bundle?) {}
+            override fun onEvent(t: Int, b: Bundle?) {}
+        })
+        r.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang).putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5).putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName))
+    }
+    private fun langOk(lang: String): Boolean {
+        val r = tts?.isLanguageAvailable(Locale.forLanguageTag(lang)) ?: return false
+        return r >= TextToSpeech.LANG_AVAILABLE
+    }
+    private fun speakNow(text: String, lang: String): String {
+        val t = tts ?: return "error"
+        if (!langOk(lang)) return "nolang"
+        t.language = Locale.forLanguageTag(lang)
+        t.setSpeechRate(0.95f)
+        return if (t.speak(text, TextToSpeech.QUEUE_ADD, null, "maata" + System.nanoTime()) == TextToSpeech.SUCCESS) "ok" else "error"
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Notifier.createChannels(this)
+        startTts()
         FirebaseMessaging.getInstance().token.addOnSuccessListener { Notifier.saveToken(this, it) }
 
         web = WebView(this)
@@ -159,6 +221,7 @@ class MainActivity : Activity() {
             if (ok.isNotEmpty()) r.grant(ok.toTypedArray()) else r.deny()
             pendingWebPermission = null
         }
+        pendingListen?.let { (id, lang) -> pendingListen = null; if (has(Manifest.permission.RECORD_AUDIO)) startListening(id, lang) else listenReply(id, false, "perm") }
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, has(Manifest.permission.ACCESS_FINE_LOCATION) || has(Manifest.permission.ACCESS_COARSE_LOCATION), false); pendingGeo = null }
     }
 
@@ -253,7 +316,7 @@ class MainActivity : Activity() {
         routeGuard = null
     }
 
-    override fun onDestroy() { stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
+    override fun onDestroy() { try { tts?.shutdown() } catch (_: Exception) { }; tts = null; try { recognizer?.destroy() } catch (_: Exception) { }; stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
@@ -384,6 +447,17 @@ class MainActivity : Activity() {
                 } catch (e: Exception) { bioReply(id, false, e.message ?: "error") }
             }
         }
+        @JavascriptInterface fun speak(text: String, lang: String): String = try {
+            when (ttsState) { 1 -> speakNow(text.take(400), lang); 0 -> { ttsPending = text.take(400) to lang; startTts(); "wait" }; else -> "error" }
+        } catch (_: Exception) { "error" }
+        @JavascriptInterface fun ttsCheck(lang: String): String = when (ttsState) { 1 -> if (langOk(lang)) "ok" else "nolang"; 0 -> "wait"; else -> "error" }
+        @JavascriptInterface fun listen(id: String, lang: String) { runOnUiThread { try { startListening(id, lang) } catch (e: Exception) { listenReply(id, false, "error") } } }
+        @JavascriptInterface fun stopListening() { runOnUiThread { try { recognizer?.stopListening() } catch (_: Exception) { } } }
+        @JavascriptInterface fun stopSpeaking() { try { tts?.stop() } catch (_: Exception) { } }
+        @JavascriptInterface fun installTtsVoice() { runOnUiThread {
+            try { startActivity(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            catch (_: Exception) { try { startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { Toast.makeText(this@MainActivity, "Open Settings → Text-to-speech to add the voice", Toast.LENGTH_LONG).show() } }
+        } }
         @JavascriptInterface fun startPhoneRingtone(vibrate: Boolean): Boolean = startPhoneRing(vibrate)
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }
