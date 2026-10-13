@@ -9457,7 +9457,7 @@ const MAP_STYLES = {
   bright: { label: 'Bright', icon: '☀️', url: 'https://tiles.openfreemap.org/styles/bright' },
   light: { label: 'Light', icon: '🤍', url: 'https://tiles.openfreemap.org/styles/positron' },
 };
-const MP_CATS = [['food', '🍽️', 'Restaurants'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Hotels'], ['hospital', '🏥', 'Hospital'], ['atm', '🏧', 'ATM'], ['temple', '🛕', 'Temples'], ['mechanic', '🔧', 'Mechanic'], ['parking', '🅿️', 'Parking'], ['ev', '🔌', 'EV charge'], ['pharmacy', '💊', 'Medical'], ['police', '🚓', 'Police'], ['toilets', '🚻', 'Toilets']];
+const MP_CATS = [['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Hotels'], ['hospital', '🏥', 'Hospital'], ['pharmacy', '💊', 'Medical']];
 const MP_MODES = { car: ['🚗', 'Drive'], bike: ['🏍️', 'Two-wheeler'], foot: ['🚶', 'Walk'] };
 let mlLoading = null;
 function loadMapLibre() {
@@ -9599,7 +9599,7 @@ async function mpAsk(text) {
   if (a.intent === 'plan') { $('#mpRes').hidden = true; return mpPlan(text); }
   const saved = a.saved && mpSaved()[a.saved];
   if (saved) return mpSetDest(saved);
-  if (a.intent === 'nearby' && a.category) { const c = MP_CATS.find((x) => x[0] === a.category); return mpNearby(a.category, c ? c[1] + ' ' + c[2] : a.category); }
+  if (a.intent === 'nearby' && a.category) { const c = MP_CATS.find((x) => x[0] === a.category); if (c) return mpNearby(a.category, c[1] + ' ' + c[2]); if (!a.to) a.to = text; }
   if (!a.to) { res.innerHTML = ''; res.append(el('div', 'mp-thinking', a.reply || 'Type the place name.')); return; }
   $('#mpQ').value = a.to; clearTimeout(MP.qt); await mpSearch(a.to, true);
   const first = $('#mpRes .mp-ri:not(.ai)'); if (first) { first.classList.add('best'); if (a.via && a.via.length) MP.viaText = a.via; }
@@ -9655,20 +9655,19 @@ function mpSOS() {
     for (const [n, t, ic] of [['108', 'Ambulance', '🚑'], ['100', 'Police', '🚓'], ['112', 'All emergencies', '🆘'], ['101', 'Fire', '🚒'], ['1091', 'Women helpline', '👩'], ['1033', 'Highway help', '🛣️']]) { const a = el('a', 'sos-btn'); a.href = 'tel:' + n; a.innerHTML = '<span>' + ic + '</span><b>' + n + '</b><small>' + t + '</small>'; g.append(a); }
     list.append(g);
     const h = el('button', 'sheet-btn', '🏥 Nearest hospital'); h.onclick = () => { closeSheet('moreSheet'); mpNearby('hospital', '🏥 Hospital'); };
-    const p = el('button', 'sheet-btn', '🚓 Nearest police station'); p.onclick = () => { closeSheet('moreSheet'); mpNearby('police', '🚓 Police'); };
     const sh = el('button', 'sheet-btn', '📍 Send my location to family'); sh.onclick = async () => {
       if (!link) return toast('Waiting for your location…'); const text = '🆘 I need help. My location: ' + link;
       try { if (navigator.share) { await navigator.share({ text }); return; } } catch { return; }
       location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
     };
-    list.append(h, p, sh, el('p', 'info-note', 'Calls are free from any phone, even without balance. Stay calm — help is coming.'));
+    list.append(h, sh, el('p', 'info-note', 'Calls are free from any phone, even without balance. Stay calm — help is coming.'));
   });
 }
 // ✨ smart suggestions for this time of day
 function mpSmartChips() {
   const hr = new Date().getHours();
-  const set = hr >= 5 && hr < 11 ? [['food', '☕', 'Tea & tiffin'], ['fuel', '⛽', 'Petrol'], ['temple', '🛕', 'Temples']] : hr < 16 ? [['food', '🍛', 'Meals'], ['atm', '🏧', 'ATM'], ['pharmacy', '💊', 'Medical']]
-    : hr < 20 ? [['fuel', '⛽', 'Petrol on the way'], ['temple', '🛕', 'Evening darshan'], ['food', '🍽️', 'Snacks']] : hr < 23 ? [['food', '🍽️', 'Dinner'], ['hotel', '🏨', 'Hotels / lodge'], ['fuel', '⛽', 'Petrol']] : [['hospital', '🏥', '24-hour hospital'], ['police', '🚓', 'Police'], ['fuel', '⛽', 'Petrol']];
+  const set = hr >= 6 && hr < 20 ? [['fuel', '⛽', 'Petrol on the way'], ['pharmacy', '💊', 'Medical'], ['hospital', '🏥', 'Hospital']]
+    : hr < 23 ? [['hotel', '🏨', 'Hotels / lodge'], ['fuel', '⛽', 'Petrol'], ['pharmacy', '💊', 'Medical']] : [['hospital', '🏥', '24-hour hospital'], ['fuel', '⛽', 'Petrol'], ['hotel', '🏨', 'Lodge']];
   const row = el('div', 'mp-smart'); row.append(el('small', null, '✨ For you now'));
   for (const [cat, ic, l] of set) { const b = el('button', null, ic + ' ' + l); b.onclick = () => (MP.routes.length && /on the way/.test(l) ? mpAlong(cat, ic + ' ' + l) : mpNearby(cat, ic + ' ' + l)); row.append(b); }
   return row;
@@ -9792,7 +9791,7 @@ function mpHomeSheet() {
   const o = mpSaved(), row = el('div', 'mp-quick');
   const q = (ic, label, fn) => { const b = el('button'); b.append(el('span', null, ic), el('small', null, label)); b.onclick = fn; row.append(b); };
   q('🏠', 'Home', () => (o.home ? mpSetDest(o.home) : mpPickSaved('home'))); q('💼', 'Work', () => (o.work ? mpSetDest(o.work) : mpPickSaved('work')));
-  q('⛽', 'Petrol', () => mpNearby('fuel', '⛽ Petrol')); q('🏥', 'Hospital', () => mpNearby('hospital', '🏥 Hospital')); q('🚓', 'Police', () => mpNearby('police', '🚓 Police')); q('🆘', 'Emergency', mpSOS);
+  q('⛽', 'Petrol', () => mpNearby('fuel', '⛽ Petrol')); q('🏥', 'Hospital', () => mpNearby('hospital', '🏥 Hospital')); q('💊', 'Medical', () => mpNearby('pharmacy', '💊 Medical')); q('🆘', 'Emergency', mpSOS);
   s.append(row, mpSmartChips());
 }
 // ----- routes -----
@@ -10043,8 +10042,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 119;
-const APP_NOTES = ["🦜 Chilaka sits on the branch first, flies down to ask your password, then flies back and sits on the branch", "👄 Chilaka's beak now moves with every word it speaks"];
+const APP_VERSION = 121;
+const APP_NOTES = ["🗺️ Maps: kept only Petrol, Hotels, Hospital and Medical nearby. Restaurants, Temples, Mechanic, Parking, EV charge and Toilets buttons removed. You can still search any place by name."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -10489,9 +10488,9 @@ function mpAskSheet() {
     const box = el('div', 'mp-askbox'); const inp = el('input'); inp.placeholder = 'e.g. Tirupati ki bike lo, petrol bunk on the way…'; const go = el('button', 'mp-go', 'Ask'); box.append(inp, go); list.append(box);
     const ask = (t) => { if (!t) return inp.focus(); closeSheet('moreSheet'); $('#mpQ').value = t; mpAsk(t); };
     go.onclick = () => ask(inp.value.trim()); inp.onkeydown = (e) => { if (e.key === 'Enter') ask(inp.value.trim()); };
-    const plan = el('button', 'sheet-btn', '🧳 Plan a trip with AI — e.g. “1 day temple trip from Chittoor”'); plan.onclick = () => { const t = inp.value.trim(); if (!t) { inp.placeholder = 'Type your trip, then tap 🧳 again'; return inp.focus(); } closeSheet('moreSheet'); mpPlan(t); };
+    const plan = el('button', 'sheet-btn', '🧳 Plan a trip with AI — e.g. “1 day trip from Chittoor”'); plan.onclick = () => { const t = inp.value.trim(); if (!t) { inp.placeholder = 'Type your trip, then tap 🧳 again'; return inp.focus(); } closeSheet('moreSheet'); mpPlan(t); };
     list.append(plan);
-    for (const [ic, t] of [['⛽', 'Nearest petrol bunk'], ['🏥', 'Hospital near me'], ['🛕', 'Famous temples near me'], ['🍽️', 'Good veg restaurant near me'], ['🏠', 'Take me home']]) { const b = el('button', 'sheet-btn', ic + ' ' + t); b.onclick = () => ask(t); list.append(b); }
+    for (const [ic, t] of [['⛽', 'Nearest petrol bunk'], ['🏥', 'Hospital near me'], ['💊', 'Medical shop near me'], ['🏨', 'Lodge near me'], ['🏠', 'Take me home']]) { const b = el('button', 'sheet-btn', ic + ' ' + t); b.onclick = () => ask(t); list.append(b); }
     setTimeout(() => inp.focus(), 200);
   });
 }
@@ -10531,7 +10530,7 @@ async function mpAbout(p, box) {
 const routeLine = () => (MP.nav ? MP.nav.g : MP.routes[MP.sel] && MP.routes[MP.sel].geometry.coordinates) || null;
 function mpAlongSheet() {
   sheet('🔍 On the way', (list) => { const g = el('div', 'mp-rgrid');
-    for (const k of ['fuel', 'food', 'toilets', 'atm', 'hospital', 'mechanic', 'ev', 'hotel']) { const c = MP_CATS.find((x) => x[0] === k); const b = el('button'); b.append(el('span', null, c[1]), el('small', null, c[2])); b.onclick = () => { closeSheet('moreSheet'); mpAlong(k, c[1] + ' ' + c[2]); }; g.append(b); }
+    for (const k of ['fuel', 'hospital', 'pharmacy', 'hotel']) { const c = MP_CATS.find((x) => x[0] === k); const b = el('button'); b.append(el('span', null, c[1]), el('small', null, c[2])); b.onclick = () => { closeSheet('moreSheet'); mpAlong(k, c[1] + ' ' + c[2]); }; g.append(b); }
     list.append(g); });
 }
 async function mpAlong(cat, label) {
