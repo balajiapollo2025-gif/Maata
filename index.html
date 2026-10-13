@@ -9393,7 +9393,18 @@ function minimizeCall(on) { callEl.classList.toggle('mini', !!on); }
 const MP = { map: null, me: null, dest: null, mode: 'car', routes: [], sel: 0, nav: null, styleKey: null, puck: null, destMarker: null, nearMarkers: [], watch: null, lastFix: null };
 const MAP_STYLES = {
   colour: { label: 'Default', icon: '🎨', url: 'https://tiles.openfreemap.org/styles/liberty' },
-  satellite: { label: 'Satellite', icon: '🛰️', style: { version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf', sources: { sat: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri' } }, layers: [{ id: 'sat', type: 'raster', source: 'sat' }] } },
+  satellite: { label: 'Satellite', icon: '🛰️', style: { version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    sources: {
+      // sharp photos where they exist (blankTile=false → no "Map data not yet available" pictures), a slightly softer copy underneath everywhere else
+      satLow: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 17, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' },
+      satHi: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?blankTile=false'], tileSize: 256, minzoom: 15, maxzoom: 19 },
+      openmaptiles: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+    layers: [
+      { id: 'sat-low', type: 'raster', source: 'satLow', paint: { 'raster-resampling': 'linear', 'raster-contrast': 0.08, 'raster-saturation': 0.12 } },
+      { id: 'sat', type: 'raster', source: 'satHi', minzoom: 15, paint: { 'raster-fade-duration': 150, 'raster-contrast': 0.08, 'raster-saturation': 0.12 } },
+      { id: 'sat-road-primary', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation', minzoom: 8, filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary', 'secondary', 'tertiary'], true, false], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['match', ['get', 'class'], ['motorway', 'trunk'], 'rgba(255,167,38,0.9)', 'rgba(255,224,130,0.85)'], 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 8, 1, 13, 2.5, 17, 9] } },
+      { id: 'sat-road-name', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 13, layout: { 'symbol-placement': 'line', 'text-field': ['coalesce', ['get', 'ref'], ['get', 'name:en'], ['get', 'name']], 'text-font': ['Noto Sans Bold'], 'text-size': 12 }, paint: { 'text-color': '#FFFFFF', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.6 } },
+      { id: 'sat-place', type: 'symbol', source: 'openmaptiles', 'source-layer': 'place', layout: { 'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name']], 'text-font': ['Noto Sans Bold'], 'text-size': ['match', ['get', 'class'], ['city'], 17, ['town'], 15, 13], 'text-max-width': 8 }, paint: { 'text-color': '#FFFFFF', 'text-halo-color': 'rgba(0,0,0,0.85)', 'text-halo-width': 1.8 } }] } },
   terrain: { label: 'Terrain', icon: '⛰️', url: 'https://tiles.openfreemap.org/styles/liberty', terrain: true },
   night: { label: 'Night', icon: '🌙', url: 'https://tiles.openfreemap.org/styles/dark' },
   bright: { label: 'Bright', icon: '☀️', url: 'https://tiles.openfreemap.org/styles/bright' },
@@ -9984,8 +9995,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 116;
-const APP_NOTES = ["🛣️ Main roads are darker and bolder (highways deep orange, main roads orange-yellow)", "🏘️ Village roads stand out in a dark slate colour with a white edge; field tracks dark brown dashes"];
+const APP_VERSION = 117;
+const APP_NOTES = ["🛰️ Satellite: no more “Map data not yet available” when you zoom in — sharpest photos where they exist", "🛰️ Satellite now shows roads and village / road names on top (like Google)"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
