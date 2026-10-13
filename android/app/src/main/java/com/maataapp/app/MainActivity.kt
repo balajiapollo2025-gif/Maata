@@ -9,6 +9,8 @@ import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.PackageInstaller
+import android.app.PendingIntent
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.Ringtone
@@ -39,6 +41,7 @@ class MainActivity : Activity() {
         const val EXTRA_HANGUP = "maata_hangup"
         private const val REQ_FILE = 11
         private const val REQ_PERMS = 12
+        const val ACTION_INSTALL_STATUS = "com.maataapp.app.INSTALL_STATUS"
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
     }
     private lateinit var web: WebView
@@ -49,6 +52,68 @@ class MainActivity : Activity() {
     private var pendingWebPermission: PermissionRequest? = null
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
     private var pageReady = false
+    // 📲 automatic updates: download the new Maata in the background, install it with one tap
+    // (Android 12+ installs it by itself, without asking, once Maata installed the previous update itself)
+    @Volatile private var updFile: java.io.File? = null
+    @Volatile private var updDownloading = false
+    private fun jsUpd(kind: String, a: String) = runOnUiThread {
+        if (::web.isInitialized) web.evaluateJavascript("window.maataUpd && maataUpd(" + org.json.JSONObject.quote(kind) + "," + org.json.JSONObject.quote(a) + ")", null)
+    }
+    private fun versionCodeOf(i: android.content.pm.PackageInfo): Long = if (Build.VERSION.SDK_INT >= 28) i.longVersionCode else @Suppress("DEPRECATION") i.versionCode.toLong()
+    private fun downloadUpdate(url: String) {
+        if (updDownloading) return; updDownloading = true
+        Thread {
+            try {
+                val f = java.io.File(cacheDir, "maata-auto-update.apk"); if (f.exists()) f.delete()
+                val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                c.instanceFollowRedirects = true; c.connectTimeout = 20000; c.readTimeout = 30000
+                if (c.responseCode !in 200..299) throw IllegalStateException("http " + c.responseCode)
+                val total = c.contentLengthLong; var got = 0L; var last = -1
+                c.inputStream.use { inp -> f.outputStream().use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) { val n = inp.read(buf); if (n < 0) break; out.write(buf, 0, n); got += n
+                        if (total > 0) { val pct = (got * 100 / total).toInt(); if (pct / 5 != last) { last = pct / 5; jsUpd("progress", pct.toString()) } } }
+                } }
+                val info = packageManager.getPackageArchiveInfo(f.path, 0) ?: throw IllegalStateException("bad file")
+                if (info.packageName != packageName || versionCodeOf(info) <= versionCodeOf(packageManager.getPackageInfo(packageName, 0))) { f.delete(); throw IllegalStateException("not newer") }
+                updFile = f; jsUpd("ready", info.versionName ?: "")
+            } catch (e: Exception) { jsUpd("error", e.message ?: "download failed") } finally { updDownloading = false }
+        }.start()
+    }
+    /** true when Android lets Maata update itself without asking (Android 12+ and Maata installed itself last time) */
+    private fun canSilentUpdate(): Boolean = try { Build.VERSION.SDK_INT >= 31 && packageManager.getInstallSourceInfo(packageName).installingPackageName == packageName } catch (_: Exception) { false }
+    private fun installDownloaded(): String {
+        val f = updFile ?: return "NONE"
+        if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+            runOnUiThread { try { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) } catch (_: Exception) { } }
+            return "PERMISSION"
+        }
+        val pi = packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        params.setAppPackageName(packageName)
+        if (Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+        val id = pi.createSession(params)
+        pi.openSession(id).use { s ->
+            f.inputStream().use { inp -> s.openWrite("maata.apk", 0, f.length()).use { out -> inp.copyTo(out); s.fsync(out) } }
+            val back = Intent(ACTION_INSTALL_STATUS).setPackage(packageName)
+            val p = PendingIntent.getBroadcast(this, 77, back, PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0))
+            s.commit(p.intentSender)
+        }
+        return "OK"
+    }
+    private val installStatus = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: android.content.Context, i: Intent) {
+            when (i.getIntExtra(PackageInstaller.EXTRA_STATUS, -99)) {
+                PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                    val ask: Intent? = if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java) else @Suppress("DEPRECATION") i.getParcelableExtra(Intent.EXTRA_INTENT)
+                    ask?.let { try { startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { } }
+                    jsUpd("confirm", "")
+                }
+                PackageInstaller.STATUS_SUCCESS -> jsUpd("done", "")
+                else -> jsUpd("error", i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "install failed")
+            }
+        }
+    }
     // 🔊 navigation voice: the phone's own text-to-speech (WebView has no speech of its own)
     private var tts: TextToSpeech? = null
     @Volatile private var ttsState = 0 // 0 starting, 1 ready, -1 failed
@@ -109,6 +174,8 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val upf = android.content.IntentFilter(ACTION_INSTALL_STATUS)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(installStatus, upf, android.content.Context.RECEIVER_NOT_EXPORTED) else registerReceiver(installStatus, upf)
         Notifier.createChannels(this)
         startTts()
         FirebaseMessaging.getInstance().token.addOnSuccessListener { Notifier.saveToken(this, it) }
@@ -316,7 +383,13 @@ class MainActivity : Activity() {
         routeGuard = null
     }
 
-    override fun onDestroy() { try { tts?.shutdown() } catch (_: Exception) { }; tts = null; try { recognizer?.destroy() } catch (_: Exception) { }; stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
+    // leaving Maata with an update downloaded: install it quietly (Android 12+), like Play Store apps
+    override fun onStop() {
+        super.onStop()
+        if (updFile != null && !CallService.running && canSilentUpdate()) try { installDownloaded() } catch (_: Exception) { }
+    }
+
+    override fun onDestroy() { try { unregisterReceiver(installStatus) } catch (_: Exception) { }; try { tts?.shutdown() } catch (_: Exception) { }; tts = null; try { recognizer?.destroy() } catch (_: Exception) { }; stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
@@ -388,6 +461,9 @@ class MainActivity : Activity() {
         } catch (e: Exception) { false }
         /** In-app update: download the newest APK from maataapp.com and open Android's "Update" screen.
          *  Returns "OK", "PERMISSION" (the person must allow Maata to install apps first) or "ERROR". */
+        @JavascriptInterface fun autoUpdate(url: String): String = when { updFile?.exists() == true -> "READY"; updDownloading -> "BUSY"; else -> { downloadUpdate(url); "STARTED" } }
+        @JavascriptInterface fun installNow(): String = try { installDownloaded() } catch (e: Exception) { "ERROR" }
+        @JavascriptInterface fun silentUpdate(): Boolean = canSilentUpdate()
         @JavascriptInterface fun installUpdate(url: String): String = try {
             if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
                 runOnUiThread { try { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) } catch (_: Exception) { } }
