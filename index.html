@@ -531,8 +531,14 @@ html.dark .fchip[aria-pressed="true"]{color:#7CC4D4}
 @media (prefers-reduced-motion:reduce){.vl-toon,.vl-spin{transition-duration:.01s}.vl-hop,.vl .eye{animation:none!important}}
 .upd.ok{background:radial-gradient(circle at 50% 20%,#2EC27E,#0B5134 70%)}.upd-tick{width:84px;height:84px;margin:0 auto;border-radius:50%;background:#1DB954;color:#fff;font-size:52px;font-weight:900;line-height:84px;box-shadow:0 0 0 10px rgba(29,185,84,.18);animation:updPop .6s cubic-bezier(.3,1.6,.5,1)}
 @keyframes updPop{from{transform:scale(.2);opacity:0}}
-.mp-puck.veh{width:auto;height:auto;background:none;border-radius:0}.mp-puck.veh i{display:none}.mp-puck .pk-veh{width:36px;height:58px;fill:initial;stroke:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}.mp-puck.bike .pk-veh{width:30px;height:48px}
-.mp-puck .pk-walk{width:38px;height:38px;fill:initial;stroke:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.mp-puck.veh{width:auto;height:auto;background:none;border-radius:0}.mp-puck.veh i{display:none}
+.mp-puck .pk-veh{width:36px;height:58px;fill:initial;stroke:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}.mp-puck.bike .pk-veh{width:30px;height:48px}
+.mp-puck .pk-walk{width:46px;height:64px;fill:initial;stroke:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.pk-walk .lg1,.pk-walk .lg2{transform-box:fill-box;transform-origin:50% 0}.mp-puck.foot.moving .lg1{animation:pkStep .45s ease-in-out infinite alternate}.mp-puck.foot.moving .lg2{animation:pkStep .45s ease-in-out infinite alternate-reverse}.mp-puck.foot.moving .pk-walk{animation:pkBob .45s ease-in-out infinite alternate}
+@keyframes pkStep{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}@keyframes pkBob{to{transform:translateY(-2px)}}
+.pkv-tabs{display:flex;gap:8px;padding:6px 10px 10px}.pkv-tabs button{flex:1;padding:10px;border-radius:14px;background:var(--panel);border:1.5px solid var(--line);color:var(--ink);font-weight:700}.pkv-tabs button.on{background:#0F7A6E;color:#fff;border-color:#0F7A6E}
+.pkv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:4px 10px 10px}.pkv-grid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;border-radius:16px;background:linear-gradient(#EAF4E4,#D7EAD0);border:2.5px solid transparent;color:#13202B;font-size:12px;font-weight:700}
+.pkv-grid button.on{border-color:#0F7A6E;box-shadow:0 0 0 3px rgba(15,122,110,.2)}.pkv-grid .pv svg{fill:initial;stroke:none;width:46px;height:74px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.3))}.pkv-grid .pv.foot svg{width:62px;height:86px}
 .upd{position:fixed;inset:0;z-index:150;background:radial-gradient(circle at 50% 20%,#1B8A7A,#0B3A44 70%);display:flex;align-items:center;justify-content:center;padding:20px;animation:updIn .35s ease}
 @keyframes updIn{from{opacity:0;transform:scale(1.04)}}
 .upd-card{width:min(420px,100%);background:#fff;color:#14324A;border-radius:28px;padding:26px 22px 18px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
@@ -9469,7 +9475,8 @@ function mpLocate(fly) {
     const c = [p.coords.longitude, p.coords.latitude]; const first = !MP.me; MP.me = c; MP.lastFix = p;
     store.set('maata_map_last', JSON.stringify(c.map((x) => +x.toFixed(4))));
     if (!MP.map) return;
-    if (!MP.puck) { const d = el('div', 'mp-puck'); d.innerHTML = '<i></i>'; MP.puck = new maplibregl.Marker({ element: d, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(c).addTo(MP.map); mpPuckLook(); }
+    if (!MP.puck) { const d = el('div', 'mp-puck'); d.innerHTML = '<i></i>'; d.onclick = (e) => { e.stopPropagation(); mpVehicleSheet(MP.puckKind); }; MP.puck = new maplibregl.Marker({ element: d, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(c).addTo(MP.map); mpPuckLook(); }
+    MP.puck.getElement().classList.toggle('moving', p.coords.speed > 0.6);
     MP.puck.setLngLat(c);
     if (p.coords.heading != null && !isNaN(p.coords.heading) && p.coords.speed > 1) mpTurnPuck(p.coords.heading);
     if (first && fly && !MP.dest) MP.map.flyTo({ center: c, zoom: 16, speed: 1.6 });
@@ -9850,8 +9857,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 108;
-const APP_NOTES = ["🚗 Drive shows a car on the map, 🏍️ Two-wheeler shows a bike, 🚶 Walk shows a walking person", "✅ After an app update: “Update successful!” screen", "⚙️ Settings shows only your version — no update buttons"];
+const APP_VERSION = 109;
+const APP_NOTES = ["🚗 Choose your car on the map: hatchback, sedan, SUV, taxi, sports car, auto rickshaw", "🏍️ Bikes: sports bike, scooter, bullet, delivery scooter, bicycle", "🚶 Walkers: explorer boy, explorer girl, thatha with stick, school kid — they walk when you walk", "Tap yourself on the map (or Maps → You) to change"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
@@ -9875,20 +9882,105 @@ function versionLine() {
 }
 
 // 🚗 / 🏍️ / 🚶 your vehicle on the map, matching the travel mode (blue arrow when just looking around)
-const PUCK_SVG = {
-  car: '<svg viewBox="0 0 40 64" class="pk-veh"><defs><linearGradient id="pkC" x1="0" x2="1"><stop offset="0" stop-color="#0D47A1"/><stop offset=".5" stop-color="#2E8BFF"/><stop offset="1" stop-color="#0D47A1"/></linearGradient></defs><ellipse cx="20" cy="34" rx="17" ry="29" fill="rgba(0,0,0,.25)"/><rect x="6" y="9" width="5" height="11" rx="2" fill="#222"/><rect x="29" y="9" width="5" height="11" rx="2" fill="#222"/><rect x="6" y="42" width="5" height="11" rx="2" fill="#222"/><rect x="29" y="42" width="5" height="11" rx="2" fill="#222"/><rect x="8" y="4" width="24" height="54" rx="10" fill="url(#pkC)" stroke="#fff" stroke-width="2"/><path d="M11 20 Q20 14 29 20 L27 27 H13Z" fill="#BFE3FF"/><rect x="12" y="29" width="16" height="13" rx="3" fill="#1565C0"/><path d="M13 47 H27 L28 52 Q20 55 12 52Z" fill="#BFE3FF" opacity=".8"/><rect x="10" y="5" width="5" height="3" rx="1.5" fill="#FFF59D"/><rect x="25" y="5" width="5" height="3" rx="1.5" fill="#FFF59D"/><rect x="10" y="55" width="5" height="2" rx="1" fill="#FF5252"/><rect x="25" y="55" width="5" height="2" rx="1" fill="#FF5252"/></svg>',
-  bike: '<svg viewBox="0 0 40 64" class="pk-veh"><ellipse cx="20" cy="34" rx="11" ry="28" fill="rgba(0,0,0,.25)"/><rect x="16.5" y="3" width="7" height="13" rx="3.5" fill="#222"/><rect x="16.5" y="47" width="7" height="14" rx="3.5" fill="#222"/><path d="M8 17 H32" stroke="#37474F" stroke-width="3" stroke-linecap="round"/><rect x="14" y="14" width="12" height="34" rx="6" fill="#E53935" stroke="#fff" stroke-width="2"/><ellipse cx="20" cy="30" rx="9" ry="8" fill="#455A64"/><circle cx="20" cy="27" r="6.5" fill="#FFC107" stroke="#fff" stroke-width="1.5"/><path d="M15.5 25 Q20 21 24.5 25" stroke="#263238" stroke-width="2" fill="none"/><circle cx="20" cy="5" r="1.6" fill="#FFF59D"/></svg>',
-  foot: '<svg viewBox="0 0 44 44" class="pk-walk"><circle cx="22" cy="22" r="19" fill="#1E88E5" stroke="#fff" stroke-width="3"/><circle cx="23.5" cy="11.5" r="3" fill="#fff"/><path d="M22 16 l-4 6 3.5 2.5 v8.5 M22 16 l4.5 4.5 4 1 M21.5 24.5 l-3 8.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>',
+// 🚗🏍️🚶 choose how YOU look on the map: car models, bike models, walking characters
+function carTop(o) {
+  const w = o.w || 24, x = 20 - w / 2, y = o.y || 4, h = o.h || 54, g = 'pk' + o.id;
+  const wheel = (wx, wy) => '<rect x="' + wx + '" y="' + wy + '" width="5" height="11" rx="2" fill="#1d1d1d"/>';
+  return '<svg viewBox="0 0 40 64" class="pk-veh"><defs><linearGradient id="' + g + '" x1="0" x2="1"><stop offset="0" stop-color="' + o.c2 + '"/><stop offset=".5" stop-color="' + o.c1 + '"/><stop offset="1" stop-color="' + o.c2 + '"/></linearGradient></defs>'
+    + '<ellipse cx="20" cy="34" rx="' + (w / 2 + 4) + '" ry="29" fill="rgba(0,0,0,.25)"/>' + wheel(x - 2, y + 6) + wheel(x + w - 3, y + 6) + wheel(x - 2, y + h - 17) + wheel(x + w - 3, y + h - 17)
+    + '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (o.r || 10) + '" fill="url(#' + g + ')" stroke="' + (o.edge || '#fff') + '" stroke-width="1.6"/>'
+    + '<path d="M' + (x + 3) + ' ' + (y + 16) + ' Q20 ' + (y + 9) + ' ' + (x + w - 3) + ' ' + (y + 16) + ' L' + (x + w - 5) + ' ' + (y + 23) + ' H' + (x + 5) + 'Z" fill="' + (o.glass || '#BFE3FF') + '"/>'
+    + '<rect x="' + (x + 4) + '" y="' + (y + 25) + '" width="' + (w - 8) + '" height="' + (o.roof || 13) + '" rx="3" fill="' + (o.top || o.c2) + '"/>'
+    + '<path d="M' + (x + 5) + ' ' + (y + h - 11) + ' H' + (x + w - 5) + ' L' + (x + w - 4) + ' ' + (y + h - 6) + ' Q20 ' + (y + h - 3) + ' ' + (x + 4) + ' ' + (y + h - 6) + 'Z" fill="' + (o.glass || '#BFE3FF') + '" opacity=".85"/>'
+    + '<rect x="' + (x + 2) + '" y="' + (y + 1) + '" width="5" height="3" rx="1.5" fill="#FFF59D"/><rect x="' + (x + w - 7) + '" y="' + (y + 1) + '" width="5" height="3" rx="1.5" fill="#FFF59D"/>'
+    + '<rect x="' + (x + 2) + '" y="' + (y + h - 3) + '" width="5" height="2" rx="1" fill="#FF5252"/><rect x="' + (x + w - 7) + '" y="' + (y + h - 3) + '" width="5" height="2" rx="1" fill="#FF5252"/>' + (o.extra || '') + '</svg>';
+}
+function bikeTop(o) {
+  const g = 'pk' + o.id;
+  return '<svg viewBox="0 0 40 64" class="pk-veh"><defs><radialGradient id="' + g + '" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="' + o.helmet + '"/></radialGradient></defs>'
+    + '<ellipse cx="20" cy="34" rx="' + (o.wide ? 13 : 11) + '" ry="28" fill="rgba(0,0,0,.25)"/>'
+    + '<rect x="16.5" y="3" width="7" height="' + (o.cycle ? 15 : 13) + '" rx="3.5" fill="#1d1d1d"/><rect x="16.5" y="47" width="7" height="14" rx="3.5" fill="#1d1d1d"/>'
+    + '<path d="M' + (o.wide ? 5 : 8) + ' 17 H' + (o.wide ? 35 : 32) + '" stroke="#37474F" stroke-width="3" stroke-linecap="round"/>'
+    + (o.body || '<rect x="14" y="14" width="12" height="34" rx="6" fill="' + o.c + '" stroke="#fff" stroke-width="2"/>')
+    + '<ellipse cx="20" cy="31" rx="9.5" ry="8" fill="' + (o.shirt || '#455A64') + '"/><circle cx="20" cy="27.5" r="6.5" fill="url(#' + g + ')" stroke="#fff" stroke-width="1.4"/>'
+    + '<path d="M15.5 25.5 Q20 21.5 24.5 25.5" stroke="#263238" stroke-width="2" fill="none"/><circle cx="20" cy="5" r="1.6" fill="#FFF59D"/>' + (o.extra || '') + '</svg>';
+}
+function walker(o) {
+  const g = 'pkw' + o.id, sk = o.skin || '#F2C08F';
+  return '<svg viewBox="0 0 60 84" class="pk-walk"><defs><radialGradient id="' + g + 'h" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#FFE3C4"/><stop offset="1" stop-color="' + sk + '"/></radialGradient>'
+    + '<linearGradient id="' + g + 's" x1="0" x2="1"><stop offset="0" stop-color="' + o.shirt + '"/><stop offset="1" stop-color="' + (o.shirt2 || o.shirt) + '"/></linearGradient>'
+    + '<linearGradient id="' + g + 'b" x1="0" x2="1"><stop offset="0" stop-color="' + o.bag + '"/><stop offset="1" stop-color="' + (o.bag2 || o.bag) + '"/></linearGradient></defs>'
+    + '<ellipse cx="30" cy="80" rx="15" ry="3.2" fill="rgba(0,0,0,.28)"/>'
+    + (o.bag ? '<rect x="9" y="33" width="15" height="24" rx="5" fill="url(#' + g + 'b)"/><rect x="11" y="44" width="10" height="8" rx="2" fill="' + (o.bag2 || o.bag) + '" stroke="rgba(0,0,0,.25)"/>' + (o.roll ? '<rect x="8" y="27" width="17" height="8" rx="4" fill="' + o.roll + '"/><circle cx="9" cy="31" r="3.6" fill="' + o.roll + '" stroke="rgba(0,0,0,.25)"/>' : '') : '')
+    + '<g class="lg1"><rect x="23" y="56" width="5.5" height="15" rx="2.5" fill="' + (o.legs || sk) + '"/><ellipse cx="25.5" cy="73.5" rx="5.5" ry="3.6" fill="' + (o.shoe || '#6D4C2F') + '"/></g>'
+    + '<g class="lg2"><rect x="31.5" y="56" width="5.5" height="15" rx="2.5" fill="' + (o.legs || sk) + '"/><ellipse cx="34.5" cy="73.5" rx="5.5" ry="3.6" fill="' + (o.shoe || '#6D4C2F') + '"/></g>'
+    + '<path d="M20 50 H40 L41 59 H19Z" fill="' + o.pants + '"/>'
+    + '<rect x="19" y="33" width="22" height="20" rx="7" fill="url(#' + g + 's)"/>' + (o.bag ? '<path d="M24 34 L24 52" stroke="' + (o.bag2 || o.bag) + '" stroke-width="2.4"/>' : '')
+    + (o.scarf ? '<path d="M22 33 H38 L30 41Z" fill="' + o.scarf + '"/>' : '')
+    + '<rect x="37" y="36" width="5" height="13" rx="2.5" fill="url(#' + g + 's)" transform="rotate(-35 39 37)"/>'
+    + (o.hand || '')
+    + '<circle cx="30" cy="21" r="12.5" fill="url(#' + g + 'h)"/><ellipse cx="18" cy="22" rx="2.4" ry="3.2" fill="' + sk + '"/>'
+    + (o.hairBack || '') + '<path d="' + (o.hairPath || 'M18 18 Q20 7 31 8 Q41 8 42 18 Q36 13 30 15 Q24 12 18 18Z') + '" fill="' + o.hair + '"/>'
+    + '<ellipse cx="25.5" cy="22" rx="2.4" ry="3.1" fill="#1B1B1B"/><ellipse cx="34.5" cy="22" rx="2.4" ry="3.1" fill="#1B1B1B"/><circle cx="26.3" cy="21" r=".9" fill="#fff"/><circle cx="35.3" cy="21" r=".9" fill="#fff"/>'
+    + '<path d="M26.5 28 Q30 31 33.5 28" stroke="#8A3B2A" stroke-width="1.5" fill="none" stroke-linecap="round"/><ellipse cx="23" cy="26.5" rx="2.2" ry="1.3" fill="#FF8A80" opacity=".55"/><ellipse cx="37" cy="26.5" rx="2.2" ry="1.3" fill="#FF8A80" opacity=".55"/>'
+    + (o.face || '') + (o.hat || '') + '</svg>';
+}
+const MAP_TOOL = '<g transform="rotate(-12 48 40)"><rect x="38" y="31" width="19" height="15" rx="1.5" fill="#F3E2B3" stroke="#C9A866" stroke-width=".8"/><path d="M40 35 Q45 33 47 38 T55 37" stroke="#7CB342" stroke-width="2.4" fill="none"/><path d="M50 41 Q53 39 55 42" stroke="#4FC3F7" stroke-width="2" fill="none"/></g><circle cx="41" cy="44" r="2.6" fill="#F2C08F"/>';
+const PUCK_MODELS = {
+  car: [
+    ['blue', 'Blue hatchback', carTop({ id: 'c1', c1: '#2E8BFF', c2: '#0D47A1', top: '#1565C0' })],
+    ['white', 'White sedan', carTop({ id: 'c2', c1: '#FFFFFF', c2: '#B8C4CE', top: '#E3E9EE', edge: '#7A8A97', h: 58, y: 2, glass: '#6FA8DC' })],
+    ['suv', 'Black SUV', carTop({ id: 'c3', c1: '#4A5560', c2: '#151A1F', top: '#2B3239', w: 27, r: 6, extra: '<path d="M11 30 V44 M29 30 V44" stroke="#9AA5AE" stroke-width="1.4"/>' })],
+    ['taxi', 'Yellow taxi', carTop({ id: 'c4', c1: '#FFD54F', c2: '#F9A825', top: '#FBC02D', extra: '<rect x="14" y="33" width="12" height="5" rx="1.5" fill="#212121"/><text x="20" y="37" font-size="3.6" text-anchor="middle" fill="#FFEB3B" font-weight="700" font-family="sans-serif">TAXI</text>' })],
+    ['sport', 'Red sports car', carTop({ id: 'c5', c1: '#FF5252', c2: '#B71C1C', top: '#C62828', w: 26, roof: 10, extra: '<path d="M18 5 V57 M22 5 V57" stroke="#fff" stroke-width="1.3" opacity=".85"/>' })],
+    ['auto', 'Auto rickshaw', '<svg viewBox="0 0 40 64" class="pk-veh"><ellipse cx="20" cy="36" rx="16" ry="26" fill="rgba(0,0,0,.25)"/><rect x="17" y="6" width="6" height="10" rx="2.5" fill="#1d1d1d"/><rect x="6" y="44" width="5" height="11" rx="2" fill="#1d1d1d"/><rect x="29" y="44" width="5" height="11" rx="2" fill="#1d1d1d"/><path d="M14 12 Q20 6 26 12 L31 26 V56 Q20 60 9 56 V26Z" fill="#43A047" stroke="#fff" stroke-width="1.5"/><path d="M11 24 Q20 18 29 24 V54 Q20 57 11 54Z" fill="#212121"/><path d="M13 26 Q20 21 27 26 V40 H13Z" fill="#FDD835"/><path d="M14 18 H26" stroke="#90CAF9" stroke-width="3"/></svg>'],
+  ],
+  bike: [
+    ['sport', 'Red sports bike', bikeTop({ id: 'b1', c: '#E53935', helmet: '#FFC107' })],
+    ['scooter', 'Scooter', bikeTop({ id: 'b2', helmet: '#E91E63', shirt: '#5C6BC0', body: '<path d="M13 14 H27 L28 46 Q20 50 12 46Z" fill="#ECEFF1" stroke="#90A4AE" stroke-width="1.5"/><rect x="15" y="36" width="10" height="9" rx="2" fill="#1E88E5"/>' })],
+    ['bullet', 'Bullet cruiser', bikeTop({ id: 'b3', helmet: '#212121', shirt: '#6D4C41', wide: true, body: '<rect x="14.5" y="13" width="11" height="36" rx="5.5" fill="#263238" stroke="#B0BEC5" stroke-width="1.6"/><ellipse cx="20" cy="19" rx="5" ry="4" fill="#B0BEC5"/>' })],
+    ['delivery', 'Delivery scooter', bikeTop({ id: 'b4', c: '#FB8C00', helmet: '#FB8C00', shirt: '#EF6C00', extra: '<rect x="11" y="40" width="18" height="16" rx="2.5" fill="#FF9800" stroke="#fff" stroke-width="1.5"/><path d="M14 48 H26" stroke="#fff" stroke-width="1.5"/>' })],
+    ['cycle', 'Bicycle', bikeTop({ id: 'b5', cycle: true, helmet: '#43A047', shirt: '#26A69A', body: '<path d="M20 15 V48" stroke="#2E7D32" stroke-width="3"/>' })],
+  ],
+  foot: [
+    ['explorer', 'Explorer boy', walker({ id: 'w1', shirt: '#E2C79A', shirt2: '#C9A56E', pants: '#8D6E4A', bag: '#9C7146', bag2: '#7A5533', roll: '#C8A06A', scarf: '#E53935', hair: '#2B2B2B', shoe: '#6D4C2F', hand: MAP_TOOL,
+      hat: '<ellipse cx="30" cy="12" rx="18" ry="4.6" fill="#B08A5A"/><path d="M19 12 Q20 1 30 1 Q40 1 41 12Z" fill="#C9A06A"/><path d="M19.5 10 H40.5" stroke="#8D6A3F" stroke-width="2.2"/>' })],
+    ['girl', 'Explorer girl', walker({ id: 'w2', shirt: '#F48FB1', shirt2: '#EC407A', pants: '#5C6BC0', bag: '#7E57C2', bag2: '#5E35B1', scarf: '#FFEB3B', hair: '#4E342E', shoe: '#8E24AA', legs: '#F2C08F', hand: MAP_TOOL,
+      hairBack: '<path d="M40 14 Q50 18 46 30 Q44 22 39 20Z" fill="#4E342E"/>', hat: '<path d="M18 13 Q20 3 30 3 Q40 3 42 13Z" fill="#26C6DA"/><path d="M16 13 H33" stroke="#00ACC1" stroke-width="3" stroke-linecap="round"/>' })],
+    ['grandpa', 'Thatha with stick', walker({ id: 'w3', skin: '#D9A066', shirt: '#FAFAFA', shirt2: '#E0E0E0', pants: '#F5F5F5', legs: '#F5F5F5', hair: '#E0E0E0', shoe: '#5D4037',
+      hairPath: 'M18 19 Q19 9 30 9 Q41 9 42 19 Q38 15 30 15 Q22 15 18 19Z', face: '<path d="M25 26.5 Q30 24.5 35 26.5" stroke="#E0E0E0" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+      hand: '<path d="M44 40 L48 78" stroke="#795548" stroke-width="2.6" stroke-linecap="round"/><circle cx="43" cy="42" r="2.6" fill="#D9A066"/><path d="M20 34 Q30 38 40 34" stroke="#FF7043" stroke-width="3" fill="none"/>' })],
+    ['student', 'School kid', walker({ id: 'w4', shirt: '#90CAF9', shirt2: '#64B5F6', pants: '#1A237E', bag: '#E53935', bag2: '#C62828', hair: '#212121', shoe: '#212121', legs: '#F2C08F', scarf: '#1A237E',
+      hat: '<path d="M18 14 Q20 4 30 4 Q40 4 42 14Z" fill="#E53935"/><path d="M30 13 H46" stroke="#C62828" stroke-width="3" stroke-linecap="round"/>' })],
+    ['amma', 'Amma in saree', walker({ id: 'w5', skin: '#C98B5B', shirt: '#43A047', shirt2: '#2E7D32', pants: '#E91E63', legs: '#E91E63', hair: '#1B1B1B', shoe: '#8D6E63', scarf: '#FFC107',
+      hairBack: '<circle cx="30" cy="9" r="5" fill="#1B1B1B"/>', face: '<circle cx="30" cy="16.5" r="1.3" fill="#D32F2F"/>', hand: '<rect x="40" y="44" width="8" height="7" rx="2" fill="#8D6E63"/><path d="M41.5 44 Q44 40 46.5 44" stroke="#5D4037" stroke-width="1.2" fill="none"/>' })],
+    ['runner', 'Morning walker', walker({ id: 'w6', shirt: '#00BCD4', shirt2: '#0097A7', pants: '#263238', hair: '#3E2723', shoe: '#FF5722',
+      hat: '<path d="M18.5 14.5 Q30 9.5 41.5 14.5" stroke="#FF5722" stroke-width="3.2" fill="none" stroke-linecap="round"/>', hand: '<circle cx="43" cy="44" r="2.6" fill="#F2C08F"/>' })],
+  ],
 };
-function mpPuckLook() {
-  if (!MP.puck) return; const d = MP.puck.getElement(); const kind = (MP.dest || MP.nav) && PUCK_SVG[MP.mode] ? MP.mode : 'dot';
-  if (d.dataset.kind !== kind) {
-    d.dataset.kind = kind; d.className = 'mp-puck' + (kind === 'dot' ? '' : ' veh ' + kind);
-    d.innerHTML = kind === 'dot' ? '<i></i>' : PUCK_SVG[kind];
-    MP.puck.setRotationAlignment(kind === 'foot' ? 'viewport' : 'map');
+const puckModel = (mode) => { const list = PUCK_MODELS[mode] || []; const want = store.get('maata_puck_' + mode); return list.find((x) => x[0] === want) || list[0]; };
+function mpVehicleSheet(start) {
+  let tab = start && PUCK_MODELS[start] ? start : (PUCK_MODELS[MP.mode] ? MP.mode : 'car');
+  sheet('🚗 You on the map', (list) => {
+    const tabs = el('div', 'pkv-tabs'), grid = el('div', 'pkv-grid');
+    const draw = () => {
+      tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
+      grid.innerHTML = ''; const cur = puckModel(tab)[0];
+      for (const [id, name, svg] of PUCK_MODELS[tab]) { const b = el('button', id === cur ? 'on' : null); const pv = el('span', 'pv ' + tab); pv.innerHTML = svg; b.append(pv, el('small', null, name)); b.onclick = () => { store.set('maata_puck_' + tab, id); draw(); mpPuckLook(true); toast('✅ ' + name); }; grid.append(b); }
+    };
+    for (const [k, l] of [['car', '🚗 Car'], ['bike', '🏍️ Bike'], ['foot', '🚶 Walk']]) { const b = el('button', null, l); b.dataset.t = k; b.onclick = () => { tab = k; draw(); }; tabs.append(b); }
+    list.append(tabs, grid, el('p', 'info-note', 'Tip: tap your car / bike / walker on the map any time to change it.')); draw();
+  });
+}
+function mpPuckLook(force) {
+  if (!MP.puck) return; const d = MP.puck.getElement(); const mode = (MP.dest || MP.nav) && PUCK_MODELS[MP.mode] ? MP.mode : 'dot';
+  const m = mode === 'dot' ? null : puckModel(mode), key = mode + ':' + (m ? m[0] : '');
+  if (force || d.dataset.kind !== key) {
+    d.dataset.kind = key; d.className = 'mp-puck' + (m ? ' veh ' + mode + ' m-' + m[0] : ''); d.innerHTML = m ? m[2] : '<i></i>';
+    MP.puck.setRotationAlignment(mode === 'foot' ? 'viewport' : 'map'); MP.puck.setPitchAlignment(mode === 'foot' ? 'viewport' : 'map'); MP.puck.setOffset(mode === 'foot' ? [0, -24] : [0, 0]);
   }
-  MP.puckKind = kind;
-  if (kind === 'foot') MP.puck.setRotation(0);
+  MP.puckKind = mode;
+  if (mode === 'foot') MP.puck.setRotation(0);
   else if (!MP.nav && MP.routes.length && MP.routes[MP.sel]) { const g = MP.routes[MP.sel].geometry.coordinates; if (g.length > 1) MP.puck.setRotation(bearingTo(g[0], g[Math.min(3, g.length - 1)])); }
 }
 const mpTurnPuck = (deg) => { if (MP.puck && MP.puckKind !== 'foot') MP.puck.setRotation(deg); };
@@ -10387,6 +10479,7 @@ function mpYouSheet() {
   const lang = el('button', 'sheet-btn', '🔤 Village names: English + ' + ({ off: 'off', te: 'తెలుగు', hi: 'हिंदी', ta: 'தமிழ்', kn: 'ಕನ್ನಡ', ml: 'മലയാളം', mr: 'मराठी', bn: 'বাংলা', gu: 'ગુજરાતી', pa: 'ਪੰਜਾਬੀ', ur: 'اردو', or: 'ଓଡ଼ିଆ' })[mapLocalLang()]);
   lang.onclick = () => sheet('Village & town names', (l2) => { for (const [k, n] of [['te', 'English + తెలుగు'], ['hi', 'English + हिंदी'], ['ta', 'English + தமிழ்'], ['kn', 'English + ಕನ್ನಡ'], ['ml', 'English + മലയാളം'], ['mr', 'English + मराठी'], ['bn', 'English + বাংলা'], ['gu', 'English + ગુજરાતી'], ['off', 'English only']]) { const b = el('button', 'sheet-btn', n); b.onclick = () => { store.set('maata_map_names', k); closeSheet('moreSheet'); mpLocalLabels(); mpYouSheet(); }; l2.append(b); } });
   s.append(lang);
+  const pk = el('button', 'sheet-btn', '🚗 You on the map: ' + puckModel('car')[1] + ' · ' + puckModel('bike')[1] + ' · ' + puckModel('foot')[1]); pk.onclick = () => mpVehicleSheet(); s.append(pk);
   const vb = el('button', 'sheet-btn', '🗣️ Navigation voice: ' + (NAV_LANGS[navLang()] || 'English') + ' · ' + (navName() || 'no name')); vb.onclick = () => mpVoiceSheet(() => mpYouSheet()); s.append(vb);
   const sh = el('button', 'sheet-btn', '🚦 Share road speed for live traffic (no name): ' + (store.get('maata_map_share_speed') === '0' ? 'OFF' : 'ON'));
   sh.onclick = () => { store.set('maata_map_share_speed', store.get('maata_map_share_speed') === '0' ? '1' : '0'); mpYouSheet(); }; s.append(sh);
