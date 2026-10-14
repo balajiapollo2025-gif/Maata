@@ -472,6 +472,23 @@ class MainActivity : Activity() {
             runOnUiThread { startActivity(Intent.createChooser(send, title)) }
             true
         } catch (e: Exception) { false }
+        /** Same as shareFileEnd, plus a caption that apps like WhatsApp show with the photo. */
+        @JavascriptInterface fun shareFileEndText(mime: String, title: String, text: String): Boolean = try {
+            val f = shareOut ?: throw IllegalStateException("no file")
+            val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.files", f)
+            val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_TITLE, f.name).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (text.isNotBlank()) send.putExtra(Intent.EXTRA_TEXT, text.take(4000))
+            send.clipData = android.content.ClipData.newRawUri(f.name, uri)
+            runOnUiThread { startActivity(Intent.createChooser(send, title)) }
+            true
+        } catch (e: Exception) { false }
+        /** Share plain text (a message, a link) with Android's share menu. */
+        @JavascriptInterface fun shareText(text: String, title: String): Boolean = try {
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text.take(60000))
+            runOnUiThread { startActivity(Intent.createChooser(send, title)) }
+            true
+        } catch (e: Exception) { false }
         /** In-app update: download the newest APK from maataapp.com and open Android's "Update" screen.
          *  Returns "OK", "PERMISSION" (the person must allow Maata to install apps first) or "ERROR". */
         @JavascriptInterface fun autoUpdate(url: String): String = when { updFile?.exists() == true -> "READY"; updDownloading -> "BUSY"; else -> { downloadUpdate(url); "STARTED" } }
