@@ -1525,7 +1525,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .bz-prow:first-of-type{border-top:0}.bz-prow small{color:var(--muted);font-size:12.5px;grid-column:1}.bz-prow b{grid-column:1}
 .bz-stk{grid-row:1/3;grid-column:2;font-weight:800;font-variant-numeric:tabular-nums}.bz-stk.low{color:var(--bz-warn)}.bz-stk.out{color:var(--bz-bad)}
 .bz-form{display:flex;flex-direction:column;gap:10px;padding:8px 16px 16px}
-.bz-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.bz-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}.bz-form label.sec-pick{flex-direction:row;align-items:center;gap:12px;padding:10px 4px;font-size:15px;color:var(--text,inherit)}.bz-form label.sec-pick input{flex:none;margin:0}
 .bz-form input,.bz-form select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);min-height:44px}
 .bz-billview{padding:4px 16px 8px;display:flex;flex-direction:column}.bz-void{color:var(--bz-bad);font-weight:800;margin:4px 0 8px}
 .bz-scan{position:fixed;inset:0;z-index:9990;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;padding:16px}
@@ -5415,6 +5415,7 @@ async function bzCreate() {
     const phone = BZ.cust.phone; BZ.cart = []; BZ.disc = ''; BZ.cust = { name: '', phone: '' }; BZ.idem = null; BZ.method = 'cash';
     await bzLoadProducts(); if (BZ.tab === 'bill') bzTab('bill');
     if (inv.payment.method === 'upi' && inv.payment.status !== 'paid') bzUpiQr(inv, phone); else bzShowBill(inv, phone);
+    { const pc = prCfg(); if (pc.auto && pc.address && prApp()) prPrintBill(inv, true); }
   } catch (e) { toast(e.message); go.disabled = false; bzCartDraw(); }
 }
 function bzCustomItem() {
@@ -5453,6 +5454,141 @@ function bzBillRow(i) {
   r.append(el('div', null, i.number), el('small', null, (i.customer.name || i.customer.phone || 'Walk-in') + ' · ' + new Date(i.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })), el('b', null, bzRs(i.grand)), el('span', 'bz-st ' + st[0], st[1]));
   r.onclick = () => bzShowBill(i); return r;
 }
+// ==================== 🖨️ BLUETOOTH RECEIPT PRINTER (58 / 80 mm thermal, ESC/POS) ====================
+// The bill is drawn as a picture (so Telugu, ₹ and the UPI QR print exactly), then sent as printer bytes.
+// Bluetooth printing needs the Maata Android app; in a browser the bill page prints in an 80 / 58 mm layout.
+const PR = { cb: new Map(), seq: 0, permCb: null };
+const prApp = () => !!(window.MaataAndroid && window.MaataAndroid.btPrintEnd);
+const PR_DEF = { address: '', name: '', width: 80, auto: false, copies: 1, qr: true, big: false };
+function prCfg() { try { return { ...PR_DEF, ...JSON.parse(store.get('maata_printer') || '{}') }; } catch { return { ...PR_DEF }; } }
+function prSave(c) { store.set('maata_printer', JSON.stringify(c)); }
+window.maataBtDone = (id, ok, msg) => { const f = PR.cb.get(id); if (f) { PR.cb.delete(id); f(ok, msg); } };
+window.maataBtPerm = (st) => { const f = PR.permCb; PR.permCb = null; if (f) f(st); };
+const PR_MSG = { perm: 'Allow "Nearby devices" for Maata to use the printer.', off: 'Switch on Bluetooth, then try again.', nobt: 'This phone has no Bluetooth.', connect: 'Could not connect. Switch on the printer, keep it near the phone, and check it is paired in Bluetooth settings.', busy: 'The printer is still printing. Try again in a moment.', error: 'Printing failed. Try again.' };
+const prMoney = (p) => '₹' + (p / 100).toFixed(2);
+// draw the receipt
+async function prReceipt(i, cfg) {
+  const W = cfg.width === 58 ? 384 : 576, M = 6, F = (cfg.width === 58 ? 19 : 24) + (cfg.big ? 4 : 0);
+  const c = mkCanvas(W, 8000), g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, 8000); g.fillStyle = '#000'; g.textBaseline = 'top';
+  let y = 4; const font = (sz, b) => (g.font = MK_FONT(b ? 700 : 400, sz));
+  const wrapT = (t, maxW) => { const out = []; for (const para of String(t ?? '').split('\n')) { let line = ''; for (const w of para.split(/(\s+)/)) { if (!w) continue; const tt = line + w; if (g.measureText(tt).width <= maxW || !line.trim()) { line = tt; while (g.measureText(line).width > maxW && line.length > 1) { let k = line.length; while (k > 1 && g.measureText(line.slice(0, k)).width > maxW) k--; out.push(line.slice(0, k)); line = line.slice(k); } } else { out.push(line.trimEnd()); line = w.trimStart(); } } out.push(line.trimEnd()); } return out; };
+  const text = (t, { sz = F, b = false, al = 'left', gap = 4 } = {}) => { font(sz, b); for (const l of wrapT(t, W - M * 2)) { g.textAlign = al; g.fillText(l, al === 'center' ? W / 2 : al === 'right' ? W - M : M, y); y += Math.round(sz * 1.22); } g.textAlign = 'left'; y += gap - 4; };
+  const row = (l, r, { sz = F, b = false } = {}) => { font(sz, b); const rw = g.measureText(r).width; const ls = wrapT(l, W - M * 2 - rw - 12); ls.forEach((x, k) => { g.fillText(x, M, y); if (k === 0) { g.textAlign = 'right'; g.fillText(r, W - M, y); g.textAlign = 'left'; } y += Math.round(sz * 1.22); }); };
+  const dash = () => { y += 4; g.fillRect(M, y, W - M * 2, 2); y += 10; };
+  const s = i.shop || {};
+  text(s.name || 'Shop', { sz: Math.round(F * 1.45), b: true, al: 'center' });
+  if (s.address) text(s.address, { sz: F - 3, al: 'center', gap: 2 });
+  if (s.phone) text('Phone: ' + s.phone, { sz: F - 3, al: 'center', gap: 2 });
+  if (s.gstin) text('GSTIN: ' + s.gstin, { sz: F - 3, al: 'center', gap: 2 });
+  dash();
+  if (i.status === 'void') text('*** CANCELLED ***', { b: true, al: 'center' });
+  row('Bill: ' + i.number, '', { sz: F - 2, b: true });
+  text(new Date(i.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }), { sz: F - 3, gap: 2 });
+  if (i.customer && (i.customer.name || i.customer.phone)) text('Customer: ' + [i.customer.name, i.customer.phone].filter(Boolean).join(' '), { sz: F - 3, gap: 2 });
+  dash();
+  for (const l of i.items) {
+    text(l.name + (l.taxRate ? '  (GST ' + l.taxRate + '%)' : ''), { sz: F - 1, b: true, gap: 2 });
+    row('  ' + l.qty + ' ' + (l.unit || '') + ' x ' + (l.price / 100).toFixed(2), (Math.round(l.qty * l.price) / 100).toFixed(2), { sz: F - 2 });
+    y += 4;
+  }
+  dash();
+  row('Items total', prMoney(i.items.reduce((a, l) => a + Math.round(l.qty * l.price), 0)), { sz: F - 2 });
+  if (i.discount) row('Discount', '- ' + prMoney(i.discount), { sz: F - 2 });
+  const taxRows = {}; for (const l of i.items) if (l.tax) taxRows[l.taxRate] = (taxRows[l.taxRate] || 0) + l.tax;
+  for (const [r, t] of Object.entries(taxRows)) { row('CGST ' + r / 2 + '%' + (i.taxMode === 'incl' ? ' (incl.)' : ''), prMoney(Math.round(t / 2)), { sz: F - 3 }); row('SGST ' + r / 2 + '%' + (i.taxMode === 'incl' ? ' (incl.)' : ''), prMoney(t - Math.round(t / 2)), { sz: F - 3 }); }
+  if (i.roundOff) row('Round off', (i.roundOff > 0 ? '+ ' : '- ') + prMoney(Math.abs(i.roundOff)), { sz: F - 3 });
+  y += 4; row('TOTAL', prMoney(i.grand), { sz: Math.round(F * 1.4), b: true }); y += 2;
+  const paid = i.payment && i.payment.status === 'paid';
+  text(paid ? 'Paid by ' + String(i.payment.method || 'cash').toUpperCase() : 'To pay' + (i.payment && i.payment.method === 'upi' ? ' by UPI' : ''), { sz: F - 2, al: 'center' });
+  if (!paid && cfg.qr && s.upi && i.status !== 'void' && i.key) {
+    try {
+      const r = await fetch('/bill/' + i.id + '/upi.svg?k=' + i.key); if (!r.ok) throw 0;
+      const im = await mkLoadImg(URL.createObjectURL(new Blob([await r.text()], { type: 'image/svg+xml' })));
+      dash(); text('Scan & pay ' + prMoney(i.grand), { sz: F, b: true, al: 'center' });
+      const q = Math.round(W * (cfg.width === 58 ? 0.7 : 0.55)); g.imageSmoothingEnabled = false; g.drawImage(im, (W - q) / 2, y, q, q); y += q + 6;
+      text('UPI: ' + s.upi, { sz: F - 4, al: 'center' });
+    } catch { /* no QR: the bill still prints */ }
+  }
+  dash();
+  if (s.footer) text(s.footer, { sz: F - 2, al: 'center', gap: 2 }); else text('Thank you! Visit again', { sz: F - 2, al: 'center', gap: 2 });
+  text('Made with Maata Business', { sz: F - 6, al: 'center' });
+  y += 8;
+  const out = mkCanvas(W, y); out.getContext('2d').drawImage(c, 0, 0); return out;
+}
+// picture → ESC/POS raster bytes (GS v 0), in bands so small printers keep up
+function prEscpos(cv, copies) {
+  const w = cv.width, h = cv.height, bw = Math.ceil(w / 8), d = cv.getContext('2d').getImageData(0, 0, w, h).data;
+  const one = []; one.push(0x1b, 0x40); // reset
+  for (let y0 = 0; y0 < h; y0 += 128) {
+    const bh = Math.min(128, h - y0); one.push(0x1d, 0x76, 0x30, 0, bw & 255, bw >> 8, bh & 255, bh >> 8);
+    for (let y = y0; y < y0 + bh; y++) for (let bx = 0; bx < bw; bx++) { let v = 0; for (let k = 0; k < 8; k++) { const x = bx * 8 + k; if (x >= w) continue; const p = (y * w + x) * 4; if (d[p + 3] > 100 && d[p] * 0.299 + d[p + 1] * 0.587 + d[p + 2] * 0.114 < 150) v |= 0x80 >> k; } one.push(v); }
+  }
+  one.push(0x1b, 0x64, 4, 0x1d, 0x56, 0x42, 0); // feed and cut (printers without a cutter ignore it)
+  const n = Math.max(1, Math.min(3, copies || 1)), out = new Uint8Array(one.length * n);
+  for (let k = 0; k < n; k++) out.set(one, k * one.length); return out;
+}
+function prSend(bytes, cfg) {
+  return new Promise((ok) => {
+    const A = window.MaataAndroid, id = 'p' + ++PR.seq; A.btPrintStart();
+    const step = 48 * 1024; for (let i = 0; i < bytes.length; i += step) { let s2 = ''; const part = bytes.subarray(i, i + step); for (let k = 0; k < part.length; k += 8192) s2 += String.fromCharCode.apply(null, part.subarray(k, k + 8192)); if (!A.btPrintChunk(btoa(s2))) return ok({ ok: false, msg: 'error' }); }
+    const t = setTimeout(() => { PR.cb.delete(id); ok({ ok: false, msg: 'connect' }); }, 90000);
+    PR.cb.set(id, (good, msg) => { clearTimeout(t); ok({ ok: good, msg }); });
+    A.btPrintEnd(cfg.address, id);
+  });
+}
+async function prPrintBill(i, quiet) {
+  const cfg = prCfg();
+  if (!prApp()) { window.open(bzBillLink(i) + '&paper=' + cfg.width, '_blank', 'noopener'); return; }
+  if (!cfg.address) { if (!quiet) prSetup(() => prPrintBill(i)); return; }
+  const st = window.MaataAndroid.btStatus(); if (st !== 'ok') { toast(PR_MSG[st] || PR_MSG.error); if (st === 'perm' || st === 'off') prSetup(); return; }
+  if (!i.shop || !i.shop.name) i = { ...i, shop: { name: BZ.info?.name, address: BZ.info?.address, phone: BZ.info?.phone, gstin: BZ.info?.settings?.gstin, upi: BZ.info?.settings?.upi, footer: BZ.info?.settings?.footer, ...(i.shop || {}) } };
+  toast('🖨️ Printing on ' + cfg.name + '…');
+  const r = await prSend(prEscpos(await prReceipt(i, cfg), cfg.copies), cfg);
+  toast(r.ok ? '🖨️ Printed ✓' : '🖨️ ' + (PR_MSG[r.msg] || PR_MSG.error));
+  return r.ok;
+}
+function prTestBill() {
+  const s = BZ.info || {}, set = s.settings || {};
+  return { id: 'test', number: 'TEST/0001', createdAt: Date.now(), status: 'final', customer: { name: '', phone: '' }, taxMode: 'incl',
+    items: [{ name: 'Santhoor soap', unit: 'pcs', qty: 2, price: 4800, taxRate: 18, tax: 1464, total: 9600 }, { name: 'బియ్యం (Rice)', unit: 'kg', qty: 1, price: 6000, taxRate: 0, tax: 0, total: 6000 }],
+    subtotal: 15600, discount: 0, roundOff: 0, grand: 15600, payment: { method: 'cash', status: 'paid' }, shop: { name: s.name || 'My Shop', address: s.address || '', phone: s.phone || '', gstin: set.gstin || '', upi: set.upi || '', footer: set.footer || '' } };
+}
+function prSetup(after) {
+  const cfg = prCfg();
+  sheet('🖨️ Bluetooth printer', (L) => {
+    const draw = () => {
+      L.innerHTML = '';
+      const f = el('div', 'bz-form');
+      f.append(el('div', 'th-title', 'Paper size'));
+      const wch = el('div', 'bz-chips'); for (const [w, l] of [[80, '80 mm (3 inch)'], [58, '58 mm (2 inch)']]) { const b = el('button', cfg.width === w ? 'on' : null, l); b.type = 'button'; b.onclick = () => { cfg.width = w; prSave(cfg); draw(); }; wch.append(b); } f.append(wch);
+      if (!prApp()) {
+        f.append(el('p', 'info-note', '🖨️ Bluetooth printing works in the Maata Android app (update it to the newest version). In a browser, "📄 PDF / other printer" opens the bill in a ' + cfg.width + ' mm layout for your printer app.'));
+        L.append(f); return;
+      }
+      const st = window.MaataAndroid.btStatus();
+      if (st === 'nobt') f.append(el('p', 'info-note', PR_MSG.nobt));
+      else if (st === 'perm') { f.append(el('p', 'info-note', 'Maata needs the "Nearby devices" permission to talk to your printer.')); const b = el('button', 'sheet-btn primary', '✅ Allow Nearby devices'); b.onclick = () => { PR.permCb = () => draw(); window.MaataAndroid.btAskPermission(); }; f.append(b); }
+      else if (st === 'off') { f.append(el('p', 'info-note', 'Bluetooth is off.')); const b = el('button', 'sheet-btn primary', 'Open Bluetooth settings'); b.onclick = () => window.MaataAndroid.btOpenSettings(); f.append(b); const r = el('button', 'sheet-btn', '🔄 I switched it on'); r.onclick = draw; f.append(r); }
+      else {
+        let list = []; try { list = JSON.parse(window.MaataAndroid.btPrinters() || '[]'); } catch {}
+        f.append(el('div', 'th-title', 'Choose your printer'));
+        if (!list.length) f.append(el('p', 'info-note', 'No paired devices. Switch on the printer, then pair it in Bluetooth settings (PIN is usually 0000 or 1234).'));
+        for (const d of list) { const l = el('label', 'sec-pick'); const r = el('input'); r.type = 'radio'; r.name = 'prDev'; r.checked = cfg.address === d.address; r.onchange = () => { cfg.address = d.address; cfg.name = d.name; prSave(cfg); }; l.append(r, el('span', null, (d.printer ? '🖨️ ' : '📶 ') + d.name)); f.append(l); }
+        const pair = el('button', 'sheet-btn', '➕ Pair a new printer (Bluetooth settings)'); pair.onclick = () => { window.MaataAndroid.btOpenSettings(); toast('After pairing, come back and tap 🔄 Refresh'); }; const rf = el('button', 'sheet-btn', '🔄 Refresh list'); rf.onclick = draw; f.append(pair, rf);
+      }
+      f.append(el('div', 'th-title', 'Options'));
+      const chk = (t, k) => { const l = el('label', 'sec-pick'); const c2 = el('input'); c2.type = 'checkbox'; c2.checked = !!cfg[k]; c2.onchange = () => { cfg[k] = c2.checked; prSave(cfg); }; l.append(c2, el('span', null, t)); f.append(l); };
+      chk('🖨️ Print automatically after every bill', 'auto'); chk('📱 Print UPI QR (with the amount) on bills not yet paid', 'qr'); chk('🔠 Bigger letters', 'big');
+      const cl = el('label'); cl.htmlFor = 'prCopies'; cl.append(el('span', null, 'Copies')); const cs = el('select'); cs.id = 'prCopies'; for (const n of [1, 2, 3]) cs.add(new Option(String(n), String(n))); cs.value = String(cfg.copies); cs.onchange = () => { cfg.copies = Number(cs.value); prSave(cfg); }; cl.append(cs); f.append(cl);
+      if (st === 'ok') { const t = el('button', 'sheet-btn primary', '🧪 Test print'); t.onclick = async () => { if (!cfg.address) return toast('Choose your printer first'); t.disabled = true; await prPrintBill(prTestBill()); t.disabled = false; }; f.append(t); }
+      const done = el('button', 'sheet-btn', after ? 'Save & print' : 'Done'); done.onclick = () => { if (after && !cfg.address && prApp()) return toast('Choose your printer first'); closeSheet('moreSheet'); toast('🖨️ Printer settings saved'); if (after) after(); }; f.append(done);
+      f.append(el('p', 'bz-note', 'Works with most 58 mm and 80 mm Bluetooth thermal receipt printers (ESC/POS). These settings are saved on this phone.'));
+      L.append(f);
+    };
+    draw();
+  });
+}
+
 function bzBillLink(i) { return location.origin + '/bill/' + i.id + '?k=' + i.key; }
 // 📱 UPI QR with the exact bill amount: the customer scans with any UPI app, the money goes straight to the shop's UPI ID
 function bzQrBox(i) { const b = el('div', 'bz-qr'); const im = el('img'); im.alt = 'UPI QR code for ' + bzRs(i.grand); im.src = '/bill/' + i.id + '/upi.svg?k=' + i.key; b.append(el('small', null, 'Scan & pay with any UPI app'), el('b', null, bzRs(i.grand)), im, el('small', null, 'UPI ID: ' + (i.shop.upi || '') + ' · ' + i.number)); return b; }
@@ -5464,7 +5600,7 @@ function bzUpiQr(i, phone) {
     const act = (t, fn, cls) => { const b = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), t); b.onclick = fn; L.append(b); return b; };
     act('✅ Payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v, phone); }, 'primary');
     act('💵 Customer paid cash instead', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v, phone); });
-    act('🖨️ Print bill with this QR', () => window.open(bzBillLink(i), '_blank', 'noopener'));
+    act('🖨️ Print bill with this QR', () => prPrintBill(i));
     act('Later (bill stays "To pay")', () => { closeSheet('moreSheet'); bzShowBill(i, phone); });
   });
 }
@@ -5502,7 +5638,8 @@ function bzShowBill(i, phone) {
     const ph = phone || i.customer.phone;
     if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
     act('🔗 Share bill link', async () => { const u = bzBillLink(i); if (nativeShareText('Bill ' + i.number + ' – ' + bzRs(i.grand) + '\n' + u, 'Share bill')) return; try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
-    act('🖨️ Print / Save PDF', () => window.open(bzBillLink(i), '_blank', 'noopener'));
+    if (prApp()) act('🖨️ Print receipt (Bluetooth)', () => prPrintBill(i));
+    act('📄 PDF / other printer', () => window.open(bzBillLink(i) + '&paper=' + prCfg().width, '_blank', 'noopener'));
     if (i.status !== 'void' && i.payment.status !== 'paid') { if (i.shop.upi) act('✅ UPI payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v); }); act('💵 Paid in cash', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v); }); }
     if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
   });
@@ -5610,6 +5747,7 @@ function bzMore(body) {
   if (bzCan('settings')) a('🛒 Online store', 'Delivery, pickup, charges, open / close', bzStoreSettings);
   if (bzCan('staff')) a('👥 Staff', (BZ.info.staff.length || 'No') + ' staff · cashier, manager, stock', bzStaff);
   if (bzCan('settings')) a('⚙️ Bill settings', 'Bill number, GST mode, UPI, GSTIN', bzSettings);
+  a('🖨️ Bluetooth printer', (() => { const p = prCfg(); return p.address ? p.name + ' · ' + p.width + ' mm' + (p.auto ? ' · auto print' : '') : '58 / 80 mm receipt printer'; })(), () => prSetup());
   if (bzCan('reports')) a('🕘 Activity log', 'Who did what, when', bzLog);
   if (BZ.info.role === 'owner') a('🏪 Business profile', 'Name, address, timings', editBusinessProfile);
   a('🔁 Switch business', 'If you work in more than one shop', () => openBiz());
@@ -11597,8 +11735,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 137;
-const APP_NOTES = ["📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 138;
+const APP_NOTES = ["🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
