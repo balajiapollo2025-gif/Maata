@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 133;
+const MAATA_VERSION = 135;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3324,26 +3324,31 @@ app.post('/api/biz/:bizId/ai/insights', auth, async (req, res) => {
 // Customers order from a shop inside Maata. Prices are always worked out on the server.
 // Flow: PLACED → ACCEPTED (stock reserved) → PREPARING → READY → OUT_FOR_DELIVERY → DELIVERED (bill made)
 // Exceptions: REJECTED, CANCELLED (stock released), DELIVERY_FAILED. Delivery and pickup need the customer's 4-digit code.
-const ORD_ACTIVE = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'];
+// Out of town: mode "ship" → READY → SHIPPED (courier / lorry transport, with the booking reference) → DELIVERED (customer or shop confirms).
+const ORD_ACTIVE = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED', 'SHIPPED'];
 const ORD_NEXT = { // shop actions allowed from each state
   PLACED: ['ACCEPTED', 'REJECTED'], ACCEPTED: ['PREPARING', 'CANCELLED'], PREPARING: ['READY', 'CANCELLED'],
-  READY: ['OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'], OUT_FOR_DELIVERY: ['DELIVERED', 'DELIVERY_FAILED'], DELIVERY_FAILED: ['OUT_FOR_DELIVERY', 'CANCELLED'],
+  READY: ['OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'], OUT_FOR_DELIVERY: ['DELIVERED', 'DELIVERY_FAILED'], DELIVERY_FAILED: ['OUT_FOR_DELIVERY', 'CANCELLED'], SHIPPED: ['DELIVERED'],
 };
-const ORD_SAY = { PLACED: 'Order placed', ACCEPTED: 'Shop accepted your order', REJECTED: 'Shop could not take your order', PREPARING: 'Your order is being packed', READY: 'Your order is ready', OUT_FOR_DELIVERY: 'Your order is on the way', DELIVERED: 'Delivered. Thank you!', DELIVERY_FAILED: 'Delivery could not be completed', CANCELLED: 'Order cancelled' };
+const ORD_SAY = { PLACED: 'Order placed', ACCEPTED: 'Shop accepted your order', REJECTED: 'Shop could not take your order', PREPARING: 'Your order is being packed', READY: 'Your order is ready', OUT_FOR_DELIVERY: 'Your order is on the way', DELIVERED: 'Delivered. Thank you!', DELIVERY_FAILED: 'Delivery could not be completed', CANCELLED: 'Order cancelled', SHIPPED: 'Your parcel is sent' };
 function storeOf(b) {
-  b.store = { on: false, delivery: true, pickup: true, fee: 0, freeAbove: 0, minOrder: 0, eta: '30–45 min', area: '', radiusKm: 5, lat: null, lng: null, payCod: true, payUpi: true, ...(b.store || {}) };
+  b.store = { on: false, delivery: true, pickup: true, fee: 0, freeAbove: 0, minOrder: 0, eta: '30–45 min', area: '', radiusKm: 5, lat: null, lng: null, payCod: true, payUpi: true, ship: false, shipFee: 0, shipToPay: false, shipEta: '3–7 days', shipNote: '', ...(b.store || {}) };
   return b.store;
 }
 const shopStaffIds = (owner) => [owner.id, ...((owner.business.members || []).filter((m) => m.status !== 'removed' && (BIZ_ROLES[m.role] || []).includes('bill')).map((m) => m.userId))];
 function ordOut(o, forShop) {
   return { id: o.id, number: o.number, bizId: o.bizId, shopName: o.shopName, shopPhone: o.shopPhone, customerId: o.customerId, customerName: o.customerName, customerPhone: forShop ? o.customerPhone : undefined,
     items: o.items, subtotal: o.subtotal, discount: 0, tax: o.tax, fee: o.fee, grand: o.grand, mode: o.mode, address: o.address, note: o.note, pay: o.pay, status: o.status, history: o.history, createdAt: o.createdAt,
-    otp: !forShop && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track };
+    otp: !forShop && o.mode !== 'ship' && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track, ship: shipOut(o), shipPref: o.shipPref || '', toPay: !!o.toPay };
 }
+// 🚚 courier / lorry transport booking details (no photo bytes here; the receipt photo has its own link)
+const SHIP_KIND = { courier: 'Courier', transport: 'Lorry transport', post: 'India Post', bus: 'Bus parcel', other: 'Other' };
+function shipOut(o) { const x = o.ship; if (!x) return null; return { kind: x.kind, kindName: SHIP_KIND[x.kind] || 'Other', carrier: x.carrier, ref: x.ref, link: x.link || '', eta: x.eta || '', pieces: x.pieces || 0, note: x.note || '', toPay: !!x.toPay, hasPhoto: !!(o.shipPhoto && o.shipPhoto.data), photoV: (o.shipPhoto && o.shipPhoto.v) || 0, at: x.at, by: x.byName || '' }; }
+const shipSay = (o) => o.ship ? ' by ' + o.ship.carrier + ' · ' + (o.ship.kind === 'transport' ? 'LR' : 'Ref') + ' no. ' + o.ship.ref : '';
 function ordNotify(o, who) {
   const owner = userById(o.bizId), cust = userById(o.customerId);
-  if (who !== 'customer' && cust) { io.to('user:' + cust.id).emit('order:update', ordOut(o, false)); pushTo(cust, { type: 'msg', title: '🛒 ' + o.shopName, body: ORD_SAY[o.status] + (o.status === 'OUT_FOR_DELIVERY' ? '. Your delivery code: ' + o.otp : '') + (o.reason ? ' (' + o.reason + ')' : ''), tag: 'order-' + o.id, url: '/?order=' + o.id }).catch(() => {}); }
-  if (owner) for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); if (who === 'customer' && (o.status === 'PLACED' || o.status === 'CANCELLED')) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title: o.status === 'PLACED' ? '🛒 New order ' + o.number : '❌ Order ' + o.number + ' cancelled', body: o.customerName + ' · ' + rupees(o.grand) + ' · ' + (o.mode === 'delivery' ? 'Delivery' : 'Pickup'), tag: 'border-' + o.id, url: '/?biz=' + o.bizId }).catch(() => {}); } }
+  if (who !== 'customer' && cust) { io.to('user:' + cust.id).emit('order:update', ordOut(o, false)); pushTo(cust, { type: 'msg', title: '🛒 ' + o.shopName, body: ORD_SAY[o.status] + (o.status === 'SHIPPED' ? shipSay(o) : '') + (o.status === 'OUT_FOR_DELIVERY' ? '. Your delivery code: ' + o.otp : '') + (o.reason ? ' (' + o.reason + ')' : ''), tag: 'order-' + o.id, url: '/?order=' + o.id }).catch(() => {}); }
+  if (owner) for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); if (who === 'customer' && (o.status === 'PLACED' || o.status === 'CANCELLED')) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title: o.status === 'PLACED' ? '🛒 New order ' + o.number : '❌ Order ' + o.number + ' cancelled', body: o.customerName + ' · ' + rupees(o.grand) + ' · ' + (o.mode === 'delivery' ? 'Delivery' : o.mode === 'ship' ? 'Courier / transport' : 'Pickup'), tag: 'border-' + o.id, url: '/?biz=' + o.bizId }).catch(() => {}); } }
 }
 function ordStock(o, owner, dir, actor) { // dir -1 reserve, +1 release
   const ctx = { bizId: owner.id, actor };
@@ -3359,7 +3364,7 @@ function ordShortStock(o, owner) {
 function ordToInvoice(o, owner, actor) { // a delivered order becomes a normal bill (stock already moved when it was accepted)
   const b = owner.business, s = bizSettings(b); b.invSeq = b.invSeq || {}; const fy = finYear(); b.invSeq[fy] = (b.invSeq[fy] || 0) + 1;
   const items = o.items.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.price, taxRate: l.taxRate, hsn: '', disc: 0, taxable: l.taxable, tax: l.tax, total: l.total }));
-  if (o.fee) items.push({ productId: null, name: 'Delivery charge', unit: 'trip', qty: 1, price: o.fee, taxRate: 0, hsn: '', disc: 0, taxable: o.fee, tax: 0, total: o.fee });
+  if (o.fee) items.push({ productId: null, name: o.mode === 'ship' ? 'Courier / transport charge' : 'Delivery charge', unit: 'trip', qty: 1, price: o.fee, taxRate: 0, hsn: '', disc: 0, taxable: o.fee, tax: 0, total: o.fee });
   const inv = { id: newId(), bizId: owner.id, idem: 'order-' + o.id, key: crypto.randomBytes(12).toString('hex'), number: (s.prefix || 'INV') + '/' + fy + '/' + String(b.invSeq[fy]).padStart(4, '0'), createdAt: now(), by: actor.id, byName: actor.name,
     customer: { name: o.customerName, phone: o.customerPhone }, taxMode: o.taxMode, items, subtotal: o.subtotal + o.fee, discount: 0, taxable: items.reduce((x, l) => x + l.taxable, 0), tax: o.tax, roundOff: 0, grand: o.grand,
     payment: { method: o.pay === 'upi' ? 'upi' : 'cash', status: 'paid', paidAt: now() }, status: 'final', orderId: o.id, history: [{ at: now(), by: actor.id, what: 'from online order ' + o.number }],
@@ -3371,12 +3376,13 @@ app.get('/api/biz/:bizId/store', auth, (req, res) => { const c = bizCtx(req, res
 app.put('/api/biz/:bizId/store', auth, (req, res) => {
   const c = bizCtx(req, res, 'settings'); if (!c) return;
   const s = storeOf(c.biz), b = req.body || {}, money = (v) => Math.max(0, Math.min(1e6, Math.round(Number(v) * 100) || 0));
-  for (const k of ['on', 'delivery', 'pickup', 'payCod', 'payUpi']) if (b[k] !== undefined) s[k] = !!b[k];
+  for (const k of ['on', 'delivery', 'pickup', 'payCod', 'payUpi', 'ship', 'shipToPay']) if (b[k] !== undefined) s[k] = !!b[k];
+  if (b.shipFee !== undefined) s.shipFee = money(b.shipFee); if (b.shipEta !== undefined) s.shipEta = clip(b.shipEta, 30); if (b.shipNote !== undefined) s.shipNote = clip(b.shipNote, 160);
   if (b.fee !== undefined) s.fee = money(b.fee); if (b.freeAbove !== undefined) s.freeAbove = money(b.freeAbove); if (b.minOrder !== undefined) s.minOrder = money(b.minOrder);
   if (b.eta !== undefined) s.eta = clip(b.eta, 30); if (b.area !== undefined) s.area = clip(b.area, 120);
   if (b.radiusKm !== undefined) s.radiusKm = Math.max(0.5, Math.min(50, Number(b.radiusKm) || 5));
   if (b.lat !== undefined && b.lng !== undefined) { const la = Number(b.lat), lo = Number(b.lng); if (Math.abs(la) <= 90 && Math.abs(lo) <= 180 && (la || lo)) { s.lat = +la.toFixed(6); s.lng = +lo.toFixed(6); } }
-  if (!s.delivery && !s.pickup) s.pickup = true; if (!s.payCod && !s.payUpi) s.payCod = true;
+  if (!s.delivery && !s.pickup && !s.ship) s.pickup = true; if (!s.payCod && !s.payUpi) s.payCod = true;
   if (s.on && !bizProducts(c.bizId).some((p) => p.available !== false && p.price != null)) { s.on = false; bizLog(c, 'store', '', 'tried to open with no priced products'); save(); return res.status(400).json({ error: 'Add products with prices first, then open your online store.' }); }
   bizLog(c, 'store', '', s.on ? 'online store ON' : 'online store OFF'); save(); res.json(s);
 });
@@ -3393,9 +3399,10 @@ app.post('/api/biz/:bizId/orders/:id/status', auth, (req, res) => {
   const to = String(req.body?.to || ''), reason = clip(req.body?.reason, 160);
   if (!(ORD_NEXT[o.status] || []).includes(to)) return res.status(400).json({ error: 'This order is "' + o.status.toLowerCase().replace(/_/g, ' ') + '". Refresh and try again.' });
   if (to === 'DELIVERED' && o.mode === 'delivery' && o.status !== 'OUT_FOR_DELIVERY') return res.status(400).json({ error: 'Send it out for delivery first.' });
-  if (to === 'OUT_FOR_DELIVERY' && o.mode !== 'delivery') return res.status(400).json({ error: 'This is a pickup order.' });
+  if (to === 'OUT_FOR_DELIVERY' && o.mode !== 'delivery') return res.status(400).json({ error: o.mode === 'ship' ? 'This order goes by courier / transport. Use "Sent by courier / transport".' : 'This is a pickup order.' });
+  if (to === 'DELIVERED' && o.mode === 'ship' && o.status !== 'SHIPPED') return res.status(400).json({ error: 'Add the courier / transport details first.' });
   if (['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(to) && !reason) return res.status(400).json({ error: 'Write a short reason for the customer.' });
-  if (to === 'DELIVERED') { // proof: the code only the customer has
+  if (to === 'DELIVERED' && o.mode !== 'ship') { // proof: the code only the customer has (a parcel is confirmed by the shop or the customer instead)
     o.otpTries = (o.otpTries || 0) + 1; if (o.otpTries > 8) return res.status(429).json({ error: 'Too many wrong codes. Call the customer.' });
     if (String(req.body?.otp || '').trim() !== o.otp) { save(); return res.status(400).json({ error: 'Wrong code. Ask the customer for the 4-digit code in their Maata order.' }); }
   }
@@ -3404,13 +3411,66 @@ app.post('/api/biz/:bizId/orders/:id/status', auth, (req, res) => {
   if (to === 'OUT_FOR_DELIVERY') { if (!o.riderId) o.riderId = c.actor.id; o.trail = []; }
   if (['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED', 'REJECTED'].includes(to)) trackStop(o);
   o.status = to; o.reason = reason; o.history.push({ s: to, at: now(), by: c.actor.name, why: reason });
-  if (to === 'DELIVERED') { if (!o.reserved) ordStock(o, c.owner, -1, c.actor); ordToInvoice(o, c.owner, c.actor); o.deliveredAt = now(); }
+  if (to === 'DELIVERED') { if (!o.invoiceId) { if (!o.reserved) ordStock(o, c.owner, -1, c.actor); ordToInvoice(o, c.owner, c.actor); } o.deliveredAt = now(); }
   bizLog(c, 'order-' + to.toLowerCase(), o.id, o.number + (reason ? ' – ' + reason : '')); save(); ordNotify(o, 'shop');
   res.json(ordOut(o, true));
 });
+// 🚚 out of town: the shop books the parcel with a courier / lorry transport and adds the reference number
+const SHIP_PHOTO_MAX = 400 * 1024;
+app.post('/api/biz/:bizId/orders/:id/ship', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const o = db.orders.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (o.mode !== 'ship') return res.status(400).json({ error: 'This order is not a courier / transport order.' });
+  if (!['READY', 'SHIPPED'].includes(o.status)) return res.status(400).json({ error: o.status === 'DELIVERED' ? 'This order is already delivered.' : 'Mark the order Ready (packed) first.' });
+  const b = req.body || {}, kind = SHIP_KIND[b.kind] ? b.kind : 'courier';
+  const carrier = clip(b.carrier, 60), ref = clip(String(b.ref || '').trim(), 40);
+  if (!carrier) return res.status(400).json({ error: 'Write the courier / transport company name.' });
+  if (!ref || ref.length < 3) return res.status(400).json({ error: 'Write the ' + (kind === 'transport' ? 'LR (lorry receipt)' : 'tracking / docket') + ' number.' });
+  const link = String(b.link || '').trim().slice(0, 300); if (link && !/^https:\/\/[^\s<>"']+$/i.test(link)) return res.status(400).json({ error: 'Tracking link must start with https://' });
+  const prev = o.ship || {};
+  const x = { kind, carrier, ref, link, eta: clip(b.eta, 40), pieces: Math.max(0, Math.min(999, Math.round(Number(b.pieces) || 0))), note: clip(b.note, 200), toPay: !!b.toPay, at: prev.at || now(), by: c.actor.id, byName: c.actor.name };
+  if (b.photo === null) delete o.shipPhoto;
+  const first = o.status === 'READY'; o.ship = x;
+  if (first) {
+    o.status = 'SHIPPED'; o.shippedAt = now(); o.reason = ''; o.history.push({ s: 'SHIPPED', at: now(), by: c.actor.name, why: carrier + ' · ' + ref });
+    if (!o.invoiceId) { if (!o.reserved) ordStock(o, c.owner, -1, c.actor); ordToInvoice(o, c.owner, c.actor); } // the sale happens when the parcel leaves the shop
+  } else o.history.push({ s: 'SHIP_EDIT', at: now(), by: c.actor.name, why: carrier + ' · ' + ref });
+  bizLog(c, first ? 'order-shipped' : 'order-ship-edit', o.id, o.number + ' – ' + carrier + ' ' + ref); save();
+  if (first) ordNotify(o, 'shop'); else { const cu = userById(o.customerId); if (cu) { io.to('user:' + cu.id).emit('order:update', ordOut(o, false)); pushTo(cu, { type: 'msg', title: '🚚 ' + o.shopName, body: 'Parcel details updated' + shipSay(o), tag: 'order-' + o.id, url: '/?order=' + o.id }).catch(() => {}); } for (const id of shopStaffIds(c.owner)) io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); }
+  res.json(ordOut(o, true));
+});
+// 🤖 read the courier / LR receipt photo and fill the form (the shopkeeper checks before saving)
+app.post('/api/biz/:bizId/ai/ship-receipt', auth, express.raw({ type: ['image/*'], limit: '4mb' }), async (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Take a photo of the receipt.' });
+  if (!GEMINI_KEY) return res.status(503).json({ error: 'Maata AI is not switched on. Type the details.' });
+  const g = await gemini('You read Indian courier receipts, consignment notes and lorry receipts (LR / bilty, often printed in English with Telugu or Hindi). Return ONLY JSON: {"kind":"courier|transport|post|bus|other","carrier":"company name as printed","ref":"the main tracking / docket / AWB / LR / consignment number exactly as printed, no spaces","pieces":number or 0,"toPay":true if marked To Pay / freight payable at destination else false,"eta":"expected delivery date if printed else empty","sure":true|false}. Never invent numbers; leave empty if not readable.',
+    [{ role: 'user', parts: [{ inlineData: { mimeType: String(req.headers['content-type'] || 'image/jpeg').split(';')[0], data: req.body.toString('base64') } }, { text: 'Read this receipt.' }] }], { json: true, maxTokens: 300, temperature: 0.1 });
+  let d = null; try { d = JSON.parse(g.text || ''); } catch { /* not json */ }
+  if (!d || (!d.ref && !d.carrier)) return res.status(502).json({ error: 'AI could not read this receipt. Try a clearer photo, or type the details.' });
+  res.json({ kind: SHIP_KIND[d.kind] ? d.kind : 'courier', carrier: clip(d.carrier, 60), ref: String(d.ref || '').replace(/\s+/g, '').slice(0, 40), pieces: Math.max(0, Math.min(999, Math.round(Number(d.pieces) || 0))), toPay: !!d.toPay, eta: clip(d.eta, 40), sure: !!d.sure });
+});
+app.post('/api/biz/:bizId/orders/:id/ship-photo', auth, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: SHIP_PHOTO_MAX }), (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const o = db.orders.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (o.mode !== 'ship' || !['READY', 'SHIPPED', 'DELIVERED'].includes(o.status)) return res.status(400).json({ error: 'Add the receipt photo after the parcel is booked.' });
+  if (!Buffer.isBuffer(req.body) || req.body.length < 100) return res.status(400).json({ error: 'Take a photo of the receipt.' });
+  const mime = String(req.headers['content-type'] || '').split(';')[0];
+  o.shipPhoto = { data: 'data:' + mime + ';base64,' + req.body.toString('base64'), v: ((o.shipPhoto && o.shipPhoto.v) || 0) + 1 };
+  bizLog(c, 'order-ship-photo', o.id, o.number); save();
+  const cu = userById(o.customerId); if (cu) io.to('user:' + cu.id).emit('order:update', ordOut(o, false));
+  res.json(ordOut(o, true));
+});
+app.get('/api/orders/:id/ship-photo', auth, (req, res) => {
+  const o = db.orders.find((x) => x.id === req.params.id); if (!o || !o.shipPhoto || !o.shipPhoto.data) return res.status(404).end();
+  const owner = userById(o.bizId), isShop = owner && (owner.id === req.user.id || (owner.business?.members || []).some((m) => m.userId === req.user.id && m.status !== 'removed'));
+  if (o.customerId !== req.user.id && !isShop) return res.status(403).end();
+  const m = /^data:(image\/\w+);base64,(.+)$/.exec(o.shipPhoto.data); if (!m) return res.status(404).end();
+  res.set('Content-Type', m[1]); res.set('Cache-Control', 'private, max-age=300'); res.send(Buffer.from(m[2], 'base64'));
+});
 // ---- customer side ----
 const shopCard = (u, me) => { const s = storeOf(u.business); const dist = me && s.lat != null ? Math.round(geoDist(me, [s.lng, s.lat]) / 100) / 10 : null;
-  return { bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
+  return { bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', ship: !!s.ship, shipFee: s.shipFee, shipToPay: !!s.shipToPay, shipEta: s.shipEta, shipNote: s.shipNote, taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
 app.get('/api/shops', auth, (req, res) => {
   const la = Number(req.query.lat), lo = Number(req.query.lng), me = isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null, q = String(req.query.q || '').toLowerCase();
   const list = db.users.filter((u) => u.business && u.status !== 'blocked' && storeOf(u.business).on && !blockedOf(u).includes(req.user.id) && (!q || u.business.name.toLowerCase().includes(q) || (u.business.category || '').toLowerCase().includes(q))).map((u) => shopCard(u, me));
@@ -3430,9 +3490,10 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
   if (!s.on) return res.status(400).json({ error: 'This shop is not taking online orders right now.' });
   const idem = clip(b.idem, 64); if (idem) { const dup = db.orders.find((o) => o.customerId === req.user.id && o.idem === idem); if (dup) return res.json(ordOut(dup, false)); }
   const hits = (ordHits.get(req.user.id) || []).filter((t) => now() - t < 3600000); if (hits.length >= 15) return res.status(429).json({ error: 'Too many orders in an hour. Please wait.' }); hits.push(now()); ordHits.set(req.user.id, hits);
-  const mode = b.mode === 'pickup' ? 'pickup' : 'delivery';
-  if (mode === 'delivery' && !s.delivery) return res.status(400).json({ error: 'This shop does pickup only.' }); if (mode === 'pickup' && !s.pickup) return res.status(400).json({ error: 'This shop does delivery only.' });
-  const pay = b.pay === 'upi' && s.payUpi ? 'upi' : s.payCod ? 'cod' : 'upi';
+  const mode = b.mode === 'pickup' ? 'pickup' : b.mode === 'ship' ? 'ship' : 'delivery';
+  if (mode === 'delivery' && !s.delivery) return res.status(400).json({ error: s.ship ? 'This shop does not do home delivery. Choose 🚚 Courier / transport.' : 'This shop does pickup only.' }); if (mode === 'pickup' && !s.pickup) return res.status(400).json({ error: 'This shop does not do pickup.' });
+  if (mode === 'ship' && !s.ship) return res.status(400).json({ error: 'This shop does not send by courier / transport.' });
+  const pay = mode === 'ship' ? (s.payUpi ? 'upi' : 'cod') : b.pay === 'upi' && s.payUpi ? 'upi' : s.payCod ? 'cod' : 'upi';
   const raw = Array.isArray(b.items) ? b.items.slice(0, 100) : []; if (!raw.length) return res.status(400).json({ error: 'Your cart is empty.' });
   const lines = [];
   for (const it of raw) {
@@ -3447,14 +3508,22 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
   if (mode === 'delivery') {
     const text = clip(b.address?.text, 300); if (text.length < 8) return res.status(400).json({ error: 'Write your full delivery address.' });
     const la = Number(b.address?.lat), lo = Number(b.address?.lng), hasLoc = Math.abs(la) <= 90 && Math.abs(lo) <= 180 && (la || lo);
-    if (hasLoc && s.lat != null && geoDist([s.lng, s.lat], [lo, la]) > s.radiusKm * 1000) return res.status(400).json({ error: 'Sorry, this shop delivers only within ' + s.radiusKm + ' km.' });
+    if (hasLoc && s.lat != null && geoDist([s.lng, s.lat], [lo, la]) > s.radiusKm * 1000) return res.status(400).json({ error: 'Sorry, this shop delivers only within ' + s.radiusKm + ' km.' + (s.ship ? ' Choose 🚚 Courier / transport to get it sent to your town.' : ''), far: !!s.ship });
     address = { text, landmark: clip(b.address?.landmark, 100), lat: hasLoc ? +la.toFixed(6) : null, lng: hasLoc ? +lo.toFixed(6) : null };
   }
-  const fee = mode === 'delivery' && !(s.freeAbove && pr.total >= s.freeAbove) ? s.fee : 0;
+  let shipPref = '';
+  if (mode === 'ship') {
+    const text = clip(b.address?.text, 300); if (text.length < 8) return res.status(400).json({ error: 'Write your full address.' });
+    const pin = String(b.address?.pin || '').replace(/\D/g, ''); if (!/^[1-9]\d{5}$/.test(pin)) return res.status(400).json({ error: 'Write your 6-digit PIN code.' });
+    const city = clip(b.address?.city, 60); if (!city) return res.status(400).json({ error: 'Write your town / city.' });
+    address = { text, landmark: clip(b.address?.landmark, 100), pin, city, state: clip(b.address?.state, 40), lat: null, lng: null };
+    shipPref = clip(b.shipPref, 100);
+  }
+  const fee = mode === 'delivery' && !(s.freeAbove && pr.total >= s.freeAbove) ? s.fee : mode === 'ship' && !s.shipToPay ? s.shipFee : 0;
   owner.business.ordSeq = (owner.business.ordSeq || 0) + 1;
   const o = { id: newId(), number: 'OD' + String(owner.business.ordSeq).padStart(5, '0'), bizId: owner.id, shopName: owner.business.name, shopPhone: owner.phone, customerId: req.user.id, customerName: req.user.name, customerPhone: req.user.phone, idem: idem || null,
     items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, taxable: l.taxable, tax: l.tax, total: l.total })), subtotal: pr.subtotal, tax: pr.tax, fee, grand: pr.total + fee, taxMode: set.taxMode,
-    mode, address, note: clip(b.note, 200), pay, status: 'PLACED', otp: String(crypto.randomInt(1000, 10000)), createdAt: now(), history: [{ s: 'PLACED', at: now(), by: req.user.name }] };
+    mode, address, shipPref, toPay: mode === 'ship' && !!s.shipToPay, note: clip(b.note, 200), pay, status: 'PLACED', otp: String(crypto.randomInt(1000, 10000)), createdAt: now(), history: [{ s: 'PLACED', at: now(), by: req.user.name }] };
   db.orders.push(o); save(); ordNotify(o, 'customer');
   res.json(ordOut(o, false));
 });
@@ -3466,6 +3535,14 @@ app.post('/api/my/orders/:id/cancel', auth, (req, res) => {
   const owner = userById(o.bizId); if (o.reserved && owner) ordStock(o, owner, 1, req.user);
   o.status = 'CANCELLED'; o.reason = clip(req.body?.reason, 160) || 'Cancelled by customer'; o.history.push({ s: 'CANCELLED', at: now(), by: req.user.name, why: o.reason });
   trackStop(o); save(); ordNotify(o, 'customer'); res.json(ordOut(o, false));
+});
+app.post('/api/my/orders/:id/received', auth, (req, res) => { // the customer got the parcel
+  const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (o.mode !== 'ship' || o.status !== 'SHIPPED') return res.status(400).json({ error: 'This order is not on the way by courier.' });
+  o.status = 'DELIVERED'; o.deliveredAt = now(); o.history.push({ s: 'DELIVERED', at: now(), by: req.user.name, why: 'Customer received the parcel' });
+  const owner = userById(o.bizId);
+  if (owner) for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); const u = userById(id); if (u) pushTo(u, { type: 'msg', title: '✅ ' + o.number + ' received', body: o.customerName + ' got the parcel.', tag: 'border-' + o.id, url: '/?biz=' + o.bizId }).catch(() => {}); }
+  save(); res.json(ordOut(o, false));
 });
 // 🤖 chat-to-order: "1 kg rice, 2 soaps" → items in this shop, for the customer to confirm
 app.post('/api/shop/:bizId/ai/list', auth, async (req, res) => {

@@ -1547,6 +1547,22 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .od-steps li::after{content:'';position:absolute;left:7px;top:19px;bottom:1px;width:2px;background:var(--line)}.od-steps li:last-child::after{display:none}
 .od-steps li.done,.od-steps li.now{color:var(--ink)}.od-steps li.done::before{background:var(--bz-acc);border-color:var(--bz-acc)}.od-steps li.done::after{background:var(--bz-acc)}
 .od-steps li.now::before{border-color:var(--bz-acc);box-shadow:0 0 0 4px rgba(15,122,110,.18)}
+.od-ship{border-left:4px solid #1E88E5}.od-ship h3{margin:2px 0 6px}.od-ship>small{color:var(--muted)}
+.od-ref{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:rgba(30,136,229,.09);margin:4px 0}.od-ref small{flex-basis:100%;color:var(--muted)}.od-ref b{font-size:20px;letter-spacing:.04em;word-break:break-all;flex:1;min-width:0;font-variant-numeric:tabular-nums}
+.od-topay{margin:6px 0;padding:8px 10px;border-radius:10px;background:rgba(247,144,9,.12);font-size:14px}
+.od-shipph{display:flex;flex-direction:column;gap:4px;align-items:flex-start;background:none;border:0;padding:0;margin:6px 0;color:var(--muted);cursor:pointer;text-align:left}.od-shipph img{max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line)}
+.od-shipprev img{max-width:100%;max-height:180px;border-radius:10px;margin:4px 0}
+.mk{position:fixed;inset:0;z-index:44;background:#111;color:#fff;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.mk-top{display:flex;align-items:center;gap:6px;padding:8px 8px;padding-top:max(8px,env(safe-area-inset-top))}.mk-top b{flex:1;font-size:16px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mk-ib{width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:19px;cursor:pointer;flex:none}
+.mk-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px;position:relative;overflow:hidden}
+.mk-stage canvas{max-width:100%;max-height:100%;touch-action:none;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+.mk-cropok{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);padding:10px 22px;border-radius:24px;border:0;background:#0F7A6E;color:#fff;font-weight:700;font-size:16px}
+.mk-tools{display:flex;gap:4px;overflow-x:auto;padding:6px 8px;scrollbar-width:none}.mk-tools button{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:54px;padding:6px 4px;border-radius:12px;border:0;background:transparent;color:#ddd;cursor:pointer}.mk-tools i{font-style:normal;font-size:20px;line-height:1}.mk-tools small{font-size:11px}.mk-tools button.on{background:rgba(255,255,255,.16);color:#fff}
+.mk-colors{display:flex;gap:12px;justify-content:center;padding:4px 8px 8px}.mk-colors button{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.35);cursor:pointer}.mk-colors button.on{outline:3px solid #fff;outline-offset:2px}
+.mk-foot{display:flex;gap:8px;align-items:center;padding:6px 8px 10px}.mk-foot input{flex:1;min-width:0;height:44px;border-radius:22px;border:0;padding:0 16px;font-size:16px;background:#2a2f32;color:#fff}
+.mk-send{width:48px;height:48px;border-radius:50%;border:0;background:#0F7A6E;display:grid;place-items:center;flex:none;cursor:pointer}.mk-send svg{width:22px;height:22px;fill:#fff;stroke:none}
+.mk-pick{display:flex;gap:10px;align-items:center;width:100%;padding:8px 4px;background:none;border:0;text-align:left;color:inherit;cursor:pointer}
 .od-card.new{border:2px solid #F79009}.od-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.od-tr{padding:4px 0}
 .od-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.od-acts .bz-btn{flex:1 1 auto;align-self:auto}.bz-btn.pri{background:var(--bz-acc);color:#fff}.bz-btn.bad{background:rgba(240,68,56,.1);color:#B42318}
 .od-cancel{color:#B42318!important}
@@ -1838,6 +1854,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
       <b id="selCount">0 selected</b>
       <button id="selStar" aria-label="Star selected" title="Star"><svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
       <button id="selCopy" aria-label="Copy selected" title="Copy"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+      <button id="selMark" aria-label="Screenshot and mark selected" title="Screenshot & mark"><svg viewBox="0 0 24 24"><path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button>
       <button id="selFwd" aria-label="Forward selected" title="Forward"><svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg></button>
       <button id="selDel" aria-label="Delete selected" title="Delete"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
     </div>
@@ -1972,6 +1989,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
       <button id="mvStar" title="Star" aria-label="Star" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
       <button id="mvPin" title="Pin" aria-label="Pin" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M5 17h14l-2-4V5h1V3H6v2h1v8z"/></svg></button>
       <button id="mvReact" title="React" aria-label="React"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+      <button id="mvMark" title="Mark & send" aria-label="Mark and send"><svg viewBox="0 0 24 24"><path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button>
       <button id="mvFwd" title="Forward" aria-label="Forward"><svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg></button>
       <button id="mvSave" title="Download" aria-label="Download"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></button>
       <button id="mvMore" title="More" aria-label="More options"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
@@ -3971,7 +3989,7 @@ $('#fAudio').onchange = (e) => { sendPickedFiles([...e.target.files], 'audio'); 
 // ----- attach sheet -----
 const ATT = [
   ['doc', '📄', 'Document', '#7A4E9E'], ['media', '🖼️', 'Photos & videos', '#1F6FB2'], ['camera', '📷', 'Camera', '#C8413A'], ['audio', '🎧', 'Audio', '#B5651D'],
-  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'], ['once', '①', 'View once', '#4A5568'], ['catalogue', '🛍️', 'Catalogue', '#B5651D'],
+  ['contact', '👤', 'Contact', '#1B7A8F'], ['poll', '📊', 'Poll', '#2E8B57'], ['event', '📅', 'Event', '#AD1457'], ['location', '📍', 'Location', '#0F4C5C'], ['gps', '🗺️', 'GPS photo', '#2E8B57'], ['once', '①', 'View once', '#4A5568'], ['catalogue', '🛍️', 'Catalogue', '#B5651D'], ['mark', '✏️', 'Mark photo', '#C2185B'],
 ];
 function openAttach() {
   if (!activeId) return;
@@ -4001,6 +4019,7 @@ function attachAction(id) {
   else if (id === 'location') locationView();
   else if (id === 'once') { closeSheet('attachSheet'); const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*,video/*'; fi.hidden = true; document.body.append(fi); fi.onchange = async () => { const f = fi.files[0]; fi.remove(); if (!f) return; let blob = f, kind = f.type.startsWith('video/') ? 'video' : 'image'; if (kind === 'image') { try { blob = await compressImage(f); } catch {} } uploadFile(blob, { kind, name: (kind === 'image' ? 'Photo.jpg' : f.name), once: true }); }; fi.click(); }
   else if (id === 'catalogue') { closeSheet('attachSheet'); pickProductToSend(); }
+  else if (id === 'mark') { closeSheet('attachSheet'); markPickPhoto(); }
   else if (id === 'gps') { closeSheet('attachSheet'); openCamera({ gps: true }); }
 }
 
@@ -4312,6 +4331,7 @@ const ICON = {
   share: '<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>',
   open: '<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>',
   del: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>',
+  mark: '<svg viewBox="0 0 24 24"><path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>',
 };
 let starred = new Set(), replyTo = null, selectMode = false;
 const selected = new Set();
@@ -4368,6 +4388,163 @@ function scrollToMsg(id) {
   b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
 }
 
+// ==================== ✏️ MARK & SEND: draw on a photo or a chat screenshot, then send it ====================
+const MKC = ['#E53935', '#FFD600', '#2E7D32', '#1E88E5', '#FFFFFF', '#111111'];
+const MK_TOOLS = [['pen', '✏️', 'Pen'], ['hl', '🖍️', 'Highlight'], ['box', '▭', 'Box'], ['circle', '◯', 'Circle'], ['arrow', '➚', 'Arrow'], ['text', 'T', 'Text'], ['hide', '▦', 'Hide'], ['crop', '✂️', 'Crop']];
+let MK = null;
+const mkCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
+function mkLoadImg(src) { return new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => bad(new Error('This photo could not be opened.')); im.src = src; }); }
+const MK_FONT = (wt, sz) => wt + ' ' + sz + 'px system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Telugu", "Noto Sans", sans-serif';
+// a picture of chat messages, drawn like the chat (works for text, photos and other message types)
+async function chatShot(msgs) {
+  msgs = msgs.filter((m) => m && !m.viewOnce).slice(0, 30); if (!msgs.length) return null;
+  const W = 420, S = 2, PAD = 10, MAXB = Math.round(W * 0.78), chat = userById(activeId), group = !!(chat && chat.isGroup);
+  const x = mkCanvas(10, 10).getContext('2d');
+  const wrap = (text, font, maxW) => { x.font = font; const out = [];
+    for (const para of String(text).split('\n')) { let line = '';
+      for (const tok of para.split(/(\s+)/)) { if (!tok) continue; const t = line + tok;
+        if (x.measureText(t).width <= maxW) { line = t; continue; }
+        if (line.trim()) { out.push(line.trimEnd()); line = tok.trimStart(); } else line = t.trimStart();
+        while (line.length > 1 && x.measureText(line).width > maxW) { let i = line.length; while (i > 1 && x.measureText(line.slice(0, i)).width > maxW) i--; out.push(line.slice(0, i)); line = line.slice(i); } }
+      out.push(line.trimEnd()); }
+    return out; };
+  const LBL = (m) => ({ video: '🎥 Video', audio: m.voice ? '🎤 Voice message' : '🎵 Audio', file: '📄 ' + ((m.file && m.file.name) || 'Document'), location: '📍 Location', sticker: '🙂 Sticker', gif: 'GIF', reel: '🎬 Reel' }[m.type]);
+  const B = [];
+  for (const m of msgs) {
+    const mine = m.from === me.id; let img = null, text = '';
+    if (m.deleted) text = '🚫 This message was deleted';
+    else if (m.type === 'image') { try { img = await mkLoadImg(fileUrl(m.file)); } catch { text = '📷 Photo'; } if (m.text) text = (text ? text + '\n' : '') + m.text; }
+    else if (isText(m)) text = m.text || '';
+    else { const l = LBL(m); text = l ? l + (m.text ? '\n' + m.text : '') : copyableText(m) || 'Message'; }
+    const name = group && !mine ? nameOf(userById(m.from) || { name: 'Someone' }) : '';
+    const lines = text ? wrap(text, MK_FONT(400, 15), MAXB - PAD * 2) : [];
+    x.font = MK_FONT(400, 15); let w = lines.reduce((a, l) => Math.max(a, x.measureText(l).width), 0);
+    x.font = MK_FONT(700, 13); if (name) w = Math.max(w, x.measureText(name).width);
+    const time = new Date(m.ts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }); x.font = MK_FONT(400, 11); w = Math.max(w, x.measureText(time).width + 8);
+    let iw = 0, ih = 0; if (img) { iw = MAXB - 8; ih = Math.round(iw * img.naturalHeight / img.naturalWidth); if (ih > 340) { ih = 340; iw = Math.round(ih * img.naturalWidth / img.naturalHeight); } w = Math.max(w, iw - PAD * 2 + 8); }
+    const bw = Math.min(MAXB, Math.max(70, Math.ceil(w) + PAD * 2)), bh = (img && !name ? 4 : PAD + (name ? 18 : 0)) + (img ? ih + (lines.length ? 6 : 0) : 0) + lines.length * 20 + 14 + PAD;
+    B.push({ m, mine, img, iw, ih, lines, name, time, bw, bh });
+  }
+  const HEAD = 52, FOOT = 26, H = HEAD + 10 + B.reduce((a, b) => a + b.bh + 6, 0) + FOOT;
+  const c = mkCanvas(W * S, H * S), g = c.getContext('2d'); g.scale(S, S);
+  const rr = (x0, y0, w0, h0, r) => { g.beginPath(); g.moveTo(x0 + r, y0); g.arcTo(x0 + w0, y0, x0 + w0, y0 + h0, r); g.arcTo(x0 + w0, y0 + h0, x0, y0 + h0, r); g.arcTo(x0, y0 + h0, x0, y0, r); g.arcTo(x0, y0, x0 + w0, y0, r); g.closePath(); };
+  g.fillStyle = '#EFE7DD'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#0F7A6E'; g.fillRect(0, 0, W, HEAD); g.fillStyle = '#fff'; g.font = MK_FONT(700, 16); g.textBaseline = 'middle';
+  g.fillText((chat ? nameOf(chat) : 'Chat').slice(0, 40), 14, HEAD / 2 - 7); g.font = MK_FONT(400, 12); g.globalAlpha = 0.85; g.fillText(new Date(msgs[0].ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), 14, HEAD / 2 + 11); g.globalAlpha = 1;
+  let y = HEAD + 10; g.textBaseline = 'top';
+  for (const b of B) {
+    const bx = b.mine ? W - 10 - b.bw : 10; g.save(); g.shadowColor = 'rgba(0,0,0,.13)'; g.shadowBlur = 2; g.shadowOffsetY = 1; g.fillStyle = b.mine ? '#D9FDD3' : '#FFFFFF'; rr(bx, y, b.bw, b.bh, 10); g.fill(); g.restore();
+    let ty = y + PAD;
+    if (b.name) { g.fillStyle = '#0F7A6E'; g.font = MK_FONT(700, 13); g.fillText(b.name, bx + PAD, ty); ty += 18; }
+    if (b.img) { const ix = bx + (b.bw - b.iw) / 2, iy = b.name ? ty : y + 4; g.save(); rr(ix, iy, b.iw, b.ih, 8); g.clip(); g.drawImage(b.img, ix, iy, b.iw, b.ih); g.restore(); ty = iy + b.ih + (b.lines.length ? 6 : 0); }
+    g.fillStyle = b.m.deleted ? '#667781' : '#111B21'; g.font = MK_FONT(400, 15); for (const l of b.lines) { g.fillText(l, bx + PAD, ty); ty += 20; }
+    g.fillStyle = '#667781'; g.font = MK_FONT(400, 11); g.textAlign = 'right'; g.fillText(b.time, bx + b.bw - PAD, y + b.bh - PAD - 11); g.textAlign = 'left';
+    y += b.bh + 6;
+  }
+  g.fillStyle = '#667781'; g.font = MK_FONT(400, 11); g.textAlign = 'center'; g.fillText('Shared from Maata', W / 2, H - FOOT + 7);
+  return c;
+}
+async function markFromMsg(m) {
+  if (m.viewOnce) return toast('View once messages cannot be marked.');
+  if (m.type === 'image' && !m.deleted) { try { const blob = await (await fetch(fileUrl(m.file))).blob(); return openMarkup(blob); } catch { return toast('This photo could not be opened.'); } }
+  const c = await chatShot([m]); if (c) openMarkup(c);
+}
+async function markSelected() {
+  const list = curList().filter((m) => selected.has(m.id)); if (!list.length) return toast('Select messages first');
+  exitSelect(); const c = await chatShot(list); if (c) openMarkup(c); else toast('These messages cannot be marked.');
+}
+function markPickPhoto() {
+  const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*';
+  fi.onchange = () => { if (fi.files[0]) openMarkup(fi.files[0]); }; fi.click();
+}
+async function openMarkup(src) {
+  let base;
+  if (src instanceof HTMLCanvasElement) base = src;
+  else {
+    const url = URL.createObjectURL(src); let im; try { im = await mkLoadImg(url); } catch (e) { return toast(e.message); } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    const k = Math.min(1, 2200 / Math.max(im.naturalWidth, im.naturalHeight)); base = mkCanvas(im.naturalWidth * k, im.naturalHeight * k); base.getContext('2d').drawImage(im, 0, 0, base.width, base.height);
+  }
+  const old = $('#mkPage'); if (old) old.remove();
+  const pg = el('section', 'mk'); pg.id = 'mkPage'; pg.setAttribute('role', 'dialog'); pg.setAttribute('aria-label', 'Mark and send');
+  const top = el('div', 'mk-top');
+  const ib = (t, label) => { const b = el('button', 'mk-ib', t); b.setAttribute('aria-label', label); b.title = label; return b; };
+  const close = ib('✕', 'Close'), undo = ib('↶', 'Undo'), save = ib('⬇', 'Save or share'), other = ib('↪', 'Send to another chat');
+  top.append(close, el('b', null, '✏️ Mark & send'), undo, save, other);
+  const stage = el('div', 'mk-stage'), cv = el('canvas'); cv.setAttribute('aria-label', 'Picture to mark'); stage.append(cv);
+  const cropOk = el('button', 'mk-cropok', '✓ Crop'); cropOk.hidden = true; stage.append(cropOk);
+  const tools = el('div', 'mk-tools'), colors = el('div', 'mk-colors');
+  const foot = el('div', 'mk-foot'), cap = el('input'); cap.placeholder = 'Add a caption…'; cap.maxLength = 1000; cap.setAttribute('aria-label', 'Caption');
+  const send = el('button', 'mk-send'); send.setAttribute('aria-label', 'Send'); send.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg>';
+  foot.append(cap, send); pg.append(top, stage, tools, colors, foot); document.body.append(pg);
+  MK = { base, ops: [], hist: [], tool: 'pen', color: MKC[0], draft: null, crop: null, cv, ctx: cv.getContext('2d'), down: false };
+  const fit = () => { cv.width = MK.base.width; cv.height = MK.base.height; MK.lw = Math.max(3, Math.round(Math.max(cv.width, cv.height) / 200)); mkDraw(); };
+  for (const [k, ic, label] of MK_TOOLS) { const b = el('button', k === MK.tool ? 'on' : null); b.dataset.t = k; b.setAttribute('aria-label', label); b.append(el('i', null, ic), el('small', null, label));
+    b.onclick = () => { MK.tool = k; MK.crop = null; cropOk.hidden = true; if (k === 'hl' && MK.color === MKC[0]) setColor(MKC[1]); else if (k !== 'hl' && k !== 'hide' && MK.color === MKC[1] && MK.autoY) setColor(MKC[0]); tools.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); mkDraw();
+      if (k === 'text') toast('Tap where the words should go'); else if (k === 'hide') toast('Drag over a number or name to hide it'); else if (k === 'crop') toast('Drag to choose the part to keep'); };
+    tools.append(b); }
+  function setColor(c, user) { MK.color = c; MK.autoY = !user && c === MKC[1]; colors.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.c === c)); }
+  for (const c of MKC) { const b = el('button', c === MK.color ? 'on' : null); b.dataset.c = c; b.style.background = c; b.setAttribute('aria-label', 'Colour ' + c); b.onclick = () => setColor(c, true); colors.append(b); }
+  const pt = (e) => { const r = cv.getBoundingClientRect(); return [Math.max(0, Math.min(cv.width, (e.clientX - r.left) * cv.width / r.width)), Math.max(0, Math.min(cv.height, (e.clientY - r.top) * cv.height / r.height))]; };
+  let raf = 0; const redraw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; mkDraw(); }); };
+  cv.onpointerdown = (e) => { e.preventDefault(); if (MK.tool === 'text') return; try { cv.setPointerCapture(e.pointerId); } catch {} const p = pt(e), t = MK.tool; MK.down = true;
+    if (t === 'crop') { MK.crop = { a: p, b: p }; cropOk.hidden = true; }
+    else if (t === 'pen' || t === 'hl') MK.draft = { t, c: MK.color, w: t === 'hl' ? MK.lw * 5 : MK.lw, pts: [p] };
+    else MK.draft = { t, c: MK.color, w: MK.lw, a: p, b: p };
+    redraw(); };
+  cv.onpointermove = (e) => { if (!MK.down) return; const p = pt(e);
+    if (MK.crop && MK.tool === 'crop') MK.crop.b = p; else if (MK.draft && MK.draft.pts) { const l = MK.draft.pts[MK.draft.pts.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > 1.5) MK.draft.pts.push(p); } else if (MK.draft) MK.draft.b = p;
+    redraw(); };
+  cv.onpointerup = (e) => {
+    const p = pt(e);
+    if (MK.tool === 'text') { const t = prompt('Write the words'); if (t && t.trim()) { MK.ops.push({ t: 'text', x: p[0], y: p[1], text: t.trim().slice(0, 200), c: MK.color, s: MK.lw * 7 }); mkDraw(); } return; }
+    if (!MK.down) return; MK.down = false;
+    if (MK.tool === 'crop') { const r = mkRect(MK.crop.a, MK.crop.b); if (r.w > 20 && r.h > 20) cropOk.hidden = false; else MK.crop = null; mkDraw(); return; }
+    const d = MK.draft; MK.draft = null;
+    if (d && (d.pts || Math.hypot(d.b[0] - d.a[0], d.b[1] - d.a[1]) > 6)) MK.ops.push(d);
+    mkDraw();
+  };
+  cv.onpointercancel = () => { MK.down = false; MK.draft = null; mkDraw(); };
+  cropOk.onclick = () => { const r = mkRect(MK.crop.a, MK.crop.b); MK.crop = null; mkDraw(); const nc = mkCanvas(r.w, r.h); nc.getContext('2d').drawImage(cv, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h); MK.hist.push({ base: MK.base, ops: MK.ops }); MK.base = nc; MK.ops = []; cropOk.hidden = true; fit(); };
+  undo.onclick = () => { if (MK.ops.length) MK.ops.pop(); else if (MK.hist.length) { const h = MK.hist.pop(); MK.base = h.base; MK.ops = h.ops; fit(); return; } else toast('Nothing to undo'); mkDraw(); };
+  const out = () => new Promise((ok) => { MK.crop = null; MK.draft = null; cropOk.hidden = true; mkDraw(); cv.toBlob((b) => ok(b), 'image/jpeg', 0.9); });
+  const done = () => { pg.remove(); MK = null; };
+  close.onclick = () => { if (MK.ops.length && !confirm('Discard your marks?')) return; done(); };
+  send.onclick = async () => { if (!activeId) return toast('Open a chat first'); const blob = await out(); if (!blob) return toast('Could not make the picture.'); uploadFile(blob, { kind: 'image', name: 'Maata-marked-' + Date.now() + '.jpg', caption: cap.value.trim() }); done(); toast('✏️ Sent'); };
+  save.onclick = async () => { const blob = await out(); if (!blob) return; const f = new File([blob], 'Maata-marked-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+    try { if (navigator.canShare && navigator.canShare({ files: [f] })) return await navigator.share({ files: [f] }); } catch { return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.append(a); a.click(); a.remove(); };
+  other.onclick = () => sheet('Send marked picture to', (list) => {
+    const box = el('div', 'formcol'); box.style.padding = '12px'; const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q); const ul = el('ul', 'fwd-list'); box.append(ul); list.append(box);
+    const draw = () => { ul.innerHTML = ''; const t = q.value.trim().toLowerCase();
+      for (const u of users.filter((u) => !u.isAI && !u.blocked && (u.inContacts || u.lastMessage)).filter((u) => !t || nameOf(u).toLowerCase().includes(t) || (u.phone || '').includes(t)).sort((a, b) => (b.lastMessage?.ts || 0) - (a.lastMessage?.ts || 0)).slice(0, 80)) {
+        const li = el('li'), b = el('button', 'mk-pick'); const tx = el('div', 'c-body'); tx.append(el('div', 'c-name', nameOf(u)), el('div', 'c-last', u.phone || '')); b.append(avatar(u, 'sm'), tx);
+        b.onclick = async () => { closeSheet('moreSheet'); const blob = await out(); if (!blob) return; const caption = cap.value.trim(); done(); setTab('chats'); await openChat(u.id); uploadFile(blob, { kind: 'image', name: 'Maata-marked-' + Date.now() + '.jpg', caption }); toast('✏️ Sent to ' + nameOf(u)); };
+        li.append(b); ul.append(li); }
+      if (!ul.children.length) ul.append(el('li', 'empty-list', 'No matching chats.')); };
+    q.oninput = draw; draw(); });
+  fit();
+}
+function mkRect(a, b) { return { x: Math.round(Math.min(a[0], b[0])), y: Math.round(Math.min(a[1], b[1])), w: Math.round(Math.abs(b[0] - a[0])), h: Math.round(Math.abs(b[1] - a[1])) }; }
+function mkDraw() {
+  if (!MK) return; const { cv, ctx } = MK;
+  ctx.drawImage(MK.base, 0, 0); for (const o of MK.ops) mkOp(ctx, o); if (MK.draft) mkOp(ctx, MK.draft);
+  if (MK.crop) { const r = mkRect(MK.crop.a, MK.crop.b); ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.rect(0, 0, cv.width, cv.height); ctx.rect(r.x, r.y, r.w, r.h); ctx.fill('evenodd'); ctx.strokeStyle = '#fff'; ctx.lineWidth = MK.lw / 1.5; ctx.setLineDash([MK.lw * 3, MK.lw * 2]); ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.restore(); }
+}
+function mkOp(ctx, o) {
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = o.c; ctx.fillStyle = o.c; ctx.lineWidth = o.w;
+  if (o.t === 'pen' || o.t === 'hl') {
+    if (o.t === 'hl') { ctx.globalAlpha = 0.4; ctx.lineCap = 'butt'; ctx.globalCompositeOperation = 'multiply'; }
+    ctx.beginPath(); o.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); if (o.pts.length === 1) ctx.lineTo(o.pts[0][0] + 0.5, o.pts[0][1]); ctx.stroke();
+  } else if (o.t === 'box') { const r = mkRect(o.a, o.b); ctx.strokeRect(r.x, r.y, r.w, r.h); }
+  else if (o.t === 'circle') { ctx.beginPath(); ctx.ellipse((o.a[0] + o.b[0]) / 2, (o.a[1] + o.b[1]) / 2, Math.max(1, Math.abs(o.b[0] - o.a[0]) / 2), Math.max(1, Math.abs(o.b[1] - o.a[1]) / 2), 0, 0, Math.PI * 2); ctx.stroke(); }
+  else if (o.t === 'arrow') { const [x1, y1] = o.a, [x2, y2] = o.b, an = Math.atan2(y2 - y1, x2 - x1), hd = o.w * 4.5; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - Math.cos(an) * hd * 0.6, y2 - Math.sin(an) * hd * 0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - hd * Math.cos(an - 0.45), y2 - hd * Math.sin(an - 0.45)); ctx.lineTo(x2 - hd * Math.cos(an + 0.45), y2 - hd * Math.sin(an + 0.45)); ctx.closePath(); ctx.fill(); }
+  else if (o.t === 'text') { ctx.font = MK_FONT(700, o.s); ctx.textBaseline = 'top'; const lines = o.text.split('\n'), lh = o.s * 1.25, pad = o.s * 0.3, wd = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    ctx.fillStyle = o.c === '#FFFFFF' || o.c === '#FFD600' ? 'rgba(0,0,0,.6)' : 'rgba(255,255,255,.88)'; ctx.fillRect(o.x - pad, o.y - pad, wd + pad * 2, lh * (lines.length - 1) + o.s + pad * 2); ctx.fillStyle = o.c; lines.forEach((l, i) => ctx.fillText(l, o.x, o.y + i * lh)); }
+  else if (o.t === 'hide') { const r = mkRect(o.a, o.b); if (r.w > 1 && r.h > 1) { const cell = Math.max(10, Math.round(Math.max(MK.base.width, MK.base.height) / 45)), sw = Math.max(1, Math.round(r.w / cell)), sh = Math.max(1, Math.round(r.h / cell)), t = mkCanvas(sw, sh);
+    t.getContext('2d').drawImage(MK.base, r.x, r.y, r.w, r.h, 0, 0, sw, sh); ctx.imageSmoothingEnabled = false; ctx.drawImage(t, 0, 0, sw, sh, r.x, r.y, r.w, r.h); } }
+  ctx.restore();
+}
+
 // ----- the popup menu -----
 let menuEls = null;
 function closeMsgMenu() { if (menuEls) { menuEls.forEach((e) => e.remove()); menuEls = null; } }
@@ -4400,6 +4577,7 @@ function openMsgMenu(m, bubble) {
   if (canEdit(m)) item('edit', 'Edit', () => startEdit(m));
   if (!dead && (copyableText(m) || m.type === 'image')) item('copy', 'Copy', () => (m.type === 'image' ? copyImage(m) : copyText(copyableText(m))));
   if (!dead) item('forward', 'Forward', () => openForward([m.id]));
+  if (!dead) item('mark', m.type === 'image' ? 'Mark & send' : 'Screenshot & mark', () => markFromMsg(m));
   if (!dead && ['text', 'image', 'video'].includes(m.type || 'text')) item('status', 'Add to my status', () => toStatus(m));
   if (!dead) item('pin', m.pinned ? 'Unpin' : 'Pin', () => { socket.emit('msg:pin', { id: m.id, pin: !m.pinned }); toast(m.pinned ? 'Unpinned' : 'Pinned for both of you'); });
   if (!dead) item('star', starred.has(m.id) ? 'Unstar' : 'Star', () => socket.emit('msg:star', { ids: [m.id], star: !starred.has(m.id) }));
@@ -4564,6 +4742,7 @@ $('#selCopy').onclick = () => {
   const t = msgs.map((m) => '[' + fmtTime(m.ts) + '] ' + (m.from === me.id ? me.name : nameOf(userById(m.from))) + ': ' + (copyableText(m) || previewText(m))).join('\n');
   copyText(t); exitSelect();
 };
+$('#selMark').onclick = () => markSelected();
 $('#selFwd').onclick = () => openForward(curList().filter((m) => selected.has(m.id)).map((m) => m.id));
 $('#selDel').onclick = () => askDelete([...selected]);
 
@@ -4664,6 +4843,7 @@ $('#mvGoto').onclick = () => { const id = MV.id; closeMediaView(); scrollToMsg(i
 $('#mvReply').onclick = () => { const m = mvCurrent(); closeMediaView(); if (m) startReply(m); };
 $('#mvStar').onclick = () => { const m = mvCurrent(); if (m) socket.emit('msg:star', { ids: [m.id], star: !starred.has(m.id) }); };
 $('#mvPin').onclick = () => { const m = mvCurrent(); if (m) { socket.emit('msg:pin', { id: m.id, pin: !m.pinned }); toast(m.pinned ? 'Unpinned' : 'Pinned for both of you'); } };
+$('#mvMark').onclick = () => { const m = mvCurrent(); if (!m) return; if (m.type !== 'image') return toast('Marking works on photos.'); closeMediaView(); markFromMsg(m); };
 $('#mvFwd').onclick = () => { const m = mvCurrent(); if (m) openForward([m.id]); };
 $('#mvSave').onclick = () => { const m = mvCurrent(); if (m) saveAs(m); };
 
@@ -5418,8 +5598,33 @@ async function bzLog() {
 
 // ==================== 🛒 ONLINE STORE + ORDERS (customer side and shop side) ====================
 const OD = { shop: null, cart: new Map(), idem: null, cat: '', q: '', loc: null };
-const OD_STEPS = { delivery: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'], pickup: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'DELIVERED'] };
-const OD_LABEL = { PLACED: 'Order placed', ACCEPTED: 'Accepted by shop', PREPARING: 'Packing', READY: 'Ready', OUT_FOR_DELIVERY: 'On the way', DELIVERED: 'Delivered', REJECTED: 'Not accepted', CANCELLED: 'Cancelled', DELIVERY_FAILED: 'Delivery failed' };
+const OD_STEPS = { delivery: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'], pickup: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'DELIVERED'], ship: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'SHIPPED', 'DELIVERED'] };
+const OD_LABEL = { PLACED: 'Order placed', ACCEPTED: 'Accepted by shop', PREPARING: 'Packing', READY: 'Ready', OUT_FOR_DELIVERY: 'On the way', DELIVERED: 'Delivered', REJECTED: 'Not accepted', CANCELLED: 'Cancelled', DELIVERY_FAILED: 'Delivery failed', SHIPPED: 'Parcel sent' };
+const odModeName = (m) => (m === 'delivery' ? '🛵 Home delivery' : m === 'ship' ? '🚚 Courier / transport' : '🏃 Pickup from shop');
+const SHIP_KINDS = [['courier', '📦 Courier'], ['transport', '🚛 Lorry transport'], ['post', '📮 India Post'], ['bus', '🚌 Bus parcel'], ['other', 'Other']];
+const SHIP_NAMES = ['DTDC', 'Delhivery', 'Blue Dart', 'Professional Couriers', 'ST Courier', 'Xpressbees', 'Ecom Express', 'Shree Maruti Courier', 'Trackon', 'India Post', 'Navata Road Transport', 'VRL Logistics', 'SRMT', 'Gati', 'TCI Freight', 'ABT Parcel Service', 'APSRTC Logistics', 'TGSRTC Logistics'];
+const shipRefName = (k) => (k === 'transport' ? 'LR number' : k === 'post' ? 'Article / consignment number' : k === 'bus' ? 'Booking number' : 'Tracking / docket number');
+function shipTrackUrl(x) { return x.link || 'https://www.google.com/search?q=' + encodeURIComponent(x.carrier + ' tracking ' + x.ref); }
+function shipText(o) { const x = o.ship; return '🚚 ' + o.shopName + ' order ' + o.number + '\nSent by: ' + x.carrier + ' (' + x.kindName + ')\n' + shipRefName(x.kind) + ': ' + x.ref + (x.pieces ? '\nPieces: ' + x.pieces : '') + (x.eta ? '\nExpected: ' + x.eta : '') + (x.toPay ? '\nTransport charges: pay when you collect (To Pay)' : '') + (x.link ? '\nTrack: ' + x.link : '') + (x.note ? '\nNote: ' + x.note : ''); }
+async function shipPhotoUrl(o) { try { const r = await fetch('/api/orders/' + o.id + '/ship-photo?v=' + (o.ship.photoV || 0), { headers: { Authorization: 'Bearer ' + token } }); if (!r.ok) return null; return URL.createObjectURL(await r.blob()); } catch { return null; } }
+// the courier / LR details card (customer and shop)
+function shipCard(o, forShop) {
+  const x = o.ship, c = el('div', 'bz-card od-ship');
+  c.append(el('small', null, x.kindName === 'Other' ? '🚚 Sent by' : '🚚 Sent by ' + x.kindName.toLowerCase()), el('h3', null, x.carrier));
+  const refRow = el('div', 'od-ref'); refRow.append(el('small', null, shipRefName(x.kind)), el('b', null, x.ref));
+  const cp = el('button', 'bz-btn', '⧉ Copy'); cp.onclick = () => copyText(x.ref); refRow.append(cp); c.append(refRow);
+  const facts = [x.pieces ? '📦 ' + x.pieces + ' piece' + (x.pieces > 1 ? 's' : '') : '', x.eta ? '🗓️ Expected ' + x.eta : '', o.shippedAt || x.at ? '📤 Sent ' + new Date(x.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''].filter(Boolean);
+  if (facts.length) c.append(el('p', 'bz-note', facts.join(' · ')));
+  if (x.toPay) c.append(el('p', 'od-topay', '💰 Transport charges are "To Pay": ' + (forShop ? 'the customer pays' : 'you pay') + ' when the parcel is collected.'));
+  if (x.note) c.append(el('p', 'bz-note', '📝 ' + x.note));
+  if (x.hasPhoto) { const ph = el('button', 'od-shipph'); ph.setAttribute('aria-label', 'Receipt photo'); ph.append(el('span', 'bz-note', 'Loading receipt photo…')); c.append(ph); shipPhotoUrl(o).then((u) => { ph.innerHTML = ''; if (!u) return ph.append(el('span', 'bz-note', 'Receipt photo could not load.')); const im = el('img'); im.src = u; im.alt = 'Courier / LR receipt'; ph.append(im, el('small', null, '🧾 Receipt photo · tap to open')); ph.onclick = () => window.open(u, '_blank'); }); }
+  const a = el('div', 'od-acts');
+  const tr = el('button', 'bz-btn pri', x.link ? '🔍 Track parcel' : '🔍 Track on web'); tr.onclick = () => window.open(shipTrackUrl(x), '_blank', 'noopener'); a.append(tr);
+  const sh = el('button', 'bz-btn', '⇪ Share'); sh.onclick = () => { const t = shipText(o); if (navigator.share) navigator.share({ text: t }).catch(() => {}); else copyText(t); }; a.append(sh);
+  c.append(a);
+  if (!x.link) c.append(el('small', 'bz-note', 'No tracking link was added, so "Track on web" searches the number. You can also call the courier office with this number.'));
+  return c;
+}
 const odPhoto = (it) => '/api/catalogue/photo/' + it.id + '?t=' + encodeURIComponent(token) + '&v=' + (it.photoV || 0);
 function odPage(id, title, sub) {
   let pg = $('#' + id); if (pg) pg.remove();
@@ -5447,9 +5652,9 @@ async function openShop(bizId) {
   let s; try { s = await api('/api/shop/' + bizId + (loc ? '?lat=' + loc.lat + '&lng=' + loc.lng : '')); } catch (e) { return toast(e.message); }
   if (!OD.shop || OD.shop.bizId !== bizId) { OD.cart = new Map(); OD.idem = null; }
   OD.shop = s; OD.cat = ''; OD.q = '';
-  const { pg, body } = odPage('shopPage', s.name, [s.category, s.distKm != null ? s.distKm + ' km away' : '', s.delivery ? 'Delivery ' + s.eta : 'Pickup only'].filter(Boolean).join(' · '));
+  const { pg, body } = odPage('shopPage', s.name, [s.category, s.distKm != null ? s.distKm + ' km away' : '', s.delivery ? 'Delivery ' + s.eta : s.pickup ? 'Pickup' : '', s.ship ? '🚚 Courier to other towns' : ''].filter(Boolean).join(' · '));
   const info = el('div', 'od-info');
-  info.append(el('span', null, s.delivery ? '🛵 Delivery ' + (s.fee ? bzRs0(s.fee) : 'free') + (s.freeAbove && s.fee ? ' · free above ' + bzRs0(s.freeAbove) : '') : '🏃 Pickup only'), el('span', null, s.minOrder ? 'Minimum order ' + bzRs0(s.minOrder) : 'No minimum'), el('span', null, (s.payCod ? 'Cash' : '') + (s.payCod && s.payUpi ? ' / ' : '') + (s.payUpi ? 'UPI' : '') + ' on ' + (s.delivery ? 'delivery' : 'pickup')));
+  info.append(el('span', null, s.delivery ? '🛵 Delivery ' + (s.fee ? bzRs0(s.fee) : 'free') + (s.freeAbove && s.fee ? ' · free above ' + bzRs0(s.freeAbove) : '') : s.pickup ? '🏃 Pickup from shop' : '🚚 Courier / transport only'), ...(s.ship ? [el('span', null, '🚚 Courier / transport to other towns · ' + (s.shipToPay ? 'charges paid on collection' : s.shipFee ? bzRs0(s.shipFee) : 'free') + (s.shipEta ? ' · ' + s.shipEta : ''))] : []), el('span', null, s.minOrder ? 'Minimum order ' + bzRs0(s.minOrder) : 'No minimum'), el('span', null, (s.payCod ? 'Cash' : '') + (s.payCod && s.payUpi ? ' / ' : '') + (s.payUpi ? 'UPI' : '') + ' on ' + (s.delivery ? 'delivery' : 'pickup')));
   body.append(info);
   const bar = el('div', 'bz-pos-top'); const q = el('input'); q.type = 'search'; q.placeholder = 'Search in ' + s.name; q.setAttribute('aria-label', 'Search items'); const ai = el('button', 'bz-ib', '✨'); ai.setAttribute('aria-label', 'Type or speak your shopping list'); ai.onclick = odAiList; bar.append(q, ai); body.append(bar);
   const cats = [...new Set(s.items.map((i) => i.category).filter(Boolean))];
@@ -5513,39 +5718,50 @@ function odCheckout() {
     for (const [id, q] of OD.cart) { const it = s.items.find((x) => x.id === id); if (!it) continue; const r = el('div', 'bz-tr'); r.append(el('span', null, it.name + ' × ' + q), el('span', null, bzRs(Math.round(Math.round(it.price * 100) * q)))); box.append(r); }
     L.append(box);
     const f = el('form', 'bz-form');
-    let mode = s.delivery ? 'delivery' : 'pickup', pay = s.payCod ? 'cod' : 'upi';
-    const mch = el('div', 'bz-chips'); const addrBox = el('div', 'od-addr');
-    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; sum(); };
+    let mode = s.delivery ? 'delivery' : s.pickup ? 'pickup' : 'ship', pay = s.payCod ? 'cod' : 'upi';
+    const mch = el('div', 'bz-chips'); const addrBox = el('div', 'od-addr'), shipBox = el('div', 'od-addr'), payHead = el('div', 'th-title', 'Payment'), shipPay = el('p', 'info-note');
+    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; shipBox.hidden = m !== 'ship'; pch.hidden = m === 'ship'; shipPay.hidden = m !== 'ship'; sum(); };
     if (s.delivery) { const b = el('button', null, '🛵 Delivery'); b.type = 'button'; b.dataset.m = 'delivery'; b.onclick = () => setMode('delivery'); mch.append(b); }
     if (s.pickup) { const b = el('button', null, '🏃 I will pick up'); b.type = 'button'; b.dataset.m = 'pickup'; b.onclick = () => setMode('pickup'); mch.append(b); }
+    if (s.ship) { const b = el('button', null, '🚚 Courier / transport (other town)'); b.type = 'button'; b.dataset.m = 'ship'; b.onclick = () => setMode('ship'); mch.append(b); }
+    { // out-of-town address
+      const sv = (() => { try { return JSON.parse(store.get('maata_od_ship') || 'null'); } catch { return null; } })() || {};
+      const fld = (lab, id, val, ph, ta, mode2) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el(ta ? 'textarea' : 'input'); i.id = id; if (ta) i.rows = 2; i.value = val || ''; if (ph) i.placeholder = ph; if (mode2) i.inputMode = mode2; l.append(i); shipBox.append(l); return i; };
+      OD.sh = { text: fld('Full address', 'odSAddr', sv.text, 'Name on parcel, house no, street, area', true), city: fld('Town / city', 'odSCity', sv.city, 'e.g. Vijayawada'), pin: fld('PIN code', 'odSPin', sv.pin, '6 digits', false, 'numeric'), state: fld('State', 'odSState', sv.state || 'Andhra Pradesh'), landmark: fld('Landmark (optional)', 'odSLm', sv.landmark), pref: fld('Preferred courier / transport (optional)', 'odSPref', sv.pref, 'e.g. Navata – Vijayawada booking office') };
+      OD.sh.pin.maxLength = 6;
+      shipBox.append(el('p', 'info-note', '🚚 The shop books your parcel with a courier or lorry transport and adds the tracking / LR number here in Maata. ' + (s.shipEta ? 'Usually takes ' + s.shipEta + '. ' : '') + (s.shipNote || '')));
+    }
     const saved = (() => { try { return JSON.parse(store.get('maata_od_addr') || 'null'); } catch { return null; } })() || {};
     const al = el('label'); al.htmlFor = 'odAddr'; al.append(el('span', null, 'Delivery address')); const at = el('textarea'); at.id = 'odAddr'; at.rows = 2; at.value = saved.text || ''; at.placeholder = 'House no, street, village / area'; al.append(at);
     const ll = el('label'); ll.htmlFor = 'odLm'; ll.append(el('span', null, 'Landmark (optional)')); const lm = el('input'); lm.id = 'odLm'; lm.value = saved.landmark || ''; ll.append(lm);
     let pin = saved.lat ? { lat: saved.lat, lng: saved.lng } : null;
     const gps = el('button', 'sheet-btn', pin ? '📍 Location added ✓ (tap to update)' : '📍 Add my location (helps the delivery person)'); gps.type = 'button'; gps.onclick = async () => { gps.textContent = '📍 Getting location…'; OD.loc = null; const p = await odHere(); if (p) { pin = { lat: p.lat, lng: p.lng }; gps.textContent = '📍 Location added ✓'; } else gps.textContent = '📍 Could not get location. Allow location and try again.'; };
     addrBox.append(al, ll, gps);
-    const pch = el('div', 'bz-chips');
+    const pch = el('div', 'bz-chips'); shipPay.textContent = s.payUpi ? '📱 Pay the shop by UPI' + (s.upi ? ' (' + s.upi + ')' : '') + '. The shop sends the parcel after the payment.' : '💬 The shop will tell you how to pay before sending the parcel.';
     for (const [k, l, okk] of [['cod', '💵 Cash', s.payCod], ['upi', '📱 UPI', s.payUpi]]) if (okk) { const b = el('button', k === pay ? 'on' : null, l + ' on ' + (mode === 'delivery' ? 'delivery' : 'pickup')); b.type = 'button'; b.onclick = () => { pay = k; pch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; pch.append(b); }
     const nl = el('label'); nl.htmlFor = 'odNote'; nl.append(el('span', null, 'Note for the shop (optional)')); const note = el('input'); note.id = 'odNote'; note.placeholder = 'e.g. Call before coming'; nl.append(note);
     const tot = el('div', 'bz-tot');
     const go = el('button', 'sheet-btn primary'); go.type = 'submit';
     function sum() {
-      const t = odTotals(), fee = mode === 'delivery' && !(s.freeAbove && t.sum >= s.freeAbove) ? s.fee : 0; tot.innerHTML = '';
+      const t = odTotals(), fee = mode === 'delivery' && !(s.freeAbove && t.sum >= s.freeAbove) ? s.fee : mode === 'ship' && !s.shipToPay ? s.shipFee : 0; tot.innerHTML = '';
       const r = (a, b) => { const x = el('div'); x.append(el('span', null, a), el('span', null, b)); tot.append(x); };
-      r('Items', bzRs(t.sum)); if (t.tax) r('GST ' + (s.taxMode === 'incl' ? '(included)' : ''), bzRs(t.tax)); if (mode === 'delivery') r('Delivery', fee ? bzRs(fee) : 'Free');
+      r('Items', bzRs(t.sum)); if (t.tax) r('GST ' + (s.taxMode === 'incl' ? '(included)' : ''), bzRs(t.tax)); if (mode === 'delivery') r('Delivery', fee ? bzRs(fee) : 'Free'); if (mode === 'ship') r('Courier / transport', s.shipToPay ? 'Pay on collection' : fee ? bzRs(fee) : 'Free');
       const g = el('div', 'bz-grand'); g.append(el('span', null, 'To pay'), el('b', null, bzRs(t.sum + fee))); tot.append(g);
       go.textContent = 'Place order · ' + bzRs(t.sum + fee);
       if (s.minOrder && t.sum < s.minOrder) { go.disabled = true; go.textContent = 'Add ' + bzRs(s.minOrder - t.sum) + ' more (minimum ' + bzRs0(s.minOrder) + ')'; } else go.disabled = false;
     }
-    f.append(mch, addrBox, el('div', 'th-title', 'Payment'), pch, nl, tot, go);
+    f.append(mch, addrBox, shipBox, payHead, pch, shipPay, nl, tot, go);
     setMode(mode);
     f.onsubmit = async (e) => {
       e.preventDefault(); if (go.disabled) return;
-      const address = mode === 'delivery' ? { text: at.value.trim(), landmark: lm.value.trim(), ...(pin || {}) } : null;
+      let address = mode === 'delivery' ? { text: at.value.trim(), landmark: lm.value.trim(), ...(pin || {}) } : null, shipPref = '';
       if (mode === 'delivery') { if (address.text.length < 8) return toast('Write your full address'); try { store.set('maata_od_addr', JSON.stringify(address)); } catch {} }
+      if (mode === 'ship') { const v = (k) => OD.sh[k].value.trim(); address = { text: v('text'), city: v('city'), pin: v('pin').replace(/\D/g, ''), state: v('state'), landmark: v('landmark') }; shipPref = v('pref');
+        if (address.text.length < 8) return toast('Write your full address'); if (!address.city) return toast('Write your town / city'); if (!/^[1-9]\d{5}$/.test(address.pin)) return toast('Write your 6-digit PIN code');
+        try { store.set('maata_od_ship', JSON.stringify({ ...address, pref: shipPref })); } catch {} }
       go.disabled = true; go.textContent = 'Placing order…';
       try {
-        const o = await api('/api/shop/' + s.bizId + '/orders', { method: 'POST', body: JSON.stringify({ idem: OD.idem, items: [...OD.cart].map(([productId, qty]) => ({ productId, qty })), mode, address, pay, note: note.value }) });
+        const o = await api('/api/shop/' + s.bizId + '/orders', { method: 'POST', body: JSON.stringify({ idem: OD.idem, items: [...OD.cart].map(([productId, qty]) => ({ productId, qty })), mode, address, shipPref, pay, note: note.value }) });
         OD.cart = new Map(); OD.idem = null; closeSheet('moreSheet'); const sp = $('#shopPage'); if (sp) sp.remove(); toast('✅ Order placed'); openOrder(o.id, o);
       } catch (x) { toast(x.message); sum(); }
     };
@@ -5562,18 +5778,22 @@ function odOrderDraw(body, o) {
   body.innerHTML = '';
   const bad = ['REJECTED', 'CANCELLED'].includes(o.status);
   const hero = el('div', 'bz-card od-hero' + (bad ? ' bad' : o.status === 'DELIVERED' ? ' good' : ''));
-  hero.append(el('small', null, o.mode === 'delivery' ? '🛵 Home delivery' : '🏃 Pickup from shop'), el('h3', null, OD_LABEL[o.status] || o.status));
+  hero.append(el('small', null, odModeName(o.mode)), el('h3', null, o.mode === 'ship' && o.status === 'READY' ? 'Packed · booking with courier' : OD_LABEL[o.status] || o.status));
   if (o.reason) hero.append(el('p', 'bz-note', 'Reason: ' + o.reason));
   if (o.otp) { const c = el('div', 'od-otp'); c.append(el('small', null, o.mode === 'delivery' ? 'Give this code to the delivery person' : 'Show this code at the shop'), el('b', null, o.otp.split('').join(' '))); hero.append(c); }
   body.append(hero);
   if (o.status === 'OUT_FOR_DELIVERY') odLiveCard(body, o.id);
+  if (o.ship) body.append(shipCard(o, false));
+  if (o.mode === 'ship' && o.status === 'SHIPPED') { const g2 = el('button', 'bz-big', '📦 I received the parcel'); g2.onclick = async () => { if (!confirm('Did you get the parcel from ' + o.ship.carrier + '?')) return; try { const v = await api('/api/my/orders/' + o.id + '/received', { method: 'POST', body: '{}' }); odOrderDraw(body, v); toast('✅ Thank you!'); } catch (e) { toast(e.message); } }; body.append(g2); }
   if (!bad) { const tl = el('ol', 'od-steps'); const steps = OD_STEPS[o.mode]; const at = steps.indexOf(o.status === 'DELIVERY_FAILED' ? 'OUT_FOR_DELIVERY' : o.status);
     steps.forEach((s, i) => { const h = [...o.history].reverse().find((x) => x.s === s); const li = el('li', i < at ? 'done' : i === at ? 'now' : ''); li.append(el('b', null, OD_LABEL[s]), el('small', null, h ? new Date(h.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')); tl.append(li); }); body.append(tl); }
   const items = el('div', 'bz-card'); items.append(el('h3', null, 'Items'));
   for (const l of o.items) { const r = el('div', 'bz-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); items.append(r); }
-  if (o.fee) { const r = el('div', 'bz-tr'); r.append(el('span', null, 'Delivery'), el('span', null, bzRs(o.fee))); items.append(r); }
-  const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Pay by UPI' : 'Pay in cash'), el('b', null, bzRs(o.grand))); items.append(g);
-  if (o.address) items.append(el('small', 'bz-note', '📍 ' + o.address.text + (o.address.landmark ? ' (near ' + o.address.landmark + ')' : '')));
+  if (o.fee) { const r = el('div', 'bz-tr'); r.append(el('span', null, o.mode === 'ship' ? 'Courier / transport' : 'Delivery'), el('span', null, bzRs(o.fee))); items.append(r); }
+  if (o.toPay) items.append(el('small', 'bz-note', '💰 Transport charges: you pay when you collect the parcel (To Pay).'));
+  const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Pay by UPI' : o.mode === 'ship' ? 'To pay' : 'Pay in cash'), el('b', null, bzRs(o.grand))); items.append(g);
+  if (o.address) items.append(el('small', 'bz-note', '📍 ' + odAddrText(o.address)));
+  if (o.shipPref) items.append(el('small', 'bz-note', '🚚 You asked for: ' + o.shipPref));
   body.append(items);
   const act = el('div', 'bz-qa');
   const chat = el('button', 'bz-big alt', '💬 Chat with shop'); chat.onclick = async () => { try { if (typeof ensureUser === 'function') await ensureUser(o.bizId); } catch {} document.querySelectorAll('#orderPage,#shopPage,#shopsPage,#myOrdersPage').forEach((x) => x.remove()); setTab('chats'); openChat(o.bizId); }; act.append(chat);
@@ -5581,11 +5801,12 @@ function odOrderDraw(body, o) {
   if (['PLACED', 'ACCEPTED'].includes(o.status)) { const c = el('button', 'bz-big alt od-cancel', 'Cancel order'); c.onclick = async () => { if (!confirm('Cancel this order?')) return; try { const v = await api('/api/my/orders/' + o.id + '/cancel', { method: 'POST', body: '{}' }); odOrderDraw(body, v); toast('Order cancelled'); } catch (e) { toast(e.message); } }; act.append(c); }
   body.append(act, el('p', 'bz-note', 'Shop phone: ' + (o.shopPhone || '')));
 }
+const odAddrText = (a) => a.text + (a.landmark ? ' (near ' + a.landmark + ')' : '') + (a.city ? ', ' + a.city : '') + (a.state ? ', ' + a.state : '') + (a.pin ? ' – ' + a.pin : '');
 async function openMyOrders() {
   const { body } = odPage('myOrdersPage', 'My orders');
   let r = []; try { r = await api('/api/my/orders'); } catch (e) { return body.append(el('p', 'bz-empty', e.message)); }
   const list = el('div', 'bz-card'); if (!r.length) list.append(el('p', 'bz-empty', 'No orders yet.'));
-  for (const o of r) { const b = el('button', 'bz-billrow'); const st = ['DELIVERED'].includes(o.status) ? 'paid' : ['REJECTED', 'CANCELLED'].includes(o.status) ? 'void' : 'due'; b.append(el('div', null, o.shopName + ' · ' + o.number), el('small', null, new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + ' · ' + o.items.length + ' items'), el('b', null, bzRs(o.grand)), el('span', 'bz-st ' + st, OD_LABEL[o.status])); b.onclick = () => openOrder(o.id, o); list.append(b); }
+  for (const o of r) { const b = el('button', 'bz-billrow'); const st = ['DELIVERED', 'SHIPPED'].includes(o.status) ? 'paid' : ['REJECTED', 'CANCELLED'].includes(o.status) ? 'void' : 'due'; b.append(el('div', null, o.shopName + ' · ' + o.number), el('small', null, new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + ' · ' + o.items.length + ' items'), el('b', null, bzRs(o.grand)), el('span', 'bz-st ' + st, OD_LABEL[o.status])); b.onclick = () => openOrder(o.id, o); list.append(b); }
   body.append(list);
 }
 // live updates
@@ -5612,10 +5833,12 @@ async function bzOrders(body) {
 function bzOrderCard(o) {
   const c = el('div', 'bz-card od-card' + (o.status === 'PLACED' ? ' new' : ''));
   const h = el('div', 'od-head'); h.append(el('b', null, o.number + ' · ' + o.customerName), el('span', 'bz-st ' + (o.status === 'PLACED' ? 'due' : ['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(o.status) ? 'void' : 'paid'), OD_LABEL[o.status])); c.append(h);
-  c.append(el('small', 'bz-note', (o.mode === 'delivery' ? '🛵 Delivery' : '🏃 Pickup') + ' · ' + (o.pay === 'upi' ? 'UPI' : 'Cash') + ' · ' + new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
+  c.append(el('small', 'bz-note', odModeName(o.mode).replace('Home delivery', 'Delivery').replace('Pickup from shop', 'Pickup') + ' · ' + (o.pay === 'upi' ? 'UPI' : o.mode === 'ship' ? 'Pay before sending' : 'Cash') + (o.toPay ? ' · transport To Pay' : '') + ' · ' + new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
   for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
   const g = el('div', 'bz-grand'); g.append(el('span', null, 'Total' + (o.fee ? ' (incl. delivery ' + bzRs(o.fee) + ')' : '')), el('b', null, bzRs(o.grand))); c.append(g);
-  if (o.address) { const a = el('small', 'bz-note', '📍 ' + o.address.text + (o.address.landmark ? ' · near ' + o.address.landmark : '')); c.append(a); if (o.address.lat) { const m = el('button', 'bz-link', 'Open in Maata Maps'); m.onclick = () => { $('#bizPage').remove(); openMaps({ name: o.customerName + ' (' + o.number + ')', lat: o.address.lat, lng: o.address.lng, addr: o.address.text }); }; c.append(m); } }
+  if (o.shipPref) c.append(el('small', 'bz-note', '🚚 Customer wants: ' + o.shipPref));
+  if (o.ship) c.append(shipCard(o, true));
+  if (o.address) { const a = el('small', 'bz-note', '📍 ' + odAddrText(o.address)); c.append(a); if (o.address.lat) { const m = el('button', 'bz-link', 'Open in Maata Maps'); m.onclick = () => { $('#bizPage').remove(); openMaps({ name: o.customerName + ' (' + o.number + ')', lat: o.address.lat, lng: o.address.lng, addr: o.address.text }); }; c.append(m); } }
   if (o.note) c.append(el('small', 'bz-note', '📝 ' + o.note));
   c.append(el('small', 'bz-note', '📞 ' + (o.customerPhone || '')));
   if (o.mode === 'delivery' && (o.rider || o.riderId)) c.append(el('small', 'od-rider', '🛵 Delivery: ' + (o.rider ? o.rider.name : 'assigned') + (o.live ? ' · 📍 live' : '')));
@@ -5627,7 +5850,13 @@ function bzOrderCard(o) {
   if (o.status === 'PLACED') { go('ACCEPTED', '✅ Accept', 'pri'); go('REJECTED', 'Reject', 'bad', true); }
   if (o.status === 'ACCEPTED') go('PREPARING', '📦 Start packing', 'pri');
   if (o.status === 'PREPARING') go('READY', '✅ Ready', 'pri');
-  if (o.status === 'READY') { if (o.mode === 'delivery') go('OUT_FOR_DELIVERY', '🛵 Out for delivery', 'pri'); else go('DELIVERED', '🤝 Handed over (code)', 'pri', false, true); }
+  if (o.mode === 'ship') {
+    if (o.status === 'READY') { const b = el('button', 'bz-btn pri', '🚚 Sent by courier / transport'); b.onclick = () => bzShipForm(o); acts.append(b); }
+    if (o.status === 'SHIPPED') { const e2 = el('button', 'bz-btn', '✏️ Edit parcel details'); e2.onclick = () => bzShipForm(o); acts.append(e2);
+      const sc = el('button', 'bz-btn', '💬 Send details in chat'); sc.onclick = () => bzShipChat(o); acts.append(sc);
+      go('DELIVERED', '✅ Customer got it', 'pri'); }
+  }
+  else if (o.status === 'READY') { if (o.mode === 'delivery') go('OUT_FOR_DELIVERY', '🛵 Out for delivery', 'pri'); else go('DELIVERED', '🤝 Handed over (code)', 'pri', false, true); }
   if (o.mode === 'delivery' && ['ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_FAILED'].includes(o.status)) { const b = el('button', 'bz-btn', o.riderId ? '🛵 Change delivery person' : '🛵 Assign delivery person'); b.onclick = () => bzAssign(o); acts.append(b); }
   if (o.status === 'OUT_FOR_DELIVERY') { if (o.riderId === me.id) { const b = el('button', 'bz-btn pri', '📍 I am delivering: share location'); b.onclick = () => openRide(o.id); acts.append(b); } else { const b = el('button', 'bz-btn', '📍 Track live'); b.onclick = () => openTrack(o.id, o.number + ' · live'); acts.append(b); } go('DELIVERED', '🤝 Delivered (code)', 'pri', false, true); go('DELIVERY_FAILED', 'Could not deliver', 'bad', true); }
   if (o.status === 'DELIVERY_FAILED') go('OUT_FOR_DELIVERY', '🛵 Try again', 'pri');
@@ -5635,6 +5864,64 @@ function bzOrderCard(o) {
   if (o.invoiceId) { const b = el('button', 'bz-btn', '🧾 Bill'); b.onclick = () => window.open('/bill/' + o.invoiceId + '?k=' + o.invoiceKey, '_blank', 'noopener'); acts.append(b); }
   const chat = el('button', 'bz-btn', '💬 Chat'); chat.onclick = async () => { try { if (typeof ensureUser === 'function') await ensureUser(o.customerId); } catch {} $('#bizPage').remove(); setTab('chats'); openChat(o.customerId); }; acts.append(chat);
   c.append(acts); return c;
+}
+async function bzShipChat(o) {
+  try { if (typeof ensureUser === 'function') await ensureUser(o.customerId); } catch {}
+  socket.timeout(10000).emit('msg:send', { to: o.customerId, text: shipText(o) }, (err, res) => toast(err || res?.error ? res?.error || 'Not sent. Check your internet.' : '💬 Sent to ' + o.customerName + ' in chat'));
+}
+// 🚚 the shop adds the courier / lorry transport booking (AI can read the receipt photo)
+function bzShipForm(o) {
+  const x = o.ship || {}; let kind = x.kind || 'courier', photo, aiBusy = false;
+  sheet(o.ship ? '✏️ Parcel details · ' + o.number : '🚚 Send ' + o.number + ' by courier / transport', (L) => {
+    const f = el('form', 'bz-form');
+    f.append(el('p', 'info-note', '📍 To: ' + o.customerName + ' · ' + odAddrText(o.address || { text: '' }) + (o.shipPref ? ' · wants ' + o.shipPref : '')));
+    const scan = el('button', 'sheet-btn', '📷 Photo of receipt → ✨ AI fills the form'); scan.type = 'button'; f.append(scan);
+    const prev = el('div', 'od-shipprev'); f.append(prev);
+    const kch = el('div', 'bz-chips'); for (const [k, l] of SHIP_KINDS) { const b = el('button', k === kind ? 'on' : null, l); b.type = 'button'; b.dataset.k = k; b.onclick = () => setKind(k); kch.append(b); } f.append(kch);
+    const fl = (lab, id, val, ph, type) => { const l = el('label'); l.htmlFor = id; const sp = el('span', null, lab); l.append(sp); const i = el('input'); i.id = id; i.value = val ?? ''; if (ph) i.placeholder = ph; if (type) i.type = type; l.append(i); f.append(l); i.lab = sp; return i; };
+    const car = fl('Company name', 'shCar', x.carrier, 'e.g. DTDC, Navata, VRL…'); const dl = el('datalist'); dl.id = 'shCarList'; for (const n of SHIP_NAMES) { const op = el('option'); op.value = n; dl.append(op); } f.append(dl); car.setAttribute('list', 'shCarList'); car.autocomplete = 'off';
+    const ref = fl(shipRefName(kind), 'shRef', x.ref, 'Exactly as on the receipt'); ref.autocapitalize = 'characters'; ref.autocomplete = 'off';
+    const pcs = fl('Number of pieces / boxes (optional)', 'shPcs', x.pieces || '', '1', 'number'); pcs.inputMode = 'numeric';
+    const eta = fl('Expected delivery (optional)', 'shEta', x.eta, 'e.g. 20 Oct or 3–4 days');
+    const link = fl('Tracking link (optional)', 'shLink', x.link, 'https://…'); link.type = 'url'; link.inputMode = 'url';
+    const tpl = el('label', 'sec-pick'); const tp = el('input'); tp.type = 'checkbox'; tp.checked = o.ship ? !!x.toPay : !!o.toPay; tpl.append(tp, el('span', null, '💰 "To Pay": the customer pays transport charges when collecting')); f.append(tpl);
+    const note = fl('Note for the customer (optional)', 'shNote', x.note, 'e.g. Collect from Vijayawada booking office with ID');
+    const phl = el('button', 'sheet-btn', x.hasPhoto ? '🧾 Receipt photo added ✓ (tap to change)' : '🧾 Add receipt photo (optional)'); phl.type = 'button'; f.append(phl);
+    const fi = el('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.capture = 'environment'; fi.hidden = true; f.append(fi);
+    function setKind(k) { kind = k; kch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.k === k)); ref.lab.textContent = shipRefName(k); if (k === 'post' && !car.value) car.value = 'India Post'; }
+    let wantAi = false;
+    scan.onclick = () => { wantAi = true; fi.click(); }; phl.onclick = () => { wantAi = false; fi.click(); };
+    fi.onchange = async () => {
+      const file = fi.files[0]; fi.value = ''; if (!file) return;
+      const blob = await bzShrink(file); photo = await shipJpeg(blob);
+      prev.innerHTML = ''; const im = el('img'); im.src = URL.createObjectURL(photo || blob); im.alt = 'Receipt'; prev.append(im); phl.textContent = '🧾 Receipt photo added ✓ (tap to change)';
+      if (!wantAi || aiBusy) return; aiBusy = true; scan.textContent = '✨ Reading the receipt…'; scan.disabled = true;
+      try {
+        const r = await fetch('/api/biz/' + BZ.id + '/ai/ship-receipt', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': blob.type || 'image/jpeg' }, body: blob });
+        const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'AI could not read it.');
+        setKind(d.kind); if (d.carrier) car.value = d.carrier; if (d.ref) ref.value = d.ref; if (d.pieces) pcs.value = d.pieces; if (d.eta) eta.value = d.eta; if (d.toPay) tp.checked = true;
+        toast(d.sure ? '✨ Filled from the receipt. Please check the number.' : '✨ Filled, but AI is not sure. Check every field.');
+      } catch (e) { toast(e.message); }
+      aiBusy = false; scan.disabled = false; scan.textContent = '📷 Photo of receipt → ✨ AI fills the form';
+    };
+    const ok = el('button', 'sheet-btn primary', o.ship ? 'Save changes' : '🚚 Save & tell the customer'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => {
+      e.preventDefault(); if (!car.value.trim()) return toast('Write the company name'); if (ref.value.trim().length < 3) return toast('Write the ' + shipRefName(kind));
+      if (!o.ship && o.pay === 'upi' && !confirm('Did you receive ' + bzRs(o.grand) + ' by UPI from ' + o.customerName + '?')) return;
+      ok.disabled = true;
+      try { await bzApi('/orders/' + o.id + '/ship', { method: 'POST', body: JSON.stringify({ kind, carrier: car.value.trim(), ref: ref.value.trim(), pieces: pcs.value, eta: eta.value.trim(), link: link.value.trim(), toPay: tp.checked, note: note.value.trim() }) });
+        if (photo) { const r = await fetch('/api/biz/' + BZ.id + '/orders/' + o.id + '/ship-photo', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'image/jpeg' }, body: photo }); if (!r.ok) toast('Details saved, but the photo did not upload. Try again from ✏️ Edit.'); }
+        closeSheet('moreSheet'); toast(o.ship ? 'Saved ✓' : '🚚 Sent ✓ The customer can see the number now'); await bzLoadProducts(); bzTab('orders'); }
+      catch (x2) { toast(x2.message); ok.disabled = false; }
+    };
+    L.append(f);
+  });
+}
+async function shipJpeg(blob) { // keep receipt photos small (under ~380 KB)
+  const img = await mkLoadImg(URL.createObjectURL(blob)).catch(() => null); if (!img) return null;
+  let k = Math.min(1, 1400 / Math.max(img.width, img.height)), q = 0.8, out = null;
+  for (let i = 0; i < 6; i++) { const c = mkCanvas(img.width * k, img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); out = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', q)); if (out && out.size < 380000) break; k *= 0.8; q = Math.max(0.5, q - 0.08); }
+  URL.revokeObjectURL(img.src); return out;
 }
 function bzStoreSettings() {
   bzApi('/store').then((s) => sheet('🛒 Online store', (L) => {
@@ -5645,11 +5932,15 @@ function bzStoreSettings() {
     const fee = fl('Delivery charge ₹', 'stFee', s.fee / 100, 'number'), free = fl('Free delivery above ₹ (0 = never)', 'stFree', s.freeAbove / 100, 'number'), min = fl('Minimum order ₹ (0 = none)', 'stMin', s.minOrder / 100, 'number');
     const eta = fl('Delivery time', 'stEta', s.eta, 'text', '30–45 min'), rad = fl('Deliver up to (km)', 'stRad', s.radiusKm, 'number'), area = fl('Areas you deliver to (shown to customers)', 'stArea', s.area, 'text', 'Vinjam, Puttur road…');
     const cod = chk('💵 Cash on delivery / pickup', s.payCod), upi = chk('📱 UPI on delivery / pickup', s.payUpi);
+    f.append(el('div', 'th-title', '🚚 Other towns (courier / lorry transport)'));
+    const sp = chk('🚚 Send to other towns by courier / transport', s.ship), stp = chk('💰 Customer pays transport charges on collection ("To Pay")', s.shipToPay);
+    const sfee = fl('Courier / packing charge ₹ (when not "To Pay")', 'stSFee', s.shipFee / 100, 'number'), seta = fl('Usual time', 'stSEta', s.shipEta, 'text', '3–7 days'), snote = fl('Note for customers (optional)', 'stSNote', s.shipNote, 'text', 'We send by Navata / DTDC. UPI payment first.');
+    f.append(el('p', 'info-note', 'For courier orders the customer pays by UPI first. After you book the parcel, add the tracking or LR number in the order, and the customer sees it in Maata.'));
     let pos = s.lat != null ? { lat: s.lat, lng: s.lng } : null;
     const lb = el('button', 'sheet-btn', pos ? '📍 Shop location saved ✓ (tap if you are at the shop to update)' : '📍 Save shop location (stand at your shop)'); lb.type = 'button'; lb.onclick = async () => { lb.textContent = '📍 Getting location…'; const p = await secPos(); if (p.lat) { pos = p; lb.textContent = '📍 Shop location saved ✓'; } else lb.textContent = '📍 Could not get location'; }; f.append(lb);
     f.append(el('p', 'info-note', 'Customers pay you directly in cash or UPI. Online card payments can be added later.'));
     const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit'; f.append(ok);
-    f.onsubmit = async (e) => { e.preventDefault(); try { await bzApi('/store', { method: 'PUT', body: JSON.stringify({ on: on.checked, delivery: dl.checked, pickup: pu.checked, fee: fee.value, freeAbove: free.value, minOrder: min.value, eta: eta.value, radiusKm: rad.value, area: area.value, payCod: cod.checked, payUpi: upi.checked, ...(pos ? { lat: pos.lat, lng: pos.lng } : {}) }) }); closeSheet('moreSheet'); toast(on.checked ? '🟢 Online store is open' : 'Online store saved'); if (BZ.tab === 'orders') bzTab('orders'); } catch (x) { toast(x.message); } };
+    f.onsubmit = async (e) => { e.preventDefault(); try { await bzApi('/store', { method: 'PUT', body: JSON.stringify({ on: on.checked, delivery: dl.checked, pickup: pu.checked, fee: fee.value, freeAbove: free.value, minOrder: min.value, eta: eta.value, radiusKm: rad.value, area: area.value, payCod: cod.checked, payUpi: upi.checked, ship: sp.checked, shipToPay: stp.checked, shipFee: sfee.value, shipEta: seta.value, shipNote: snote.value, ...(pos ? { lat: pos.lat, lng: pos.lng } : {}) }) }); closeSheet('moreSheet'); toast(on.checked ? '🟢 Online store is open' : 'Online store saved'); if (BZ.tab === 'orders') bzTab('orders'); } catch (x) { toast(x.message); } };
     L.append(f);
   })).catch((e) => toast(e.message));
 }
@@ -5717,8 +6008,9 @@ function rdDraw(body, o) {
   if (o.note) c.append(el('p', 'bz-note', '📝 ' + o.note));
   const row = el('div', 'od-acts');
   if (o.customerPhone) { const a = el('a', 'bz-btn', '📞 Call ' + o.customerPhone); a.href = 'tel:' + o.customerPhone; row.append(a); }
-  if (o.address && o.address.lat != null) { const n = el('button', 'bz-btn pri', '🧭 Navigate'); n.onclick = () => { document.querySelectorAll('#ridePage,#ridesPage').forEach((x) => x.remove()); openMaps({ name: o.customerName + ' (' + o.number + ')', lat: o.address.lat, lng: o.address.lng, addr: o.address.text }); toast('Keep sharing: open My deliveries again after you reach.'); }; row.append(n); }
+  if (o.address && o.address.lat != null) { const n = el('button', 'bz-btn pri', '🧭 Navigate (voice)'); n.onclick = () => { openMaps({ name: o.customerName + ' (' + o.number + ')', lat: o.address.lat, lng: o.address.lng, addr: o.address.text }); toast('Your location keeps sharing. Press Back to return to this delivery.'); }; row.append(n); }
   c.append(row);
+  if (o.address && o.address.lat != null && o.status !== 'DELIVERED') { const mc = el('div', 'od-map'); c.append(mc); const info = el('p', 'bz-note'); info.id = 'rdInfo'; info.textContent = '🏠 Customer · 🛵 You (when you start)'; c.append(info); odTrackMap(mc, { dest: { lat: o.address.lat, lng: o.address.lng }, shop: o.shopLoc, track: o.track ? { ...o.track } : (RD.last ? { lat: RD.last.lat, lng: RD.last.lng, trail: [] } : null) }).then((T) => { RD.map = T; }); }
   for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
   const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Customer pays by UPI' : 'Collect cash'), el('b', null, bzRs(o.grand))); c.append(g);
   body.append(c);
@@ -5734,8 +6026,9 @@ function rdDraw(body, o) {
   body.append(acts, el('p', 'bz-note', 'Your location is shared only while an order is "On the way", only with that customer and the shop, and it is deleted when the delivery ends.'));
 }
 function rdSend(id, p) {
-  RD.sentAt = Date.now(); RD.last = p;
-  api('/api/rider/jobs/' + id + '/loc', { method: 'POST', body: JSON.stringify(p) }).then((r) => { if (r.stop) { rdStop(); toast('Delivery ended. Location sharing stopped.'); } else if (r.eta && $('#rdBanner')) $('#rdBanner').textContent = '📍 Sharing your location · about ' + r.eta.minutes + ' min (' + fmtKm(r.eta.meters) + ') to the customer'; }).catch(() => {});
+  RD.sentAt = Date.now(); RD.last = p; RD.trail = (RD.trail || []).concat([[p.lat, p.lng]]).slice(-200);
+  if (RD.map && document.body.contains(RD.map.map.getContainer())) RD.map.update({ track: { lat: p.lat, lng: p.lng, trail: RD.trail } }, RD.trail.length === 1);
+  api('/api/rider/jobs/' + id + '/loc', { method: 'POST', body: JSON.stringify(p) }).then((r) => { if (r.stop) { rdStop(); toast('Delivery ended. Location sharing stopped.'); } else if (r.eta && $('#rdBanner')) $('#rdBanner').textContent = '📍 Sharing your location · about ' + r.eta.minutes + ' min (' + fmtKm(r.eta.meters) + ') to the customer'; if (r.eta && $('#rdInfo')) $('#rdInfo').textContent = '🛵 ' + fmtKm(r.eta.meters) + ' to the customer · about ' + r.eta.minutes + ' min'; }).catch(() => {});
 }
 function rdShare(id) {
   if (RD.job === id && RD.watch != null) return; rdStop(); RD.job = id;
@@ -8797,6 +9090,7 @@ const inCallNow = () => (shown('#callScreen') && !$('#callScreen').classList.con
 const isMobileLayout = () => matchMedia('(max-width:760px)').matches;
 // the screens, top-most first, each with how to close it
 const BACK_LAYERS = [
+  ['#mkPage', () => { if (!$('#moreSheet').hidden) return closeSheet('moreSheet'); const c = document.querySelector('#mkPage .mk-top .mk-ib'); if (c) c.click(); }],
   ['.qr-scan', () => { const b = document.querySelector('.qr-scan .qr-close'); if (b) b.click(); }],
   ['#mapPage', () => closeMaps()],
   ['#bkView', () => $('#bkView').remove()],
@@ -11236,8 +11530,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 133;
-const APP_NOTES = ["🛵 Live delivery tracking: shops assign a delivery person, customers see them coming on a live map with the time left. Delivery staff use ⋮ Menu → My deliveries. Location is shared only during a delivery."];
+const APP_VERSION = 135;
+const APP_NOTES = ["🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
