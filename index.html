@@ -291,6 +291,9 @@ html.dark .recall{color:#7CC4D4}
 .ring.none{background:transparent;padding:3px}
 .ring .avatar{border:2px solid var(--panel)}
 .st-plus{position:relative}
+.sr-ring{position:relative;flex:none;width:58px;height:58px;display:grid;place-items:center}.sr-ring svg{position:absolute;inset:0;width:58px;height:58px}
+.sr-thumb{position:relative;width:50px;height:50px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--line)}.sr-thumb img,.sr-thumb video{width:100%;height:100%;object-fit:cover;display:block}.sr-thumb .avatar{width:50px;height:50px}
+.sr-thumb.txt{color:#fff;font-size:9px;font-weight:700;line-height:1.15;padding:6px;text-align:center;word-break:break-word;box-sizing:border-box}.sr-play{position:absolute;font-style:normal;color:#fff;font-size:13px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
 .st-plus::after{content:"+";position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:var(--leaf);color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center;border:2px solid var(--panel)}
 .st-actions{display:flex;gap:8px;padding:4px 10px 8px}
 .st-actions button{flex:1;padding:11px;border-radius:12px;font-weight:600;font-size:14px;background:var(--peacock-soft);color:var(--peacock)}
@@ -1087,8 +1090,8 @@ html[data-accent="green"]:not(.dark) .bubble.mine{--tk-sent:#8696A0;--tk-deliver
 .st-tools button .i{font-size:21px}
 .st-tools button[aria-pressed="true"]{background:#1C2A36;color:#fff}
 .st-panel{max-height:36vh;overflow-y:auto;padding:8px 14px 12px;background:#121820}
-.st-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:14px}
-.st-row span{min-width:110px;opacity:.85}.st-row input[type=range]{flex:1;accent-color:#21C063}.st-row select{flex:1;padding:8px;border-radius:10px;background:#1C2530;color:#fff;border:1px solid #2A3644}
+label.st-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:14px}
+label.st-row span{min-width:110px;opacity:.85}label.st-row input[type=range]{flex:1;accent-color:#21C063}label.st-row select{flex:1;padding:8px;border-radius:10px;background:#1C2530;color:#fff;border:1px solid #2A3644}
 .st-note{font-size:13px;opacity:.8;margin:4px 0 8px}
 .st-ai{display:block;width:100%;margin:6px 0;padding:11px;border-radius:12px;background:linear-gradient(90deg,#1DAA61,#1B7A8F);color:#fff;font-weight:700}
 .st-ai:disabled{opacity:.6}
@@ -1464,6 +1467,94 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .sec-own form{display:flex;flex-direction:column;gap:8px;text-align:left}.sec-own input{font:inherit;font-size:16px;padding:12px;border-radius:12px;border:0;min-height:44px}
 .sec-err{color:#FFB4BF}
 .map-head-btn svg{stroke:#0F7A6E}
+/* 🏪 Maata Business — uses the app's own theme tokens (light / dark) */
+.bz{--bz-acc:#0F7A6E;--bz-acc-ink:#fff;--bz-soft:rgba(15,122,110,.12);--bz-warn:#B54708;--bz-bad:#B42318;position:fixed;inset:0;z-index:37;background:var(--paper);color:var(--ink);display:flex;flex-direction:column}
+.bz-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px;background:var(--panel);border-bottom:1px solid var(--line)}
+.bz-title{display:flex;flex-direction:column;min-width:0}.bz-title b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bz-title small{color:var(--muted)}
+.bz-ib{flex:none;width:44px;height:44px;border-radius:12px;background:none;border:0;color:inherit;font-size:21px}
+.bz-body{flex:1;overflow-y:auto;padding:12px 14px 24px;display:flex;flex-direction:column;gap:12px}
+.bz-nav{display:flex;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.bz-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;min-height:56px;background:none;border:0;color:var(--muted);font:inherit}
+.bz-nav button span{font-size:20px}.bz-nav button small{font-size:11.5px;font-weight:600}.bz-nav button[aria-current="page"]{color:var(--bz-acc)}
+.bz-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.bz-card h3{margin:0 0 2px;font-size:16px}
+.bz-note{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}.bz-empty{color:var(--muted);text-align:center;padding:18px 8px;margin:0}.bz-load{color:var(--muted);text-align:center;padding:30px}
+.bz-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bz-kpi{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.bz-kpi small{color:var(--muted);font-size:12px}.bz-kpi b{font-size:22px;font-variant-numeric:tabular-nums}.bz-kpi span{color:var(--muted);font-size:12px}
+.bz-kpi:first-child{background:var(--bz-acc);border-color:var(--bz-acc);color:var(--bz-acc-ink)}.bz-kpi:first-child small,.bz-kpi:first-child span{color:rgba(255,255,255,.85)}
+.bz-bars{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:130px;align-items:end}
+.bz-bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;min-width:0}
+.bz-bar i{display:block;width:70%;background:var(--bz-acc);border-radius:6px 6px 2px 2px;min-height:2px}.bz-bar small{font-size:9.5px;color:var(--muted);white-space:nowrap}.bz-bar span{font-size:11px;color:var(--muted)}
+.bz-qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.bz-big{border:0;border-radius:14px;padding:14px;min-height:50px;background:var(--bz-acc);color:var(--bz-acc-ink);font:inherit;font-size:16px;font-weight:800}
+.bz-big.alt{background:var(--bz-soft);color:var(--bz-acc)}.bz-big:disabled{opacity:.6}
+.bz-btn{align-self:flex-start;border:0;border-radius:12px;padding:10px 14px;min-height:44px;background:var(--bz-soft);color:var(--bz-acc);font:inherit;font-weight:700}
+.bz-link{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;padding:10px;min-height:44px}
+.bz-row{padding:8px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px;cursor:pointer}.bz-row:first-of-type{border-top:0}
+.bz-warn{color:var(--bz-warn)}.bz-warn.full{grid-column:1/-1}
+.bz-ai-out{white-space:pre-line;line-height:1.55;font-size:14.5px}
+.bz-pos-top{display:flex;gap:8px;align-items:center}
+.bz-pos-top input{flex:1;min-width:0;font:inherit;font-size:16px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);min-height:46px}
+.bz-pos-top .bz-ib{background:var(--panel);border:1px solid var(--line)}
+.bz-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.bz-pick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;min-height:60px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:inherit;font:inherit}
+.bz-pick b{font-size:14px;line-height:1.25}.bz-pick small{color:var(--muted);font-size:12px}.bz-pick.out{opacity:.55}.bz-pick.custom{border-style:dashed;color:var(--bz-acc)}
+.bz-cart{display:flex;flex-direction:column;gap:8px}
+.bz-line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.bz-line-n{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;min-width:0}.bz-line-n b{width:100%;font-size:14.5px}.bz-line-n small{color:var(--muted);font-size:12px}
+.bz-line-n input{width:72px;font:inherit;font-size:14px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.bz-qty{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.bz-qty button{width:38px;height:40px;border:0;background:var(--bz-soft);color:var(--bz-acc);font-size:20px;font-weight:800}
+.bz-qty input{width:50px;text-align:center;border:0;font:inherit;font-size:15px;background:var(--panel);color:var(--ink);height:40px}
+.bz-amt{font-variant-numeric:tabular-nums;min-width:70px;text-align:right}
+.bz-sum{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.bz-inl{display:flex;align-items:center;gap:10px;color:var(--muted);min-width:0}.bz-inl span{white-space:nowrap}.bz-inl input{flex:1;min-width:0;width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);min-height:44px}
+.bz-cust summary{cursor:pointer;color:var(--muted);padding:6px 0}.bz-cust input{display:block;width:100%;box-sizing:border-box;margin-top:8px;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);min-height:44px}
+.bz-chips{display:flex;flex-wrap:wrap;gap:8px}
+.bz-chips button{padding:9px 14px;min-height:42px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-weight:600}
+.bz-chips button.on{background:var(--bz-acc);border-color:var(--bz-acc);color:var(--bz-acc-ink)}
+.bz-tot{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:14px}.bz-tot div,.bz-tr{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
+.bz-tr{padding:8px 16px;border-bottom:1px solid var(--line);font-size:14px;align-items:center}.bz-billview .bz-tr{padding:6px 0}
+.bz-grand{display:flex;justify-content:space-between;align-items:baseline;font-size:15px}.bz-grand b{font-size:26px;font-variant-numeric:tabular-nums}
+.bz-billrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;padding:10px 0;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;width:100%}
+.bz-billrow small{color:var(--muted);font-size:12px}.bz-billrow b{grid-row:1;grid-column:2;text-align:right;font-variant-numeric:tabular-nums}
+.bz-st{grid-column:2;justify-self:end;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.bz-st.paid{background:#DCFAE6;color:#067647}.bz-st.due{background:#FEF0C7;color:#93370D}.bz-st.void{background:#FEE4E2;color:#B42318}
+.bz-prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;text-align:left;padding:11px 0;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;width:100%;min-height:52px}
+.bz-prow:first-of-type{border-top:0}.bz-prow small{color:var(--muted);font-size:12.5px;grid-column:1}.bz-prow b{grid-column:1}
+.bz-stk{grid-row:1/3;grid-column:2;font-weight:800;font-variant-numeric:tabular-nums}.bz-stk.low{color:var(--bz-warn)}.bz-stk.out{color:var(--bz-bad)}
+.bz-form{display:flex;flex-direction:column;gap:10px;padding:8px 16px 16px}
+.bz-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.bz-form input,.bz-form select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);min-height:44px}
+.bz-billview{padding:4px 16px 8px;display:flex;flex-direction:column}.bz-void{color:var(--bz-bad);font-weight:800;margin:4px 0 8px}
+.bz-scan{position:fixed;inset:0;z-index:9990;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;padding:16px}
+.bz-scan video{width:100%;max-width:480px;border-radius:14px}
+.od-info{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.od-grid{display:flex;flex-direction:column;gap:8px;padding-bottom:80px}
+.od-item{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
+.od-item.out{opacity:.6}.od-ph{width:56px;height:56px;border-radius:12px;background:rgba(15,122,110,.08);display:grid;place-items:center;font-size:24px;overflow:hidden}.od-ph img{width:100%;height:100%;object-fit:cover}
+.od-tx{display:flex;flex-direction:column;gap:2px;min-width:0}.od-tx b{font-size:14.5px;line-height:1.25}.od-tx small{color:var(--muted);font-size:12.5px}
+.od-add{border:1.5px solid var(--bz-acc);color:var(--bz-acc);background:var(--panel);border-radius:10px;padding:8px 16px;min-height:40px;font:inherit;font-weight:800}
+.od-n{display:inline-block;min-width:30px;text-align:center;font-weight:800}
+.od-cartbar{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border:0;border-radius:16px;background:var(--bz-acc);color:#fff;font:inherit;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:2}
+.od-addr{display:flex;flex-direction:column;gap:10px}.od-addr textarea,.bz-form textarea{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
+.od-hero{align-items:flex-start}.od-hero h3{font-size:22px}.od-hero.good{border-color:#12B76A}.od-hero.bad{border-color:#F04438}
+.od-otp{margin-top:6px;padding:10px 14px;border-radius:12px;background:rgba(15,122,110,.1);display:flex;flex-direction:column;gap:2px}.od-otp b{font-size:30px;letter-spacing:.2em;color:var(--bz-acc)}
+.od-steps{list-style:none;margin:0;padding:4px 0 4px 6px;display:flex;flex-direction:column;gap:0}
+.od-steps li{position:relative;padding:0 0 16px 26px;display:flex;justify-content:space-between;gap:10px;color:var(--muted)}
+.od-steps li::before{content:'';position:absolute;left:0;top:3px;width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:var(--panel)}
+.od-steps li::after{content:'';position:absolute;left:7px;top:19px;bottom:1px;width:2px;background:var(--line)}.od-steps li:last-child::after{display:none}
+.od-steps li.done,.od-steps li.now{color:var(--ink)}.od-steps li.done::before{background:var(--bz-acc);border-color:var(--bz-acc)}.od-steps li.done::after{background:var(--bz-acc)}
+.od-steps li.now::before{border-color:var(--bz-acc);box-shadow:0 0 0 4px rgba(15,122,110,.18)}
+.od-card.new{border:2px solid #F79009}.od-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.od-tr{padding:4px 0}
+.od-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.od-acts .bz-btn{flex:1 1 auto;align-self:auto}.bz-btn.pri{background:var(--bz-acc);color:#fff}.bz-btn.bad{background:rgba(240,68,56,.1);color:#B42318}
+.od-cancel{color:#B42318!important}
+.od-map{height:260px;border-radius:14px;overflow:hidden;background:rgba(15,122,110,.08)}.od-live-t{margin:0;font-weight:600}
+.od-who{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.od-mk{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}.od-mk.rider{font-size:32px}
+.od-sharing{background:#0F7A6E;color:#fff;border-radius:14px;padding:12px 14px;font-weight:600;line-height:1.4}
+.od-rider{font-size:13px;color:var(--bz-acc);font-weight:700}
 .mp-attr{order:99;padding:6px 16px 2px;font-size:11px;color:#7A8792;text-align:right}
 .mp-fixed{padding:8px 16px;font-size:13px;color:#1558B0;font-weight:600}
 .mp-chips{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}.mp-chips::-webkit-scrollbar{display:none}
@@ -2233,6 +2324,7 @@ async function start() {
   setTimeout(() => { registerNativePush(); if (!isNativeApp()) { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); } handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
   setTimeout(secStart, 2000);
+  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); }
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -2245,7 +2337,7 @@ function connectSocket() {
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
   socket.on('announcement', showNotice);
-  socket.on('connect', secHello); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
+  socket.on('connect', secHello); odSocket(); rdSocket(); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
   socket.on('user:removed', ({ id }) => {
     users = users.filter((u) => u.id !== id);
     if (activeId === id) { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; }
@@ -3375,12 +3467,25 @@ async function loadStatus() {
   $('#statusDot').hidden = !statusData.users.some((g) => !g.allViewed) || tab === 'status';
   if (tab === 'status') renderStatus();
 }
+function statusThumb(g, seenAll) {
+  const list = g.statuses || [], st = list[list.length - 1], n = Math.max(1, list.length);
+  const box = document.createElement('span'); box.className = 'sr-ring';
+  const C = 2 * Math.PI * 27, gap = n > 1 ? 4 : 0, seg = Math.max(1, C / n - gap);
+  let arcs = ''; list.forEach((x, i) => { const seen = seenAll || x.viewed || g.mine; arcs += '<circle cx="29" cy="29" r="27" fill="none" stroke="' + (seen ? 'var(--line)' : '#25D366') + '" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="' + seg.toFixed(2) + ' ' + (C - seg).toFixed(2) + '" stroke-dashoffset="' + (C / 4 - i * C / n).toFixed(2) + '"/>'; });
+  box.innerHTML = '<svg viewBox="0 0 58 58" aria-hidden="true">' + arcs + '</svg>';
+  const th = document.createElement('span'); th.className = 'sr-thumb';
+  if (!st) th.append(avatar(g.user));
+  else if (st.type === 'image') { const im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; im.src = mediaSrc(st); im.onerror = () => { im.remove(); th.append(avatar(g.user)); }; th.append(im); }
+  else if (st.type === 'video') { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'metadata'; v.src = mediaSrc(st) + '#t=0.5'; th.append(v); const pl = document.createElement('i'); pl.className = 'sr-play'; pl.textContent = '▶'; th.append(pl); }
+  else { th.classList.add('txt'); th.style.background = st.bg || '#0F4C5C'; th.textContent = (st.text || '').slice(0, 18); }
+  box.append(th); return box;
+}
 function ringAvatar(u, cls) { const r = document.createElement('span'); r.className = 'ring ' + (cls || ''); r.append(avatar(u)); return r; }
 function renderStatus() {
   const mineBox = $('#stMine'); mineBox.innerHTML = '';
   const mb = document.createElement('button'); mb.className = 'st-row';
   const has = statusData.mine.length;
-  const av = ringAvatar(me, has ? '' : 'none'); if (!has) av.classList.add('st-plus');
+  const av = has ? statusThumb({ user: me, statuses: statusData.mine, mine: true }, true) : ringAvatar(me, 'none'); if (!has) av.classList.add('st-plus');
   const t = document.createElement('div'); t.className = 'c-body';
   t.innerHTML = '<div class="c-name"></div><div class="c-last"></div>'; t.querySelector('.c-name').textContent = i18n('myStatus');
   t.querySelector('.c-last').textContent = has ? has + ' update' + (has > 1 ? 's' : '') + ' · ' + ago2(statusData.mine[has - 1].createdAt) + ' · tap to see views' : 'Share a photo, video or text';
@@ -3396,7 +3501,7 @@ function renderStatus() {
       body.innerHTML = '<div class="c-name"></div><div class="c-last"></div>';
       body.querySelector('.c-name').textContent = nameOf(g.user);
       body.querySelector('.c-last').textContent = ago2(g.latest) + (g.statuses.length > 1 ? ' · ' + g.statuses.length + ' updates' : '');
-      b.append(ringAvatar(g.user, g.allViewed ? 'seen' : ''), body);
+      b.append(statusThumb(g, g.allViewed), body);
       b.onclick = () => openViewer(groups, groups.indexOf(g));
       li.append(b); list.append(li);
     });
@@ -4627,6 +4732,9 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  rides: '<svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-2-7h-3M13 10h3l2 7M6 14l2-4h3"/></svg>',
+  shops: '<svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 2 3 3 0 0 1-5.4 0A3 3 0 0 1 4 11z"/><path d="M5 13v7h14v-7M10 20v-4h4v4"/></svg>',
+  bizpos: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
   secure: '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6"/></svg>',
   maps: '<svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
   invite: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s4 1 6 1zm0 0c2-4 6-4 6-1s-4 1-6 1z"/></svg>',
@@ -4959,6 +5067,702 @@ function secTrusted() {
   });
 }
 
+
+// ==================== 🏪 MAATA BUSINESS (billing, stock, staff, reports, AI) ====================
+const BZ = { id: null, info: null, tab: 'home', prods: [], cart: [], idem: null, disc: '', method: 'cash', cust: { name: '', phone: '' }, range: 'today' };
+const bzRs = (p) => '₹' + (Math.round(p) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const bzRs0 = (p) => '₹' + Math.round(p / 100).toLocaleString('en-IN');
+const bzCan = (perm) => !!(BZ.info && BZ.info.perms.includes(perm));
+const bzApi = (path, opts) => api('/api/biz/' + BZ.id + path, opts);
+const bzLang = () => ({ te: 'te-IN', hi: 'hi-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-IN', ur: 'ur-IN', or: 'or-IN' })[(me && me.lang) || ''] || 'en-IN';
+const bzNewIdem = () => 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+async function openBiz(bizId) {
+  let list = []; try { list = await api('/api/biz/me'); } catch (e) { return toast(e.message); }
+  if (!list.length) { toast('Create your business profile first'); return editBusinessProfile(); }
+  if (!bizId && list.length > 1) return sheet('🏪 Choose a business', (L) => list.forEach((w) => { const b = el('button', 'sheet-btn', '🏪 ' + w.name + ' · ' + w.role); b.onclick = () => { closeSheet('moreSheet'); openBiz(w.bizId); }; L.append(b); }));
+  BZ.id = bizId || list[0].bizId;
+  try { BZ.info = await bzApi(''); } catch (e) { return toast(e.message); }
+  let pg = $('#bizPage');
+  if (!pg) {
+    pg = el('section', 'bz'); pg.id = 'bizPage'; pg.setAttribute('aria-label', 'Maata Business');
+    const top = el('div', 'bz-top'); const back = el('button', 'bz-ib', '←'); back.setAttribute('aria-label', 'Back'); back.onclick = () => pg.remove();
+    const tt = el('div', 'bz-title'); tt.id = 'bzTitle'; top.append(back, tt);
+    const body = el('div', 'bz-body'); body.id = 'bzBody';
+    const nav = el('nav', 'bz-nav'); nav.id = 'bzNav';
+    pg.append(top, body, nav); document.body.append(pg);
+  }
+  $('#bzTitle').innerHTML = ''; $('#bzTitle').append(el('b', null, BZ.info.name), el('small', null, BZ.info.role === 'owner' ? 'Owner' : 'You are ' + BZ.info.role));
+  const nav = $('#bzNav'); nav.innerHTML = '';
+  const tabs = [['home', '🏠', 'Home'], ...(bzCan('bill') ? [['bill', '🧾', 'New bill'], ['orders', '🛒', 'Orders']] : []), ...(bzCan('deliver') ? [['rides', '🛵', 'Deliveries']] : []), ['stock', '📦', 'Stock'], ...(bzCan('bill') ? [['bills', '📚', 'Bills']] : []), ['more', '⚙️', 'More']];
+  for (const [k, ic, l] of tabs) { const b = el('button'); b.dataset.t = k; b.append(el('span', null, ic), el('small', null, l)); b.onclick = () => bzTab(k); nav.append(b); }
+  await bzLoadProducts(); bzTab(bzCan('bill') && BZ.cart.length ? 'bill' : 'home');
+}
+async function bzLoadProducts() { try { BZ.prods = await bzApi('/products'); } catch { BZ.prods = []; } }
+function bzTab(t) {
+  BZ.tab = t; document.querySelectorAll('#bzNav button').forEach((b) => b.setAttribute('aria-current', b.dataset.t === t ? 'page' : 'false'));
+  const body = $('#bzBody'); body.innerHTML = ''; body.scrollTop = 0;
+  ({ home: bzHome, bill: bzBill, orders: bzOrders, stock: bzStock, bills: bzBills, more: bzMore, rides: (b) => { b.append(el('p', 'bz-load', 'Opening your deliveries…')); openRides(); } })[t](body);
+}
+// ---------- 🏠 Home ----------
+async function bzHome(body) {
+  body.append(el('div', 'bz-load', 'Loading…'));
+  let d; try { d = await bzApi('/dashboard'); } catch (e) { body.innerHTML = ''; return body.append(el('p', 'bz-empty', e.message)); }
+  if (BZ.tab !== 'home') return; body.innerHTML = '';
+  if (d.today) {
+    const k = el('div', 'bz-kpis');
+    const kpi = (label, val, sub) => { const c = el('div', 'bz-kpi'); c.append(el('small', null, label), el('b', null, val)); if (sub) c.append(el('span', null, sub)); k.append(c); };
+    kpi('Sales today', bzRs0(d.today.sales), d.today.bills + ' bill' + (d.today.bills === 1 ? '' : 's'));
+    kpi('This month', bzRs0(d.month.sales), d.month.bills + ' bills');
+    kpi('Average bill', bzRs0(d.today.avgBill || d.month.avgBill), 'today');
+    kpi('To collect', bzRs0(d.month.unpaid), 'credit bills');
+    body.append(k);
+    const wk = el('div', 'bz-card'); wk.append(el('h3', null, 'Last 7 days')); const bars = el('div', 'bz-bars'); wk.append(bars); body.append(wk);
+    bzApi('/report').then((r) => { const max = Math.max(1, ...r.days.map((x) => x.sales)); for (const x of r.days.slice(-7)) { const col = el('div', 'bz-bar'); const f = el('i'); f.style.height = Math.max(2, Math.round(x.sales / max * 100)) + '%'; col.title = x.day + ': ' + bzRs0(x.sales); col.append(el('small', null, bzRs0(x.sales)), f, el('span', null, new Date(x.day + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }))); bars.append(col); } }).catch(() => {});
+  }
+  if (d.orders && d.orders.active) { const oc = el('button', 'bz-card od-card' + (d.orders.new ? ' new' : '')); oc.append(el('h3', null, '🛒 ' + (d.orders.new ? d.orders.new + ' new order' + (d.orders.new > 1 ? 's' : '') + ' waiting' : d.orders.active + ' active order' + (d.orders.active > 1 ? 's' : ''))), el('small', 'bz-note', 'Tap to open Orders')); oc.onclick = () => bzTab('orders'); body.prepend(oc); }
+  const qa = el('div', 'bz-qa');
+  if (bzCan('bill')) { const b = el('button', 'bz-big', '🧾 New bill'); b.onclick = () => bzTab('bill'); qa.append(b); }
+  if (bzCan('stock')) { const b = el('button', 'bz-big alt', '➕ Add product'); b.onclick = () => bzEditProduct(null); qa.append(b); }
+  body.append(qa);
+  if (d.reorder.length) {
+    const c = el('div', 'bz-card'); c.append(el('h3', null, '🤖 Order these soon'), el('p', 'bz-note', 'Based on how fast each item sold in the last 14 days.'));
+    for (const r of d.reorder.slice(0, 8)) { const row = el('div', 'bz-row'); row.append(el('div', null, r.name), el('small', 'bz-warn', 'Stock ' + r.stock + ' ' + r.unit + (r.daysLeft != null ? ' · ~' + r.daysLeft + ' days left' : '') + ' · order ~' + r.suggest)); row.onclick = () => { const p = BZ.prods.find((x) => x.id === r.productId); if (p && bzCan('stock')) bzStockAdjust(p); }; c.append(row); }
+    body.append(c);
+  }
+  if (d.today) { const ai = el('div', 'bz-card bz-ai'); ai.append(el('h3', null, '✨ AI business insights')); const out = el('div', 'bz-ai-out'); out.textContent = 'Tap to get simple advice from your own sales numbers.'; const go = el('button', 'bz-btn', 'Get insights'); go.onclick = async () => { go.disabled = true; go.textContent = 'Thinking…'; try { const r = await bzApi('/ai/insights', { method: 'POST', body: '{}' }); out.textContent = r.text; } catch (e) { out.textContent = e.message; } go.disabled = false; go.textContent = 'Refresh insights'; }; ai.append(out, go); body.append(ai); }
+  if (d.recent.length) { const c = el('div', 'bz-card'); c.append(el('h3', null, 'Recent bills')); d.recent.forEach((i) => c.append(bzBillRow(i))); body.append(c); }
+  if (!d.products && bzCan('stock')) body.append(el('p', 'bz-empty', 'Start by adding your products in 📦 Stock. Tip: use 📷 AI photo to fill details fast.'));
+}
+// ---------- 🧾 New bill (POS) ----------
+function bzPreview() { // same maths as the server, for the live total
+  const mode = BZ.info.settings.taxMode, lines = BZ.cart.map((l) => ({ base: Math.round(Math.round(Number(l.price) * 100) * l.qty), r: mode === 'none' ? 0 : l.taxRate || 0 }));
+  const sum = lines.reduce((s, x) => s + x.base, 0), disc = Math.max(0, Math.min(sum, Math.round((Number(BZ.disc) || 0) * 100)));
+  let left = disc, tax = 0, total = 0;
+  lines.forEach((x, i) => { const d = i === lines.length - 1 ? left : Math.round(disc * x.base / (sum || 1)); left -= d; const net = x.base - d; if (mode === 'excl') { const t = Math.round(net * x.r / 100); tax += t; total += net + t; } else { const tb = x.r ? Math.round(net * 100 / (100 + x.r)) : net; tax += net - tb; total += net; } });
+  const grand = BZ.info.settings.roundOff ? Math.round(total / 100) * 100 : total;
+  return { sum, disc, tax, total, grand, round: grand - total };
+}
+function bzAdd(p, qty = 1) {
+  if (p.price == null) { toast(p.name + ' has no price. Add a price in Stock.'); return; }
+  const l = BZ.cart.find((x) => x.productId === p.id);
+  if (l) l.qty = Math.round((l.qty + qty) * 1000) / 1000; else BZ.cart.push({ productId: p.id, name: p.name, unit: p.unit, price: p.price, taxRate: p.taxRate, qty, stock: p.stock });
+  if (!BZ.idem) BZ.idem = bzNewIdem();
+  try { navigator.vibrate && navigator.vibrate(15); } catch {}
+  bzCartDraw();
+}
+function bzBill(body) {
+  const top = el('div', 'bz-pos-top');
+  const q = el('input'); q.type = 'search'; q.id = 'bzQ'; q.placeholder = 'Search item or scan barcode'; q.setAttribute('aria-label', 'Search item or barcode'); q.autocomplete = 'off';
+  const scan = el('button', 'bz-ib', '📷'); scan.setAttribute('aria-label', 'Scan barcode'); scan.onclick = () => bzScan((code) => { const p = BZ.prods.find((x) => x.barcode === code); if (p) { bzAdd(p); toast('Added ' + p.name); } else toast('No product with barcode ' + code); });
+  const mic = el('button', 'bz-ib', '🎤'); mic.setAttribute('aria-label', 'Speak the items'); mic.onclick = bzVoice;
+  top.append(q, scan, mic); body.append(top);
+  const res = el('div', 'bz-picks'); res.id = 'bzPicks'; body.append(res);
+  const draw = () => {
+    const t = q.value.trim().toLowerCase(); res.innerHTML = '';
+    const list = BZ.prods.filter((p) => p.available !== false && (!t || p.name.toLowerCase().includes(t) || (p.barcode && p.barcode.includes(t)) || (p.sku || '').toLowerCase().includes(t))).slice(0, t ? 30 : 12);
+    for (const p of list) { const b = el('button', 'bz-pick' + (p.stock != null && p.stock <= 0 ? ' out' : '')); b.append(el('b', null, p.name), el('small', null, (p.price != null ? bzRs(p.price * 100) : 'no price') + ' / ' + p.unit + (p.stock != null ? ' · ' + p.stock + ' left' : ''))); b.onclick = () => { bzAdd(p); q.value = ''; draw(); q.focus(); }; res.append(b); }
+    const cu = el('button', 'bz-pick custom'); cu.append(el('b', null, '+ Item not in list'), el('small', null, 'Type name and price')); cu.onclick = bzCustomItem; res.append(cu);
+    if (!BZ.prods.length) res.prepend(el('p', 'bz-note', 'No products yet. Add them in 📦 Stock, or use "+ Item not in list".'));
+  };
+  q.oninput = draw;
+  q.onkeydown = (e) => { if (e.key !== 'Enter') return; e.preventDefault(); const v = q.value.trim(); const p = BZ.prods.find((x) => x.barcode && x.barcode === v) || (res.querySelector('.bz-pick:not(.custom)') && BZ.prods.find((x) => x.name === res.querySelector('.bz-pick:not(.custom) b').textContent)); if (p) { bzAdd(p); q.value = ''; draw(); } };
+  draw();
+  const cart = el('div', 'bz-cart'); cart.id = 'bzCart'; body.append(cart); bzCartDraw();
+}
+function bzCartDraw() {
+  const c = $('#bzCart'); if (!c) return; c.innerHTML = '';
+  if (!BZ.cart.length) { c.append(el('p', 'bz-empty', 'Tap items above, scan a barcode, or press 🎤 and say "2 rice, 1 soap".')); return; }
+  const canPrice = bzCan('stock') || ['owner', 'manager'].includes(BZ.info.role);
+  for (const l of BZ.cart) {
+    const r = el('div', 'bz-line');
+    const nm = el('div', 'bz-line-n'); nm.append(el('b', null, l.name)); const pr = el('input'); pr.type = 'number'; pr.inputMode = 'decimal'; pr.step = '0.01'; pr.value = l.price; pr.disabled = !canPrice && !!l.productId; pr.setAttribute('aria-label', 'Price of ' + l.name); pr.onchange = () => { l.price = Math.max(0, Number(pr.value) || 0); bzCartDraw(); }; nm.append(el('small', null, '₹'), pr, el('small', null, '/' + l.unit + (l.taxRate ? ' · GST ' + l.taxRate + '%' : '')));
+    const qt = el('div', 'bz-qty'); const m = el('button', null, '−'); m.setAttribute('aria-label', 'Less'); const qi = el('input'); qi.type = 'number'; qi.inputMode = 'decimal'; qi.value = l.qty; qi.setAttribute('aria-label', 'Quantity of ' + l.name); const p = el('button', null, '+'); p.setAttribute('aria-label', 'More');
+    m.onclick = () => { l.qty = Math.round((l.qty - 1) * 1000) / 1000; if (l.qty <= 0) BZ.cart = BZ.cart.filter((x) => x !== l); bzCartDraw(); };
+    p.onclick = () => { l.qty = Math.round((l.qty + 1) * 1000) / 1000; bzCartDraw(); };
+    qi.onchange = () => { const v = Number(qi.value); if (!(v > 0)) BZ.cart = BZ.cart.filter((x) => x !== l); else l.qty = Math.round(v * 1000) / 1000; bzCartDraw(); };
+    qt.append(m, qi, p);
+    r.append(nm, qt, el('b', 'bz-amt', bzRs(Math.round(Number(l.price) * 100) * l.qty)));
+    if (l.stock != null && l.qty > l.stock && !BZ.info.settings.allowNegative) r.append(el('small', 'bz-warn full', 'Only ' + l.stock + ' in stock'));
+    c.append(r);
+  }
+  const t = bzPreview(), sum = el('div', 'bz-sum');
+  const dl = el('label', 'bz-inl'); dl.append(el('span', null, 'Discount ₹')); const di = el('input'); di.type = 'number'; di.inputMode = 'decimal'; di.id = 'bzDisc'; di.value = BZ.disc; di.oninput = () => { BZ.disc = di.value; const x = bzPreview(); $('#bzGrand').textContent = bzRs(x.grand); $('#bzGo').textContent = 'Create bill · ' + bzRs(x.grand); }; dl.append(di);
+  const cust = el('details', 'bz-cust'); cust.open = !!(BZ.cust.name || BZ.cust.phone); cust.append(el('summary', null, '👤 Customer (optional)'));
+  const cn = el('input'); cn.placeholder = 'Name'; cn.value = BZ.cust.name; cn.setAttribute('aria-label', 'Customer name'); cn.oninput = () => (BZ.cust.name = cn.value);
+  const cp = el('input'); cp.placeholder = 'Mobile number (to send the bill on Maata)'; cp.type = 'tel'; cp.value = BZ.cust.phone; cp.setAttribute('aria-label', 'Customer mobile'); cp.oninput = () => (BZ.cust.phone = cp.value);
+  cust.append(cn, cp);
+  const pay = el('div', 'bz-chips'); for (const [k, l] of [['cash', '💵 Cash'], ['upi', '📱 UPI'], ['card', '💳 Card'], ['credit', '📒 Credit']]) { const b = el('button', BZ.method === k ? 'on' : null, l); b.setAttribute('aria-pressed', String(BZ.method === k)); b.onclick = () => { BZ.method = k; bzCartDraw(); }; pay.append(b); }
+  const rows = el('div', 'bz-tot');
+  const tr = (a, b, id) => { const r = el('div'); r.append(el('span', null, a)); const v = el('span', null, b); if (id) v.id = id; r.append(v); rows.append(r); };
+  tr('Items total', bzRs(t.sum)); if (t.disc) tr('Discount', '− ' + bzRs(t.disc)); if (t.tax) tr('GST ' + (BZ.info.settings.taxMode === 'incl' ? '(included)' : ''), bzRs(t.tax)); if (t.round) tr('Round off', (t.round > 0 ? '+ ' : '− ') + bzRs(Math.abs(t.round)));
+  const g = el('div', 'bz-grand'); g.append(el('span', null, 'Total'), el('b', null, bzRs(t.grand))); g.lastChild.id = 'bzGrand';
+  const go = el('button', 'bz-big'); go.id = 'bzGo'; go.textContent = 'Create bill · ' + bzRs(t.grand); go.onclick = bzCreate;
+  const clr = el('button', 'bz-link', 'Clear bill'); clr.onclick = () => { if (confirm('Clear this bill?')) { BZ.cart = []; BZ.disc = ''; BZ.cust = { name: '', phone: '' }; BZ.idem = null; bzCartDraw(); } };
+  sum.append(dl, cust, pay, rows, g, go, clr); c.append(sum);
+}
+async function bzCreate() {
+  const go = $('#bzGo'); if (!go || go.disabled) return; go.disabled = true; go.textContent = 'Saving…';
+  try {
+    const inv = await bzApi('/invoices', { method: 'POST', body: JSON.stringify({ idem: BZ.idem, items: BZ.cart.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.price, taxRate: l.taxRate })), discount: BZ.disc || 0, method: BZ.method, customer: BZ.cust }) });
+    const phone = BZ.cust.phone; BZ.cart = []; BZ.disc = ''; BZ.cust = { name: '', phone: '' }; BZ.idem = null; BZ.method = 'cash';
+    await bzLoadProducts(); if (BZ.tab === 'bill') bzTab('bill');
+    bzShowBill(inv, phone);
+  } catch (e) { toast(e.message); go.disabled = false; bzCartDraw(); }
+}
+function bzCustomItem() {
+  sheet('+ Item not in list', (L) => {
+    const f = el('form', 'bz-form');
+    const fl = (lab, id, type, ph) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el('input'); i.id = id; i.type = type || 'text'; if (ph) i.placeholder = ph; if (type === 'number') { i.inputMode = 'decimal'; i.step = 'any'; } l.append(i); f.append(l); return i; };
+    const n = fl('Item name', 'bzCiN', 'text', 'e.g. Loose sugar'), p = fl('Price ₹ (per unit)', 'bzCiP', 'number'), q = fl('Quantity', 'bzCiQ', 'number'); q.value = '1';
+    const ok = el('button', 'sheet-btn primary', 'Add to bill'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = (e) => { e.preventDefault(); if (!n.value.trim() || !(Number(p.value) >= 0) || p.value === '' || !(Number(q.value) > 0)) return toast('Fill name, price and quantity'); BZ.cart.push({ productId: null, name: n.value.trim(), unit: 'pcs', price: Number(p.value), taxRate: 0, qty: Number(q.value), stock: null }); if (!BZ.idem) BZ.idem = bzNewIdem(); closeSheet('moreSheet'); bzCartDraw(); };
+    L.append(f); setTimeout(() => n.focus(), 250);
+  });
+}
+async function bzVoice() {
+  toast('🎤 Say the items, e.g. "rendu kilo biyyam, oka soap"');
+  let said = ''; try { const r = await listenOnce(bzLang()); said = Array.isArray(r) ? r[0] : String(r || ''); } catch { return toast('Could not hear. Try again or type.'); }
+  if (!said) return toast('Could not hear. Try again.');
+  let d; try { d = await bzApi('/ai/voice-bill', { method: 'POST', body: JSON.stringify({ text: said }) }); } catch (e) { return toast(e.message); }
+  sheet('🎤 Check the items', (L) => {
+    L.append(el('p', 'info-note', 'You said: "' + said + '". Check before adding.'));
+    const rows = d.items.map((it) => { const p = BZ.prods.find((x) => x.id === it.productId); const lab = el('label', 'sec-pick'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!p; cb.disabled = !p; lab.append(cb, el('span', null, p ? p.name + ' × ' + it.qty + ' ' + p.unit : '❓ "' + it.said + '" not found in your products')); L.append(lab); return { p, it, cb }; });
+    const ok = el('button', 'sheet-btn primary', 'Add to bill'); ok.onclick = () => { for (const r of rows) if (r.p && r.cb.checked) bzAdd(r.p, r.it.qty); closeSheet('moreSheet'); }; L.append(ok);
+  });
+}
+// barcode camera (phones with the browser barcode reader); a USB/Bluetooth scanner works by typing into the search box
+async function bzScan(onCode) {
+  if (!('BarcodeDetector' in window)) return toast('Camera scan is not supported here. Type the barcode, or use a barcode scanner.');
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } catch { return toast('Allow camera to scan barcodes'); }
+  const o = el('div', 'bz-scan'); const v = el('video'); v.playsInline = true; v.muted = true; v.srcObject = stream; const x = el('button', 'bz-btn', 'Close'); o.append(v, el('p', null, 'Point at the barcode'), x); document.body.append(o); v.play().catch(() => {});
+  let done = false; const stop = () => { done = true; stream.getTracks().forEach((t) => t.stop()); o.remove(); }; x.onclick = stop;
+  const det = new BarcodeDetector();
+  const loop = async () => { if (done) return; try { const r = await det.detect(v); if (r[0]) { stop(); onCode(r[0].rawValue); return; } } catch {} setTimeout(loop, 250); }; loop();
+}
+// ---------- bill view ----------
+function bzBillRow(i) {
+  const r = el('button', 'bz-billrow'); const st = i.status === 'void' ? ['void', 'Cancelled'] : i.payment.status === 'paid' ? ['paid', i.payment.method.toUpperCase()] : ['due', 'To pay'];
+  r.append(el('div', null, i.number), el('small', null, (i.customer.name || i.customer.phone || 'Walk-in') + ' · ' + new Date(i.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })), el('b', null, bzRs(i.grand)), el('span', 'bz-st ' + st[0], st[1]));
+  r.onclick = () => bzShowBill(i); return r;
+}
+function bzBillLink(i) { return location.origin + '/bill/' + i.id + '?k=' + i.key; }
+function bzShowBill(i, phone) {
+  sheet('🧾 ' + i.number, (L) => {
+    const box = el('div', 'bz-billview');
+    if (i.status === 'void') box.append(el('p', 'bz-void', 'Cancelled: ' + i.voidReason));
+    for (const l of i.items) { const r = el('div', 'bz-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); box.append(r); }
+    const r2 = el('div', 'bz-tr bz-grand'); r2.append(el('span', null, 'Total'), el('b', null, bzRs(i.grand))); box.append(r2);
+    box.append(el('small', 'bz-note', (i.payment.status === 'paid' ? '✅ Paid by ' + i.payment.method.toUpperCase() : '📒 To pay (credit)') + ' · by ' + i.byName));
+    L.append(box);
+    const act = (t, fn, cls) => { const b = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), t); b.onclick = fn; L.append(b); return b; };
+    const ph = phone || i.customer.phone;
+    if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
+    act('🔗 Share bill link', async () => { const u = bzBillLink(i); try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
+    act('🖨️ Print / Save PDF', () => window.open(bzBillLink(i), '_blank', 'noopener'));
+    if (i.status !== 'void' && i.payment.status !== 'paid') act('✅ Mark as paid', async () => { try { const v = await bzApi('/invoices/' + i.id + '/pay', { method: 'POST', body: JSON.stringify({ method: 'cash' }) }); closeSheet('moreSheet'); toast('Marked paid'); bzShowBill(v); } catch (e) { toast(e.message); } });
+    if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
+  });
+}
+// ---------- 📚 Bills ----------
+async function bzBills(body) {
+  const bar = el('div', 'bz-pos-top'); const q = el('input'); q.type = 'search'; q.placeholder = 'Bill number, name or mobile'; q.setAttribute('aria-label', 'Search bills'); bar.append(q); body.append(bar);
+  const ch = el('div', 'bz-chips'); for (const [k, l] of [['today', 'Today'], ['7', '7 days'], ['30', '30 days'], ['all', 'All']]) { const b = el('button', BZ.range === k ? 'on' : null, l); b.onclick = () => { BZ.range = k; bzTab('bills'); }; ch.append(b); } body.append(ch);
+  const list = el('div', 'bz-card'); body.append(list);
+  const day = new Date(); day.setHours(0, 0, 0, 0);
+  const from = BZ.range === 'today' ? day.getTime() : BZ.range === 'all' ? 0 : Date.now() - Number(BZ.range) * 86400000;
+  const load = async () => { list.innerHTML = ''; let r = []; try { r = await bzApi('/invoices?from=' + from + '&q=' + encodeURIComponent(q.value.trim())); } catch (e) { return list.append(el('p', 'bz-empty', e.message)); } if (!r.length) list.append(el('p', 'bz-empty', 'No bills here.')); const tot = r.filter((i) => i.status !== 'void').reduce((s, i) => s + i.grand, 0); if (r.length) list.append(el('p', 'bz-note', r.length + ' bills · ' + bzRs(tot))); r.forEach((i) => list.append(bzBillRow(i))); };
+  let t; q.oninput = () => { clearTimeout(t); t = setTimeout(load, 300); }; load();
+}
+// ---------- 📦 Stock ----------
+function bzStock(body) {
+  const bar = el('div', 'bz-pos-top'); const q = el('input'); q.type = 'search'; q.placeholder = 'Search products'; q.setAttribute('aria-label', 'Search products'); bar.append(q);
+  if (bzCan('stock')) { const add = el('button', 'bz-ib', '＋'); add.setAttribute('aria-label', 'Add product'); add.onclick = () => bzEditProduct(null); bar.append(add); }
+  body.append(bar);
+  const list = el('div', 'bz-card'); body.append(list);
+  const draw = () => {
+    list.innerHTML = ''; const t = q.value.trim().toLowerCase();
+    const ps = BZ.prods.filter((p) => !t || p.name.toLowerCase().includes(t) || (p.barcode || '').includes(t) || (p.category || '').toLowerCase().includes(t));
+    if (!ps.length) list.append(el('p', 'bz-empty', BZ.prods.length ? 'No match.' : 'No products yet. Tap ＋ to add your first product.'));
+    for (const p of ps) {
+      const low = p.stock != null && p.lowAt != null && p.stock <= p.lowAt, out = p.stock != null && p.stock <= 0;
+      const r = el('button', 'bz-prow'); r.append(el('b', null, p.name), el('small', null, (p.price != null ? bzRs(p.price * 100) : 'No price') + ' / ' + p.unit + (p.taxRate ? ' · GST ' + p.taxRate + '%' : '') + (p.category ? ' · ' + p.category : '')), el('span', 'bz-stk' + (out ? ' out' : low ? ' low' : ''), p.stock == null ? '—' : p.stock + ' ' + p.unit));
+      r.onclick = () => (bzCan('stock') ? bzProductMenu(p) : null); list.append(r);
+    }
+  };
+  q.oninput = draw; draw();
+}
+function bzProductMenu(p) {
+  sheet(p.name, (L) => {
+    const a = (t, fn) => { const b = el('button', 'sheet-btn', t); b.onclick = () => { closeSheet('moreSheet'); fn(); }; L.append(b); };
+    a('📦 Add / remove stock', () => bzStockAdjust(p)); a('✏️ Edit details & price', () => bzEditProduct(p)); a('🕘 Stock history', () => bzMoves(p));
+  });
+}
+function bzStockAdjust(p) {
+  sheet('📦 ' + p.name, (L) => {
+    const f = el('form', 'bz-form'); f.append(el('p', 'info-note', 'In stock now: ' + (p.stock ?? 0) + ' ' + p.unit));
+    const kind = el('div', 'bz-chips'); let mode = 'purchase';
+    for (const [k, l] of [['purchase', '➕ Bought / received'], ['damage', '➖ Damaged / lost'], ['count', '🔢 Set exact count']]) { const b = el('button', k === mode ? 'on' : null, l); b.type = 'button'; b.onclick = () => { mode = k; kind.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); lab.firstChild.textContent = k === 'count' ? 'Counted quantity' : 'Quantity'; }; kind.append(b); }
+    const lab = el('label'); lab.htmlFor = 'bzAdjQ'; lab.append(el('span', null, 'Quantity')); const q = el('input'); q.id = 'bzAdjQ'; q.type = 'number'; q.inputMode = 'decimal'; q.step = 'any'; lab.append(q);
+    const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit';
+    f.append(kind, lab, ok);
+    f.onsubmit = async (e) => { e.preventDefault(); const v = Number(q.value); if (!(v >= 0) || q.value === '') return toast('Enter a quantity'); const delta = mode === 'count' ? v - (p.stock || 0) : mode === 'damage' ? -v : v; if (!delta) return closeSheet('moreSheet'); try { await bzApi('/products/' + p.id + '/stock', { method: 'POST', body: JSON.stringify({ delta, reason: mode }) }); closeSheet('moreSheet'); toast('Stock saved ✓'); await bzLoadProducts(); bzTab(BZ.tab); } catch (x) { toast(x.message); } };
+    L.append(f); setTimeout(() => q.focus(), 250);
+  });
+}
+async function bzMoves(p) {
+  let m = []; try { m = await bzApi('/products/' + p.id + '/moves'); } catch (e) { return toast(e.message); }
+  const R = { opening: 'Opening stock', sale: 'Sold', void: 'Bill cancelled', purchase: 'Received', damage: 'Damaged', count: 'Count fix', return: 'Returned', other: 'Other' };
+  sheet('🕘 ' + p.name, (L) => { if (!m.length) L.append(el('p', 'info-note', 'No stock changes yet.')); for (const x of m) { const r = el('div', 'bz-tr'); r.append(el('span', null, (R[x.reason] || x.reason) + ' · ' + new Date(x.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + (x.actorName ? ' · ' + x.actorName : '')), el('b', null, (x.delta > 0 ? '+' : '') + x.delta + ' → ' + x.after)); L.append(r); } });
+}
+function bzEditProduct(p) {
+  const P = p || {};
+  sheet(p ? '✏️ ' + p.name : '➕ New product', (L) => {
+    const f = el('form', 'bz-form');
+    if (!p) { const ai = el('button', 'sheet-btn', '📷 Fill with AI from a photo'); ai.type = 'button'; ai.onclick = () => bzAiPhoto(fill); f.append(ai); }
+    const fl = (lab, id, val, type, ph) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el(type === 'select' ? 'select' : 'input'); i.id = id; if (type && type !== 'select') i.type = type; if (type === 'number') { i.inputMode = 'decimal'; i.step = 'any'; } if (ph) i.placeholder = ph; if (val != null && type !== 'select') i.value = val; l.append(i); f.append(l); return i; };
+    const n = fl('Product name', 'bzPN', P.name, 'text', 'e.g. Sona Masoori Rice 1 kg');
+    const pr = fl('Selling price ₹', 'bzPP', P.price, 'number');
+    const un = fl('Unit', 'bzPU', null, 'select'); BZ.info.units.forEach((u) => un.add(new Option(u, u))); un.value = P.unit || 'pcs';
+    const tx = fl('GST %', 'bzPT', null, 'select'); BZ.info.taxRates.forEach((r) => tx.add(new Option(r ? r + '%' : 'No GST / exempt', r))); tx.value = String(P.taxRate ?? 0);
+    const st = fl(p ? 'Stock (change it with "Add / remove stock")' : 'Opening stock (leave empty if you do not count stock)', 'bzPS', p ? (P.stock ?? '') : '', 'number'); if (p) st.disabled = true;
+    const lo = fl('Warn me when stock is at or below', 'bzPL', P.lowAt ?? '', 'number');
+    const bc = fl('Barcode (optional)', 'bzPB', P.barcode || '', 'text', 'Scan or type'); bc.inputMode = 'numeric';
+    const sc = el('button', 'sheet-btn', '📷 Scan barcode'); sc.type = 'button'; sc.onclick = () => bzScan((c) => { bc.value = c; }); f.append(sc);
+    const ca = fl('Category (optional)', 'bzPC', P.category || '', 'text', 'Rice, Oil, Soaps…');
+    const ds = fl('Description (optional)', 'bzPD', P.description || '', 'text');
+    const av = el('label', 'sec-pick'); const avc = el('input'); avc.type = 'checkbox'; avc.checked = P.available !== false; av.append(avc, el('span', null, 'Available for sale')); f.append(av);
+    f.append(el('p', 'info-note', 'GST rates differ by item. Please confirm rates with your tax adviser.'));
+    function fill(d) { if (d.name) n.value = d.name; if (d.unit) un.value = d.unit; if (d.category) ca.value = d.category; if (d.description) ds.value = d.description; if (d.barcode) bc.value = d.barcode; if (d.mrp && !pr.value) pr.value = d.mrp; toast(d.sure ? 'AI filled the details. Check price, GST and stock.' : 'AI is not sure. Please check every field.'); pr.focus(); }
+    const ok = el('button', 'sheet-btn primary', p ? 'Save' : 'Add product'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const body = { name: n.value, price: pr.value, unit: un.value, taxRate: Number(tx.value), lowAt: lo.value, barcode: bc.value, category: ca.value, description: ds.value, available: avc.checked };
+      if (!p && st.value !== '') { body.stock = st.value; body.trackStock = true; }
+      try { await (p ? bzApi('/products/' + p.id, { method: 'PUT', body: JSON.stringify(body) }) : bzApi('/products', { method: 'POST', body: JSON.stringify(body) })); closeSheet('moreSheet'); toast(p ? 'Saved ✓' : 'Product added ✓'); await bzLoadProducts(); bzTab(BZ.tab); } catch (x) { toast(x.message); }
+    };
+    L.append(f); if (!p) setTimeout(() => n.focus(), 250);
+  });
+}
+function bzAiPhoto(fill) {
+  const inp = el('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+  inp.onchange = async () => {
+    const file = inp.files[0]; if (!file) return; toast('✨ AI is reading the photo…');
+    try {
+      const small = await bzShrink(file);
+      const r = await fetch('/api/biz/' + BZ.id + '/ai/product-photo', { method: 'POST', headers: { 'Content-Type': small.type, Authorization: 'Bearer ' + token }, body: small });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'AI could not read the photo.'); fill(d);
+    } catch (e) { toast(e.message); }
+  };
+  inp.click();
+}
+function bzShrink(file) { // phone photos are big: send a 1024 px JPEG
+  return new Promise((ok) => { const img = new Image(); img.onload = () => { const k = Math.min(1, 1024 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); c.toBlob((b) => ok(b || file), 'image/jpeg', 0.85); URL.revokeObjectURL(img.src); }; img.onerror = () => ok(file); img.src = URL.createObjectURL(file); });
+}
+// ---------- ⚙️ More ----------
+function bzMore(body) {
+  const c = el('div', 'bz-card');
+  const a = (t, s, fn) => { const b = el('button', 'bz-prow'); b.append(el('b', null, t), el('small', null, s)); b.onclick = fn; c.append(b); };
+  if (bzCan('reports')) a('📊 Reports', 'Sales, GST, payments, top items', () => bzReport('7'));
+  if (bzCan('settings')) a('🛒 Online store', 'Delivery, pickup, charges, open / close', bzStoreSettings);
+  if (bzCan('staff')) a('👥 Staff', (BZ.info.staff.length || 'No') + ' staff · cashier, manager, stock', bzStaff);
+  if (bzCan('settings')) a('⚙️ Bill settings', 'Bill number, GST mode, UPI, GSTIN', bzSettings);
+  if (bzCan('reports')) a('🕘 Activity log', 'Who did what, when', bzLog);
+  if (BZ.info.role === 'owner') a('🏪 Business profile', 'Name, address, timings', editBusinessProfile);
+  a('🔁 Switch business', 'If you work in more than one shop', () => openBiz());
+  body.append(c, el('p', 'bz-note', 'Maata Business calculates GST from the rates you set. Please confirm GST rules and bill format with a tax professional.'));
+}
+async function bzReport(range) {
+  const days = Number(range), d = new Date(); d.setHours(0, 0, 0, 0); const from = d.getTime() - (days - 1) * 86400000;
+  let r; try { r = await bzApi('/report?from=' + from); } catch (e) { return toast(e.message); }
+  sheet('📊 Report · last ' + days + ' day' + (days > 1 ? 's' : ''), (L) => {
+    const ch = el('div', 'bz-chips'); for (const k of ['1', '7', '30', '90']) { const b = el('button', k === range ? 'on' : null, k === '1' ? 'Today' : k + ' days'); b.onclick = () => { closeSheet('moreSheet'); setTimeout(() => bzReport(k), 250); }; ch.append(b); } L.append(ch);
+    const box = el('div', 'bz-billview'); const row = (a, b) => { const x = el('div', 'bz-tr'); x.append(el('span', null, a), el('b', null, b)); box.append(x); };
+    row('Sales', bzRs(r.sales)); row('Bills', String(r.bills)); row('Average bill', bzRs(r.avgBill)); row('Discounts', bzRs(r.discount)); row('GST collected', bzRs(r.tax));
+    for (const [k, v] of Object.entries(r.taxByRate || {})) if (v) row('  GST ' + k + '%', bzRs(v));
+    for (const [k, v] of Object.entries(r.byPay || {})) row('Paid by ' + k.toUpperCase(), bzRs(v));
+    row('Still to collect', bzRs(r.unpaid)); row('Cancelled bills', String(r.voids));
+    L.append(box);
+    if (r.top.length) { L.append(el('p', 'info-note', 'Top items')); const t = el('div', 'bz-billview'); r.top.forEach((x) => { const y = el('div', 'bz-tr'); y.append(el('span', null, x.name + ' × ' + Math.round(x.qty * 100) / 100), el('b', null, bzRs(x.amount))); t.append(y); }); L.append(t); }
+  });
+}
+function bzStaff() {
+  sheet('👥 Staff', (L) => {
+    L.append(el('p', 'info-note', 'Add people by their Maata mobile number. Cashier: makes bills. Stock: products and stock. Delivery person: delivers online orders and shares location only during a delivery. Manager: bills, stock, reports and cancelling bills. Only you change settings and staff.'));
+    for (const s of BZ.info.staff) { const r = el('div', 'bz-tr'); const x = el('button', 'bz-link', 'Remove'); x.onclick = async () => { if (!confirm('Remove ' + s.name + '?')) return; try { await bzApi('/staff/' + s.userId, { method: 'DELETE' }); BZ.info = await bzApi(''); closeSheet('moreSheet'); toast('Removed'); } catch (e) { toast(e.message); } }; r.append(el('span', null, s.name + ' · ' + s.role + ' · ' + s.phone), x); L.append(r); }
+    const f = el('form', 'bz-form'); const l1 = el('label'); l1.htmlFor = 'bzSP'; l1.append(el('span', null, 'Mobile number')); const ph = el('input'); ph.id = 'bzSP'; ph.type = 'tel'; l1.append(ph);
+    const l2 = el('label'); l2.htmlFor = 'bzSR'; l2.append(el('span', null, 'Role')); const ro = el('select'); ro.id = 'bzSR'; for (const [k, t] of [['cashier', 'Cashier'], ['stock', 'Stock keeper'], ['delivery', 'Delivery person'], ['manager', 'Manager']]) ro.add(new Option(t, k)); l2.append(ro);
+    const ok = el('button', 'sheet-btn primary', 'Add staff'); ok.type = 'submit'; f.append(l1, l2, ok);
+    f.onsubmit = async (e) => { e.preventDefault(); try { await bzApi('/staff', { method: 'POST', body: JSON.stringify({ phone: ph.value, role: ro.value }) }); BZ.info = await bzApi(''); closeSheet('moreSheet'); toast('Staff added ✓ They will see your shop in Maata → Business.'); } catch (x) { toast(x.message); } };
+    L.append(f);
+  });
+}
+function bzSettings() {
+  const s = BZ.info.settings;
+  sheet('⚙️ Bill settings', (L) => {
+    const f = el('form', 'bz-form');
+    const fl = (lab, id, val, ph) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el('input'); i.id = id; i.value = val || ''; if (ph) i.placeholder = ph; l.append(i); f.append(l); return i; };
+    const pre = fl('Bill number starts with', 'bzSPre', s.prefix, 'INV'); const gst = fl('GSTIN (if registered)', 'bzSG', s.gstin, '37ABCDE1234F1Z5'); const upi = fl('UPI ID (customers can pay from the bill)', 'bzSU', s.upi, 'shopname@okaxis'); const ft = fl('Message at the bottom of bills', 'bzSF', s.footer);
+    const ml = el('label'); ml.htmlFor = 'bzSM'; ml.append(el('span', null, 'Prices and GST')); const md = el('select'); md.id = 'bzSM'; for (const [k, t] of [['incl', 'My prices include GST'], ['excl', 'Add GST on top of my prices'], ['none', 'No GST on bills']]) md.add(new Option(t, k)); md.value = s.taxMode; ml.append(md); f.append(ml);
+    const chk = (t, v) => { const l = el('label', 'sec-pick'); const c = el('input'); c.type = 'checkbox'; c.checked = v; l.append(c, el('span', null, t)); f.append(l); return c; };
+    const ro = chk('Round off the total to the nearest rupee', s.roundOff), ng = chk('Allow selling when stock shows 0', s.allowNegative);
+    const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => { e.preventDefault(); try { BZ.info.settings = await bzApi('/settings', { method: 'PUT', body: JSON.stringify({ prefix: pre.value, gstin: gst.value, upi: upi.value, footer: ft.value, taxMode: md.value, roundOff: ro.checked, allowNegative: ng.checked }) }); closeSheet('moreSheet'); toast('Settings saved ✓'); } catch (x) { toast(x.message); } };
+    L.append(f);
+  });
+}
+async function bzLog() {
+  let r = []; try { r = await bzApi('/log'); } catch (e) { return toast(e.message); }
+  sheet('🕘 Activity', (L) => { if (!r.length) L.append(el('p', 'info-note', 'Nothing yet.')); for (const x of r) { const y = el('div', 'bz-tr'); y.append(el('span', null, x.actorName + ': ' + x.action.replace('-', ' ') + (x.detail ? ' · ' + x.detail : '')), el('small', null, new Date(x.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))); L.append(y); } });
+}
+
+
+// ==================== 🛒 ONLINE STORE + ORDERS (customer side and shop side) ====================
+const OD = { shop: null, cart: new Map(), idem: null, cat: '', q: '', loc: null };
+const OD_STEPS = { delivery: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'], pickup: ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'DELIVERED'] };
+const OD_LABEL = { PLACED: 'Order placed', ACCEPTED: 'Accepted by shop', PREPARING: 'Packing', READY: 'Ready', OUT_FOR_DELIVERY: 'On the way', DELIVERED: 'Delivered', REJECTED: 'Not accepted', CANCELLED: 'Cancelled', DELIVERY_FAILED: 'Delivery failed' };
+const odPhoto = (it) => '/api/catalogue/photo/' + it.id + '?t=' + encodeURIComponent(token) + '&v=' + (it.photoV || 0);
+function odPage(id, title, sub) {
+  let pg = $('#' + id); if (pg) pg.remove();
+  pg = el('section', 'bz od'); pg.id = id; pg.setAttribute('aria-label', title);
+  const top = el('div', 'bz-top'); const back = el('button', 'bz-ib', '←'); back.setAttribute('aria-label', 'Back'); back.onclick = () => pg.remove();
+  const tt = el('div', 'bz-title'); tt.append(el('b', null, title)); if (sub) tt.append(el('small', null, sub)); top.append(back, tt);
+  const body = el('div', 'bz-body'); pg.append(top, body); document.body.append(pg); return { pg, body, top };
+}
+async function odHere() { if (OD.loc) return OD.loc; const p = await secPos(); if (p.lat) OD.loc = p; return OD.loc; }
+// ----- shops near me -----
+async function openShops() {
+  const { body } = odPage('shopsPage', 'Shops on Maata', 'Order from local shops');
+  const q = el('input'); q.type = 'search'; q.placeholder = 'Search shops: grocery, medical…'; q.setAttribute('aria-label', 'Search shops'); const bar = el('div', 'bz-pos-top'); bar.append(q); body.append(bar);
+  const mine = el('button', 'bz-btn', '🧾 My orders'); mine.onclick = openMyOrders; body.append(mine);
+  const list = el('div', 'bz-card'); list.append(el('p', 'bz-load', 'Finding shops near you…')); body.append(list);
+  const loc = await odHere();
+  const load = async () => { let r = []; try { r = await api('/api/shops?q=' + encodeURIComponent(q.value.trim()) + (loc ? '&lat=' + loc.lat + '&lng=' + loc.lng : '')); } catch (e) { list.innerHTML = ''; return list.append(el('p', 'bz-empty', e.message)); }
+    list.innerHTML = ''; if (!r.length) list.append(el('p', 'bz-empty', 'No shops are taking online orders here yet. Tell your local shop about Maata Business!'));
+    for (const s of r) { const b = el('button', 'bz-prow'); b.append(el('b', null, '🏪 ' + s.name), el('small', null, [s.category, s.distKm != null ? s.distKm + ' km' : '', s.delivery ? '🛵 ' + s.eta : '', s.pickup ? 'Pickup' : '', s.minOrder ? 'Min ' + bzRs0(s.minOrder) : ''].filter(Boolean).join(' · ')), el('span', 'bz-stk', s.products + ' items')); b.onclick = () => openShop(s.bizId); list.append(b); } };
+  let t; q.oninput = () => { clearTimeout(t); t = setTimeout(load, 300); }; load();
+}
+// ----- one shop -----
+async function openShop(bizId) {
+  const loc = OD.loc;
+  let s; try { s = await api('/api/shop/' + bizId + (loc ? '?lat=' + loc.lat + '&lng=' + loc.lng : '')); } catch (e) { return toast(e.message); }
+  if (!OD.shop || OD.shop.bizId !== bizId) { OD.cart = new Map(); OD.idem = null; }
+  OD.shop = s; OD.cat = ''; OD.q = '';
+  const { pg, body } = odPage('shopPage', s.name, [s.category, s.distKm != null ? s.distKm + ' km away' : '', s.delivery ? 'Delivery ' + s.eta : 'Pickup only'].filter(Boolean).join(' · '));
+  const info = el('div', 'od-info');
+  info.append(el('span', null, s.delivery ? '🛵 Delivery ' + (s.fee ? bzRs0(s.fee) : 'free') + (s.freeAbove && s.fee ? ' · free above ' + bzRs0(s.freeAbove) : '') : '🏃 Pickup only'), el('span', null, s.minOrder ? 'Minimum order ' + bzRs0(s.minOrder) : 'No minimum'), el('span', null, (s.payCod ? 'Cash' : '') + (s.payCod && s.payUpi ? ' / ' : '') + (s.payUpi ? 'UPI' : '') + ' on ' + (s.delivery ? 'delivery' : 'pickup')));
+  body.append(info);
+  const bar = el('div', 'bz-pos-top'); const q = el('input'); q.type = 'search'; q.placeholder = 'Search in ' + s.name; q.setAttribute('aria-label', 'Search items'); const ai = el('button', 'bz-ib', '✨'); ai.setAttribute('aria-label', 'Type or speak your shopping list'); ai.onclick = odAiList; bar.append(q, ai); body.append(bar);
+  const cats = [...new Set(s.items.map((i) => i.category).filter(Boolean))];
+  if (cats.length) { const ch = el('div', 'bz-chips od-cats'); const mk = (k, l) => { const b = el('button', OD.cat === k ? 'on' : null, l); b.onclick = () => { OD.cat = k; ch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(); }; ch.append(b); }; mk('', 'All'); cats.forEach((c) => mk(c, c)); body.append(ch); }
+  const grid = el('div', 'od-grid'); body.append(grid);
+  const cartBar = el('button', 'od-cartbar'); cartBar.id = 'odCartBar'; cartBar.onclick = odCheckout; pg.append(cartBar);
+  function draw() {
+    grid.innerHTML = ''; const t = q.value.trim().toLowerCase();
+    const list = s.items.filter((i) => (!OD.cat || i.category === OD.cat) && (!t || i.name.toLowerCase().includes(t) || i.description.toLowerCase().includes(t)));
+    if (!list.length) grid.append(el('p', 'bz-empty', 'Nothing found. Try ✨ and type your list.'));
+    for (const it of list) {
+      const c = el('div', 'od-item' + (it.inStock ? '' : ' out'));
+      const ph = el('div', 'od-ph'); if (it.hasPhoto) { const im = el('img'); im.src = odPhoto(it); im.alt = ''; im.loading = 'lazy'; ph.append(im); } else ph.textContent = '🛍️';
+      const tx = el('div', 'od-tx'); tx.append(el('b', null, it.name), el('small', null, bzRs(Math.round(it.price * 100)) + ' / ' + it.unit + (s.taxMode === 'excl' && it.taxRate ? ' + GST' : '')));
+      if (!it.inStock) tx.append(el('small', 'bz-warn', 'Out of stock')); else if (it.left != null) tx.append(el('small', 'bz-warn', 'Only ' + it.left + ' left'));
+      const q2 = OD.cart.get(it.id) || 0, ctl = el('div', 'od-ctl');
+      if (!it.inStock) ctl.append(el('span', 'bz-note', '—'));
+      else if (!q2) { const add = el('button', 'od-add', 'Add'); add.setAttribute('aria-label', 'Add ' + it.name); add.onclick = () => odSet(it, 1); ctl.append(add); }
+      else { const qt = el('div', 'bz-qty'); const m = el('button', null, '−'); m.setAttribute('aria-label', 'Less'); const n = el('span', 'od-n', String(q2)); const p = el('button', null, '+'); p.setAttribute('aria-label', 'More'); m.onclick = () => odSet(it, q2 - 1); p.onclick = () => odSet(it, q2 + 1); qt.append(m, n, p); ctl.append(qt); }
+      c.append(ph, tx, ctl); grid.append(c);
+    }
+    odBar();
+  }
+  OD.redraw = draw; q.oninput = draw; draw();
+}
+function odSet(it, qty) {
+  if (it.left != null && qty > it.left) { toast('Only ' + it.left + ' left'); qty = it.left; }
+  if (qty > 0) OD.cart.set(it.id, Math.round(qty * 1000) / 1000); else OD.cart.delete(it.id);
+  if (!OD.idem) OD.idem = bzNewIdem(); try { navigator.vibrate && navigator.vibrate(10); } catch {}
+  if (OD.redraw) OD.redraw();
+}
+function odTotals() { // preview; the shop's server makes the final amount
+  const s = OD.shop, mode = s.taxMode; let sum = 0, tax = 0;
+  for (const [id, q] of OD.cart) { const it = s.items.find((x) => x.id === id); if (!it) continue; const base = Math.round(Math.round(it.price * 100) * q), r = mode === 'none' ? 0 : it.taxRate || 0; if (mode === 'excl') { const t = Math.round(base * r / 100); tax += t; sum += base + t; } else { tax += base - (r ? Math.round(base * 100 / (100 + r)) : base); sum += base; } }
+  return { sum, tax, count: [...OD.cart.values()].reduce((a, b) => a + b, 0) };
+}
+function odBar() {
+  const b = $('#odCartBar'); if (!b) return; const t = odTotals();
+  b.hidden = !OD.cart.size; b.innerHTML = ''; b.append(el('span', null, '🛒 ' + OD.cart.size + ' item' + (OD.cart.size > 1 ? 's' : '') + ' · ' + bzRs(t.sum)), el('b', null, 'View cart →'));
+}
+async function odAiList() {
+  sheet('✨ Your shopping list', (L) => {
+    const f = el('form', 'bz-form'); f.append(el('p', 'info-note', 'Type or speak in Telugu, Hindi or English, e.g. "rendu kilo biyyam, oka toor dal, 2 soaps". AI finds the items; you check before adding.'));
+    const lab = el('label'); lab.htmlFor = 'odAiT'; lab.append(el('span', null, 'Your list')); const ta = el('textarea'); ta.id = 'odAiT'; ta.rows = 3; lab.append(ta); f.append(lab);
+    const mic = el('button', 'sheet-btn', '🎤 Speak the list'); mic.type = 'button'; mic.onclick = async () => { try { const r = await listenOnce(bzLang()); ta.value = (ta.value ? ta.value + ', ' : '') + (Array.isArray(r) ? r[0] : r); } catch { toast('Could not hear. Please type.'); } };
+    const go = el('button', 'sheet-btn primary', 'Find items'); go.type = 'submit'; f.append(mic, go);
+    f.onsubmit = async (e) => {
+      e.preventDefault(); if (!ta.value.trim()) return; go.disabled = true; go.textContent = '✨ Finding…';
+      let d; try { d = await api('/api/shop/' + OD.shop.bizId + '/ai/list', { method: 'POST', body: JSON.stringify({ text: ta.value }) }); } catch (x) { toast(x.message); go.disabled = false; go.textContent = 'Find items'; return; }
+      L.innerHTML = ''; L.append(el('p', 'info-note', 'Check the items, then add them to your cart.'));
+      const rows = d.items.map((x) => { const it = OD.shop.items.find((i) => i.id === x.productId); const l = el('label', 'sec-pick'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!(it && it.inStock); cb.disabled = !(it && it.inStock); l.append(cb, el('span', null, it ? it.name + ' × ' + x.qty + ' ' + it.unit + (it.inStock ? '' : ' (out of stock)') : '❓ "' + x.said + '" not sold here')); L.append(l); return { it, x, cb }; });
+      const ok = el('button', 'sheet-btn primary', 'Add to cart'); ok.onclick = () => { for (const r of rows) if (r.it && r.cb.checked) odSet(r.it, (OD.cart.get(r.it.id) || 0) + r.x.qty); closeSheet('moreSheet'); }; L.append(ok);
+    };
+    L.append(f); setTimeout(() => ta.focus(), 250);
+  });
+}
+function odCheckout() {
+  const s = OD.shop; if (!OD.cart.size) return;
+  sheet('🛒 Your cart · ' + s.name, (L) => {
+    const box = el('div', 'bz-billview');
+    for (const [id, q] of OD.cart) { const it = s.items.find((x) => x.id === id); if (!it) continue; const r = el('div', 'bz-tr'); r.append(el('span', null, it.name + ' × ' + q), el('span', null, bzRs(Math.round(Math.round(it.price * 100) * q)))); box.append(r); }
+    L.append(box);
+    const f = el('form', 'bz-form');
+    let mode = s.delivery ? 'delivery' : 'pickup', pay = s.payCod ? 'cod' : 'upi';
+    const mch = el('div', 'bz-chips'); const addrBox = el('div', 'od-addr');
+    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; sum(); };
+    if (s.delivery) { const b = el('button', null, '🛵 Delivery'); b.type = 'button'; b.dataset.m = 'delivery'; b.onclick = () => setMode('delivery'); mch.append(b); }
+    if (s.pickup) { const b = el('button', null, '🏃 I will pick up'); b.type = 'button'; b.dataset.m = 'pickup'; b.onclick = () => setMode('pickup'); mch.append(b); }
+    const saved = (() => { try { return JSON.parse(store.get('maata_od_addr') || 'null'); } catch { return null; } })() || {};
+    const al = el('label'); al.htmlFor = 'odAddr'; al.append(el('span', null, 'Delivery address')); const at = el('textarea'); at.id = 'odAddr'; at.rows = 2; at.value = saved.text || ''; at.placeholder = 'House no, street, village / area'; al.append(at);
+    const ll = el('label'); ll.htmlFor = 'odLm'; ll.append(el('span', null, 'Landmark (optional)')); const lm = el('input'); lm.id = 'odLm'; lm.value = saved.landmark || ''; ll.append(lm);
+    let pin = saved.lat ? { lat: saved.lat, lng: saved.lng } : null;
+    const gps = el('button', 'sheet-btn', pin ? '📍 Location added ✓ (tap to update)' : '📍 Add my location (helps the delivery person)'); gps.type = 'button'; gps.onclick = async () => { gps.textContent = '📍 Getting location…'; OD.loc = null; const p = await odHere(); if (p) { pin = { lat: p.lat, lng: p.lng }; gps.textContent = '📍 Location added ✓'; } else gps.textContent = '📍 Could not get location. Allow location and try again.'; };
+    addrBox.append(al, ll, gps);
+    const pch = el('div', 'bz-chips');
+    for (const [k, l, okk] of [['cod', '💵 Cash', s.payCod], ['upi', '📱 UPI', s.payUpi]]) if (okk) { const b = el('button', k === pay ? 'on' : null, l + ' on ' + (mode === 'delivery' ? 'delivery' : 'pickup')); b.type = 'button'; b.onclick = () => { pay = k; pch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; pch.append(b); }
+    const nl = el('label'); nl.htmlFor = 'odNote'; nl.append(el('span', null, 'Note for the shop (optional)')); const note = el('input'); note.id = 'odNote'; note.placeholder = 'e.g. Call before coming'; nl.append(note);
+    const tot = el('div', 'bz-tot');
+    const go = el('button', 'sheet-btn primary'); go.type = 'submit';
+    function sum() {
+      const t = odTotals(), fee = mode === 'delivery' && !(s.freeAbove && t.sum >= s.freeAbove) ? s.fee : 0; tot.innerHTML = '';
+      const r = (a, b) => { const x = el('div'); x.append(el('span', null, a), el('span', null, b)); tot.append(x); };
+      r('Items', bzRs(t.sum)); if (t.tax) r('GST ' + (s.taxMode === 'incl' ? '(included)' : ''), bzRs(t.tax)); if (mode === 'delivery') r('Delivery', fee ? bzRs(fee) : 'Free');
+      const g = el('div', 'bz-grand'); g.append(el('span', null, 'To pay'), el('b', null, bzRs(t.sum + fee))); tot.append(g);
+      go.textContent = 'Place order · ' + bzRs(t.sum + fee);
+      if (s.minOrder && t.sum < s.minOrder) { go.disabled = true; go.textContent = 'Add ' + bzRs(s.minOrder - t.sum) + ' more (minimum ' + bzRs0(s.minOrder) + ')'; } else go.disabled = false;
+    }
+    f.append(mch, addrBox, el('div', 'th-title', 'Payment'), pch, nl, tot, go);
+    setMode(mode);
+    f.onsubmit = async (e) => {
+      e.preventDefault(); if (go.disabled) return;
+      const address = mode === 'delivery' ? { text: at.value.trim(), landmark: lm.value.trim(), ...(pin || {}) } : null;
+      if (mode === 'delivery') { if (address.text.length < 8) return toast('Write your full address'); try { store.set('maata_od_addr', JSON.stringify(address)); } catch {} }
+      go.disabled = true; go.textContent = 'Placing order…';
+      try {
+        const o = await api('/api/shop/' + s.bizId + '/orders', { method: 'POST', body: JSON.stringify({ idem: OD.idem, items: [...OD.cart].map(([productId, qty]) => ({ productId, qty })), mode, address, pay, note: note.value }) });
+        OD.cart = new Map(); OD.idem = null; closeSheet('moreSheet'); const sp = $('#shopPage'); if (sp) sp.remove(); toast('✅ Order placed'); openOrder(o.id, o);
+      } catch (x) { toast(x.message); sum(); }
+    };
+    L.append(f);
+  });
+}
+// ----- order tracking (customer) -----
+async function openOrder(id, o) {
+  if (!o) { try { o = await api('/api/my/orders/' + id); } catch (e) { return toast(e.message); } }
+  const { body } = odPage('orderPage', 'Order ' + o.number, o.shopName);
+  OD.viewing = o.id; odOrderDraw(body, o);
+}
+function odOrderDraw(body, o) {
+  body.innerHTML = '';
+  const bad = ['REJECTED', 'CANCELLED'].includes(o.status);
+  const hero = el('div', 'bz-card od-hero' + (bad ? ' bad' : o.status === 'DELIVERED' ? ' good' : ''));
+  hero.append(el('small', null, o.mode === 'delivery' ? '🛵 Home delivery' : '🏃 Pickup from shop'), el('h3', null, OD_LABEL[o.status] || o.status));
+  if (o.reason) hero.append(el('p', 'bz-note', 'Reason: ' + o.reason));
+  if (o.otp) { const c = el('div', 'od-otp'); c.append(el('small', null, o.mode === 'delivery' ? 'Give this code to the delivery person' : 'Show this code at the shop'), el('b', null, o.otp.split('').join(' '))); hero.append(c); }
+  body.append(hero);
+  if (o.status === 'OUT_FOR_DELIVERY') odLiveCard(body, o.id);
+  if (!bad) { const tl = el('ol', 'od-steps'); const steps = OD_STEPS[o.mode]; const at = steps.indexOf(o.status === 'DELIVERY_FAILED' ? 'OUT_FOR_DELIVERY' : o.status);
+    steps.forEach((s, i) => { const h = [...o.history].reverse().find((x) => x.s === s); const li = el('li', i < at ? 'done' : i === at ? 'now' : ''); li.append(el('b', null, OD_LABEL[s]), el('small', null, h ? new Date(h.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')); tl.append(li); }); body.append(tl); }
+  const items = el('div', 'bz-card'); items.append(el('h3', null, 'Items'));
+  for (const l of o.items) { const r = el('div', 'bz-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); items.append(r); }
+  if (o.fee) { const r = el('div', 'bz-tr'); r.append(el('span', null, 'Delivery'), el('span', null, bzRs(o.fee))); items.append(r); }
+  const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Pay by UPI' : 'Pay in cash'), el('b', null, bzRs(o.grand))); items.append(g);
+  if (o.address) items.append(el('small', 'bz-note', '📍 ' + o.address.text + (o.address.landmark ? ' (near ' + o.address.landmark + ')' : '')));
+  body.append(items);
+  const act = el('div', 'bz-qa');
+  const chat = el('button', 'bz-big alt', '💬 Chat with shop'); chat.onclick = async () => { try { if (typeof ensureUser === 'function') await ensureUser(o.bizId); } catch {} document.querySelectorAll('#orderPage,#shopPage,#shopsPage,#myOrdersPage').forEach((x) => x.remove()); setTab('chats'); openChat(o.bizId); }; act.append(chat);
+  if (o.invoiceId) { const b = el('button', 'bz-big alt', '🧾 Bill'); b.onclick = () => window.open('/bill/' + o.invoiceId + '?k=' + o.invoiceKey, '_blank', 'noopener'); act.append(b); }
+  if (['PLACED', 'ACCEPTED'].includes(o.status)) { const c = el('button', 'bz-big alt od-cancel', 'Cancel order'); c.onclick = async () => { if (!confirm('Cancel this order?')) return; try { const v = await api('/api/my/orders/' + o.id + '/cancel', { method: 'POST', body: '{}' }); odOrderDraw(body, v); toast('Order cancelled'); } catch (e) { toast(e.message); } }; act.append(c); }
+  body.append(act, el('p', 'bz-note', 'Shop phone: ' + (o.shopPhone || '')));
+}
+async function openMyOrders() {
+  const { body } = odPage('myOrdersPage', 'My orders');
+  let r = []; try { r = await api('/api/my/orders'); } catch (e) { return body.append(el('p', 'bz-empty', e.message)); }
+  const list = el('div', 'bz-card'); if (!r.length) list.append(el('p', 'bz-empty', 'No orders yet.'));
+  for (const o of r) { const b = el('button', 'bz-billrow'); const st = ['DELIVERED'].includes(o.status) ? 'paid' : ['REJECTED', 'CANCELLED'].includes(o.status) ? 'void' : 'due'; b.append(el('div', null, o.shopName + ' · ' + o.number), el('small', null, new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + ' · ' + o.items.length + ' items'), el('b', null, bzRs(o.grand)), el('span', 'bz-st ' + st, OD_LABEL[o.status])); b.onclick = () => openOrder(o.id, o); list.append(b); }
+  body.append(list);
+}
+// live updates
+function odSocket() {
+  if (!socket) return;
+  socket.on('order:update', (o) => { if (OD.viewing === o.id && $('#orderPage')) odOrderDraw($('#orderPage .bz-body'), o); else toast('🛒 ' + o.shopName + ': ' + (OD_LABEL[o.status] || o.status)); });
+  socket.on('biz:order', (p) => {
+    if ($('#bizPage') && BZ.id === p.bizId && BZ.tab === 'orders') bzTab('orders');
+    else if (p.order.status === 'PLACED') { toast('🛒 New order ' + p.order.number + ' · ' + bzRs(p.order.grand)); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch {} }
+  });
+}
+// ----- shop side: 🛒 Orders tab -----
+async function bzOrders(body) {
+  const ch = el('div', 'bz-chips'); const view = BZ.ordView || 'active';
+  for (const [k, l] of [['active', 'Active'], ['done', 'Completed']]) { const b = el('button', view === k ? 'on' : null, l); b.onclick = () => { BZ.ordView = k; bzTab('orders'); }; ch.append(b); }
+  body.append(ch);
+  let st = null; try { st = await bzApi('/store'); } catch {}
+  if (st && !st.on) { const c = el('div', 'bz-card'); c.append(el('h3', null, 'Your online store is closed'), el('p', 'bz-note', 'Open it so customers can order from you inside Maata.')); if (bzCan('settings')) { const b = el('button', 'bz-btn', 'Open online store'); b.onclick = bzStoreSettings; c.append(b); } body.append(c); }
+  let r = []; try { r = await bzApi('/orders?view=' + view); } catch (e) { return body.append(el('p', 'bz-empty', e.message)); }
+  if (BZ.tab !== 'orders') return;
+  if (!r.length) body.append(el('p', 'bz-empty', view === 'active' ? 'No orders right now.' : 'No completed orders yet.'));
+  for (const o of r) body.append(bzOrderCard(o));
+}
+function bzOrderCard(o) {
+  const c = el('div', 'bz-card od-card' + (o.status === 'PLACED' ? ' new' : ''));
+  const h = el('div', 'od-head'); h.append(el('b', null, o.number + ' · ' + o.customerName), el('span', 'bz-st ' + (o.status === 'PLACED' ? 'due' : ['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(o.status) ? 'void' : 'paid'), OD_LABEL[o.status])); c.append(h);
+  c.append(el('small', 'bz-note', (o.mode === 'delivery' ? '🛵 Delivery' : '🏃 Pickup') + ' · ' + (o.pay === 'upi' ? 'UPI' : 'Cash') + ' · ' + new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
+  for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
+  const g = el('div', 'bz-grand'); g.append(el('span', null, 'Total' + (o.fee ? ' (incl. delivery ' + bzRs(o.fee) + ')' : '')), el('b', null, bzRs(o.grand))); c.append(g);
+  if (o.address) { const a = el('small', 'bz-note', '📍 ' + o.address.text + (o.address.landmark ? ' · near ' + o.address.landmark : '')); c.append(a); if (o.address.lat) { const m = el('button', 'bz-link', 'Open in Maata Maps'); m.onclick = () => { $('#bizPage').remove(); openMaps({ name: o.customerName + ' (' + o.number + ')', lat: o.address.lat, lng: o.address.lng, addr: o.address.text }); }; c.append(m); } }
+  if (o.note) c.append(el('small', 'bz-note', '📝 ' + o.note));
+  c.append(el('small', 'bz-note', '📞 ' + (o.customerPhone || '')));
+  if (o.mode === 'delivery' && (o.rider || o.riderId)) c.append(el('small', 'od-rider', '🛵 Delivery: ' + (o.rider ? o.rider.name : 'assigned') + (o.live ? ' · 📍 live' : '')));
+  const acts = el('div', 'od-acts');
+  const go = (to, label, cls, needReason, needOtp) => { const b = el('button', 'bz-btn' + (cls ? ' ' + cls : ''), label); b.onclick = async () => {
+      let reason = '', otp = ''; if (needReason) { reason = prompt('Reason for the customer'); if (!reason) return; } if (needOtp) { otp = prompt('Enter the 4-digit code from the customer'); if (!otp) return; }
+      b.disabled = true; try { await bzApi('/orders/' + o.id + '/status', { method: 'POST', body: JSON.stringify({ to, reason, otp }) }); toast(OD_LABEL[to] + ' ✓'); if (to === 'ACCEPTED' || to === 'DELIVERED' || to === 'CANCELLED') await bzLoadProducts(); bzTab('orders'); } catch (e) { toast(e.message); b.disabled = false; } };
+    acts.append(b); };
+  if (o.status === 'PLACED') { go('ACCEPTED', '✅ Accept', 'pri'); go('REJECTED', 'Reject', 'bad', true); }
+  if (o.status === 'ACCEPTED') go('PREPARING', '📦 Start packing', 'pri');
+  if (o.status === 'PREPARING') go('READY', '✅ Ready', 'pri');
+  if (o.status === 'READY') { if (o.mode === 'delivery') go('OUT_FOR_DELIVERY', '🛵 Out for delivery', 'pri'); else go('DELIVERED', '🤝 Handed over (code)', 'pri', false, true); }
+  if (o.mode === 'delivery' && ['ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_FAILED'].includes(o.status)) { const b = el('button', 'bz-btn', o.riderId ? '🛵 Change delivery person' : '🛵 Assign delivery person'); b.onclick = () => bzAssign(o); acts.append(b); }
+  if (o.status === 'OUT_FOR_DELIVERY') { if (o.riderId === me.id) { const b = el('button', 'bz-btn pri', '📍 I am delivering: share location'); b.onclick = () => openRide(o.id); acts.append(b); } else { const b = el('button', 'bz-btn', '📍 Track live'); b.onclick = () => openTrack(o.id, o.number + ' · live'); acts.append(b); } go('DELIVERED', '🤝 Delivered (code)', 'pri', false, true); go('DELIVERY_FAILED', 'Could not deliver', 'bad', true); }
+  if (o.status === 'DELIVERY_FAILED') go('OUT_FOR_DELIVERY', '🛵 Try again', 'pri');
+  if (['ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_FAILED'].includes(o.status)) go('CANCELLED', 'Cancel', 'bad', true);
+  if (o.invoiceId) { const b = el('button', 'bz-btn', '🧾 Bill'); b.onclick = () => window.open('/bill/' + o.invoiceId + '?k=' + o.invoiceKey, '_blank', 'noopener'); acts.append(b); }
+  const chat = el('button', 'bz-btn', '💬 Chat'); chat.onclick = async () => { try { if (typeof ensureUser === 'function') await ensureUser(o.customerId); } catch {} $('#bizPage').remove(); setTab('chats'); openChat(o.customerId); }; acts.append(chat);
+  c.append(acts); return c;
+}
+function bzStoreSettings() {
+  bzApi('/store').then((s) => sheet('🛒 Online store', (L) => {
+    const f = el('form', 'bz-form');
+    const chk = (t, v) => { const l = el('label', 'sec-pick'); const c = el('input'); c.type = 'checkbox'; c.checked = !!v; l.append(c, el('span', null, t)); f.append(l); return c; };
+    const fl = (lab, id, val, type, ph) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el('input'); i.id = id; i.value = val ?? ''; if (type) i.type = type; if (type === 'number') { i.inputMode = 'decimal'; i.step = 'any'; } if (ph) i.placeholder = ph; l.append(i); f.append(l); return i; };
+    const on = chk('🟢 Take online orders on Maata', s.on), dl = chk('🛵 Home delivery', s.delivery), pu = chk('🏃 Pickup from shop', s.pickup);
+    const fee = fl('Delivery charge ₹', 'stFee', s.fee / 100, 'number'), free = fl('Free delivery above ₹ (0 = never)', 'stFree', s.freeAbove / 100, 'number'), min = fl('Minimum order ₹ (0 = none)', 'stMin', s.minOrder / 100, 'number');
+    const eta = fl('Delivery time', 'stEta', s.eta, 'text', '30–45 min'), rad = fl('Deliver up to (km)', 'stRad', s.radiusKm, 'number'), area = fl('Areas you deliver to (shown to customers)', 'stArea', s.area, 'text', 'Vinjam, Puttur road…');
+    const cod = chk('💵 Cash on delivery / pickup', s.payCod), upi = chk('📱 UPI on delivery / pickup', s.payUpi);
+    let pos = s.lat != null ? { lat: s.lat, lng: s.lng } : null;
+    const lb = el('button', 'sheet-btn', pos ? '📍 Shop location saved ✓ (tap if you are at the shop to update)' : '📍 Save shop location (stand at your shop)'); lb.type = 'button'; lb.onclick = async () => { lb.textContent = '📍 Getting location…'; const p = await secPos(); if (p.lat) { pos = p; lb.textContent = '📍 Shop location saved ✓'; } else lb.textContent = '📍 Could not get location'; }; f.append(lb);
+    f.append(el('p', 'info-note', 'Customers pay you directly in cash or UPI. Online card payments can be added later.'));
+    const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => { e.preventDefault(); try { await bzApi('/store', { method: 'PUT', body: JSON.stringify({ on: on.checked, delivery: dl.checked, pickup: pu.checked, fee: fee.value, freeAbove: free.value, minOrder: min.value, eta: eta.value, radiusKm: rad.value, area: area.value, payCod: cod.checked, payUpi: upi.checked, ...(pos ? { lat: pos.lat, lng: pos.lng } : {}) }) }); closeSheet('moreSheet'); toast(on.checked ? '🟢 Online store is open' : 'Online store saved'); if (BZ.tab === 'orders') bzTab('orders'); } catch (x) { toast(x.message); } };
+    L.append(f);
+  })).catch((e) => toast(e.message));
+}
+
+
+// ==================== 🛵 DELIVERY PERSON MODE + 📍 LIVE TRACKING ====================
+const RD = { watch: null, job: null, timer: null, last: null, sentAt: 0, wake: null };
+const rdDist = (a, b) => hav([a.lng, a.lat], [b.lng, b.lat]);
+// a small live map: delivery person, the customer's home, the shop, and the path so far
+async function odTrackMap(box, d) {
+  try { await loadMapLibre(); } catch { box.append(el('p', 'bz-note', 'Map could not load. Check internet.')); return null; }
+  const start = d.track || d.dest || d.shop; if (!start) { box.append(el('p', 'bz-note', 'Location not shared yet.')); return null; }
+  const m = new maplibregl.Map({ container: box, style: MAP_STYLES.colour.url, center: [start.lng, start.lat], zoom: 14, attributionControl: { compact: true } });
+  const mk = (txt, cls) => { const e = el('div', 'od-mk ' + cls, txt); return e; };
+  const T = { map: m, rider: null };
+  m.on('load', () => {
+    m.addSource('od-trail', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
+    m.addLayer({ id: 'od-trail', type: 'line', source: 'od-trail', paint: { 'line-color': '#0F7A6E', 'line-width': 4, 'line-opacity': 0.7 } });
+    T.update(d, true);
+  });
+  if (d.dest) new maplibregl.Marker({ element: mk('🏠', 'home') }).setLngLat([d.dest.lng, d.dest.lat]).addTo(m);
+  if (d.shop) new maplibregl.Marker({ element: mk('🏪', 'shop') }).setLngLat([d.shop.lng, d.shop.lat]).addTo(m);
+  T.update = (x, fit) => {
+    if (x.dest) d.dest = x.dest; const t = x.track; if (!t) return;
+    if (!T.rider) T.rider = new maplibregl.Marker({ element: mk('🛵', 'rider') }).setLngLat([t.lng, t.lat]).addTo(m); else T.rider.setLngLat([t.lng, t.lat]);
+    const src = m.getSource && m.getSource('od-trail'); if (src && t.trail) src.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: t.trail.map((p) => [p[1], p[0]]).concat([[t.lng, t.lat]]) } });
+    if (fit) { const b = new maplibregl.LngLatBounds([t.lng, t.lat], [t.lng, t.lat]); if (d.dest) b.extend([d.dest.lng, d.dest.lat]); m.fitBounds(b, { padding: 50, maxZoom: 16, duration: 0 }); }
+  };
+  return T;
+}
+function odTrackText(t) {
+  if (!t) return 'Waiting for the delivery person\'s location…';
+  const age = Math.round((Date.now() - t.at) / 1000);
+  return (t.eta ? '🛵 About ' + t.eta.minutes + ' min away (' + fmtKm(t.eta.meters) + ')' : '🛵 On the way') + ' · updated ' + (age < 60 ? 'just now' : Math.round(age / 60) + ' min ago') + (age > 180 ? ' – the signal may be weak' : '');
+}
+// live map card used by the customer's order page and the shop
+async function odLiveCard(parent, orderId) {
+  const card = el('div', 'bz-card od-live'); const info = el('p', 'od-live-t', 'Loading live location…'); const box = el('div', 'od-map'); const who = el('div', 'od-who');
+  card.append(el('h3', null, '📍 Live tracking'), info, box, who); parent.append(card);
+  let d; try { d = await api('/api/orders/' + orderId + '/track'); } catch (e) { info.textContent = e.message; return; }
+  const draw = (x) => { info.textContent = odTrackText(x.track); who.innerHTML = ''; if (x.rider) { who.append(el('span', null, '🛵 ' + x.rider.name)); if (x.rider.phone) { const a = el('a', 'bz-btn', '📞 Call ' + x.rider.phone); a.href = 'tel:' + x.rider.phone; who.append(a); } } };
+  draw(d); const T = await odTrackMap(box, d);
+  OD.liveFor = orderId; OD.liveT = T; OD.liveDraw = (x) => { draw(x); if (T) T.update(x, false); };
+  clearInterval(OD.livePoll); OD.livePoll = setInterval(async () => { if (!document.body.contains(card)) return clearInterval(OD.livePoll); try { const x = await api('/api/orders/' + orderId + '/track'); OD.liveDraw(x); } catch {} }, 20000);
+}
+async function openTrack(orderId, title) { const { body } = odPage('trackPage', title || 'Live tracking'); odLiveCard(body, orderId); }
+// ----- delivery person: my jobs -----
+async function openRides() {
+  const { body } = odPage('ridesPage', 'My deliveries', 'Orders given to you by shops');
+  let r = []; try { r = await api('/api/rider/jobs'); } catch (e) { return body.append(el('p', 'bz-empty', e.message)); }
+  if (!r.length) body.append(el('p', 'bz-empty', 'No deliveries for you right now. The shop will assign them, and you will get a notification.'));
+  for (const o of r) { const b = el('button', 'bz-card od-card' + (o.status === 'READY' ? ' new' : '')); b.append(el('div', 'od-head'), el('small', 'bz-note', '📍 ' + (o.address ? o.address.text : ''))); b.firstChild.append(el('b', null, o.number + ' · ' + o.shopName), el('span', 'bz-st ' + (o.status === 'DELIVERED' ? 'paid' : 'due'), OD_LABEL[o.status])); b.onclick = () => openRide(o.id); body.append(b); }
+}
+async function openRide(id) {
+  let o; try { o = await api('/api/rider/jobs/' + id); } catch (e) { return toast(e.message); }
+  const { body } = odPage('ridePage', 'Delivery ' + o.number, o.shopName); rdDraw(body, o);
+  if (o.status === 'OUT_FOR_DELIVERY') rdShare(o.id);
+}
+function rdDraw(body, o) {
+  body.innerHTML = '';
+  const hero = el('div', 'bz-card od-hero'); hero.append(el('small', null, '🛵 Delivery'), el('h3', null, OD_LABEL[o.status] || o.status)); body.append(hero);
+  if (o.status === 'OUT_FOR_DELIVERY') { const bn = el('div', 'od-sharing'); bn.id = 'rdBanner'; bn.textContent = '📍 Sharing your location with this customer until the delivery ends. Keep Maata open.'; body.append(bn); }
+  const c = el('div', 'bz-card'); c.append(el('h3', null, o.customerName));
+  if (o.address) c.append(el('p', 'bz-note', '📍 ' + o.address.text + (o.address.landmark ? ' · near ' + o.address.landmark : '')));
+  if (o.note) c.append(el('p', 'bz-note', '📝 ' + o.note));
+  const row = el('div', 'od-acts');
+  if (o.customerPhone) { const a = el('a', 'bz-btn', '📞 Call ' + o.customerPhone); a.href = 'tel:' + o.customerPhone; row.append(a); }
+  if (o.address && o.address.lat != null) { const n = el('button', 'bz-btn pri', '🧭 Navigate'); n.onclick = () => { document.querySelectorAll('#ridePage,#ridesPage').forEach((x) => x.remove()); openMaps({ name: o.customerName + ' (' + o.number + ')', lat: o.address.lat, lng: o.address.lng, addr: o.address.text }); toast('Keep sharing: open My deliveries again after you reach.'); }; row.append(n); }
+  c.append(row);
+  for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
+  const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Customer pays by UPI' : 'Collect cash'), el('b', null, bzRs(o.grand))); c.append(g);
+  body.append(c);
+  const acts = el('div', 'bz-qa');
+  const act = (t, cls, fn) => { const b = el('button', 'bz-big' + (cls ? ' ' + cls : ''), t); b.onclick = async () => { b.disabled = true; try { await fn(); } catch (e) { toast(e.message); } b.disabled = false; }; acts.append(b); };
+  if (['READY', 'DELIVERY_FAILED'].includes(o.status)) act('🛵 Start delivery', '', async () => { const v = await api('/api/rider/jobs/' + o.id + '/start', { method: 'POST', body: '{}' }); rdDraw(body, v); rdShare(o.id); toast('Started. Your location is shared with the customer.'); });
+  if (['ACCEPTED', 'PREPARING'].includes(o.status)) acts.append(el('p', 'bz-note', 'The shop is still packing. You can start when it is Ready.'));
+  if (o.status === 'OUT_FOR_DELIVERY') {
+    act('🤝 Delivered (enter code)', '', async () => { const otp = prompt('Enter the 4-digit code from the customer'); if (!otp) return; const v = await api('/api/rider/jobs/' + o.id + '/deliver', { method: 'POST', body: JSON.stringify({ otp }) }); rdStop(); rdDraw(body, v); toast('✅ Delivered. Thank you!'); });
+    act('Could not deliver', 'alt', async () => { const reason = prompt('Why could you not deliver? (the shop and customer will see this)'); if (!reason) return; const v = await api('/api/rider/jobs/' + o.id + '/fail', { method: 'POST', body: JSON.stringify({ reason }) }); rdStop(); rdDraw(body, v); });
+  }
+  if (['ACCEPTED', 'PREPARING', 'READY'].includes(o.status)) act('Decline this delivery', 'alt', async () => { const reason = prompt('Why are you declining?'); if (reason === null) return; await api('/api/rider/jobs/' + o.id + '/decline', { method: 'POST', body: JSON.stringify({ reason }) }); toast('Declined. The shop will assign someone else.'); $('#ridePage').remove(); });
+  body.append(acts, el('p', 'bz-note', 'Your location is shared only while an order is "On the way", only with that customer and the shop, and it is deleted when the delivery ends.'));
+}
+function rdSend(id, p) {
+  RD.sentAt = Date.now(); RD.last = p;
+  api('/api/rider/jobs/' + id + '/loc', { method: 'POST', body: JSON.stringify(p) }).then((r) => { if (r.stop) { rdStop(); toast('Delivery ended. Location sharing stopped.'); } else if (r.eta && $('#rdBanner')) $('#rdBanner').textContent = '📍 Sharing your location · about ' + r.eta.minutes + ' min (' + fmtKm(r.eta.meters) + ') to the customer'; }).catch(() => {});
+}
+function rdShare(id) {
+  if (RD.job === id && RD.watch != null) return; rdStop(); RD.job = id;
+  if (!navigator.geolocation) return toast('Location is not available on this phone.');
+  RD.watch = navigator.geolocation.watchPosition((pos) => {
+    const p = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, speed: pos.coords.speed, heading: pos.coords.heading };
+    const moved = !RD.last || rdDist(RD.last, p) > 20, age = Date.now() - RD.sentAt;
+    if (age > 12000 || (moved && age > 4000)) rdSend(id, p); else RD.last = p;
+  }, () => toast('Turn on location so the customer can see you coming.'), { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  RD.timer = setInterval(() => { if (RD.last && Date.now() - RD.sentAt > 25000) rdSend(id, RD.last); }, 10000);
+  try { navigator.wakeLock && navigator.wakeLock.request('screen').then((w) => (RD.wake = w)).catch(() => {}); } catch {}
+}
+function rdStop() { if (RD.watch != null) try { navigator.geolocation.clearWatch(RD.watch); } catch {} clearInterval(RD.timer); RD.watch = null; RD.job = null; try { RD.wake && RD.wake.release(); } catch {} RD.wake = null; }
+function rdSocket() {
+  if (!socket) return;
+  socket.on('order:track', (x) => { if (OD.liveFor === x.orderId && OD.liveDraw) OD.liveDraw(x); });
+  socket.on('rider:job', () => { toast('🛵 New delivery for you. Open ⋮ → My deliveries'); try { navigator.vibrate && navigator.vibrate([300, 100, 300]); } catch {} if ($('#ridesPage')) openRides(); });
+}
+// shop: choose who delivers
+async function bzAssign(o) {
+  let rs = []; try { rs = await bzApi('/riders'); } catch (e) { return toast(e.message); }
+  sheet('🛵 Who delivers ' + o.number + '?', (L) => {
+    L.append(el('p', 'info-note', 'Add delivery boys in More → Staff (role: Delivery person). They get the job in Maata → My deliveries.'));
+    for (const r of rs) { const b = el('button', 'sheet-btn', (r.userId === o.riderId ? '✅ ' : '🛵 ') + r.name + (r.busy ? ' · ' + r.busy + ' on the way' : '')); b.onclick = async () => { try { await bzApi('/orders/' + o.id + '/assign', { method: 'POST', body: JSON.stringify({ riderId: r.userId }) }); closeSheet('moreSheet'); toast('Assigned to ' + r.name); bzTab('orders'); } catch (e) { toast(e.message); } }; L.append(b); }
+  });
+}
+
 // ----- ⋮ menu -----
 function openMainMenu(btn) {
   closeMsgMenu();
@@ -4971,6 +5775,9 @@ function openMainMenu(btn) {
   item('community', 'Communities', openCommunities);
   item('channel', 'Channels', () => { setTab('status'); findChannels(); });
   item('biz', 'Business tools', openBusinessTools);
+  item('bizpos', 'Maata Business (billing)', () => openBiz());
+  item('shops', 'Shops & my orders', openShops);
+  item('rides', 'My deliveries', openRides);
   item('broadcast', i18n('broadcast'), openBroadcast);
   item('quick', i18n('quick'), openQuickReplies);
   item('ai', i18n('aiAuto'), openAutoReply);
@@ -6722,6 +7529,7 @@ async function openBusinessTools() {
   await loadMyBiz();
   sheet('🏪 Business tools', (list) => {
     const b = (label, sub, fn) => { const x = el('button', 'mem-row'); const t = el('div', 'txt'); t.append(el('b', null, label), el('small', null, sub)); x.append(t); x.onclick = fn; list.append(x); };
+    b('📊 Maata Business', 'Billing, stock, staff, reports and AI', () => { closeSheet('moreSheet'); openBiz(); });
     b('🏪 Business profile', myBiz ? myBiz.name + ' · ' + myBiz.category : 'Add your shop name, address and timings', () => editBusinessProfile());
     b('🛍️ Catalogue', myBiz ? myBiz.productCount + ' products' : 'Create your business profile first', () => (myBiz ? openMyCatalogue() : editBusinessProfile()));
     b('📢 Advertise', 'Show your offer to everyone on Maata (free, after review)', () => (myBiz ? openAdvertise() : editBusinessProfile()));
@@ -6858,6 +7666,7 @@ async function viewBusiness(uid) {
     if (b.email) row('✉️', b.email, 'mailto:' + b.email);
     if (b.website) row('🌐', b.website.replace(/^https?:\/\//, ''), b.website);
     list.append(grp);
+    if (b.storeOn) { const ob = el('button', 'sheet-btn primary', '🛒 Order online from ' + b.name); ob.style.margin = '10px 12px 0'; ob.style.width = 'calc(100% - 24px)'; ob.onclick = () => { closeSheet('moreSheet'); openShop(uid); }; list.append(ob); }
     if (uid !== me.id) {
       const act = el('div', 'row2'); act.style.cssText = 'display:flex;gap:8px;padding:12px';
       const chat = el('button', 'primary', '💬 Message'); chat.onclick = async () => { closeSheet('moreSheet'); await ensureUser(uid); openChat(uid); };
@@ -8006,6 +8815,14 @@ const BACK_LAYERS = [
   ['#moreSheet', () => closeSheet('moreSheet')],
   ['#settingsSheet', () => closeSettings()],
   ['#secPage', () => $('#secPage').remove()],
+  ['#trackPage', () => $('#trackPage').remove()],
+  ['#ridePage', () => $('#ridePage').remove()],
+  ['#ridesPage', () => $('#ridesPage').remove()],
+  ['#orderPage', () => $('#orderPage').remove()],
+  ['#shopPage', () => $('#shopPage').remove()],
+  ['#myOrdersPage', () => $('#myOrdersPage').remove()],
+  ['#shopsPage', () => $('#shopsPage').remove()],
+  ['#bizPage', () => $('#bizPage').remove()],
 
   ['#ciView', () => $('#ciView').remove()],
   ['#chView', () => closeChannel()],
@@ -10419,8 +11236,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 129;
-const APP_NOTES = ["🗺️ The camera button at the top of Chats is now a Maata Maps button — one tap opens maps. (The camera is still in Updates and in every chat.)"];
+const APP_VERSION = 133;
+const APP_NOTES = ["🛵 Live delivery tracking: shops assign a delivery person, customers see them coming on a live map with the time left. Delivery staff use ⋮ Menu → My deliveries. Location is shared only during a delivery."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }

@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 129;
+const MAATA_VERSION = 133;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2914,7 +2914,7 @@ const BIZ_CATS = ['Mobile & electronics', 'Grocery', 'Clothing', 'Food & restaur
 const clip = (v, n) => String(v ?? '').trim().slice(0, n);
 function bizView(u) {
   const b = u.business; if (!b) return null;
-  return { ...b, ownerId: u.id, ownerName: u.name, phone: u.phone, productCount: db.products.filter((p) => p.ownerId === u.id).length };
+  return { ...b, members: undefined, invSeq: undefined, ordSeq: undefined, settings: undefined, store: undefined, storeOn: !!(b.store && b.store.on), ownerId: u.id, ownerName: u.name, phone: u.phone, productCount: db.products.filter((p) => p.ownerId === u.id).length };
 }
 app.get('/api/business/:id', auth, (req, res) => {
   const u = userById(req.params.id);
@@ -2981,6 +2981,594 @@ function streamPhoto(obj, req, res) {
   const st = chatFileStream(obj.photo, 0, obj.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
 }
 app.get('/api/catalogue/photo/:id', (req, res) => streamPhoto(db.products.find((x) => x.id === req.params.id), req, res));
+
+
+// ==================== 🏪 MAATA BUSINESS: staff, stock, billing (POS), reports, AI ====================
+// A business is the owner's account (bizId = owner user id). Staff are other Maata users with a role.
+// Every request checks membership and permission on the server; money is kept in paise (whole numbers).
+const BIZ_ROLES = { manager: ['bill', 'stock', 'reports', 'void'], cashier: ['bill'], stock: ['stock'], delivery: ['deliver'] };
+const BIZ_UNITS = ['pcs', 'kg', 'g', 'l', 'ml', 'box', 'pack', 'dozen', 'm', 'pair', 'set', 'plate'];
+const BIZ_TAX = [0, 0.25, 3, 5, 12, 18, 28, 40];
+const istNow = () => new Date(now() + 5.5 * 3600000);
+const istDayKey = (t) => new Date(t + 5.5 * 3600000).toISOString().slice(0, 10);
+const istDayStart = (t = now()) => { const d = new Date(t + 5.5 * 3600000); d.setUTCHours(0, 0, 0, 0); return d.getTime() - 5.5 * 3600000; };
+const finYear = (t = now()) => { const d = new Date(t + 5.5 * 3600000), y = d.getUTCFullYear(); return d.getUTCMonth() >= 3 ? y + '-' + String((y + 1) % 100).padStart(2, '0') : (y - 1) + '-' + String(y % 100).padStart(2, '0'); };
+const rupees = (p) => '₹' + (Math.round(p) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function bizSettings(b) {
+  b.settings = { prefix: 'INV', taxMode: 'incl', roundOff: true, allowNegative: false, gstin: '', upi: '', footer: 'Thank you! Visit again.', ...(b.settings || {}) };
+  return b.settings;
+}
+// who is acting, for which business, with which rights (never trusts the bizId alone)
+function bizCtx(req, res, need) {
+  const bizId = String(req.params.bizId || ''), owner = userById(bizId);
+  if (!owner || !owner.business || owner.status === 'blocked') { res.status(404).json({ error: 'Business not found.' }); return null; }
+  let role = null, perms = [];
+  if (owner.id === req.user.id) { role = 'owner'; perms = ['bill', 'stock', 'reports', 'void', 'settings', 'staff']; }
+  else { const m = (owner.business.members || []).find((x) => x.userId === req.user.id && x.status !== 'removed'); if (m) { role = m.role; perms = BIZ_ROLES[m.role] || []; } }
+  if (!role) { res.status(403).json({ error: 'You are not part of this business.' }); return null; }
+  if (need && !perms.includes(need)) { res.status(403).json({ error: 'Your role (' + role + ') cannot do this. Ask the shop owner.' }); return null; }
+  bizSettings(owner.business);
+  return { owner, biz: owner.business, bizId: owner.id, role, perms, actor: req.user };
+}
+function bizLog(ctx, action, ref, detail = '') {
+  db.bizLog.push({ id: newId(), bizId: ctx.bizId, actor: ctx.actor.id, actorName: ctx.actor.name, action, ref: ref || '', detail: clip(detail, 300), at: now() });
+  if (db.bizLog.length > 60000) db.bizLog.splice(0, db.bizLog.length - 60000);
+}
+const bizProducts = (bizId) => db.products.filter((p) => p.ownerId === bizId);
+const bizProdOut = (p) => ({ ...productOut(p), sku: p.sku || '', barcode: p.barcode || '', unit: p.unit || 'pcs', category: p.category || '', taxRate: p.taxRate ?? 0, stock: p.stock ?? null, lowAt: p.lowAt ?? null, cost: p.cost ?? null, mrp: p.mrp ?? null });
+function stockMove(ctx, p, delta, reason, ref) {
+  if (p.stock == null) return; // stock not tracked for this product
+  p.stock = Math.round((Number(p.stock) + delta) * 1000) / 1000;
+  db.stockMoves.push({ id: newId(), bizId: ctx.bizId, productId: p.id, name: p.name, delta, after: p.stock, reason, ref: ref || '', actor: ctx.actor.id, at: now() });
+}
+function readProductFields(b, p, isNew) {
+  if (b.name !== undefined || isNew) { const n = clip(b.name, 80); if (!n) return 'Enter a product name.'; p.name = n; }
+  const money = (v) => (v === '' || v == null ? null : Math.round(Number(v) * 100) / 100);
+  if (b.price !== undefined) { const v = money(b.price); if (v !== null && !(v >= 0 && v < 1e8)) return 'Enter a valid price.'; p.price = v; }
+  if (b.cost !== undefined) { const v = money(b.cost); if (v !== null && !(v >= 0 && v < 1e8)) return 'Enter a valid cost.'; p.cost = v; }
+  if (b.mrp !== undefined) { const v = money(b.mrp); if (v !== null && !(v >= 0 && v < 1e8)) return 'Enter a valid MRP.'; p.mrp = v; }
+  if (b.description !== undefined) p.description = clip(b.description, 500);
+  if (b.available !== undefined) p.available = !!b.available;
+  if (b.sku !== undefined) p.sku = clip(b.sku, 40);
+  if (b.barcode !== undefined) p.barcode = String(b.barcode).replace(/[^\w-]/g, '').slice(0, 40);
+  if (b.unit !== undefined) p.unit = BIZ_UNITS.includes(b.unit) ? b.unit : 'pcs';
+  if (b.category !== undefined) p.category = clip(b.category, 40);
+  if (b.taxRate !== undefined) { const r = Number(b.taxRate); p.taxRate = BIZ_TAX.includes(r) ? r : 0; }
+  if (b.lowAt !== undefined) p.lowAt = b.lowAt === '' || b.lowAt == null ? null : Math.max(0, Number(b.lowAt) || 0);
+  if (b.trackStock !== undefined && !b.trackStock) p.stock = null;
+  return null;
+}
+// ---- workspaces I can open ----
+app.get('/api/biz/me', auth, (req, res) => {
+  const list = [];
+  if (req.user.business) list.push({ bizId: req.user.id, name: req.user.business.name, role: 'owner' });
+  for (const u of db.users) if (u.business && u.id !== req.user.id) { const m = (u.business.members || []).find((x) => x.userId === req.user.id && x.status !== 'removed'); if (m) list.push({ bizId: u.id, name: u.business.name, role: m.role }); }
+  res.json(list);
+});
+app.get('/api/biz/:bizId', auth, (req, res) => {
+  const c = bizCtx(req, res); if (!c) return;
+  res.json({ bizId: c.bizId, name: c.biz.name, category: c.biz.category, address: c.biz.address || '', phone: c.owner.phone, role: c.role, perms: c.perms, settings: c.biz.settings, units: BIZ_UNITS, taxRates: BIZ_TAX,
+    staff: c.perms.includes('staff') ? (c.biz.members || []).filter((m) => m.status !== 'removed').map((m) => { const u = userById(m.userId); return { userId: m.userId, name: u ? u.name : 'Removed user', phone: u ? u.phone : '', role: m.role, addedAt: m.addedAt }; }) : [] });
+});
+// ---- dashboard ----
+function bizStats(bizId, from, to) {
+  const inv = db.invoices.filter((i) => i.bizId === bizId && i.createdAt >= from && i.createdAt < to);
+  const ok = inv.filter((i) => i.status !== 'void');
+  const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+  const byPay = {}; for (const i of ok) byPay[i.payment.method] = (byPay[i.payment.method] || 0) + i.grand;
+  const items = new Map(); for (const i of ok) for (const l of i.items) { const k = l.productId || l.name; const x = items.get(k) || { name: l.name, qty: 0, amount: 0 }; x.qty += l.qty; x.amount += l.total; items.set(k, x); }
+  const taxByRate = {}; for (const i of ok) for (const l of i.items) taxByRate[l.taxRate] = (taxByRate[l.taxRate] || 0) + l.tax;
+  const hours = new Array(24).fill(0); for (const i of ok) hours[new Date(i.createdAt + 5.5 * 3600000).getUTCHours()] += i.grand;
+  return { bills: ok.length, voids: inv.length - ok.length, sales: sum(ok, (i) => i.grand), tax: sum(ok, (i) => i.tax), discount: sum(ok, (i) => i.discount), unpaid: sum(ok.filter((i) => i.payment.status !== 'paid'), (i) => i.grand), byPay, taxByRate,
+    top: [...items.values()].sort((a, b) => b.amount - a.amount).slice(0, 8), bestHour: hours.indexOf(Math.max(...hours)), avgBill: ok.length ? Math.round(sum(ok, (i) => i.grand) / ok.length) : 0 };
+}
+function bizReorder(bizId) { // 🤖 smart reorder: average sale per day over 14 days vs stock left
+  const from = now() - 14 * 86400000, sold = new Map();
+  for (const m of db.stockMoves) if (m.bizId === bizId && m.reason === 'sale' && m.at >= from) sold.set(m.productId, (sold.get(m.productId) || 0) - m.delta);
+  const out = [];
+  for (const p of bizProducts(bizId)) {
+    if (p.stock == null) continue; const perDay = (sold.get(p.id) || 0) / 14;
+    const daysLeft = perDay > 0 ? p.stock / perDay : Infinity, low = p.lowAt != null && p.stock <= p.lowAt;
+    if (low || daysLeft < 5) out.push({ productId: p.id, name: p.name, stock: p.stock, unit: p.unit || 'pcs', perDay: Math.round(perDay * 10) / 10, daysLeft: isFinite(daysLeft) ? Math.max(0, Math.round(daysLeft * 10) / 10) : null, suggest: Math.max(1, Math.ceil(perDay * 14 - p.stock)) });
+  }
+  return out.sort((a, b) => (a.daysLeft ?? 99) - (b.daysLeft ?? 99)).slice(0, 20);
+}
+app.get('/api/biz/:bizId/dashboard', auth, (req, res) => {
+  const c = bizCtx(req, res); if (!c) return;
+  const day = istDayStart(), see = c.perms.includes('reports');
+  const prods = bizProducts(c.bizId);
+  res.json({
+    today: see ? bizStats(c.bizId, day, day + 86400000) : null,
+    month: see ? bizStats(c.bizId, Date.UTC(istNow().getUTCFullYear(), istNow().getUTCMonth(), 1) - 5.5 * 3600000, now() + 1) : null,
+    products: prods.length, lowStock: prods.filter((p) => p.stock != null && p.lowAt != null && p.stock <= p.lowAt).map(bizProdOut).slice(0, 20),
+    reorder: c.perms.includes('stock') || see ? bizReorder(c.bizId) : [],
+    recent: db.invoices.filter((i) => i.bizId === c.bizId && (see || i.by === c.actor.id)).slice(-8).reverse().map(invOut),
+    orders: c.perms.includes('bill') ? { new: db.orders.filter((o) => o.bizId === c.bizId && o.status === 'PLACED').length, active: db.orders.filter((o) => o.bizId === c.bizId && ORD_ACTIVE.includes(o.status)).length } : null,
+  });
+});
+// ---- products & stock ----
+app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
+app.post('/api/biz/:bizId/products', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  if (bizProducts(c.bizId).length >= 3000) return res.status(400).json({ error: 'You can have up to 3,000 products.' });
+  const b = req.body || {}, p = { id: newId(), ownerId: c.bizId, available: true, createdAt: now(), stock: null };
+  const err = readProductFields(b, p, true); if (err) return res.status(400).json({ error: err });
+  if (p.barcode && bizProducts(c.bizId).some((x) => x.barcode === p.barcode)) return res.status(400).json({ error: 'Another product already has this barcode.' });
+  db.products.push(p);
+  if (b.stock !== undefined && b.stock !== '' && b.stock != null && b.trackStock !== false) { p.stock = 0; stockMove(c, p, Math.round(Number(b.stock) * 1000) / 1000 || 0, 'opening', ''); }
+  bizLog(c, 'product-add', p.id, p.name); save(); res.json(bizProdOut(p));
+});
+app.put('/api/biz/:bizId/products/:pid', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const p = db.products.find((x) => x.id === req.params.pid && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
+  const b = req.body || {}, err = readProductFields(b, p, false); if (err) return res.status(400).json({ error: err });
+  if (p.barcode && bizProducts(c.bizId).some((x) => x !== p && x.barcode === p.barcode)) return res.status(400).json({ error: 'Another product already has this barcode.' });
+  if (b.trackStock && p.stock == null) { p.stock = 0; if (Number(b.stock)) stockMove(c, p, Number(b.stock), 'opening', ''); }
+  bizLog(c, 'product-edit', p.id, p.name); save(); res.json(bizProdOut(p));
+});
+app.post('/api/biz/:bizId/products/:pid/stock', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const p = db.products.find((x) => x.id === req.params.pid && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
+  const delta = Math.round(Number(req.body?.delta) * 1000) / 1000, reason = ['purchase', 'damage', 'count', 'return', 'other'].includes(req.body?.reason) ? req.body.reason : 'other';
+  if (!delta || !isFinite(delta) || Math.abs(delta) > 1e7) return res.status(400).json({ error: 'Enter how much stock to add or remove.' });
+  if (p.stock == null) p.stock = 0;
+  if (!c.biz.settings.allowNegative && p.stock + delta < 0) return res.status(400).json({ error: 'Stock cannot go below 0. In stock: ' + p.stock + '.' });
+  stockMove(c, p, delta, reason, clip(req.body?.note, 80)); bizLog(c, 'stock', p.id, p.name + ' ' + (delta > 0 ? '+' : '') + delta + ' (' + reason + ')'); save(); res.json(bizProdOut(p));
+});
+app.get('/api/biz/:bizId/products/:pid/moves', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  res.json(db.stockMoves.filter((m) => m.bizId === c.bizId && m.productId === req.params.pid).slice(-60).reverse().map((m) => ({ ...m, actorName: (userById(m.actor) || {}).name || '' })));
+});
+// ---- billing ----
+const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null });
+function priceBill(lines, discountPaise, mode) { // allocate the discount by value, then tax per line
+  const base = lines.map((l) => Math.round(l.unitPaise * l.qty)), sumBase = base.reduce((a, b) => a + b, 0);
+  const disc = Math.max(0, Math.min(sumBase, Math.round(discountPaise || 0)));
+  let left = disc; const out = [];
+  lines.forEach((l, i) => {
+    const d = i === lines.length - 1 ? left : Math.round(disc * base[i] / (sumBase || 1)); left -= d;
+    const net = base[i] - d, r = mode === 'none' ? 0 : l.taxRate || 0;
+    let taxable, tax, total;
+    if (mode === 'excl') { taxable = net; tax = Math.round(net * r / 100); total = net + tax; }
+    else { total = net; taxable = r ? Math.round(net * 100 / (100 + r)) : net; tax = net - taxable; }
+    out.push({ ...l, gross: base[i], disc: d, taxable, tax, total });
+  });
+  return { lines: out, subtotal: sumBase, discount: disc, taxable: out.reduce((s, x) => s + x.taxable, 0), tax: out.reduce((s, x) => s + x.tax, 0), total: out.reduce((s, x) => s + x.total, 0) };
+}
+app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const b = req.body || {}, s = c.biz.settings;
+  const idem = clip(b.idem, 64);
+  if (idem) { const dup = db.invoices.find((i) => i.bizId === c.bizId && i.idem === idem); if (dup) return res.json(invOut(dup)); } // double tap: same bill back
+  const raw = Array.isArray(b.items) ? b.items.slice(0, 200) : [];
+  if (!raw.length) return res.status(400).json({ error: 'Add at least one item to the bill.' });
+  const canPrice = c.perms.includes('stock') || c.role === 'owner' || c.role === 'manager';
+  const lines = [], need = new Map();
+  for (const it of raw) {
+    const qty = Math.round(Number(it.qty) * 1000) / 1000; if (!(qty > 0 && qty < 1e6)) return res.status(400).json({ error: 'Check the quantity of every item.' });
+    let p = null; if (it.productId) { p = db.products.find((x) => x.id === it.productId && x.ownerId === c.bizId); if (!p) return res.status(400).json({ error: 'A product on this bill was removed. Refresh and try again.' }); }
+    const listPrice = p ? Math.round((p.price || 0) * 100) : null;
+    let unitPaise = listPrice; if (it.price != null && it.price !== '' && (canPrice || !p)) unitPaise = Math.round(Number(it.price) * 100);
+    if (!(unitPaise >= 0 && unitPaise < 1e10)) return res.status(400).json({ error: (p ? p.name : 'An item') + ' has no price. Add a price first.' });
+    const name = p ? p.name : clip(it.name, 80); if (!name) return res.status(400).json({ error: 'Every item needs a name.' });
+    const taxRate = p ? p.taxRate || 0 : BIZ_TAX.includes(Number(it.taxRate)) ? Number(it.taxRate) : 0;
+    lines.push({ productId: p ? p.id : null, name, unit: p ? p.unit || 'pcs' : clip(it.unit, 10) || 'pcs', qty, unitPaise, taxRate, hsn: p ? p.sku || '' : '' });
+    if (p && p.stock != null) need.set(p.id, (need.get(p.id) || 0) + qty);
+  }
+  if (!s.allowNegative) { // never sell more than the stock we have
+    const short = []; for (const [pid, q] of need) { const p = db.products.find((x) => x.id === pid); if (p.stock < q) short.push(p.name + ' (in stock ' + p.stock + ')'); }
+    if (short.length) return res.status(400).json({ error: 'Not enough stock: ' + short.join(', ') + '. Add stock first, or turn on "Allow selling below 0" in settings.' });
+  }
+  const pr = priceBill(lines, Math.round(Number(b.discount || 0) * 100), s.taxMode);
+  const grand = s.roundOff ? Math.round(pr.total / 100) * 100 : pr.total;
+  const method = ['cash', 'upi', 'card', 'credit', 'other'].includes(b.method) ? b.method : 'cash';
+  c.biz.invSeq = c.biz.invSeq || {}; const fy = finYear(); c.biz.invSeq[fy] = (c.biz.invSeq[fy] || 0) + 1;
+  const phone = cleanMobile(b.customer?.phone || '');
+  const inv = {
+    id: newId(), bizId: c.bizId, idem: idem || null, key: crypto.randomBytes(12).toString('hex'), number: (s.prefix || 'INV') + '/' + fy + '/' + String(c.biz.invSeq[fy]).padStart(4, '0'),
+    createdAt: now(), by: c.actor.id, byName: c.actor.name, customer: { name: clip(b.customer?.name, 60), phone: phone || '' }, taxMode: s.taxMode,
+    items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, hsn: l.hsn, disc: l.disc, taxable: l.taxable, tax: l.tax, total: l.total })),
+    subtotal: pr.subtotal, discount: pr.discount, taxable: pr.taxable, tax: pr.tax, roundOff: grand - pr.total, grand,
+    payment: { method, status: method === 'credit' ? 'unpaid' : 'paid', paidAt: method === 'credit' ? null : now() }, status: 'final', history: [{ at: now(), by: c.actor.id, what: 'created' }],
+    shop: { name: c.biz.name, address: c.biz.address || '', phone: c.owner.phone, gstin: s.gstin || '', upi: s.upi || '', footer: s.footer || '' },
+  };
+  db.invoices.push(inv);
+  for (const l of inv.items) if (l.productId) { const p = db.products.find((x) => x.id === l.productId); if (p) stockMove(c, p, -l.qty, 'sale', inv.id); }
+  bizLog(c, 'invoice', inv.id, inv.number + ' ' + rupees(grand)); save();
+  res.json(invOut(inv));
+});
+app.get('/api/biz/:bizId/invoices', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const q = String(req.query.q || '').toLowerCase(), from = Number(req.query.from) || 0, to = Number(req.query.to) || now() + 1, all = c.perms.includes('reports');
+  const list = db.invoices.filter((i) => i.bizId === c.bizId && i.createdAt >= from && i.createdAt < to && (all || i.by === c.actor.id)
+    && (!q || i.number.toLowerCase().includes(q) || (i.customer.name || '').toLowerCase().includes(q) || (i.customer.phone || '').includes(q)));
+  res.json(list.slice(-300).reverse().map(invOut));
+});
+const myInvoice = (c, id) => db.invoices.find((i) => i.id === id && i.bizId === c.bizId && (c.perms.includes('reports') || i.by === c.actor.id));
+app.get('/api/biz/:bizId/invoices/:id', auth, (req, res) => { const c = bizCtx(req, res, 'bill'); if (!c) return; const i = myInvoice(c, req.params.id); if (!i) return res.status(404).json({ error: 'Bill not found.' }); res.json({ ...invOut(i), shop: i.shop }); });
+app.post('/api/biz/:bizId/invoices/:id/void', auth, (req, res) => {
+  const c = bizCtx(req, res, 'void'); if (!c) return;
+  const i = myInvoice(c, req.params.id); if (!i) return res.status(404).json({ error: 'Bill not found.' });
+  if (i.status === 'void') return res.status(400).json({ error: 'This bill is already cancelled.' });
+  const reason = clip(req.body?.reason, 160); if (!reason) return res.status(400).json({ error: 'Write why this bill is cancelled.' });
+  i.status = 'void'; i.voidReason = reason; i.history.push({ at: now(), by: c.actor.id, what: 'void: ' + reason });
+  for (const l of i.items) if (l.productId) { const p = db.products.find((x) => x.id === l.productId); if (p) stockMove(c, p, l.qty, 'void', i.id); }
+  bizLog(c, 'invoice-void', i.id, i.number + ' – ' + reason); save(); res.json(invOut(i));
+});
+app.post('/api/biz/:bizId/invoices/:id/pay', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const i = myInvoice(c, req.params.id); if (!i || i.status === 'void') return res.status(404).json({ error: 'Bill not found.' });
+  const method = ['cash', 'upi', 'card', 'other'].includes(req.body?.method) ? req.body.method : 'cash';
+  i.payment = { method, status: 'paid', paidAt: now(), was: i.payment.method }; i.history.push({ at: now(), by: c.actor.id, what: 'paid by ' + method });
+  bizLog(c, 'invoice-paid', i.id, i.number); save(); res.json(invOut(i));
+});
+// send the bill to the customer's Maata chat (from the shop owner's account, which customers know)
+app.post('/api/biz/:bizId/invoices/:id/send', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const i = myInvoice(c, req.params.id); if (!i) return res.status(404).json({ error: 'Bill not found.' });
+  const phone = cleanMobile(req.body?.phone || i.customer.phone); if (!phone) return res.status(400).json({ error: 'Enter the customer\'s mobile number.' });
+  const to = findByMobile(phone); if (!to) return res.status(404).json({ error: 'This number is not on Maata yet. Share the bill link instead.' });
+  const ok = canMessage(c.owner, to.id); if (ok.error) return res.status(400).json({ error: 'Could not send the bill to this person.' });
+  const base = (process.env.PUBLIC_URL || 'https://maataapp.com').replace(/\/$/, '');
+  const text = '🧾 Bill ' + i.number + ' from ' + i.shop.name + '\n' + i.items.slice(0, 15).map((l) => '• ' + l.name + ' × ' + l.qty + ' = ' + rupees(l.total)).join('\n') + (i.items.length > 15 ? '\n…' : '') + '\nTotal: ' + rupees(i.grand) + ' (' + (i.payment.status === 'paid' ? 'paid by ' + i.payment.method.toUpperCase() : 'to pay') + ')\nFull bill: ' + base + '/bill/' + i.id + '?k=' + i.key;
+  deliverMessage(c.owner, ok.target, { type: 'text', text: clip(text, 3000) });
+  i.sentTo = phone; if (!i.customer.phone) i.customer.phone = phone; i.history.push({ at: now(), by: c.actor.id, what: 'sent to ' + phone });
+  save(); res.json(invOut(i));
+});
+// printable bill page (anyone with the secret link: the customer, a printer, a PDF)
+app.get('/bill/:id', (req, res) => {
+  const i = db.invoices.find((x) => x.id === req.params.id);
+  if (!i || String(req.query.k || '') !== i.key) return res.status(404).type('html').send('<p style="font-family:system-ui;padding:24px">Bill not found.</p>');
+  const e = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+  const taxRows = {}; for (const l of i.items) if (l.tax) taxRows[l.taxRate] = (taxRows[l.taxRate] || 0) + l.tax;
+  const upi = i.shop.upi && i.payment.status !== 'paid' ? 'upi://pay?pa=' + encodeURIComponent(i.shop.upi) + '&pn=' + encodeURIComponent(i.shop.name) + '&am=' + (i.grand / 100).toFixed(2) + '&cu=INR&tn=' + encodeURIComponent(i.number) : '';
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(i.number)} · ${e(i.shop.name)}</title>
+<style>body{margin:0;background:#EEF2F1;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#13201E}.bill{max-width:420px;margin:16px auto;background:#fff;padding:22px 20px;border-radius:14px}h1{margin:0;font-size:22px;text-align:center}.c{text-align:center;color:#55625F;font-size:13px;line-height:1.5}.row{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:3px 0}hr{border:0;border-top:1px dashed #B9C4C1;margin:10px 0}table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;color:#55625F;font-weight:600;padding:4px 0;border-bottom:1px solid #DDE4E2}td{padding:5px 0;vertical-align:top}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.tot{font-size:20px;font-weight:800}.void{color:#B42318;font-weight:800;text-align:center;font-size:18px;border:2px solid #B42318;border-radius:10px;padding:6px;margin:8px 0}.pay{display:block;text-align:center;background:#0F7A6E;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;margin-top:12px}.btn{display:block;margin:12px auto 24px;padding:12px 20px;border:0;border-radius:12px;background:#13201E;color:#fff;font-size:15px}@media print{body{background:#fff}.bill{margin:0;border-radius:0}.btn,.pay{display:none}}</style></head><body><div class="bill">
+<h1>${e(i.shop.name)}</h1><div class="c">${e(i.shop.address)}${i.shop.phone ? '<br>Phone: ' + e(i.shop.phone) : ''}${i.shop.gstin ? '<br>GSTIN: ' + e(i.shop.gstin) : ''}</div><hr>
+${i.status === 'void' ? '<div class="void">CANCELLED – ' + e(i.voidReason) + '</div>' : ''}
+<div class="row"><span>Bill no: <b>${e(i.number)}</b></span><span>${e(new Date(i.createdAt + 5.5 * 3600000).toISOString().slice(0, 16).replace('T', ' '))}</span></div>
+${i.customer.name || i.customer.phone ? '<div class="row"><span>Customer: ' + e(i.customer.name) + ' ' + e(i.customer.phone) + '</span></div>' : ''}<hr>
+<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Amount</th></tr></thead><tbody>
+${i.items.map((l) => `<tr><td>${e(l.name)}${l.taxRate ? '<br><small style="color:#55625F">GST ' + l.taxRate + '%</small>' : ''}</td><td class="n">${l.qty} ${e(l.unit)}</td><td class="n">${(l.price / 100).toFixed(2)}</td><td class="n">${(l.total / 100).toFixed(2)}</td></tr>`).join('')}
+</tbody></table><hr>
+<div class="row"><span>Subtotal</span><span>${rupees(i.subtotal)}</span></div>
+${i.discount ? '<div class="row"><span>Discount</span><span>– ' + rupees(i.discount) + '</span></div>' : ''}
+${Object.entries(taxRows).map(([r, t]) => '<div class="row"><span>GST ' + r + '% ' + (i.taxMode === 'incl' ? '(included)' : '') + '</span><span>' + rupees(t) + '</span></div>').join('')}
+${i.roundOff ? '<div class="row"><span>Round off</span><span>' + (i.roundOff > 0 ? '+' : '–') + ' ' + rupees(Math.abs(i.roundOff)) + '</span></div>' : ''}
+<div class="row tot"><span>Total</span><span>${rupees(i.grand)}</span></div>
+<div class="row"><span>Payment</span><span>${e(i.payment.method.toUpperCase())} · ${i.payment.status === 'paid' ? 'Paid' : 'To pay'}</span></div>
+${upi ? '<a class="pay" href="' + e(upi) + '">Pay ' + rupees(i.grand) + ' by UPI</a>' : ''}<hr>
+<div class="c">${e(i.shop.footer)}<br><small>Made with Maata Business</small></div></div>
+<button class="btn" onclick="window.print()">Print / Save as PDF</button></body></html>`);
+});
+// ---- reports ----
+app.get('/api/biz/:bizId/report', auth, (req, res) => {
+  const c = bizCtx(req, res, 'reports'); if (!c) return;
+  const from = Number(req.query.from) || istDayStart(now() - 6 * 86400000), to = Number(req.query.to) || now() + 1;
+  const days = []; for (let t = istDayStart(from); t < to; t += 86400000) { const s = bizStats(c.bizId, t, t + 86400000); days.push({ day: istDayKey(t), sales: s.sales, bills: s.bills }); if (days.length > 92) break; }
+  res.json({ from, to, ...bizStats(c.bizId, from, to), days });
+});
+// ---- staff ----
+app.post('/api/biz/:bizId/staff', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'staff'); if (!c) return;
+  const role = BIZ_ROLES[req.body?.role] ? req.body.role : 'cashier', phone = cleanMobile(req.body?.phone);
+  const u = phone && findByMobile(phone); if (!u) return res.status(404).json({ error: 'This number is not on Maata. Ask them to join Maata first.' });
+  if (u.id === c.bizId) return res.status(400).json({ error: 'You are the owner.' });
+  c.biz.members = (c.biz.members || []).filter((m) => m.userId !== u.id);
+  if (c.biz.members.filter((m) => m.status !== 'removed').length >= 30) return res.status(400).json({ error: 'Up to 30 staff.' });
+  c.biz.members.push({ userId: u.id, role, status: 'active', addedAt: now(), addedBy: c.actor.id });
+  bizLog(c, 'staff-add', u.id, u.name + ' as ' + role); save();
+  pushTo(u, { type: 'msg', title: '🏪 ' + c.biz.name, body: 'You were added as ' + role + '. Open Maata → Business to start.', tag: 'biz-' + c.bizId, url: '/?biz=' + c.bizId }).catch(() => {});
+  res.json({ ok: true });
+});
+app.delete('/api/biz/:bizId/staff/:uid', auth, (req, res) => {
+  const c = bizCtx(req, res, 'staff'); if (!c) return;
+  const m = (c.biz.members || []).find((x) => x.userId === req.params.uid); if (!m) return res.status(404).json({ error: 'Not found.' });
+  m.status = 'removed'; m.removedAt = now(); bizLog(c, 'staff-remove', m.userId, ''); save(); res.json({ ok: true });
+});
+app.put('/api/biz/:bizId/settings', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return;
+  const b = req.body || {}, s = c.biz.settings;
+  if (b.prefix !== undefined) s.prefix = String(b.prefix).toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 8) || 'INV';
+  if (b.taxMode !== undefined) s.taxMode = ['incl', 'excl', 'none'].includes(b.taxMode) ? b.taxMode : 'incl';
+  if (b.roundOff !== undefined) s.roundOff = !!b.roundOff;
+  if (b.allowNegative !== undefined) s.allowNegative = !!b.allowNegative;
+  if (b.gstin !== undefined) { const g = String(b.gstin).toUpperCase().replace(/\s/g, ''); if (g && !/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(g)) return res.status(400).json({ error: 'GSTIN should be 15 characters, like 37ABCDE1234F1Z5.' }); s.gstin = g; }
+  if (b.upi !== undefined) { const v = String(b.upi).trim(); if (v && !/^[\w.-]{2,}@[\w.-]{2,}$/.test(v)) return res.status(400).json({ error: 'UPI ID looks like name@bank.' }); s.upi = v; }
+  if (b.footer !== undefined) s.footer = clip(b.footer, 120);
+  bizLog(c, 'settings', '', JSON.stringify(b).slice(0, 200)); save(); res.json(s);
+});
+app.get('/api/biz/:bizId/log', auth, (req, res) => { const c = bizCtx(req, res, 'reports'); if (!c) return; res.json(db.bizLog.filter((l) => l.bizId === c.bizId).slice(-100).reverse()); });
+// ---- 🤖 AI helpers (always a draft; a person confirms) ----
+app.post('/api/biz/:bizId/ai/product-photo', auth, express.raw({ type: ['image/*'], limit: '4mb' }), async (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Take a photo of the product.' });
+  if (!GEMINI_KEY) return res.status(503).json({ error: 'Maata AI is not switched on.' });
+  const g = await gemini('You help an Indian shopkeeper add products. Look at the photo and suggest product details. Return ONLY JSON: {"name":"short product name with brand and size if visible","category":"one or two words","unit":"one of ' + BIZ_UNITS.join('|') + '","description":"one short sentence","mrp":number or null (only if an MRP is clearly printed),"barcode":"digits if a barcode number is clearly readable, else empty","sure":true|false}. Never guess prices.',
+    [{ role: 'user', parts: [{ inlineData: { mimeType: String(req.headers['content-type'] || 'image/jpeg').split(';')[0], data: req.body.toString('base64') } }, { text: 'What is this product?' }] }], { json: true, maxTokens: 300, temperature: 0.2 });
+  let d = null; try { d = JSON.parse(g.text || ''); } catch { /* not json */ }
+  if (!d || !d.name) return res.status(502).json({ error: 'AI could not read this photo. Try a clearer photo, or type the name.' });
+  res.json({ name: clip(d.name, 80), category: clip(d.category, 40), unit: BIZ_UNITS.includes(d.unit) ? d.unit : 'pcs', description: clip(d.description, 200), mrp: Number(d.mrp) > 0 ? Math.round(Number(d.mrp) * 100) / 100 : null, barcode: String(d.barcode || '').replace(/\D/g, '').slice(0, 20), sure: !!d.sure });
+});
+app.post('/api/biz/:bizId/ai/voice-bill', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const said = clip(req.body?.text, 600); if (!said) return res.status(400).json({ error: 'Say the items.' });
+  const prods = bizProducts(c.bizId).filter((p) => p.available !== false).slice(0, 400).map((p) => ({ id: p.id, n: p.name, u: p.unit || 'pcs' }));
+  let items = [];
+  if (GEMINI_KEY) {
+    const g = await gemini('Turn what an Indian shopkeeper said (Telugu, Hindi, English or mixed) into bill items. Match each item to the closest product from the list by meaning (Telugu/Hindi names allowed). Numbers may be words (rendu=2, oka=1, moodu=3, ek=1, do=2, aadha/ara=0.5, pav=0.25). Return ONLY JSON: {"items":[{"id":"product id or empty if no match","said":"words used","qty":number}]}',
+      [{ role: 'user', parts: [{ text: 'Products: ' + JSON.stringify(prods) + '\nSaid: ' + said }] }], { json: true, maxTokens: 600, temperature: 0.1 });
+    try { items = (JSON.parse(g.text || '{}').items || []).slice(0, 40); } catch { items = []; }
+  }
+  if (!items.length) { // simple fallback: "2 rice 1 soap"
+    const parts = said.toLowerCase().split(/[,;]| and | mariyu | aur /);
+    for (const p of parts) { const m = /(\d+(?:\.\d+)?)?\s*(.+)/.exec(p.trim()); if (!m) continue; const name = m[2].trim(); const hit = prods.find((x) => x.n.toLowerCase().includes(name) || name.includes(x.n.toLowerCase())); items.push({ id: hit ? hit.id : '', said: name, qty: Number(m[1]) || 1 }); }
+  }
+  const ok = new Set(prods.map((p) => p.id));
+  res.json({ items: items.map((x) => ({ productId: ok.has(x.id) ? x.id : null, said: clip(x.said, 60), qty: Math.max(0.001, Math.min(1e5, Number(x.qty) || 1)) })) });
+});
+app.post('/api/biz/:bizId/ai/insights', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'reports'); if (!c) return;
+  const to = now() + 1, from = istDayStart(now() - 29 * 86400000), wk = istDayStart(now() - 6 * 86400000), pw = istDayStart(now() - 13 * 86400000);
+  const m = bizStats(c.bizId, from, to), w = bizStats(c.bizId, wk, to), p = bizStats(c.bizId, pw, wk), re = bizReorder(c.bizId);
+  const facts = { period: 'last 30 days (' + istDayKey(from) + ' to ' + istDayKey(now()) + ')', sales30: rupees(m.sales), bills30: m.bills, avgBill: rupees(m.avgBill), thisWeek: rupees(w.sales), lastWeek: rupees(p.sales), bestHour: m.bills ? m.bestHour + ':00' : null, top: m.top.slice(0, 5).map((t) => t.name + ' ' + rupees(t.amount)), payments: Object.fromEntries(Object.entries(m.byPay).map(([k, v]) => [k, rupees(v)])), unpaid: rupees(m.unpaid), reorder: re.slice(0, 5).map((r) => r.name + ' (stock ' + r.stock + ', ~' + (r.daysLeft ?? '?') + ' days left)') };
+  let text = '';
+  if (GEMINI_KEY && m.bills) { const lang = AI_LANG_NAME[req.user.lang] || 'English'; const g = await gemini('You are a friendly business adviser for a small Indian shop. Using ONLY these numbers, write 4 to 6 short, practical points in ' + lang + ' (plain text, one per line, start each with an emoji). Do not invent numbers.', [{ role: 'user', parts: [{ text: JSON.stringify(facts) }] }], { maxTokens: 500, temperature: 0.4 }); text = String(g.text || '').trim(); }
+  if (!text) text = m.bills ? ['📈 Sales in the last 30 days: ' + facts.sales30 + ' from ' + m.bills + ' bills (average ' + facts.avgBill + ').', '🗓️ This week ' + facts.thisWeek + ', last week ' + facts.lastWeek + '.', facts.top.length ? '🏆 Top sellers: ' + facts.top.join(', ') + '.' : '', facts.bestHour ? '⏰ Busiest hour: ' + facts.bestHour + '.' : '', m.unpaid > 0 ? '💳 Money still to collect (credit bills): ' + facts.unpaid + '.' : '', re.length ? '📦 Order soon: ' + facts.reorder.join(', ') + '.' : ''].filter(Boolean).join('\n') : 'No bills yet. Make your first bill in Maata Business, and insights will appear here.';
+  res.json({ text: clip(text, 2000), facts });
+});
+
+
+// ==================== 🛒 PHASE 3: ONLINE STORE + ORDERS ====================
+// Customers order from a shop inside Maata. Prices are always worked out on the server.
+// Flow: PLACED → ACCEPTED (stock reserved) → PREPARING → READY → OUT_FOR_DELIVERY → DELIVERED (bill made)
+// Exceptions: REJECTED, CANCELLED (stock released), DELIVERY_FAILED. Delivery and pickup need the customer's 4-digit code.
+const ORD_ACTIVE = ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'];
+const ORD_NEXT = { // shop actions allowed from each state
+  PLACED: ['ACCEPTED', 'REJECTED'], ACCEPTED: ['PREPARING', 'CANCELLED'], PREPARING: ['READY', 'CANCELLED'],
+  READY: ['OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'], OUT_FOR_DELIVERY: ['DELIVERED', 'DELIVERY_FAILED'], DELIVERY_FAILED: ['OUT_FOR_DELIVERY', 'CANCELLED'],
+};
+const ORD_SAY = { PLACED: 'Order placed', ACCEPTED: 'Shop accepted your order', REJECTED: 'Shop could not take your order', PREPARING: 'Your order is being packed', READY: 'Your order is ready', OUT_FOR_DELIVERY: 'Your order is on the way', DELIVERED: 'Delivered. Thank you!', DELIVERY_FAILED: 'Delivery could not be completed', CANCELLED: 'Order cancelled' };
+function storeOf(b) {
+  b.store = { on: false, delivery: true, pickup: true, fee: 0, freeAbove: 0, minOrder: 0, eta: '30–45 min', area: '', radiusKm: 5, lat: null, lng: null, payCod: true, payUpi: true, ...(b.store || {}) };
+  return b.store;
+}
+const shopStaffIds = (owner) => [owner.id, ...((owner.business.members || []).filter((m) => m.status !== 'removed' && (BIZ_ROLES[m.role] || []).includes('bill')).map((m) => m.userId))];
+function ordOut(o, forShop) {
+  return { id: o.id, number: o.number, bizId: o.bizId, shopName: o.shopName, shopPhone: o.shopPhone, customerId: o.customerId, customerName: o.customerName, customerPhone: forShop ? o.customerPhone : undefined,
+    items: o.items, subtotal: o.subtotal, discount: 0, tax: o.tax, fee: o.fee, grand: o.grand, mode: o.mode, address: o.address, note: o.note, pay: o.pay, status: o.status, history: o.history, createdAt: o.createdAt,
+    otp: !forShop && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track };
+}
+function ordNotify(o, who) {
+  const owner = userById(o.bizId), cust = userById(o.customerId);
+  if (who !== 'customer' && cust) { io.to('user:' + cust.id).emit('order:update', ordOut(o, false)); pushTo(cust, { type: 'msg', title: '🛒 ' + o.shopName, body: ORD_SAY[o.status] + (o.status === 'OUT_FOR_DELIVERY' ? '. Your delivery code: ' + o.otp : '') + (o.reason ? ' (' + o.reason + ')' : ''), tag: 'order-' + o.id, url: '/?order=' + o.id }).catch(() => {}); }
+  if (owner) for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); if (who === 'customer' && (o.status === 'PLACED' || o.status === 'CANCELLED')) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title: o.status === 'PLACED' ? '🛒 New order ' + o.number : '❌ Order ' + o.number + ' cancelled', body: o.customerName + ' · ' + rupees(o.grand) + ' · ' + (o.mode === 'delivery' ? 'Delivery' : 'Pickup'), tag: 'border-' + o.id, url: '/?biz=' + o.bizId }).catch(() => {}); } }
+}
+function ordStock(o, owner, dir, actor) { // dir -1 reserve, +1 release
+  const ctx = { bizId: owner.id, actor };
+  for (const l of o.items) { const p = db.products.find((x) => x.id === l.productId && x.ownerId === owner.id); if (p && p.stock != null) stockMove(ctx, p, dir * l.qty, dir < 0 ? 'order' : 'order-cancel', o.id); }
+  o.reserved = dir < 0;
+}
+function ordShortStock(o, owner) {
+  if (bizSettings(owner.business).allowNegative) return [];
+  const need = new Map(); for (const l of o.items) need.set(l.productId, (need.get(l.productId) || 0) + l.qty);
+  const short = []; for (const [pid, q] of need) { const p = db.products.find((x) => x.id === pid && x.ownerId === owner.id); if (p && p.stock != null && p.stock < q) short.push(p.name + ' (' + p.stock + ' left)'); }
+  return short;
+}
+function ordToInvoice(o, owner, actor) { // a delivered order becomes a normal bill (stock already moved when it was accepted)
+  const b = owner.business, s = bizSettings(b); b.invSeq = b.invSeq || {}; const fy = finYear(); b.invSeq[fy] = (b.invSeq[fy] || 0) + 1;
+  const items = o.items.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.price, taxRate: l.taxRate, hsn: '', disc: 0, taxable: l.taxable, tax: l.tax, total: l.total }));
+  if (o.fee) items.push({ productId: null, name: 'Delivery charge', unit: 'trip', qty: 1, price: o.fee, taxRate: 0, hsn: '', disc: 0, taxable: o.fee, tax: 0, total: o.fee });
+  const inv = { id: newId(), bizId: owner.id, idem: 'order-' + o.id, key: crypto.randomBytes(12).toString('hex'), number: (s.prefix || 'INV') + '/' + fy + '/' + String(b.invSeq[fy]).padStart(4, '0'), createdAt: now(), by: actor.id, byName: actor.name,
+    customer: { name: o.customerName, phone: o.customerPhone }, taxMode: o.taxMode, items, subtotal: o.subtotal + o.fee, discount: 0, taxable: items.reduce((x, l) => x + l.taxable, 0), tax: o.tax, roundOff: 0, grand: o.grand,
+    payment: { method: o.pay === 'upi' ? 'upi' : 'cash', status: 'paid', paidAt: now() }, status: 'final', orderId: o.id, history: [{ at: now(), by: actor.id, what: 'from online order ' + o.number }],
+    shop: { name: b.name, address: b.address || '', phone: owner.phone, gstin: s.gstin || '', upi: s.upi || '', footer: s.footer || '' } };
+  db.invoices.push(inv); o.invoiceId = inv.id; o.invoiceKey = inv.key; return inv;
+}
+// ---- shop side: store settings ----
+app.get('/api/biz/:bizId/store', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(storeOf(c.biz)); });
+app.put('/api/biz/:bizId/store', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return;
+  const s = storeOf(c.biz), b = req.body || {}, money = (v) => Math.max(0, Math.min(1e6, Math.round(Number(v) * 100) || 0));
+  for (const k of ['on', 'delivery', 'pickup', 'payCod', 'payUpi']) if (b[k] !== undefined) s[k] = !!b[k];
+  if (b.fee !== undefined) s.fee = money(b.fee); if (b.freeAbove !== undefined) s.freeAbove = money(b.freeAbove); if (b.minOrder !== undefined) s.minOrder = money(b.minOrder);
+  if (b.eta !== undefined) s.eta = clip(b.eta, 30); if (b.area !== undefined) s.area = clip(b.area, 120);
+  if (b.radiusKm !== undefined) s.radiusKm = Math.max(0.5, Math.min(50, Number(b.radiusKm) || 5));
+  if (b.lat !== undefined && b.lng !== undefined) { const la = Number(b.lat), lo = Number(b.lng); if (Math.abs(la) <= 90 && Math.abs(lo) <= 180 && (la || lo)) { s.lat = +la.toFixed(6); s.lng = +lo.toFixed(6); } }
+  if (!s.delivery && !s.pickup) s.pickup = true; if (!s.payCod && !s.payUpi) s.payCod = true;
+  if (s.on && !bizProducts(c.bizId).some((p) => p.available !== false && p.price != null)) { s.on = false; bizLog(c, 'store', '', 'tried to open with no priced products'); save(); return res.status(400).json({ error: 'Add products with prices first, then open your online store.' }); }
+  bizLog(c, 'store', '', s.on ? 'online store ON' : 'online store OFF'); save(); res.json(s);
+});
+// ---- shop side: orders ----
+app.get('/api/biz/:bizId/orders', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const active = req.query.view !== 'done';
+  const list = db.orders.filter((o) => o.bizId === c.bizId && (active ? ORD_ACTIVE.includes(o.status) : !ORD_ACTIVE.includes(o.status)));
+  res.json(list.slice(active ? -200 : -100).reverse().map((o) => ordOut(o, true)));
+});
+app.post('/api/biz/:bizId/orders/:id/status', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const o = db.orders.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  const to = String(req.body?.to || ''), reason = clip(req.body?.reason, 160);
+  if (!(ORD_NEXT[o.status] || []).includes(to)) return res.status(400).json({ error: 'This order is "' + o.status.toLowerCase().replace(/_/g, ' ') + '". Refresh and try again.' });
+  if (to === 'DELIVERED' && o.mode === 'delivery' && o.status !== 'OUT_FOR_DELIVERY') return res.status(400).json({ error: 'Send it out for delivery first.' });
+  if (to === 'OUT_FOR_DELIVERY' && o.mode !== 'delivery') return res.status(400).json({ error: 'This is a pickup order.' });
+  if (['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(to) && !reason) return res.status(400).json({ error: 'Write a short reason for the customer.' });
+  if (to === 'DELIVERED') { // proof: the code only the customer has
+    o.otpTries = (o.otpTries || 0) + 1; if (o.otpTries > 8) return res.status(429).json({ error: 'Too many wrong codes. Call the customer.' });
+    if (String(req.body?.otp || '').trim() !== o.otp) { save(); return res.status(400).json({ error: 'Wrong code. Ask the customer for the 4-digit code in their Maata order.' }); }
+  }
+  if (to === 'ACCEPTED') { const short = ordShortStock(o, c.owner); if (short.length) return res.status(400).json({ error: 'Not enough stock: ' + short.join(', ') + '. Add stock or reject the order.' }); ordStock(o, c.owner, -1, c.actor); }
+  if (['CANCELLED', 'REJECTED'].includes(to) && o.reserved) ordStock(o, c.owner, 1, c.actor);
+  if (to === 'OUT_FOR_DELIVERY') { if (!o.riderId) o.riderId = c.actor.id; o.trail = []; }
+  if (['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED', 'REJECTED'].includes(to)) trackStop(o);
+  o.status = to; o.reason = reason; o.history.push({ s: to, at: now(), by: c.actor.name, why: reason });
+  if (to === 'DELIVERED') { if (!o.reserved) ordStock(o, c.owner, -1, c.actor); ordToInvoice(o, c.owner, c.actor); o.deliveredAt = now(); }
+  bizLog(c, 'order-' + to.toLowerCase(), o.id, o.number + (reason ? ' – ' + reason : '')); save(); ordNotify(o, 'shop');
+  res.json(ordOut(o, true));
+});
+// ---- customer side ----
+const shopCard = (u, me) => { const s = storeOf(u.business); const dist = me && s.lat != null ? Math.round(geoDist(me, [s.lng, s.lat]) / 100) / 10 : null;
+  return { bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
+app.get('/api/shops', auth, (req, res) => {
+  const la = Number(req.query.lat), lo = Number(req.query.lng), me = isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null, q = String(req.query.q || '').toLowerCase();
+  const list = db.users.filter((u) => u.business && u.status !== 'blocked' && storeOf(u.business).on && !blockedOf(u).includes(req.user.id) && (!q || u.business.name.toLowerCase().includes(q) || (u.business.category || '').toLowerCase().includes(q))).map((u) => shopCard(u, me));
+  list.sort((a, b) => (a.distKm ?? 9999) - (b.distKm ?? 9999)); res.json(list.slice(0, 60));
+});
+app.get('/api/shop/:bizId', auth, (req, res) => {
+  const u = userById(req.params.bizId); if (!u || !u.business || u.status === 'blocked' || blockedOf(u).includes(req.user.id)) return res.status(404).json({ error: 'Shop not found.' });
+  const s = storeOf(u.business); if (!s.on) return res.status(404).json({ error: 'This shop is not taking online orders right now.' });
+  const la = Number(req.query.lat), lo = Number(req.query.lng);
+  res.json({ ...shopCard(u, isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null), items: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).sort((a, b) => (a.category || 'zz').localeCompare(b.category || 'zz') || a.name.localeCompare(b.name))
+    .map((p) => ({ id: p.id, name: p.name, price: p.price, unit: p.unit || 'pcs', category: p.category || '', description: p.description || '', taxRate: p.taxRate || 0, hasPhoto: !!p.photo, photoV: p.photoV || 0, inStock: p.stock == null || p.stock > 0, left: p.stock != null && p.stock <= 5 ? Math.max(0, p.stock) : null })) });
+});
+const ordHits = new Map();
+app.post('/api/shop/:bizId/orders', auth, (req, res) => {
+  const owner = userById(req.params.bizId); if (!owner || !owner.business || owner.status === 'blocked' || blockedOf(owner).includes(req.user.id)) return res.status(404).json({ error: 'Shop not found.' });
+  const s = storeOf(owner.business), set = bizSettings(owner.business), b = req.body || {};
+  if (!s.on) return res.status(400).json({ error: 'This shop is not taking online orders right now.' });
+  const idem = clip(b.idem, 64); if (idem) { const dup = db.orders.find((o) => o.customerId === req.user.id && o.idem === idem); if (dup) return res.json(ordOut(dup, false)); }
+  const hits = (ordHits.get(req.user.id) || []).filter((t) => now() - t < 3600000); if (hits.length >= 15) return res.status(429).json({ error: 'Too many orders in an hour. Please wait.' }); hits.push(now()); ordHits.set(req.user.id, hits);
+  const mode = b.mode === 'pickup' ? 'pickup' : 'delivery';
+  if (mode === 'delivery' && !s.delivery) return res.status(400).json({ error: 'This shop does pickup only.' }); if (mode === 'pickup' && !s.pickup) return res.status(400).json({ error: 'This shop does delivery only.' });
+  const pay = b.pay === 'upi' && s.payUpi ? 'upi' : s.payCod ? 'cod' : 'upi';
+  const raw = Array.isArray(b.items) ? b.items.slice(0, 100) : []; if (!raw.length) return res.status(400).json({ error: 'Your cart is empty.' });
+  const lines = [];
+  for (const it of raw) {
+    const p = db.products.find((x) => x.id === it.productId && x.ownerId === owner.id && x.available !== false && x.price != null); if (!p) return res.status(400).json({ error: 'Some items are no longer available. Refresh the shop.' });
+    const qty = Math.round(Number(it.qty) * 1000) / 1000; if (!(qty > 0 && qty <= 1000)) return res.status(400).json({ error: 'Check quantities.' });
+    if (p.stock != null && !set.allowNegative && p.stock < qty) return res.status(400).json({ error: p.name + ': only ' + Math.max(0, p.stock) + ' left.' });
+    lines.push({ productId: p.id, name: p.name, unit: p.unit || 'pcs', qty, unitPaise: Math.round(p.price * 100), taxRate: p.taxRate || 0 });
+  }
+  const pr = priceBill(lines, 0, set.taxMode);
+  if (s.minOrder && pr.total < s.minOrder) return res.status(400).json({ error: 'Minimum order is ' + rupees(s.minOrder) + '.' });
+  let address = null;
+  if (mode === 'delivery') {
+    const text = clip(b.address?.text, 300); if (text.length < 8) return res.status(400).json({ error: 'Write your full delivery address.' });
+    const la = Number(b.address?.lat), lo = Number(b.address?.lng), hasLoc = Math.abs(la) <= 90 && Math.abs(lo) <= 180 && (la || lo);
+    if (hasLoc && s.lat != null && geoDist([s.lng, s.lat], [lo, la]) > s.radiusKm * 1000) return res.status(400).json({ error: 'Sorry, this shop delivers only within ' + s.radiusKm + ' km.' });
+    address = { text, landmark: clip(b.address?.landmark, 100), lat: hasLoc ? +la.toFixed(6) : null, lng: hasLoc ? +lo.toFixed(6) : null };
+  }
+  const fee = mode === 'delivery' && !(s.freeAbove && pr.total >= s.freeAbove) ? s.fee : 0;
+  owner.business.ordSeq = (owner.business.ordSeq || 0) + 1;
+  const o = { id: newId(), number: 'OD' + String(owner.business.ordSeq).padStart(5, '0'), bizId: owner.id, shopName: owner.business.name, shopPhone: owner.phone, customerId: req.user.id, customerName: req.user.name, customerPhone: req.user.phone, idem: idem || null,
+    items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, taxable: l.taxable, tax: l.tax, total: l.total })), subtotal: pr.subtotal, tax: pr.tax, fee, grand: pr.total + fee, taxMode: set.taxMode,
+    mode, address, note: clip(b.note, 200), pay, status: 'PLACED', otp: String(crypto.randomInt(1000, 10000)), createdAt: now(), history: [{ s: 'PLACED', at: now(), by: req.user.name }] };
+  db.orders.push(o); save(); ordNotify(o, 'customer');
+  res.json(ordOut(o, false));
+});
+app.get('/api/my/orders', auth, (req, res) => res.json(db.orders.filter((o) => o.customerId === req.user.id).slice(-60).reverse().map((o) => ordOut(o, false))));
+app.get('/api/my/orders/:id', auth, (req, res) => { const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' }); res.json(ordOut(o, false)); });
+app.post('/api/my/orders/:id/cancel', auth, (req, res) => {
+  const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (!['PLACED', 'ACCEPTED'].includes(o.status)) return res.status(400).json({ error: 'The shop is already packing this order. Chat with the shop to cancel.' });
+  const owner = userById(o.bizId); if (o.reserved && owner) ordStock(o, owner, 1, req.user);
+  o.status = 'CANCELLED'; o.reason = clip(req.body?.reason, 160) || 'Cancelled by customer'; o.history.push({ s: 'CANCELLED', at: now(), by: req.user.name, why: o.reason });
+  trackStop(o); save(); ordNotify(o, 'customer'); res.json(ordOut(o, false));
+});
+// 🤖 chat-to-order: "1 kg rice, 2 soaps" → items in this shop, for the customer to confirm
+app.post('/api/shop/:bizId/ai/list', auth, async (req, res) => {
+  const owner = userById(req.params.bizId); if (!owner || !owner.business || !storeOf(owner.business).on) return res.status(404).json({ error: 'Shop not found.' });
+  const hits = (ordHits.get('ai' + req.user.id) || []).filter((t) => now() - t < 3600000); if (hits.length >= 30) return res.status(429).json({ error: 'Please wait a little.' }); hits.push(now()); ordHits.set('ai' + req.user.id, hits);
+  const said = clip(req.body?.text, 800); if (!said) return res.status(400).json({ error: 'Write or say your list.' });
+  const prods = bizProducts(owner.id).filter((p) => p.available !== false && p.price != null).slice(0, 400).map((p) => ({ id: p.id, n: p.name, u: p.unit || 'pcs' }));
+  let items = [];
+  if (GEMINI_KEY) { const g = await gemini('A customer wrote or said a shopping list (Telugu, Hindi, English or mixed). Match each item to the closest product in this shop by meaning. Numbers may be words (oka=1, rendu=2, moodu=3, ek=1, do=2, teen=3, ara/aadha=0.5). Return ONLY JSON: {"items":[{"id":"product id or empty","said":"the words","qty":number}]}', [{ role: 'user', parts: [{ text: 'Products: ' + JSON.stringify(prods) + '\nList: ' + said }] }], { json: true, maxTokens: 700, temperature: 0.1 }); try { items = (JSON.parse(g.text || '{}').items || []).slice(0, 40); } catch { items = []; } }
+  if (!items.length) for (const part of said.toLowerCase().split(/[,;\n]| and | mariyu | aur /)) { const m = /(\d+(?:\.\d+)?)?\s*(.+)/.exec(part.trim()); if (!m) continue; const name = m[2].trim(); const hit = prods.find((x) => x.n.toLowerCase().includes(name) || name.includes(x.n.toLowerCase())); items.push({ id: hit ? hit.id : '', said: name, qty: Number(m[1]) || 1 }); }
+  const ok = new Set(prods.map((p) => p.id));
+  res.json({ items: items.map((x) => ({ productId: ok.has(x.id) ? x.id : null, said: clip(x.said, 60), qty: Math.max(0.001, Math.min(1000, Number(x.qty) || 1)) })) });
+});
+
+
+// ==================== 🛵 PHASE 4–5: DELIVERY PERSON + LIVE TRACKING ====================
+// The shop assigns an order to a delivery person (a staff member with the "delivery" role, or the owner/manager
+// themselves). Location is collected ONLY while that person has the order "on the way", is seen ONLY by that
+// customer and the shop, and is deleted when the delivery ends.
+const riderOk = (owner, uid) => uid === owner.id || (owner.business.members || []).some((m) => m.userId === uid && m.status !== 'removed' && ['delivery', 'manager'].includes(m.role));
+const riderList = (owner) => [{ userId: owner.id, name: owner.name + ' (owner)' }, ...(owner.business.members || []).filter((m) => m.status !== 'removed' && ['delivery', 'manager'].includes(m.role)).map((m) => ({ userId: m.userId, name: (userById(m.userId) || {}).name || 'Staff', role: m.role }))];
+function riderEta(o) {
+  if (!o.track || !o.address || o.address.lat == null) return null;
+  const d = geoDist([o.track.lng, o.track.lat], [o.address.lng, o.address.lat]) * 1.35; // roads are longer than a straight line
+  const speed = o.track.speed > 2 ? Math.min(12, Math.max(4, o.track.speed)) : 5.5; // m/s, ~20 km/h in town
+  return { meters: Math.round(d), minutes: Math.max(1, Math.round(d / speed / 60)) };
+}
+function trackOut(o) { return o.status === 'OUT_FOR_DELIVERY' && o.track ? { lat: o.track.lat, lng: o.track.lng, acc: o.track.acc, heading: o.track.heading, at: o.track.at, trail: (o.trail || []).slice(-40), eta: riderEta(o) } : null; }
+function riderPublic(o) { const r = o.riderId && userById(o.riderId); return r ? { name: r.name, phone: o.status === 'OUT_FOR_DELIVERY' ? r.phone : '' } : null; }
+function trackEmit(o) {
+  const payload = { orderId: o.id, track: trackOut(o), rider: riderPublic(o) };
+  io.to('user:' + o.customerId).emit('order:track', payload);
+  const owner = userById(o.bizId); if (owner) for (const id of shopStaffIds(owner)) io.to('user:' + id).emit('order:track', payload);
+}
+function trackStop(o) { delete o.track; delete o.trail; } // privacy: nothing kept after the trip
+// shop: who can deliver, and assign
+app.get('/api/biz/:bizId/riders', auth, (req, res) => { const c = bizCtx(req, res, 'bill'); if (!c) return; res.json(riderList(c.owner).map((r) => ({ ...r, busy: db.orders.filter((o) => o.riderId === r.userId && o.status === 'OUT_FOR_DELIVERY').length }))); });
+app.post('/api/biz/:bizId/orders/:id/assign', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const o = db.orders.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (o.mode !== 'delivery' || !['ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_FAILED'].includes(o.status)) return res.status(400).json({ error: 'You can assign a delivery person to a delivery order before it leaves the shop.' });
+  const rid = String(req.body?.riderId || ''); if (!riderOk(c.owner, rid)) return res.status(400).json({ error: 'Choose one of your delivery staff.' });
+  o.riderId = rid; o.riderAt = now(); o.history.push({ s: 'ASSIGNED', at: now(), by: c.actor.name, why: (userById(rid) || {}).name || '' });
+  bizLog(c, 'order-assign', o.id, o.number + ' → ' + ((userById(rid) || {}).name || '')); save();
+  if (rid !== c.actor.id) { const r = userById(rid); if (r) { io.to('user:' + rid).emit('rider:job', { orderId: o.id }); pushTo(r, { type: 'msg', title: '🛵 New delivery ' + o.number, body: o.shopName + ' → ' + (o.address ? o.address.text : ''), tag: 'rider-' + o.id, url: '/?ride=' + o.id }).catch(() => {}); } }
+  ordNotify(o, 'shop'); res.json(ordOut(o, true));
+});
+// delivery person
+const riderJob = (req, res) => { const o = db.orders.find((x) => x.id === req.params.id && x.riderId === req.user.id); if (!o) { res.status(404).json({ error: 'This delivery is not assigned to you.' }); return null; } const owner = userById(o.bizId); if (!owner || !owner.business || !riderOk(owner, req.user.id)) { res.status(403).json({ error: 'You are no longer delivery staff for this shop.' }); return null; } return { o, owner }; };
+const riderOut = (o) => ({ ...ordOut(o, true), customerPhone: o.customerPhone, otp: undefined, track: trackOut(o), shopAddress: (userById(o.bizId) || { business: {} }).business.address || '', shopLoc: (() => { const s = (userById(o.bizId) || {}).business?.store; return s && s.lat != null ? { lat: s.lat, lng: s.lng } : null; })() });
+app.get('/api/rider/jobs', auth, (req, res) => res.json(db.orders.filter((o) => o.riderId === req.user.id && ['ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status)).map(riderOut)
+  .concat(db.orders.filter((o) => o.riderId === req.user.id && o.status === 'DELIVERED' && now() - (o.deliveredAt || 0) < 86400000).map(riderOut))));
+app.get('/api/rider/jobs/:id', auth, (req, res) => { const j = riderJob(req, res); if (j) res.json(riderOut(j.o)); });
+app.post('/api/rider/jobs/:id/start', auth, (req, res) => {
+  const j = riderJob(req, res); if (!j) return; const { o } = j;
+  if (!['READY', 'DELIVERY_FAILED', 'PREPARING', 'ACCEPTED'].includes(o.status)) return res.status(400).json({ error: 'This order is ' + o.status.toLowerCase().replace(/_/g, ' ') + '.' });
+  if (o.status !== 'READY' && o.status !== 'DELIVERY_FAILED') return res.status(400).json({ error: 'Wait until the shop marks the order Ready.' });
+  o.status = 'OUT_FOR_DELIVERY'; o.reason = ''; o.history.push({ s: 'OUT_FOR_DELIVERY', at: now(), by: req.user.name }); o.trail = [];
+  save(); ordNotify(o, 'shop'); trackEmit(o); res.json(riderOut(o));
+});
+app.post('/api/rider/jobs/:id/decline', auth, (req, res) => {
+  const j = riderJob(req, res); if (!j) return; const { o, owner } = j;
+  if (o.status === 'OUT_FOR_DELIVERY') return res.status(400).json({ error: 'You already started. Use "Could not deliver" with a reason.' });
+  o.history.push({ s: 'UNASSIGNED', at: now(), by: req.user.name, why: clip(req.body?.reason, 120) || 'Declined' }); o.riderId = null;
+  save(); for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); const u = userById(id); if (u) pushTo(u, { type: 'msg', title: '🛵 ' + req.user.name + ' declined ' + o.number, body: 'Assign another delivery person.', tag: 'border-' + o.id, url: '/?biz=' + o.bizId }).catch(() => {}); }
+  res.json({ ok: true });
+});
+const locHits = new Map();
+app.post('/api/rider/jobs/:id/loc', auth, (req, res) => {
+  const j = riderJob(req, res); if (!j) return; const { o } = j;
+  if (o.status !== 'OUT_FOR_DELIVERY') return res.json({ stop: true }); // the trip ended: the phone stops sharing
+  const last = locHits.get(o.id) || 0; if (now() - last < 3000) return res.json({ ok: true }); locHits.set(o.id, now());
+  const la = Number(req.body?.lat), lo = Number(req.body?.lng); if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180) || (!la && !lo)) return res.status(400).json({ error: 'Bad location.' });
+  o.track = { lat: +la.toFixed(6), lng: +lo.toFixed(6), acc: Math.round(Number(req.body?.acc) || 0), speed: Math.max(0, Number(req.body?.speed) || 0), heading: Number.isFinite(Number(req.body?.heading)) ? Math.round(Number(req.body.heading)) : null, at: now() };
+  const tl = o.trail || (o.trail = []); const p = tl[tl.length - 1];
+  if (!p || geoDist([p[1], p[0]], [o.track.lng, o.track.lat]) > 25) { tl.push([o.track.lat, o.track.lng]); if (tl.length > 300) tl.splice(0, tl.length - 300); }
+  if (!o.nearTold && o.address && o.address.lat != null && geoDist([o.track.lng, o.track.lat], [o.address.lng, o.address.lat]) < 400) { o.nearTold = true; const cu = userById(o.customerId); if (cu) pushTo(cu, { type: 'msg', title: '🛵 ' + o.shopName, body: 'Your delivery is almost there. Keep your code ready: ' + o.otp, tag: 'order-' + o.id, url: '/?order=' + o.id }).catch(() => {}); }
+  save(); trackEmit(o); res.json({ ok: true, eta: riderEta(o) });
+});
+app.post('/api/rider/jobs/:id/deliver', auth, (req, res) => {
+  const j = riderJob(req, res); if (!j) return; const { o, owner } = j;
+  if (o.status !== 'OUT_FOR_DELIVERY') return res.status(400).json({ error: 'Start the delivery first.' });
+  o.otpTries = (o.otpTries || 0) + 1; if (o.otpTries > 8) { save(); return res.status(429).json({ error: 'Too many wrong codes. Call the customer or the shop.' }); }
+  if (String(req.body?.otp || '').trim() !== o.otp) { save(); return res.status(400).json({ error: 'Wrong code. Ask the customer for the 4-digit code in their Maata order.' }); }
+  o.status = 'DELIVERED'; o.history.push({ s: 'DELIVERED', at: now(), by: req.user.name }); o.deliveredAt = now();
+  if (!o.reserved) ordStock(o, owner, -1, req.user); ordToInvoice(o, owner, req.user); trackStop(o);
+  db.bizLog.push({ id: newId(), bizId: owner.id, actor: req.user.id, actorName: req.user.name, action: 'order-delivered', ref: o.id, detail: o.number, at: now() });
+  save(); ordNotify(o, 'shop'); trackEmit(o); res.json(riderOut(o));
+});
+app.post('/api/rider/jobs/:id/fail', auth, (req, res) => {
+  const j = riderJob(req, res); if (!j) return; const { o } = j;
+  if (o.status !== 'OUT_FOR_DELIVERY') return res.status(400).json({ error: 'This delivery is not on the way.' });
+  const why = clip(req.body?.reason, 160); if (!why) return res.status(400).json({ error: 'Write why it could not be delivered.' });
+  o.status = 'DELIVERY_FAILED'; o.reason = why; o.history.push({ s: 'DELIVERY_FAILED', at: now(), by: req.user.name, why }); trackStop(o);
+  save(); ordNotify(o, 'shop'); trackEmit(o); res.json(riderOut(o));
+});
+// the customer and the shop can read the live position (only while it is on the way)
+app.get('/api/orders/:id/track', auth, (req, res) => {
+  const o = db.orders.find((x) => x.id === req.params.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  const owner = userById(o.bizId), isShop = owner && (owner.id === req.user.id || (owner.business?.members || []).some((m) => m.userId === req.user.id && m.status !== 'removed'));
+  if (o.customerId !== req.user.id && !isShop) return res.status(403).json({ error: 'Not your order.' });
+  res.json({ orderId: o.id, track: trackOut(o), rider: riderPublic(o), dest: o.address && o.address.lat != null ? { lat: o.address.lat, lng: o.address.lng } : null, shop: owner && owner.business?.store?.lat != null ? { lat: owner.business.store.lat, lng: owner.business.store.lng } : null });
+});
 
 // Ads: business owners create a promotion → admin approves → shown as "Sponsored" in everyone's Status tab
 const adOut = (a, mine) => ({ id: a.id, ownerId: a.ownerId, title: a.title, text: a.text, productId: a.productId || null, hasPhoto: !!a.photo, photoV: a.photoV || 0, days: a.days, status: a.status, reason: a.reason || '', createdAt: a.createdAt, startsAt: a.startsAt || null, endsAt: a.endsAt || null, ...(mine ? { views: (a.viewers || []).length, clicks: a.clicks || 0 } : {}) });
