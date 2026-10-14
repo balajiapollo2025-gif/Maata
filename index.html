@@ -1563,6 +1563,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mk-foot{display:flex;gap:8px;align-items:center;padding:6px 8px 10px}.mk-foot input{flex:1;min-width:0;height:44px;border-radius:22px;border:0;padding:0 16px;font-size:16px;background:#2a2f32;color:#fff}
 .mk-send{width:48px;height:48px;border-radius:50%;border:0;background:#0F7A6E;display:grid;place-items:center;flex:none;cursor:pointer}.mk-send svg{width:22px;height:22px;fill:#fff;stroke:none}
 .mk-pick{display:flex;gap:10px;align-items:center;width:100%;padding:8px 4px;background:none;border:0;text-align:left;color:inherit;cursor:pointer}
+.bz-qr{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;margin:6px 0 10px;border-radius:16px;background:#fff;border:2px solid #0F7A6E;color:#13201E}.bz-qr b{font-size:30px;font-variant-numeric:tabular-nums}.bz-qr small{color:#55625F;text-align:center}.bz-qr img,.bz-qrsvg svg{width:min(260px,70vw);height:min(260px,70vw);display:block}.bz-upinote{flex-basis:100%;margin-top:4px}
 .od-card.new{border:2px solid #F79009}.od-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.od-tr{padding:4px 0}
 .od-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.od-acts .bz-btn{flex:1 1 auto;align-self:auto}.bz-btn.pri{background:var(--bz-acc);color:#fff}.bz-btn.bad{background:rgba(240,68,56,.1);color:#B42318}
 .od-cancel{color:#B42318!important}
@@ -5319,7 +5320,7 @@ async function bzHome(body) {
     kpi('Sales today', bzRs0(d.today.sales), d.today.bills + ' bill' + (d.today.bills === 1 ? '' : 's'));
     kpi('This month', bzRs0(d.month.sales), d.month.bills + ' bills');
     kpi('Average bill', bzRs0(d.today.avgBill || d.month.avgBill), 'today');
-    kpi('To collect', bzRs0(d.month.unpaid), 'credit bills');
+    kpi('To collect', bzRs0(d.month.unpaid), 'unpaid bills');
     body.append(k);
     const wk = el('div', 'bz-card'); wk.append(el('h3', null, 'Last 7 days')); const bars = el('div', 'bz-bars'); wk.append(bars); body.append(wk);
     bzApi('/report').then((r) => { const max = Math.max(1, ...r.days.map((x) => x.sales)); for (const x of r.days.slice(-7)) { const col = el('div', 'bz-bar'); const f = el('i'); f.style.height = Math.max(2, Math.round(x.sales / max * 100)) + '%'; col.title = x.day + ': ' + bzRs0(x.sales); col.append(el('small', null, bzRs0(x.sales)), f, el('span', null, new Date(x.day + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }))); bars.append(col); } }).catch(() => {});
@@ -5396,7 +5397,9 @@ function bzCartDraw() {
   const cn = el('input'); cn.placeholder = 'Name'; cn.value = BZ.cust.name; cn.setAttribute('aria-label', 'Customer name'); cn.oninput = () => (BZ.cust.name = cn.value);
   const cp = el('input'); cp.placeholder = 'Mobile number (to send the bill on Maata)'; cp.type = 'tel'; cp.value = BZ.cust.phone; cp.setAttribute('aria-label', 'Customer mobile'); cp.oninput = () => (BZ.cust.phone = cp.value);
   cust.append(cn, cp);
-  const pay = el('div', 'bz-chips'); for (const [k, l] of [['cash', '💵 Cash'], ['upi', '📱 UPI'], ['card', '💳 Card'], ['credit', '📒 Credit']]) { const b = el('button', BZ.method === k ? 'on' : null, l); b.setAttribute('aria-pressed', String(BZ.method === k)); b.onclick = () => { BZ.method = k; bzCartDraw(); }; pay.append(b); }
+  if (BZ.method !== 'upi') BZ.method = 'cash';
+  const pay = el('div', 'bz-chips'); for (const [k, l] of [['cash', '💵 Cash'], ['upi', '📱 UPI (QR)']]) { const b = el('button', BZ.method === k ? 'on' : null, l); b.setAttribute('aria-pressed', String(BZ.method === k)); b.onclick = () => { if (k === 'upi' && !BZ.info.settings.upi) return bzUpiSetup(() => { BZ.method = 'upi'; bzCartDraw(); }); BZ.method = k; bzCartDraw(); }; pay.append(b); }
+  if (BZ.method === 'upi') pay.append(el('small', 'bz-note bz-upinote', '📱 After you create the bill, Maata shows a QR with ' + bzRs(t.grand) + ' for the customer to scan.'));
   const rows = el('div', 'bz-tot');
   const tr = (a, b, id) => { const r = el('div'); r.append(el('span', null, a)); const v = el('span', null, b); if (id) v.id = id; r.append(v); rows.append(r); };
   tr('Items total', bzRs(t.sum)); if (t.disc) tr('Discount', '− ' + bzRs(t.disc)); if (t.tax) tr('GST ' + (BZ.info.settings.taxMode === 'incl' ? '(included)' : ''), bzRs(t.tax)); if (t.round) tr('Round off', (t.round > 0 ? '+ ' : '− ') + bzRs(Math.abs(t.round)));
@@ -5411,7 +5414,7 @@ async function bzCreate() {
     const inv = await bzApi('/invoices', { method: 'POST', body: JSON.stringify({ idem: BZ.idem, items: BZ.cart.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.price, taxRate: l.taxRate })), discount: BZ.disc || 0, method: BZ.method, customer: BZ.cust }) });
     const phone = BZ.cust.phone; BZ.cart = []; BZ.disc = ''; BZ.cust = { name: '', phone: '' }; BZ.idem = null; BZ.method = 'cash';
     await bzLoadProducts(); if (BZ.tab === 'bill') bzTab('bill');
-    bzShowBill(inv, phone);
+    if (inv.payment.method === 'upi' && inv.payment.status !== 'paid') bzUpiQr(inv, phone); else bzShowBill(inv, phone);
   } catch (e) { toast(e.message); go.disabled = false; bzCartDraw(); }
 }
 function bzCustomItem() {
@@ -5451,20 +5454,56 @@ function bzBillRow(i) {
   r.onclick = () => bzShowBill(i); return r;
 }
 function bzBillLink(i) { return location.origin + '/bill/' + i.id + '?k=' + i.key; }
+// 📱 UPI QR with the exact bill amount: the customer scans with any UPI app, the money goes straight to the shop's UPI ID
+function bzQrBox(i) { const b = el('div', 'bz-qr'); const im = el('img'); im.alt = 'UPI QR code for ' + bzRs(i.grand); im.src = '/bill/' + i.id + '/upi.svg?k=' + i.key; b.append(el('small', null, 'Scan & pay with any UPI app'), el('b', null, bzRs(i.grand)), im, el('small', null, 'UPI ID: ' + (i.shop.upi || '') + ' · ' + i.number)); return b; }
+async function bzMarkPaid(i, method) { try { const v = await bzApi('/invoices/' + i.id + '/pay', { method: 'POST', body: JSON.stringify({ method }) }); closeSheet('moreSheet'); toast(method === 'upi' ? '✅ UPI payment received' : '✅ Paid in cash'); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); return v; } catch (e) { toast(e.message); return null; } }
+function bzUpiQr(i, phone) {
+  sheet('📱 Scan & pay', (L) => {
+    L.append(bzQrBox(i));
+    L.append(el('p', 'info-note', 'Show this to the customer. Check that the money reached your UPI app (or sound box), then tap ✅.'));
+    const act = (t, fn, cls) => { const b = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), t); b.onclick = fn; L.append(b); return b; };
+    act('✅ Payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v, phone); }, 'primary');
+    act('💵 Customer paid cash instead', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v, phone); });
+    act('🖨️ Print bill with this QR', () => window.open(bzBillLink(i), '_blank', 'noopener'));
+    act('Later (bill stays "To pay")', () => { closeSheet('moreSheet'); bzShowBill(i, phone); });
+  });
+}
+function bzUpiSetup(after) {
+  if (!bzCan('settings')) return toast('Ask the shop owner to add the UPI ID in Maata Business → More → Settings.');
+  sheet('📱 Add your UPI ID', (L) => {
+    const f = el('form', 'bz-form');
+    f.append(el('p', 'info-note', 'Type the UPI ID where you want the money (e.g. shopname@okaxis, 98xxxxxxxx@ybl). Maata makes a new QR for every bill with the exact amount — you do not need to upload any scanner.'));
+    const l = el('label'); l.htmlFor = 'bzUpiId'; l.append(el('span', null, 'UPI ID')); const inp = el('input'); inp.id = 'bzUpiId'; inp.placeholder = 'name@bank'; inp.autocapitalize = 'none'; inp.autocomplete = 'off'; inp.inputMode = 'email'; l.append(inp); f.append(l);
+    const ok = el('button', 'sheet-btn primary', 'Save & check with a ₹1 test QR'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!/^[\w.-]{2,}@[\w.-]{2,}$/.test(v)) return toast('UPI ID looks like name@bank');
+      try { BZ.info.settings = await bzApi('/settings', { method: 'PUT', body: JSON.stringify({ upi: v }) }); } catch (x) { return toast(x.message); }
+      closeSheet('moreSheet'); toast('UPI ID saved ✓'); bzUpiTest(after); };
+    L.append(f); setTimeout(() => inp.focus(), 250);
+  });
+}
+async function bzUpiTest(after) {
+  let d; try { d = await bzApi('/upi-qr?amount=100&note=Maata%20test'); } catch (e) { return toast(e.message); }
+  sheet('📱 Test your UPI QR (₹1)', (L) => {
+    const b = el('div', 'bz-qr'); b.append(el('small', null, 'Scan with another phone'), el('b', null, '₹1.00')); const q = el('div', 'bz-qrsvg'); q.innerHTML = d.svg; b.append(q, el('small', null, 'UPI ID: ' + d.upi)); L.append(b);
+    L.append(el('p', 'info-note', 'Scan this from another phone. If the UPI app shows YOUR name, the UPI ID is correct (you can cancel without paying). If it shows a different name or an error, fix the UPI ID in More → Settings.'));
+    const ok = el('button', 'sheet-btn primary', after ? '👍 It shows my name — continue' : '👍 Done'); ok.onclick = () => { closeSheet('moreSheet'); if (after) after(); }; L.append(ok);
+  });
+}
 function bzShowBill(i, phone) {
   sheet('🧾 ' + i.number, (L) => {
     const box = el('div', 'bz-billview');
     if (i.status === 'void') box.append(el('p', 'bz-void', 'Cancelled: ' + i.voidReason));
     for (const l of i.items) { const r = el('div', 'bz-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); box.append(r); }
     const r2 = el('div', 'bz-tr bz-grand'); r2.append(el('span', null, 'Total'), el('b', null, bzRs(i.grand))); box.append(r2);
-    box.append(el('small', 'bz-note', (i.payment.status === 'paid' ? '✅ Paid by ' + i.payment.method.toUpperCase() : '📒 To pay (credit)') + ' · by ' + i.byName));
+    box.append(el('small', 'bz-note', (i.payment.status === 'paid' ? '✅ Paid by ' + i.payment.method.toUpperCase() : i.payment.method === 'upi' ? '⏳ Waiting for UPI payment' : '📒 To pay') + ' · by ' + i.byName));
     L.append(box);
+    if (i.status !== 'void' && i.payment.status !== 'paid' && i.shop.upi) L.append(bzQrBox(i));
     const act = (t, fn, cls) => { const b = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), t); b.onclick = fn; L.append(b); return b; };
     const ph = phone || i.customer.phone;
     if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
     act('🔗 Share bill link', async () => { const u = bzBillLink(i); if (nativeShareText('Bill ' + i.number + ' – ' + bzRs(i.grand) + '\n' + u, 'Share bill')) return; try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
     act('🖨️ Print / Save PDF', () => window.open(bzBillLink(i), '_blank', 'noopener'));
-    if (i.status !== 'void' && i.payment.status !== 'paid') act('✅ Mark as paid', async () => { try { const v = await bzApi('/invoices/' + i.id + '/pay', { method: 'POST', body: JSON.stringify({ method: 'cash' }) }); closeSheet('moreSheet'); toast('Marked paid'); bzShowBill(v); } catch (e) { toast(e.message); } });
+    if (i.status !== 'void' && i.payment.status !== 'paid') { if (i.shop.upi) act('✅ UPI payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v); }); act('💵 Paid in cash', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v); }); }
     if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
   });
 }
@@ -5606,10 +5645,11 @@ function bzSettings() {
   sheet('⚙️ Bill settings', (L) => {
     const f = el('form', 'bz-form');
     const fl = (lab, id, val, ph) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el('input'); i.id = id; i.value = val || ''; if (ph) i.placeholder = ph; l.append(i); f.append(l); return i; };
-    const pre = fl('Bill number starts with', 'bzSPre', s.prefix, 'INV'); const gst = fl('GSTIN (if registered)', 'bzSG', s.gstin, '37ABCDE1234F1Z5'); const upi = fl('UPI ID (customers can pay from the bill)', 'bzSU', s.upi, 'shopname@okaxis'); const ft = fl('Message at the bottom of bills', 'bzSF', s.footer);
+    const pre = fl('Bill number starts with', 'bzSPre', s.prefix, 'INV'); const gst = fl('GSTIN (if registered)', 'bzSG', s.gstin, '37ABCDE1234F1Z5'); const upi = fl('UPI ID (Maata makes a QR with the bill amount)', 'bzSU', s.upi, 'shopname@okaxis'); upi.autocapitalize = 'none'; const ft = fl('Message at the bottom of bills', 'bzSF', s.footer);
     const ml = el('label'); ml.htmlFor = 'bzSM'; ml.append(el('span', null, 'Prices and GST')); const md = el('select'); md.id = 'bzSM'; for (const [k, t] of [['incl', 'My prices include GST'], ['excl', 'Add GST on top of my prices'], ['none', 'No GST on bills']]) md.add(new Option(t, k)); md.value = s.taxMode; ml.append(md); f.append(ml);
     const chk = (t, v) => { const l = el('label', 'sec-pick'); const c = el('input'); c.type = 'checkbox'; c.checked = v; l.append(c, el('span', null, t)); f.append(l); return c; };
     const ro = chk('Round off the total to the nearest rupee', s.roundOff), ng = chk('Allow selling when stock shows 0', s.allowNegative);
+    if (s.upi) { const tq = el('button', 'sheet-btn', '📱 Show ₹1 test QR (check your UPI ID)'); tq.type = 'button'; tq.onclick = () => { closeSheet('moreSheet'); bzUpiTest(); }; f.append(tq); }
     const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit'; f.append(ok);
     f.onsubmit = async (e) => { e.preventDefault(); try { BZ.info.settings = await bzApi('/settings', { method: 'PUT', body: JSON.stringify({ prefix: pre.value, gstin: gst.value, upi: upi.value, footer: ft.value, taxMode: md.value, roundOff: ro.checked, allowNegative: ng.checked }) }); closeSheet('moreSheet'); toast('Settings saved ✓'); } catch (x) { toast(x.message); } };
     L.append(f);
@@ -11557,8 +11597,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 136;
-const APP_NOTES = ["📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 137;
+const APP_NOTES = ["📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }

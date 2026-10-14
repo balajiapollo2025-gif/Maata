@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 136;
+const MAATA_VERSION = 137;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3120,7 +3120,7 @@ app.get('/api/biz/:bizId/products/:pid/moves', auth, (req, res) => {
   res.json(db.stockMoves.filter((m) => m.bizId === c.bizId && m.productId === req.params.pid).slice(-60).reverse().map((m) => ({ ...m, actorName: (userById(m.actor) || {}).name || '' })));
 });
 // ---- billing ----
-const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null });
+const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null, shop: { upi: (i.shop && i.shop.upi) || '' } });
 function priceBill(lines, discountPaise, mode) { // allocate the discount by value, then tax per line
   const base = lines.map((l) => Math.round(l.unitPaise * l.qty)), sumBase = base.reduce((a, b) => a + b, 0);
   const disc = Math.max(0, Math.min(sumBase, Math.round(discountPaise || 0)));
@@ -3161,7 +3161,8 @@ app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
   }
   const pr = priceBill(lines, Math.round(Number(b.discount || 0) * 100), s.taxMode);
   const grand = s.roundOff ? Math.round(pr.total / 100) * 100 : pr.total;
-  const method = ['cash', 'upi', 'card', 'credit', 'other'].includes(b.method) ? b.method : 'cash';
+  const method = b.method === 'upi' ? 'upi' : 'cash';
+  if (method === 'upi' && !s.upi) return res.status(400).json({ error: 'Add your shop UPI ID first (More → Settings), so Maata can make the QR code.' });
   c.biz.invSeq = c.biz.invSeq || {}; const fy = finYear(); c.biz.invSeq[fy] = (c.biz.invSeq[fy] || 0) + 1;
   const phone = cleanMobile(b.customer?.phone || '');
   const inv = {
@@ -3169,7 +3170,7 @@ app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
     createdAt: now(), by: c.actor.id, byName: c.actor.name, customer: { name: clip(b.customer?.name, 60), phone: phone || '' }, taxMode: s.taxMode,
     items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, hsn: l.hsn, disc: l.disc, taxable: l.taxable, tax: l.tax, total: l.total })),
     subtotal: pr.subtotal, discount: pr.discount, taxable: pr.taxable, tax: pr.tax, roundOff: grand - pr.total, grand,
-    payment: { method, status: method === 'credit' ? 'unpaid' : 'paid', paidAt: method === 'credit' ? null : now() }, status: 'final', history: [{ at: now(), by: c.actor.id, what: 'created' }],
+    payment: { method, status: method === 'upi' ? 'unpaid' : 'paid', paidAt: method === 'upi' ? null : now() }, status: 'final', history: [{ at: now(), by: c.actor.id, what: 'created' }], // UPI: paid when the shop sees the money
     shop: { name: c.biz.name, address: c.biz.address || '', phone: c.owner.phone, gstin: s.gstin || '', upi: s.upi || '', footer: s.footer || '' },
   };
   db.invoices.push(inv);
@@ -3198,7 +3199,8 @@ app.post('/api/biz/:bizId/invoices/:id/void', auth, (req, res) => {
 app.post('/api/biz/:bizId/invoices/:id/pay', auth, (req, res) => {
   const c = bizCtx(req, res, 'bill'); if (!c) return;
   const i = myInvoice(c, req.params.id); if (!i || i.status === 'void') return res.status(404).json({ error: 'Bill not found.' });
-  const method = ['cash', 'upi', 'card', 'other'].includes(req.body?.method) ? req.body.method : 'cash';
+  const method = req.body?.method === 'upi' ? 'upi' : 'cash';
+  if (i.payment.status === 'paid') return res.json(invOut(i));
   i.payment = { method, status: 'paid', paidAt: now(), was: i.payment.method }; i.history.push({ at: now(), by: c.actor.id, what: 'paid by ' + method });
   bizLog(c, 'invoice-paid', i.id, i.number); save(); res.json(invOut(i));
 });
@@ -3216,15 +3218,29 @@ app.post('/api/biz/:bizId/invoices/:id/send', auth, (req, res) => {
   save(); res.json(invOut(i));
 });
 // printable bill page (anyone with the secret link: the customer, a printer, a PDF)
-app.get('/bill/:id', (req, res) => {
+// 📱 UPI QR with the exact amount (made from the shop's UPI ID; any UPI app can scan it)
+const upiLink = (vpa, name, paise, note) => 'upi://pay?pa=' + encodeURIComponent(vpa) + '&pn=' + encodeURIComponent(String(name || 'Shop').slice(0, 40)) + (paise ? '&am=' + (paise / 100).toFixed(2) : '') + '&cu=INR' + (note ? '&tn=' + encodeURIComponent(String(note).slice(0, 50)) : '');
+const upiSvg = (link) => QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#FFFFFF' } });
+app.get('/bill/:id/upi.svg', async (req, res) => {
+  const i = db.invoices.find((x) => x.id === req.params.id);
+  if (!i || String(req.query.k || '') !== i.key || !i.shop.upi || i.status === 'void') return res.status(404).end();
+  res.setHeader('Cache-Control', 'private, no-store'); res.type('image/svg+xml').send(await upiSvg(upiLink(i.shop.upi, i.shop.name, i.grand, i.number)));
+});
+app.get('/api/biz/:bizId/upi-qr', auth, async (req, res) => { // test QR from Settings (₹1) so the shop can check its UPI ID
+  const c = bizCtx(req, res); if (!c) return; const s = bizSettings(c.biz); if (!s.upi) return res.status(400).json({ error: 'Add your UPI ID first.' });
+  const paise = Math.max(0, Math.min(1e9, Math.round(Number(req.query.amount) || 0))), link = upiLink(s.upi, c.biz.name, paise, req.query.note || '');
+  res.json({ link, svg: await upiSvg(link), upi: s.upi });
+});
+app.get('/bill/:id', async (req, res) => {
   const i = db.invoices.find((x) => x.id === req.params.id);
   if (!i || String(req.query.k || '') !== i.key) return res.status(404).type('html').send('<p style="font-family:system-ui;padding:24px">Bill not found.</p>');
   const e = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
   const taxRows = {}; for (const l of i.items) if (l.tax) taxRows[l.taxRate] = (taxRows[l.taxRate] || 0) + l.tax;
-  const upi = i.shop.upi && i.payment.status !== 'paid' ? 'upi://pay?pa=' + encodeURIComponent(i.shop.upi) + '&pn=' + encodeURIComponent(i.shop.name) + '&am=' + (i.grand / 100).toFixed(2) + '&cu=INR&tn=' + encodeURIComponent(i.number) : '';
+  const upi = i.shop.upi && i.payment.status !== 'paid' && i.status !== 'void' ? upiLink(i.shop.upi, i.shop.name, i.grand, i.number) : '';
+  let qr = ''; if (upi) { try { qr = await upiSvg(upi); } catch { qr = ''; } }
   res.setHeader('Cache-Control', 'private, no-store');
   res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(i.number)} · ${e(i.shop.name)}</title>
-<style>body{margin:0;background:#EEF2F1;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#13201E}.bill{max-width:420px;margin:16px auto;background:#fff;padding:22px 20px;border-radius:14px}h1{margin:0;font-size:22px;text-align:center}.c{text-align:center;color:#55625F;font-size:13px;line-height:1.5}.row{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:3px 0}hr{border:0;border-top:1px dashed #B9C4C1;margin:10px 0}table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;color:#55625F;font-weight:600;padding:4px 0;border-bottom:1px solid #DDE4E2}td{padding:5px 0;vertical-align:top}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.tot{font-size:20px;font-weight:800}.void{color:#B42318;font-weight:800;text-align:center;font-size:18px;border:2px solid #B42318;border-radius:10px;padding:6px;margin:8px 0}.pay{display:block;text-align:center;background:#0F7A6E;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;margin-top:12px}.btn{display:block;margin:12px auto 24px;padding:12px 20px;border:0;border-radius:12px;background:#13201E;color:#fff;font-size:15px}@media print{body{background:#fff}.bill{margin:0;border-radius:0}.btn,.pay{display:none}}</style></head><body><div class="bill">
+<style>body{margin:0;background:#EEF2F1;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#13201E}.bill{max-width:420px;margin:16px auto;background:#fff;padding:22px 20px;border-radius:14px}h1{margin:0;font-size:22px;text-align:center}.c{text-align:center;color:#55625F;font-size:13px;line-height:1.5}.row{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:3px 0}hr{border:0;border-top:1px dashed #B9C4C1;margin:10px 0}table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;color:#55625F;font-weight:600;padding:4px 0;border-bottom:1px solid #DDE4E2}td{padding:5px 0;vertical-align:top}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.tot{font-size:20px;font-weight:800}.void{color:#B42318;font-weight:800;text-align:center;font-size:18px;border:2px solid #B42318;border-radius:10px;padding:6px;margin:8px 0}.pay{display:block;text-align:center;background:#0F7A6E;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;margin-top:12px}.qr{text-align:center;margin:12px 0 4px;display:flex;flex-direction:column;align-items:center;gap:6px}.qr b{font-size:16px}.qr svg{width:200px;height:200px}.qr small{color:#55625F;font-size:12px;line-height:1.5}.btn{display:block;margin:12px auto 24px;padding:12px 20px;border:0;border-radius:12px;background:#13201E;color:#fff;font-size:15px}@media print{body{background:#fff}.bill{margin:0;border-radius:0}.btn,.pay{display:none}}</style></head><body><div class="bill">
 <h1>${e(i.shop.name)}</h1><div class="c">${e(i.shop.address)}${i.shop.phone ? '<br>Phone: ' + e(i.shop.phone) : ''}${i.shop.gstin ? '<br>GSTIN: ' + e(i.shop.gstin) : ''}</div><hr>
 ${i.status === 'void' ? '<div class="void">CANCELLED – ' + e(i.voidReason) + '</div>' : ''}
 <div class="row"><span>Bill no: <b>${e(i.number)}</b></span><span>${e(new Date(i.createdAt + 5.5 * 3600000).toISOString().slice(0, 16).replace('T', ' '))}</span></div>
@@ -3238,7 +3254,8 @@ ${Object.entries(taxRows).map(([r, t]) => '<div class="row"><span>GST ' + r + '%
 ${i.roundOff ? '<div class="row"><span>Round off</span><span>' + (i.roundOff > 0 ? '+' : '–') + ' ' + rupees(Math.abs(i.roundOff)) + '</span></div>' : ''}
 <div class="row tot"><span>Total</span><span>${rupees(i.grand)}</span></div>
 <div class="row"><span>Payment</span><span>${e(i.payment.method.toUpperCase())} · ${i.payment.status === 'paid' ? 'Paid' : 'To pay'}</span></div>
-${upi ? '<a class="pay" href="' + e(upi) + '">Pay ' + rupees(i.grand) + ' by UPI</a>' : ''}<hr>
+${qr ? '<div class="qr"><b>Scan &amp; pay ' + rupees(i.grand) + '</b>' + qr + '<small>Any UPI app · GPay · PhonePe · Paytm · BHIM<br>UPI ID: ' + e(i.shop.upi) + '</small></div>' : ''}
+${upi ? '<a class="pay" href="' + e(upi) + '">Pay ' + rupees(i.grand) + ' by UPI app</a>' : ''}<hr>
 <div class="c">${e(i.shop.footer)}<br><small>Made with Maata Business</small></div></div>
 <button class="btn" onclick="window.print()">Print / Save as PDF</button></body></html>`);
 });
