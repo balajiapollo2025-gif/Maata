@@ -303,9 +303,11 @@ class MainActivity : Activity() {
         }
         pendingListen?.let { (id, lang) -> pendingListen = null; if (has(Manifest.permission.RECORD_AUDIO)) startListening(id, lang) else listenReply(id, false, "perm") }
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, has(Manifest.permission.ACCESS_FINE_LOCATION) || has(Manifest.permission.ACCESS_COARSE_LOCATION), false); pendingGeo = null }
+        if (pendingTrack) { pendingTrack = false; web.evaluateJavascript("window.maataTrackPerm && maataTrackPerm(" + org.json.JSONObject.quote(TeamTrackService.status(this)) + ")", null) }
         if (pendingBt) { pendingBt = false; val st = BtPrinter.status(this); web.evaluateJavascript("window.maataBtPerm && maataBtPerm(" + org.json.JSONObject.quote(st) + ")", null) }
     }
     private var pendingBt = false
+    private var pendingTrack = false
     private var btOut = java.io.ByteArrayOutputStream()
 
     @Deprecated("Deprecated in Java")
@@ -475,6 +477,16 @@ class MainActivity : Activity() {
             runOnUiThread { startActivity(Intent.createChooser(send, title)) }
             true
         } catch (e: Exception) { false }
+        // 📍 Team tracking (on duty)
+        @JavascriptInterface fun trackStatus(): String = TeamTrackService.status(this@MainActivity)
+        @JavascriptInterface fun trackRunning(): Boolean = TeamTrackService.running
+        @JavascriptInterface fun trackStart(json: String): Boolean = try { TeamTrackService.start(this@MainActivity, org.json.JSONObject(json)) } catch (e: Exception) { false }
+        @JavascriptInterface fun trackStop() { TeamTrackService.stop(this@MainActivity) }
+        @JavascriptInterface fun trackAskPermission() { runOnUiThread {
+            if (!has(Manifest.permission.ACCESS_FINE_LOCATION)) { pendingTrack = true; requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_PERMS) }
+            else web.evaluateJavascript("window.maataTrackPerm && maataTrackPerm(" + org.json.JSONObject.quote(TeamTrackService.status(this@MainActivity)) + ")", null)
+        } }
+        @JavascriptInterface fun openLocationSettings() { runOnUiThread { try { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (e: Exception) { } } }
         // 🖨️ Bluetooth receipt printer
         @JavascriptInterface fun btStatus(): String = BtPrinter.status(this@MainActivity)
         @JavascriptInterface fun btPrinters(): String = BtPrinter.paired(this@MainActivity)
