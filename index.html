@@ -4364,17 +4364,42 @@ function saveAs(m) {
   const t = copyableText(m); if (!t) return;
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/plain' })); a.download = 'Maata-message-' + new Date(m.ts).toISOString().slice(0, 10) + '.txt'; a.click();
 }
+// 📤 Share like WhatsApp: in the Maata Android app the real photo / file goes to Android's share menu
+async function nativeShareBlob(blob, name, mime, title, text) {
+  const A = window.MaataAndroid; if (!(A && A.shareFileStart)) return false;
+  if (blob.size > 150 * 1048576) { toast('This file is too big to share from here. Use Save as.'); return true; }
+  if (!A.shareFileStart(String(name || 'Maata-file').slice(0, 80))) return false;
+  const buf = new Uint8Array(await blob.arrayBuffer()), step = 768 * 1024;
+  for (let i = 0; i < buf.length; i += step) { let s2 = ''; const part = buf.subarray(i, i + step); for (let k = 0; k < part.length; k += 8192) s2 += String.fromCharCode.apply(null, part.subarray(k, k + 8192)); if (!A.shareFileChunk(btoa(s2))) return false; }
+  mime = mime || blob.type || 'application/octet-stream';
+  return A.shareFileEndText ? A.shareFileEndText(mime, title || 'Share', text || '') : A.shareFileEnd(mime, title || 'Share');
+}
+function nativeShareText(text, title) { const A = window.MaataAndroid; try { return !!(A && A.shareText && A.shareText(text, title || 'Share')); } catch { return false; } }
+const SHARE_EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif', 'video/mp4': '.mp4', 'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/webm': '.webm', 'application/pdf': '.pdf' };
+async function shareFileAny(blob, name, mime, text, title) { // file → Android share menu, else the browser's, else download
+  mime = mime || blob.type; if (!/\.\w{2,5}$/.test(name || '') && SHARE_EXT[mime]) name = (name || 'Maata-file') + SHARE_EXT[mime];
+  if (await nativeShareBlob(blob, name, mime, title, text)) return true;
+  const f = new File([blob], name, { type: mime });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], text: text || '' }); } catch {} return true; }
+  return false;
+}
+async function shareTextOut(text, title) { // text → Android share menu, else the browser's, else copy
+  if (nativeShareText(text, title)) return;
+  if (navigator.share) { try { await navigator.share({ text }); } catch {} return; }
+  const A = window.MaataAndroid;
+  if (A && A.shareFileStart) { try { const b = new TextEncoder().encode(text); let s2 = ''; b.forEach((x) => (s2 += String.fromCharCode(x))); if (A.shareFileStart('Maata-message.txt') && A.shareFileChunk(btoa(s2)) && A.shareFileEnd('text/plain', title || 'Share')) return; } catch {} }
+  copyText(text);
+}
 async function shareMsg(m) {
   try {
-    if (m.file && navigator.canShare) {
-      const blob = await (await fetch(fileUrl(m.file))).blob();
-      const f = new File([blob], m.file.name, { type: m.file.mime });
-      if (navigator.canShare({ files: [f] })) return await navigator.share({ files: [f], text: m.text || '' });
+    if (m.file) {
+      toast(m.type === 'image' ? 'Opening share…' : 'Preparing to share…');
+      const r = await fetch(fileUrl(m.file)); if (!r.ok) throw new Error('This file is no longer available.');
+      const blob = await r.blob(), word = { image: 'photo', video: 'video', audio: 'audio' }[m.type] || 'file';
+      if (await shareFileAny(blob, m.file.name || 'Maata-' + word, m.file.mime || blob.type, m.text || '', 'Share ' + word)) return;
     }
-    const t = copyableText(m);
-    if (navigator.share) return await navigator.share({ text: t });
-    copyText(t);
-  } catch (e) { if (e && e.name !== 'AbortError') toast('Sharing is not available here.'); }
+    await shareTextOut(copyableText(m), 'Share message');
+  } catch (e) { toast(e && e.message ? e.message : 'Sharing is not available here.'); }
 }
 function openWith(m) {
   if (m.file) window.open(fileUrl(m.file), '_blank', 'noopener');
@@ -4511,7 +4536,7 @@ async function openMarkup(src) {
   close.onclick = () => { if (MK.ops.length && !confirm('Discard your marks?')) return; done(); };
   send.onclick = async () => { if (!activeId) return toast('Open a chat first'); const blob = await out(); if (!blob) return toast('Could not make the picture.'); uploadFile(blob, { kind: 'image', name: 'Maata-marked-' + Date.now() + '.jpg', caption: cap.value.trim() }); done(); toast('✏️ Sent'); };
   save.onclick = async () => { const blob = await out(); if (!blob) return; const f = new File([blob], 'Maata-marked-' + Date.now() + '.jpg', { type: 'image/jpeg' });
-    try { if (navigator.canShare && navigator.canShare({ files: [f] })) return await navigator.share({ files: [f] }); } catch { return; }
+    try { if (await shareFileAny(blob, f.name, 'image/jpeg', cap.value.trim(), 'Share picture')) return; } catch { return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.append(a); a.click(); a.remove(); };
   other.onclick = () => sheet('Send marked picture to', (list) => {
     const box = el('div', 'formcol'); box.style.padding = '12px'; const q = el('input'); q.type = 'search'; q.placeholder = 'Search name or number'; box.append(q); const ul = el('ul', 'fwd-list'); box.append(ul); list.append(box);
@@ -5437,7 +5462,7 @@ function bzShowBill(i, phone) {
     const act = (t, fn, cls) => { const b = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), t); b.onclick = fn; L.append(b); return b; };
     const ph = phone || i.customer.phone;
     if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
-    act('🔗 Share bill link', async () => { const u = bzBillLink(i); try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
+    act('🔗 Share bill link', async () => { const u = bzBillLink(i); if (nativeShareText('Bill ' + i.number + ' – ' + bzRs(i.grand) + '\n' + u, 'Share bill')) return; try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
     act('🖨️ Print / Save PDF', () => window.open(bzBillLink(i), '_blank', 'noopener'));
     if (i.status !== 'void' && i.payment.status !== 'paid') act('✅ Mark as paid', async () => { try { const v = await bzApi('/invoices/' + i.id + '/pay', { method: 'POST', body: JSON.stringify({ method: 'cash' }) }); closeSheet('moreSheet'); toast('Marked paid'); bzShowBill(v); } catch (e) { toast(e.message); } });
     if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
@@ -5620,7 +5645,7 @@ function shipCard(o, forShop) {
   if (x.hasPhoto) { const ph = el('button', 'od-shipph'); ph.setAttribute('aria-label', 'Receipt photo'); ph.append(el('span', 'bz-note', 'Loading receipt photo…')); c.append(ph); shipPhotoUrl(o).then((u) => { ph.innerHTML = ''; if (!u) return ph.append(el('span', 'bz-note', 'Receipt photo could not load.')); const im = el('img'); im.src = u; im.alt = 'Courier / LR receipt'; ph.append(im, el('small', null, '🧾 Receipt photo · tap to open')); ph.onclick = () => window.open(u, '_blank'); }); }
   const a = el('div', 'od-acts');
   const tr = el('button', 'bz-btn pri', x.link ? '🔍 Track parcel' : '🔍 Track on web'); tr.onclick = () => window.open(shipTrackUrl(x), '_blank', 'noopener'); a.append(tr);
-  const sh = el('button', 'bz-btn', '⇪ Share'); sh.onclick = () => { const t = shipText(o); if (navigator.share) navigator.share({ text: t }).catch(() => {}); else copyText(t); }; a.append(sh);
+  const sh = el('button', 'bz-btn', '⇪ Share'); sh.onclick = () => shareTextOut(shipText(o), 'Share parcel details'); a.append(sh);
   c.append(a);
   if (!x.link) c.append(el('small', 'bz-note', 'No tracking link was added, so "Track on web" searches the number. You can also call the courier office with this number.'));
   return c;
@@ -10748,6 +10773,7 @@ async function openInvite() {
 function openOut(url) { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove(); }
 function shareTextAny(text) {
   const A = window.MaataAndroid;
+  if (nativeShareText(text, 'Share')) return;
   if (navigator.share) return navigator.share({ text }).catch(() => {});
   if (A && A.shareFileStart) { try { const b = new TextEncoder().encode(text); let s2 = ''; b.forEach((x) => (s2 += String.fromCharCode(x))); A.shareFileStart('Maata-invite.txt'); A.shareFileChunk(btoa(s2)); A.shareFileEnd('text/plain', 'Invite to Maata'); return; } catch {} }
   copyText(text); toast('📋 Message copied — paste it in any app');
@@ -11144,6 +11170,7 @@ function mpSOS() {
     const po = el('button', 'sheet-btn', '👮 Nearest police station'); po.onclick = () => { closeSheet('moreSheet'); mpNearby('police', '👮 Police'); };
     const sh = el('button', 'sheet-btn', '📍 Send my location to family'); sh.onclick = async () => {
       if (!link) return toast('Waiting for your location…'); const text = '🆘 I need help. My location: ' + link;
+      if (nativeShareText(text, 'Send my location')) return;
       try { if (navigator.share) { await navigator.share({ text }); return; } } catch { return; }
       location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
     };
@@ -11530,8 +11557,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 135;
-const APP_NOTES = ["🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 136;
+const APP_NOTES = ["📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
