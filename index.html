@@ -1463,6 +1463,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .sec-own{margin-top:16px;max-width:360px;width:100%}.sec-own summary{cursor:pointer;opacity:.8;padding:10px}
 .sec-own form{display:flex;flex-direction:column;gap:8px;text-align:left}.sec-own input{font:inherit;font-size:16px;padding:12px;border-radius:12px;border:0;min-height:44px}
 .sec-err{color:#FFB4BF}
+.map-head-btn svg{stroke:#0F7A6E}
 .mp-attr{order:99;padding:6px 16px 2px;font-size:11px;color:#7A8792;text-align:right}
 .mp-fixed{padding:8px 16px;font-size:13px;color:#1558B0;font-weight:600}
 .mp-chips{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}.mp-chips::-webkit-scrollbar{display:none}
@@ -1670,7 +1671,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand-txt"><div class="brand">Maata</div><div class="tagline">Connect · Chat · Share</div></div></div>
       <h1 class="page-title" id="pageTitle">Maata</h1>
       <button class="coin-pill" id="coinBtn" title="Maata coins" aria-label="My Maata coins"><span>🪙</span><b>0</b></button>
-      <button class="icon-btn cam-btn" id="camHeadBtn" title="Camera" aria-label="Camera" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+      <button class="icon-btn cam-btn map-head-btn" id="mapHeadBtn" title="Maata Maps" aria-label="Open Maata Maps" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
       <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -7438,7 +7439,7 @@ $('#fab').onclick = () => {
   else if (tab === 'calls') { setTab('contacts'); toast('Choose someone, then tap 📞 to call'); }
   else if (tab === 'contacts') $('#addContactBtn').click();
 };
-$('#camHeadBtn').onclick = () => $('#stMediaBtn').click();
+$('#mapHeadBtn').onclick = () => openMaps();
 // "Ask Maata AI or Search": press Enter on text that matches nobody → ask Maata AI
 $('#search').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || tab !== 'chats') return;
@@ -10418,8 +10419,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 128;
-const APP_NOTES = ["🛡️ New: Maata Secure (Settings → Maata Secure). Find your lost phone on the map, ring a loud alarm, show \"This phone is lost\" with your number, alert family, log out a stolen phone, AI safety check and a ready police / CEIR report."];
+const APP_VERSION = 129;
+const APP_NOTES = ["🗺️ The camera button at the top of Chats is now a Maata Maps button — one tap opens maps. (The camera is still in Updates and in every chat.)"];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
