@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 141;
+const MAATA_VERSION = 144;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4703,6 +4703,15 @@ const teamOf = (id) => db.teams.find((t) => t.id === id && !t.deleted);
 const tmMember = (t, uid) => t.members.find((m) => m.userId === uid && ['invited', 'active'].includes(m.status));
 const tmIsAdmin = (t, uid) => { const m = tmMember(t, uid); return !!(m && m.status === 'active' && m.role === 'admin'); };
 const tmAdmins = (t) => t.members.filter((m) => m.status === 'active' && m.role === 'admin').map((m) => m.userId);
+// who may see whose location: members see nobody else; admins see members (and the group maker);
+// an admin's own location is seen only by the group maker (owner).
+function tmCanSee(t, viewer, target) {
+  if (viewer === target) return true;
+  if (!tmIsAdmin(t, viewer)) return false;
+  if (viewer === t.ownerId) return true;
+  const tm = t.members.find((m) => m.userId === target);
+  return !!tm && (target === t.ownerId || tm.role !== 'admin');
+}
 function tmCtx(req, res, adminOnly) {
   const t = teamOf(req.params.id); if (!t) { res.status(404).json({ error: 'Team not found.' }); return null; }
   const m = tmMember(t, req.user.id); if (!m) { res.status(403).json({ error: 'You are not in this team.' }); return null; }
@@ -4723,6 +4732,7 @@ function tmEvent(t, uid, kind, text, p, tell) {
   db.teamEvents.push(ev);
   const u = userById(uid), name = u ? u.name : 'Staff';
   for (const a of tmAdmins(t)) {
+    if (!tmCanSee(t, a, uid)) continue;
     io.to('user:' + a).emit('team:event', { teamId: t.id, event: { ...ev, name } });
     if (tell && a !== uid) { const au = userById(a); if (au) pushTo(au, { type: 'msg', title: '📍 ' + t.name + ': ' + name, body: text, tag: 'team-' + t.id + '-' + uid, url: '/?team=' + t.id }).catch(() => {}); }
   }
@@ -4735,10 +4745,11 @@ function tmLiveRow(t, m) {
 }
 function tmOut(t, uid) {
   const admin = tmIsAdmin(t, uid), me = tmMember(t, uid);
-  const base = { id: t.id, name: t.name, type: t.type || 'work', hours: t.hours, interval: t.interval, awayMin: t.awayMin, offlineMin: t.offlineMin, myRole: me ? me.role : null, myStatus: me ? me.status : null, admin, inHours: tmInHours(t),
-    admins: tmAdmins(t).map((a) => (userById(a) || {}).name || 'Admin'), mySites: tmSitesFor(t, uid).map((s) => ({ id: s.id, name: s.name, lat: s.lat, lng: s.lng, r: s.r })), me: me ? tmLiveRow(t, me) : null, endAt: tmEndAt(t) };
+  const owner = userById(t.ownerId) || {}, seenBy = (target) => tmAdmins(t).filter((a) => a !== target && tmCanSee(t, a, target)).map((a) => (userById(a) || {}).name || 'Admin');
+  const base = { id: t.id, name: t.name, type: t.type || 'work', isOwner: t.ownerId === uid, ownerName: owner.name || '', seenBy: seenBy(uid), hours: t.hours, interval: t.interval, awayMin: t.awayMin, offlineMin: t.offlineMin, myRole: me ? me.role : null, myStatus: me ? me.status : null, admin, inHours: tmInHours(t),
+    admins: seenBy(uid), mySites: tmSitesFor(t, uid).map((s) => ({ id: s.id, name: s.name, lat: s.lat, lng: s.lng, r: s.r })), me: me ? tmLiveRow(t, me) : null, endAt: tmEndAt(t) };
   if (!admin) return base;
-  return { ...base, sites: t.sites || [], members: t.members.filter((m) => ['invited', 'active'].includes(m.status)).map((m) => tmLiveRow(t, m)) };
+  return { ...base, sites: t.sites || [], members: t.members.filter((m) => ['invited', 'active'].includes(m.status) && (tmCanSee(t, uid, m.userId) || m.status === 'invited')).map((m) => ({ ...tmLiveRow(t, m), ...(tmCanSee(t, uid, m.userId) ? {} : { onDuty: false, last: null, state: 'off', km: 0 }), owner: m.userId === t.ownerId })) };
 }
 function tmTrackDoc(t, uid, ts) { const id = t.id + ':' + uid + ':' + dayKey(ts); let d = db.teamTracks.find((x) => x.id === id); if (!d) { d = { id, teamId: t.id, userId: uid, day: dayKey(ts), createdAt: now(), pts: [] }; db.teamTracks.push(d); } return d; }
 function tmStopDuty(t, uid, why, auto) {
@@ -4773,16 +4784,16 @@ app.post('/api/teams/:id/members', auth, (req, res) => {
   const c = tmCtx(req, res, true); if (!c) return; const t = c.t;
   const u = findByMobile(cleanMobile(req.body?.phone || '')); if (!u) return res.status(404).json({ error: 'This number is not on Maata. Ask them to install Maata first.' });
   if (t.members.filter((m) => ['invited', 'active'].includes(m.status)).length >= 200) return res.status(400).json({ error: 'A team can have up to 200 members.' });
-  const role = req.body?.role === 'admin' ? 'admin' : req.body?.role === 'staff' ? 'staff' : t.type === 'family' ? 'admin' : 'staff';
+  const role = req.body?.role === 'admin' && t.ownerId === req.user.id ? 'admin' : 'staff'; // only the group maker gives admin
   let m = t.members.find((x) => x.userId === u.id);
-  if (m && ['invited', 'active'].includes(m.status)) { m.role = role; save(); return res.json(tmOut(t, req.user.id)); }
+  if (m && ['invited', 'active'].includes(m.status)) { if (t.ownerId === req.user.id) m.role = role; save(); return res.json(tmOut(t, req.user.id)); }
   if (m) Object.assign(m, { role, status: 'invited', invitedAt: now(), invitedBy: req.user.id }); else t.members.push({ userId: u.id, role, status: 'invited', invitedAt: now(), invitedBy: req.user.id });
   save(); io.to('user:' + u.id).emit('team:invite', { teamId: t.id });
   pushTo(u, { type: 'msg', title: '📍 ' + t.name, body: req.user.name + ' added you to the group. Open to read and accept.', tag: 'team-inv-' + t.id, url: '/?team=' + t.id }).catch(() => {});
   res.json(tmOut(t, req.user.id));
 });
-app.put('/api/teams/:id/members/:uid', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const m = tmMember(c.t, req.params.uid); if (!m) return res.status(404).json({ error: 'Not in this team.' }); if (m.userId === c.t.ownerId && req.body?.role !== 'admin') return res.status(400).json({ error: 'The team maker stays admin.' }); m.role = req.body?.role === 'admin' ? 'admin' : 'staff'; save(); res.json(tmOut(c.t, req.user.id)); });
-app.delete('/api/teams/:id/members/:uid', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const m = tmMember(c.t, req.params.uid); if (!m) return res.status(404).json({ error: 'Not in this team.' }); if (m.userId === c.t.ownerId) return res.status(400).json({ error: 'The team maker cannot be removed.' }); tmStopDuty(c.t, m.userId, 'Removed from team'); m.status = 'removed'; save(); res.json(tmOut(c.t, req.user.id)); });
+app.put('/api/teams/:id/members/:uid', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; if (c.t.ownerId !== req.user.id) return res.status(403).json({ error: 'Only the group maker can give or remove admin.' }); const m = tmMember(c.t, req.params.uid); if (!m) return res.status(404).json({ error: 'Not in this team.' }); if (m.userId === c.t.ownerId && req.body?.role !== 'admin') return res.status(400).json({ error: 'The team maker stays admin.' }); m.role = req.body?.role === 'admin' ? 'admin' : 'staff'; save(); res.json(tmOut(c.t, req.user.id)); });
+app.delete('/api/teams/:id/members/:uid', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const m = tmMember(c.t, req.params.uid); if (!m) return res.status(404).json({ error: 'Not in this team.' }); if (m.role === 'admin' && c.t.ownerId !== req.user.id) return res.status(403).json({ error: 'Only the group maker can remove an admin.' }); if (m.userId === c.t.ownerId) return res.status(400).json({ error: 'The team maker cannot be removed.' }); tmStopDuty(c.t, m.userId, 'Removed from team'); m.status = 'removed'; save(); res.json(tmOut(c.t, req.user.id)); });
 app.post('/api/teams/:id/accept', auth, (req, res) => { const c = tmCtx(req, res); if (!c) return; if (c.m.status !== 'invited') return res.json(tmOut(c.t, req.user.id)); if (!req.body?.agree) return res.status(400).json({ error: 'Please read and agree first.' }); c.m.status = 'active'; c.m.joinedAt = now(); c.m.consentAt = now(); tmEvent(c.t, req.user.id, 'joined', 'Joined the team', null); save(); res.json(tmOut(c.t, req.user.id)); });
 app.post('/api/teams/:id/leave', auth, (req, res) => { const c = tmCtx(req, res); if (!c) return; if (req.user.id === c.t.ownerId) return res.status(400).json({ error: 'You made this team. Delete it instead.' }); tmStopDuty(c.t, req.user.id, 'Left the team'); c.m.status = c.m.status === 'invited' ? 'declined' : 'left'; tmEvent(c.t, req.user.id, 'left', c.m.status === 'declined' ? 'Did not accept the invite' : 'Left the team', null, true); save(); res.json({ ok: true }); });
 // camps / work sites (geofences)
@@ -4838,7 +4849,7 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
     } else Object.assign(d, { state: 'free', siteId: null, siteName: '' });
     d.last = p;
   }
-  if (pts.length) { const row = tmLiveRow(t, m); for (const a of tmAdmins(t)) io.to('user:' + a).emit('team:live', { teamId: t.id, row }); }
+  if (pts.length) { const row = tmLiveRow(t, m); for (const a of tmAdmins(t)) if (tmCanSee(t, a, req.user.id)) io.to('user:' + a).emit('team:live', { teamId: t.id, row }); }
   save(); res.json({ on: true, interval: t.interval, endAt: tmEndAt(t), state: d.state || 'free', site: d.siteName || '' });
 });
 // admin: one person's day (route, stops, events, numbers)
@@ -4858,16 +4869,16 @@ function tmDay(t, uid, day) {
 }
 app.get('/api/teams/:id/day', auth, (req, res) => {
   const c = tmCtx(req, res); if (!c) return; const uid = String(req.query.uid || req.user.id);
-  if (uid !== req.user.id && !c.admin) return res.status(403).json({ error: 'Only admins can see others.' });
+  if (!tmCanSee(c.t, req.user.id, uid)) return res.status(403).json({ error: 'You cannot see this person\'s location.' });
   if (!tmMember(c.t, uid)) return res.status(404).json({ error: 'Not in this team.' });
   const day = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.day || '')) ? req.query.day : dayKey(now());
   res.json({ ...tmDay(c.t, uid, day), name: (userById(uid) || {}).name || 'Staff' });
 });
-app.get('/api/teams/:id/events', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const day = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.day || '')) ? req.query.day : dayKey(now()); res.json(db.teamEvents.filter((e) => e.teamId === c.t.id && dayKey(e.at) === day).slice(-400).reverse().map((e) => ({ ...e, name: (userById(e.userId) || {}).name || 'Staff' }))); });
+app.get('/api/teams/:id/events', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const day = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.day || '')) ? req.query.day : dayKey(now()); res.json(db.teamEvents.filter((e) => e.teamId === c.t.id && dayKey(e.at) === day && tmCanSee(c.t, req.user.id, e.userId)).slice(-400).reverse().map((e) => ({ ...e, name: (userById(e.userId) || {}).name || 'Staff' }))); });
 app.post('/api/teams/:id/ai', auth, async (req, res) => {
   const c = tmCtx(req, res, true); if (!c) return; const day = /^\d{4}-\d{2}-\d{2}$/.test(String(req.body?.day || '')) ? req.body.day : dayKey(now());
   const hhmm = (ts) => ts ? new Date(ts + TZ * 60000).toISOString().slice(11, 16) : '-';
-  const rows = c.t.members.filter((m) => m.status === 'active' && m.role === 'staff').map((m) => { const d = tmDay(c.t, m.userId, day); return { name: (userById(m.userId) || {}).name, firstSeen: hhmm(d.first), lastSeen: hhmm(d.lastAt), km: d.km, minutesAtCamp: d.siteMin, minutesAway: d.awayMin, longStopsAwayFromCamp: d.stops.filter((s) => s.away).map((s) => hhmm(s.from) + '-' + hhmm(s.to) + ' (' + s.min + ' min, ' + (s.away / 1000).toFixed(1) + ' km from camp)'), alerts: d.events.filter((e) => ['away', 'offline', 'gps_off', 'mock', 'auto_off'].includes(e.kind)).map((e) => hhmm(e.at) + ' ' + e.text), fakeGps: d.mock }; });
+  const rows = c.t.members.filter((m) => m.status === 'active' && m.userId !== req.user.id && tmCanSee(c.t, req.user.id, m.userId)).map((m) => { const d = tmDay(c.t, m.userId, day); return { name: (userById(m.userId) || {}).name, firstSeen: hhmm(d.first), lastSeen: hhmm(d.lastAt), km: d.km, minutesAtCamp: d.siteMin, minutesAway: d.awayMin, longStopsAwayFromCamp: d.stops.filter((s) => s.away).map((s) => hhmm(s.from) + '-' + hhmm(s.to) + ' (' + s.min + ' min, ' + (s.away / 1000).toFixed(1) + ' km from camp)'), alerts: d.events.filter((e) => ['away', 'offline', 'gps_off', 'mock', 'auto_off'].includes(e.kind)).map((e) => hhmm(e.at) + ' ' + e.text), fakeGps: d.mock }; });
   let text = '';
   if (GEMINI_KEY && rows.length) { const lang = AI_LANG_NAME[req.user.lang] || 'English'; const g = await gemini('You help a field-team manager in India review staff attendance from location data. Using ONLY these facts, write a short report in ' + lang + ': first one line per staff member (emoji ✅ good / ⚠️ check / ❌ problem), then 2-3 practical suggestions. Be fair: phones can lose signal, so say "check with them" rather than accusing. Do not invent facts.', [{ role: 'user', parts: [{ text: 'Team: ' + c.t.name + '. Day: ' + day + '. Work hours ' + c.t.hours.start + '-' + c.t.hours.end + '.\n' + JSON.stringify(rows) }] }], { maxTokens: 700, temperature: 0.3 }); text = String(g.text || '').trim(); }
   if (!text) text = rows.length ? rows.map((r) => (r.alerts.length || r.fakeGps ? '⚠️ ' : r.firstSeen === '-' ? '❌ ' : '✅ ') + r.name + ': ' + (r.firstSeen === '-' ? 'no location today' : r.firstSeen + '–' + r.lastSeen + ', ' + r.km + ' km, at camp ' + r.minutesAtCamp + ' min, away ' + r.minutesAway + ' min' + (r.alerts.length ? '. Alerts: ' + r.alerts.join('; ') : ''))).join('\n') : 'No staff in this team yet.';

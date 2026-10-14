@@ -1564,8 +1564,9 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mk-send{width:48px;height:48px;border-radius:50%;border:0;background:#0F7A6E;display:grid;place-items:center;flex:none;cursor:pointer}.mk-send svg{width:22px;height:22px;fill:#fff;stroke:none}
 .mk-pick{display:flex;gap:10px;align-items:center;width:100%;padding:8px 4px;background:none;border:0;text-align:left;color:inherit;cursor:pointer}
 .bz-qr{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;margin:6px 0 10px;border-radius:16px;background:#fff;border:2px solid #0F7A6E;color:#13201E}.bz-qr b{font-size:30px;font-variant-numeric:tabular-nums}.bz-qr small{color:#55625F;text-align:center}.bz-qr img,.bz-qrsvg svg{width:min(260px,70vw);height:min(260px,70vw);display:block}.bz-upinote{flex-basis:100%;margin-top:4px}
+.pr-type{grid-template-columns:repeat(3,1fr)!important}.pr-dev{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 4px;border-bottom:1px solid var(--line)}.pr-dev span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr-dev .bz-btn{flex:none;width:auto;margin:0}.pr-dev.on span{font-weight:700;color:#0F7A6E}
 .tm-type{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tm-type button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;border-radius:14px;border:2px solid var(--line);background:var(--card,#fff);color:inherit;cursor:pointer}.tm-type button.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-type i{font-style:normal;font-size:28px}.tm-type small{color:var(--muted);text-align:center;font-size:12px}
-.tm-mine{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;margin-bottom:10px;border-radius:14px;border:1px solid var(--line);background:var(--card,#fff);color:inherit;font:inherit;font-weight:600;cursor:pointer}.tm-mine b{background:#0F7A6E;color:#fff;padding:6px 14px;border-radius:20px}.tm-mine.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-mine.on b{background:#C62828}
+.tm-mine{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;margin-bottom:10px;border-radius:14px;border:1px solid var(--line);background:var(--card,#fff);color:inherit;font:inherit;font-weight:600;cursor:pointer}.tm-mine>span{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}.tm-mine small{font-weight:400;color:var(--muted);font-size:12px}.tm-mine b{background:#0F7A6E;color:#fff;padding:6px 14px;border-radius:20px}.tm-mine.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-mine.on b{background:#C62828}
 .tm-hero{text-align:center}.tm-hero.on{border:2px solid #0F7A6E;background:rgba(15,122,110,.06)}.tm-hero h3{margin:6px 0 10px}
 .tm-consent{margin:4px 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;line-height:1.45}
 .tm-tabs{margin-bottom:10px}.tm-map{height:46vh;min-height:260px;margin-bottom:10px}
@@ -5381,7 +5382,7 @@ function bzBill(body) {
   const q = el('input'); q.type = 'search'; q.id = 'bzQ'; q.placeholder = 'Search item or scan barcode'; q.setAttribute('aria-label', 'Search item or barcode'); q.autocomplete = 'off';
   const scan = el('button', 'bz-ib', '📷'); scan.setAttribute('aria-label', 'Scan barcode'); scan.onclick = () => bzScan((code) => { const p = BZ.prods.find((x) => x.barcode === code); if (p) { bzAdd(p); toast('Added ' + p.name); } else toast('No product with barcode ' + code); });
   const mic = el('button', 'bz-ib', '🎤'); mic.setAttribute('aria-label', 'Speak the items'); mic.onclick = bzVoice;
-  const prn = el('button', 'bz-ib', '🖨️'); prn.setAttribute('aria-label', 'Bluetooth printer'); prn.title = 'Bluetooth printer'; prn.onclick = () => prSetup(); if (prCfg().address) prn.classList.add('on');
+  const prn = el('button', 'bz-ib', '🖨️'); prn.setAttribute('aria-label', 'Bluetooth printer'); prn.title = 'Bluetooth printer'; prn.onclick = () => prSetup(); if (prReady(prCfg())) prn.classList.add('on');
   top.append(q, scan, mic, prn); body.append(top);
   const res = el('div', 'bz-picks'); res.id = 'bzPicks'; body.append(res);
   const draw = () => {
@@ -5436,7 +5437,7 @@ async function bzCreate() {
     const phone = BZ.cust.phone; BZ.cart = []; BZ.disc = ''; BZ.cust = { name: '', phone: '' }; BZ.idem = null; BZ.method = 'cash';
     await bzLoadProducts(); if (BZ.tab === 'bill') bzTab('bill');
     if (inv.payment.method === 'upi' && inv.payment.status !== 'paid') bzUpiQr(inv, phone); else bzShowBill(inv, phone);
-    { const pc = prCfg(); if (pc.auto && pc.address && prApp()) prPrintBill(inv, true); }
+    { const pc = prCfg(); if (pc.auto && prReady(pc) && prApp()) prPrintBill(inv, true); }
   } catch (e) { toast(e.message); go.disabled = false; bzCartDraw(); }
 }
 function bzCustomItem() {
@@ -5480,12 +5481,18 @@ function bzBillRow(i) {
 // Bluetooth printing needs the Maata Android app; in a browser the bill page prints in an 80 / 58 mm layout.
 const PR = { cb: new Map(), seq: 0, permCb: null };
 const prApp = () => !!(window.MaataAndroid && window.MaataAndroid.btPrintEnd);
-const PR_DEF = { address: '', name: '', width: 80, auto: false, copies: 1, qr: true, big: false };
+const PR_DEF = { type: 'bt', address: '', name: '', usbKey: '', host: '', port: 9100, width: 80, auto: false, copies: 1, qr: true, big: false };
+const prReady = (c) => (c.type === 'usb' ? !!c.usbKey : c.type === 'net' ? !!c.host : !!c.address);
+const prHas = (fn) => !!(window.MaataAndroid && window.MaataAndroid[fn]);
+window.maataBtFound = (d) => { if (PR.onFound) PR.onFound(d); };
+window.maataBtScanEnd = (st) => { if (PR.onScanEnd) PR.onScanEnd(st); };
+window.maataBtPaired = (a, st) => { if (PR.onPaired) PR.onPaired(a, st); };
+window.maataUsbPerm = (k, ok) => { if (PR.onUsbPerm) PR.onUsbPerm(k, ok); };
 function prCfg() { try { return { ...PR_DEF, ...JSON.parse(store.get('maata_printer') || '{}') }; } catch { return { ...PR_DEF }; } }
 function prSave(c) { store.set('maata_printer', JSON.stringify(c)); }
 window.maataBtDone = (id, ok, msg) => { const f = PR.cb.get(id); if (f) { PR.cb.delete(id); f(ok, msg); } };
 window.maataBtPerm = (st) => { const f = PR.permCb; PR.permCb = null; if (f) f(st); };
-const PR_MSG = { perm: 'Allow "Nearby devices" for Maata to use the printer.', off: 'Switch on Bluetooth, then try again.', nobt: 'This phone has no Bluetooth.', connect: 'Could not connect. Switch on the printer, keep it near the phone, and check it is paired in Bluetooth settings.', busy: 'The printer is still printing. Try again in a moment.', error: 'Printing failed. Try again.' };
+const PR_MSG = { usb_none: 'USB printer not found. Check the OTG cable and that the printer is ON.', usb_perm: 'Allow Maata to use the USB printer (tap OK when Android asks).', usb_fail: 'Could not send to the USB printer. Unplug and plug the cable again.', net_fail: 'Could not reach the printer on the network. Check the IP address, and that the phone and printer are on the same Wi-Fi router.', perm: 'Allow "Nearby devices" for Maata to use the printer.', off: 'Switch on Bluetooth, then try again.', nobt: 'This phone has no Bluetooth.', connect: 'Could not connect. Switch on the printer, keep it near the phone, and check it is paired in Bluetooth settings.', busy: 'The printer is still printing. Try again in a moment.', error: 'Printing failed. Try again.' };
 const prMoney = (p) => '₹' + (p / 100).toFixed(2);
 // draw the receipt
 async function prReceipt(i, cfg) {
@@ -5554,14 +5561,14 @@ function prSend(bytes, cfg) {
     const step = 48 * 1024; for (let i = 0; i < bytes.length; i += step) { let s2 = ''; const part = bytes.subarray(i, i + step); for (let k = 0; k < part.length; k += 8192) s2 += String.fromCharCode.apply(null, part.subarray(k, k + 8192)); if (!A.btPrintChunk(btoa(s2))) return ok({ ok: false, msg: 'error' }); }
     const t = setTimeout(() => { PR.cb.delete(id); ok({ ok: false, msg: 'connect' }); }, 90000);
     PR.cb.set(id, (good, msg) => { clearTimeout(t); ok({ ok: good, msg }); });
-    A.btPrintEnd(cfg.address, id);
+    if (cfg.type === 'usb') A.usbPrintEnd(cfg.usbKey, id); else if (cfg.type === 'net') A.netPrintEnd(cfg.host, Number(cfg.port) || 9100, id); else A.btPrintEnd(cfg.address, id);
   });
 }
 async function prPrintBill(i, quiet) {
   const cfg = prCfg();
   if (!prApp()) { window.open(bzBillLink(i) + '&paper=' + cfg.width, '_blank', 'noopener'); return; }
-  if (!cfg.address) { if (!quiet) prSetup(() => prPrintBill(i)); return; }
-  const st = window.MaataAndroid.btStatus(); if (st !== 'ok') { toast(PR_MSG[st] || PR_MSG.error); if (st === 'perm' || st === 'off') prSetup(); return; }
+  if (!prReady(cfg) || ((cfg.type === 'usb' || cfg.type === 'net') && !prHas('netPrintEnd'))) { if (!quiet) prSetup(() => prPrintBill(i)); return; }
+  if (cfg.type === 'bt') { const st = window.MaataAndroid.btStatus(); if (st !== 'ok') { toast(PR_MSG[st] || PR_MSG.error); if (st === 'perm' || st === 'off') prSetup(); return; } }
   if (!i.shop || !i.shop.name) i = { ...i, shop: { name: BZ.info?.name, address: BZ.info?.address, phone: BZ.info?.phone, gstin: BZ.info?.settings?.gstin, upi: BZ.info?.settings?.upi, footer: BZ.info?.settings?.footer, ...(i.shop || {}) } };
   toast('🖨️ Printing on ' + cfg.name + '…');
   const r = await prSend(prEscpos(await prReceipt(i, cfg), cfg.copies), cfg);
@@ -5575,43 +5582,101 @@ function prTestBill() {
     subtotal: 15600, discount: 0, roundOff: 0, grand: 15600, payment: { method: 'cash', status: 'paid' }, shop: { name: s.name || 'My Shop', address: s.address || '', phone: s.phone || '', gstin: set.gstin || '', upi: set.upi || '', footer: set.footer || '' } };
 }
 function prSetup(after) {
-  const cfg = prCfg();
-  sheet('🖨️ Bluetooth printer', (L) => {
+  const cfg = prCfg(), A = window.MaataAndroid;
+  sheet('🖨️ Receipt printer', (L) => {
+    const found = new Map(); let scanning = false;
     const draw = () => {
-      L.innerHTML = '';
-      const f = el('div', 'bz-form');
+      L.innerHTML = ''; const f = el('div', 'bz-form');
       f.append(el('div', 'th-title', 'Paper size'));
       const wch = el('div', 'bz-chips'); for (const [w, l] of [[80, '80 mm (3 inch)'], [58, '58 mm (2 inch)']]) { const b = el('button', cfg.width === w ? 'on' : null, l); b.type = 'button'; b.onclick = () => { cfg.width = w; prSave(cfg); draw(); }; wch.append(b); } f.append(wch);
       if (!prApp()) {
-        const inApp = !!window.MaataAndroid;
-        f.append(el('p', 'info-note', inApp ? '📲 Your Maata app is older. Bluetooth printing needs the newest Maata app. Tap Update, install it, then open this again.' : '🖨️ Bluetooth printing works in the Maata Android app. In a browser, "📄 PDF / other printer" opens the bill in a ' + cfg.width + ' mm layout for your printer app.'));
+        const inApp = !!A;
+        f.append(el('p', 'info-note', inApp ? '📲 Your Maata app is older. Printing needs the newest Maata app. Tap Update, install it, then open this again.' : '🖨️ Printing works in the Maata Android app. In a browser, "📄 PDF / other printer" opens the bill in a ' + cfg.width + ' mm layout.'));
         if (inApp) { const u = el('button', 'sheet-btn primary', '📲 Update Maata app'); u.onclick = () => startAppUpdate(); f.append(u); }
         L.append(f); return;
       }
-      const st = window.MaataAndroid.btStatus();
-      if (st === 'nobt') f.append(el('p', 'info-note', PR_MSG.nobt));
-      else if (st === 'perm') { f.append(el('p', 'info-note', 'Maata needs the "Nearby devices" permission to talk to your printer.')); const b = el('button', 'sheet-btn primary', '✅ Allow Nearby devices'); b.onclick = () => { PR.permCb = () => draw(); window.MaataAndroid.btAskPermission(); }; f.append(b); }
-      else if (st === 'off') { f.append(el('p', 'info-note', 'Bluetooth is off.')); const b = el('button', 'sheet-btn primary', 'Open Bluetooth settings'); b.onclick = () => window.MaataAndroid.btOpenSettings(); f.append(b); const r = el('button', 'sheet-btn', '🔄 I switched it on'); r.onclick = draw; f.append(r); }
-      else {
-        let list = []; try { list = JSON.parse(window.MaataAndroid.btPrinters() || '[]'); } catch {}
-        f.append(el('div', 'th-title', 'Choose your printer'));
-        if (!list.length) f.append(el('p', 'info-note', 'No paired devices. Switch on the printer, then pair it in Bluetooth settings (PIN is usually 0000 or 1234).'));
-        for (const d of list) { const l = el('label', 'sec-pick'); const r = el('input'); r.type = 'radio'; r.name = 'prDev'; r.checked = cfg.address === d.address; r.onchange = () => { cfg.address = d.address; cfg.name = d.name; prSave(cfg); }; l.append(r, el('span', null, (d.printer ? '🖨️ ' : '📶 ') + d.name)); f.append(l); }
-        const pair = el('button', 'sheet-btn', '➕ Pair a new printer (Bluetooth settings)'); pair.onclick = () => { window.MaataAndroid.btOpenSettings(); toast('After pairing, come back and tap 🔄 Refresh'); }; const rf = el('button', 'sheet-btn', '🔄 Refresh list'); rf.onclick = draw; f.append(pair, rf);
+      f.append(el('div', 'th-title', 'How is the printer connected?'));
+      const tch = el('div', 'tm-type pr-type'); for (const [k, ic, tl, sub] of [['bt', '📶', 'Bluetooth', 'No wire'], ['usb', '🔌', 'USB cable', 'Phone OTG cable'], ['net', '🌐', 'Wi-Fi / LAN', 'Printer on router']]) { const b = el('button', cfg.type === k ? 'on' : null); b.type = 'button'; b.append(el('i', null, ic), el('b', null, tl), el('small', null, sub)); b.onclick = () => { cfg.type = k; prSave(cfg); draw(); }; tch.append(b); } f.append(tch);
+      const needNew = (cfg.type !== 'bt' && !prHas('netPrintEnd')) || (cfg.type === 'bt' && !prHas('btScan'));
+      if (needNew) { f.append(el('p', 'info-note', '📲 This needs the newest Maata app (with ' + (cfg.type === 'bt' ? 'Bluetooth search' : 'USB and Wi-Fi printing') + '). Update the app, then open this again.')); const u = el('button', 'sheet-btn primary', '📲 Update Maata app'); u.onclick = () => startAppUpdate(); f.append(u); }
+      if (cfg.type === 'bt' && !needNew) {
+        const st = A.btScanStatus();
+        if (st === 'nobt') f.append(el('p', 'info-note', PR_MSG.nobt));
+        else if (st === 'perm') { f.append(el('p', 'info-note', 'Maata needs the "Nearby devices" permission to find and use the printer.')); const b = el('button', 'sheet-btn primary', '✅ Allow Nearby devices'); b.onclick = () => { PR.permCb = () => draw(); A.btAskScanPermission(); }; f.append(b); }
+        else if (st === 'off') { f.append(el('p', 'info-note', 'Bluetooth is off.')); const b = el('button', 'sheet-btn primary', 'Switch on Bluetooth'); b.onclick = () => A.btOpenSettings(); f.append(b); const r = el('button', 'sheet-btn', '🔄 I switched it on'); r.onclick = draw; f.append(r); }
+        else {
+          let paired = []; try { paired = JSON.parse(A.btPrinters() || '[]'); } catch {}
+          const all = new Map(paired.map((d) => [d.address, { ...d, paired: true }])); for (const [k2, d] of found) if (!all.has(k2)) all.set(k2, d);
+          f.append(el('div', 'th-title', 'Choose your printer'));
+          if (!all.size) f.append(el('p', 'bz-note', 'No printer yet. Switch ON the printer and tap 🔍 Search.'));
+          for (const d of [...all.values()].sort((x, y) => (y.printer - x.printer) || (y.paired - x.paired))) {
+            const row = el('div', 'pr-dev' + (cfg.address === d.address && cfg.type === 'bt' ? ' on' : ''));
+            row.append(el('span', null, (d.printer ? '🖨️ ' : '📶 ') + d.name + (d.paired ? '' : ' · new')));
+            const use = el('button', 'bz-btn' + (cfg.address === d.address ? ' pri' : ''), cfg.address === d.address ? '✓ Selected' : d.paired ? 'Use' : 'Pair & use');
+            use.onclick = () => {
+              if (d.paired) { Object.assign(cfg, { type: 'bt', address: d.address, name: d.name }); prSave(cfg); toast('🖨️ ' + d.name + ' selected'); return draw(); }
+              use.disabled = true; use.textContent = 'Pairing…'; toast('If Android asks for a PIN, type 0000 or 1234');
+              PR.onPaired = (addr, st2) => { if (addr !== d.address) return; PR.onPaired = null; Object.assign(cfg, { type: 'bt', address: d.address, name: d.name }); prSave(cfg); toast(st2 === 'paired' ? '✅ Paired with ' + d.name + '. Tap 🧪 Test print.' : 'Selected ' + d.name + '. Some printers work without pairing: tap 🧪 Test print.'); draw(); };
+              A.btPair(d.address);
+            };
+            row.append(use); f.append(row);
+          }
+          const sc = el('button', 'sheet-btn primary', scanning ? '🔍 Searching… (about 12 seconds)' : '🔍 Search for printers'); sc.disabled = scanning;
+          sc.onclick = () => { scanning = true; PR.onFound = (d) => { found.set(d.address, d); draw(); }; PR.onScanEnd = (st2) => { scanning = false; PR.onFound = null; if (st2 !== 'done') toast(PR_MSG[st2] || 'Search failed'); else if (![...found.values()].some((x) => x.printer)) toast('No printer found. Is the printer ON and does it have Bluetooth?'); draw(); }; A.btScan(); draw(); };
+          f.append(sc);
+          f.append(el('p', 'bz-note', 'Not found? Some printers have no Bluetooth (for example many ZY803 models are USB + LAN only). Check the label on the printer, or choose 🔌 USB cable / 🌐 Wi-Fi / LAN above.'));
+        }
+      }
+      if (cfg.type === 'usb' && !needNew) {
+        f.append(el('p', 'info-note', '🔌 Connect the printer\'s USB cable to the phone with an OTG adapter (USB-C / micro-USB), switch the printer ON, then tap 🔄.'));
+        let list = []; try { list = JSON.parse(A.usbPrinters() || '[]'); } catch {}
+        if (!list.length) f.append(el('p', 'bz-note', 'No USB device found yet.'));
+        for (const d of list) { const row = el('div', 'pr-dev' + (cfg.usbKey === d.key && cfg.type === 'usb' ? ' on' : '')); row.append(el('span', null, (d.printer ? '🖨️ ' : '🔌 ') + d.name)); const use = el('button', 'bz-btn' + (cfg.usbKey === d.key ? ' pri' : ''), cfg.usbKey === d.key ? '✓ Selected' : 'Use');
+          use.onclick = () => { PR.onUsbPerm = (k2, ok2) => { if (k2 !== d.key) return; PR.onUsbPerm = null; if (ok2) { Object.assign(cfg, { type: 'usb', usbKey: d.key, name: d.name }); prSave(cfg); toast('🖨️ ' + d.name + ' selected'); } else toast(PR_MSG.usb_perm); draw(); }; A.usbAskPermission(d.key); };
+          row.append(use); f.append(row); }
+        const rf = el('button', 'sheet-btn', '🔄 Refresh'); rf.onclick = draw; f.append(rf);
+      }
+      if (cfg.type === 'net' && !needNew) {
+        f.append(el('p', 'info-note', '🌐 Connect the printer\'s LAN cable to your Wi-Fi router. Keep this phone on the same Wi-Fi. To see the printer\'s IP address: switch the printer OFF, hold the FEED button and switch it ON — it prints a test page with the IP.'));
+        const il = el('label'); il.htmlFor = 'prIp'; il.append(el('span', null, 'Printer IP address')); const ip = el('input'); ip.id = 'prIp'; ip.inputMode = 'decimal'; ip.placeholder = 'e.g. 192.168.1.100'; ip.value = cfg.host || ''; il.append(ip);
+        const pl = el('label'); pl.htmlFor = 'prPort'; pl.append(el('span', null, 'Port (usually 9100)')); const pt = el('input'); pt.id = 'prPort'; pt.inputMode = 'numeric'; pt.value = String(cfg.port || 9100); pl.append(pt);
+        const sv = el('button', 'sheet-btn primary', 'Save IP'); sv.onclick = () => { const h = ip.value.trim(); if (!/^[\w.-]+$/.test(h)) return toast('Type the IP address, like 192.168.1.100'); Object.assign(cfg, { type: 'net', host: h, port: Number(pt.value) || 9100, name: 'LAN printer ' + h }); prSave(cfg); toast('Saved. Now tap 🧪 Test print'); draw(); };
+        f.append(il, pl, sv);
       }
       f.append(el('div', 'th-title', 'Options'));
-      const chk = (t, k) => { const l = el('label', 'sec-pick'); const c2 = el('input'); c2.type = 'checkbox'; c2.checked = !!cfg[k]; c2.onchange = () => { cfg[k] = c2.checked; prSave(cfg); }; l.append(c2, el('span', null, t)); f.append(l); };
+      const chk = (t2, k) => { const l = el('label', 'sec-pick'); const c2 = el('input'); c2.type = 'checkbox'; c2.checked = !!cfg[k]; c2.onchange = () => { cfg[k] = c2.checked; prSave(cfg); }; l.append(c2, el('span', null, t2)); f.append(l); };
       chk('🖨️ Print automatically after every bill', 'auto'); chk('📱 Print UPI QR (with the amount) on bills not yet paid', 'qr'); chk('🔠 Bigger letters', 'big');
       const cl = el('label'); cl.htmlFor = 'prCopies'; cl.append(el('span', null, 'Copies')); const cs = el('select'); cs.id = 'prCopies'; for (const n of [1, 2, 3]) cs.add(new Option(String(n), String(n))); cs.value = String(cfg.copies); cs.onchange = () => { cfg.copies = Number(cs.value); prSave(cfg); }; cl.append(cs); f.append(cl);
-      if (st === 'ok') { const t = el('button', 'sheet-btn primary', '🧪 Test print'); t.onclick = async () => { if (!cfg.address) return toast('Choose your printer first'); t.disabled = true; await prPrintBill(prTestBill()); t.disabled = false; }; f.append(t); }
-      const done = el('button', 'sheet-btn', after ? 'Save & print' : 'Done'); done.onclick = () => { if (after && !cfg.address && prApp()) return toast('Choose your printer first'); closeSheet('moreSheet'); toast('🖨️ Printer settings saved'); if (after) after(); }; f.append(done);
-      f.append(el('p', 'bz-note', 'Works with most 58 mm and 80 mm Bluetooth thermal receipt printers (ESC/POS). These settings are saved on this phone.'));
+      if (!needNew) {
+        const t = el('button', 'sheet-btn primary', '🧪 Test print'); t.onclick = async () => { if (!prReady(cfg)) return toast('Choose your printer first'); t.disabled = true; await prPrintBill(prTestBill()); t.disabled = false; }; f.append(t);
+        const ck = el('button', 'sheet-btn', '🔧 Check printer'); ck.onclick = () => prCheck(cfg); f.append(ck);
+      }
+      const done = el('button', 'sheet-btn', after ? 'Save & print' : 'Done'); done.onclick = () => { if (after && !prReady(cfg)) return toast('Choose your printer first'); if (PR.onFound) A.btStopScan && A.btStopScan(); closeSheet('moreSheet'); toast('🖨️ Printer settings saved'); if (after) after(); }; f.append(done);
+      f.append(el('p', 'bz-note', 'Works with most 58 mm / 80 mm thermal receipt printers (ESC/POS). Settings are saved on this phone.'));
       L.append(f);
     };
     draw();
   });
 }
-
+// 🔧 step-by-step check, in simple words
+async function prCheck(cfg) {
+  const A = window.MaataAndroid, lines = [];
+  const add = (ok, t) => lines.push((ok ? '✅ ' : '❌ ') + t);
+  if (!prApp()) add(false, 'Maata Android app is too old or this is a browser');
+  else if (cfg.type === 'bt') {
+    const st = A.btStatus(); add(st !== 'nobt', 'Phone has Bluetooth'); add(st !== 'perm', '"Nearby devices" permission'); add(st === 'ok' || st === 'perm', 'Bluetooth is ON');
+    let paired = []; try { paired = JSON.parse(A.btPrinters() || '[]'); } catch {}
+    add(!!cfg.address, 'Printer chosen' + (cfg.name ? ': ' + cfg.name : '')); add(paired.some((d) => d.address === cfg.address), 'Printer is paired with this phone');
+  } else if (cfg.type === 'usb') {
+    let list = []; try { list = JSON.parse(A.usbPrinters() || '[]'); } catch {}
+    const d = list.find((x) => x.key === cfg.usbKey); add(list.length > 0, 'A USB device is connected (OTG cable)'); add(!!d, 'Chosen printer is plugged in'); add(!!(d && d.allowed), 'Maata is allowed to use it');
+  } else { add(!!cfg.host, 'Printer IP address saved' + (cfg.host ? ': ' + cfg.host : '')); lines.push('ℹ️ This phone must be on the same Wi-Fi router as the printer'); }
+  sheet('🔧 Printer check', (L) => {
+    const pre = el('pre', 'tm-ai', lines.join('\n')); L.append(pre);
+    const go = el('button', 'sheet-btn primary', '🧪 Send a test print now'); go.onclick = async () => { go.disabled = true; pre.textContent = lines.join('\n') + '\n⏳ Sending test print…'; const ok = await prPrintBill(prTestBill()); pre.textContent = lines.join('\n') + '\n' + (ok ? '✅ Printer answered. Check the paper.' : '❌ Test print failed (see the message at the bottom of the screen).'); go.disabled = false; }; L.append(go);
+    const back = el('button', 'sheet-btn', '← Printer settings'); back.onclick = () => { closeSheet('moreSheet'); prSetup(); }; L.append(back);
+  });
+}
 function bzBillLink(i) { return location.origin + '/bill/' + i.id + '?k=' + i.key; }
 // 📱 UPI QR with the exact bill amount: the customer scans with any UPI app, the money goes straight to the shop's UPI ID
 function bzQrBox(i) { const b = el('div', 'bz-qr'); const im = el('img'); im.alt = 'UPI QR code for ' + bzRs(i.grand); im.src = '/bill/' + i.id + '/upi.svg?k=' + i.key; b.append(el('small', null, 'Scan & pay with any UPI app'), el('b', null, bzRs(i.grand)), im, el('small', null, 'UPI ID: ' + (i.shop.upi || '') + ' · ' + i.number)); return b; }
@@ -5661,7 +5726,7 @@ function bzShowBill(i, phone) {
     const ph = phone || i.customer.phone;
     if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
     act('🔗 Share bill link', async () => { const u = bzBillLink(i); if (nativeShareText('Bill ' + i.number + ' – ' + bzRs(i.grand) + '\n' + u, 'Share bill')) return; try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
-    act('🖨️ Print receipt (Bluetooth)', () => (prApp() ? prPrintBill(i) : prSetup()));
+    act('🖨️ Print receipt', () => (prApp() ? prPrintBill(i) : prSetup()));
     act('📄 PDF / other printer', () => window.open(bzBillLink(i) + '&paper=' + prCfg().width, '_blank', 'noopener'));
     if (i.status !== 'void' && i.payment.status !== 'paid') { if (i.shop.upi) act('✅ UPI payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v); }); act('💵 Paid in cash', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v); }); }
     if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
@@ -5770,7 +5835,7 @@ function bzMore(body) {
   if (bzCan('settings')) a('🛒 Online store', 'Delivery, pickup, charges, open / close', bzStoreSettings);
   if (bzCan('staff')) a('👥 Staff', (BZ.info.staff.length || 'No') + ' staff · cashier, manager, stock', bzStaff);
   if (bzCan('settings')) a('⚙️ Bill settings', 'Bill number, GST mode, UPI, GSTIN', bzSettings);
-  a('🖨️ Bluetooth printer', (() => { const p = prCfg(); return p.address ? p.name + ' · ' + p.width + ' mm' + (p.auto ? ' · auto print' : '') : '58 / 80 mm receipt printer'; })(), () => prSetup());
+  a('🖨️ Receipt printer', (() => { const p = prCfg(); return prReady(p) ? p.name + ' · ' + p.width + ' mm' + (p.auto ? ' · auto print' : '') : 'Bluetooth, USB or Wi-Fi · 58 / 80 mm'; })(), () => prSetup());
   if (bzCan('reports')) a('🕘 Activity log', 'Who did what, when', bzLog);
   if (BZ.info.role === 'owner') a('🏪 Business profile', 'Name, address, timings', editBusinessProfile);
   a('🔁 Switch business', 'If you work in more than one shop', () => openBiz());
@@ -5810,7 +5875,7 @@ function bzSettings() {
     const ml = el('label'); ml.htmlFor = 'bzSM'; ml.append(el('span', null, 'Prices and GST')); const md = el('select'); md.id = 'bzSM'; for (const [k, t] of [['incl', 'My prices include GST'], ['excl', 'Add GST on top of my prices'], ['none', 'No GST on bills']]) md.add(new Option(t, k)); md.value = s.taxMode; ml.append(md); f.append(ml);
     const chk = (t, v) => { const l = el('label', 'sec-pick'); const c = el('input'); c.type = 'checkbox'; c.checked = v; l.append(c, el('span', null, t)); f.append(l); return c; };
     const ro = chk('Round off the total to the nearest rupee', s.roundOff), ng = chk('Allow selling when stock shows 0', s.allowNegative);
-    { const pb = el('button', 'sheet-btn', '🖨️ Bluetooth printer (58 / 80 mm)'); pb.type = 'button'; pb.onclick = () => { closeSheet('moreSheet'); prSetup(); }; f.append(pb); }
+    { const pb = el('button', 'sheet-btn', '🖨️ Receipt printer (Bluetooth / USB / Wi-Fi)'); pb.type = 'button'; pb.onclick = () => { closeSheet('moreSheet'); prSetup(); }; f.append(pb); }
     if (s.upi) { const tq = el('button', 'sheet-btn', '📱 Show ₹1 test QR (check your UPI ID)'); tq.type = 'button'; tq.onclick = () => { closeSheet('moreSheet'); bzUpiTest(); }; f.append(tq); }
     const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit'; f.append(ok);
     f.onsubmit = async (e) => { e.preventDefault(); try { BZ.info.settings = await bzApi('/settings', { method: 'PUT', body: JSON.stringify({ prefix: pre.value, gstin: gst.value, upi: upi.value, footer: ft.value, taxMode: md.value, roundOff: ro.checked, allowNegative: ng.checked }) }); closeSheet('moreSheet'); toast('Settings saved ✓'); } catch (x) { toast(x.message); } };
@@ -6413,7 +6478,7 @@ function tmPin(r) { const st = TM_STATE[r.state] || TM_STATE.free; const e = el(
 async function tmLive(area, t) {
   const rows = () => t.members.filter((m) => m.status === 'active' && (m.userId !== me.id || m.onDuty));
   const mine = t.members.find((m) => m.userId === me.id) || {};
-  const sw = el('button', 'tm-mine' + (mine.onDuty ? ' on' : '')); sw.append(el('span', null, mine.onDuty ? '📍 My location: ON' : '📍 My location: OFF'), el('b', null, mine.onDuty ? 'Stop' : 'Share'));
+  const sw = el('button', 'tm-mine' + (mine.onDuty ? ' on' : '')); const swt = el('span'); swt.append(el('span', null, mine.onDuty ? '📍 My location: ON' : '📍 My location: OFF'), el('small', null, t.seenBy && t.seenBy.length ? 'Seen only by ' + t.seenBy.join(', ') : 'Nobody else can see it')); sw.append(swt, el('b', null, mine.onDuty ? 'Stop' : 'Share'));
   sw.onclick = async () => { sw.disabled = true; if (mine.onDuty) await tmDutyOff(t); else await tmDutyOn(t); try { Object.assign(t, await api('/api/teams/' + t.id)); } catch {} TM.redraw(); };
   const cnt = el('div', 'tm-count'); const box = el('div', 'od-map tm-map'); const list = el('div', 'bz-card');
   area.append(sw, cnt, box, list);
@@ -6496,9 +6561,13 @@ function tmSetup(area, t) {
   const save = async (path, method, body) => { try { const n = await api('/api/teams/' + t.id + path, { method, body: JSON.stringify(body || {}) }); Object.assign(t, n); TM.cur = t; TM.redraw(); return n; } catch (e) { toast(e.message); return null; } };
   // staff
   const w = TMW(t), ms = el('div', 'bz-card'); ms.append(el('h3', null, '👥 Members (' + t.members.length + ')'));
-  for (const m of t.members) { const r = el('div', 'tm-mrow'); r.append(el('div', null, m.name), el('small', null, (m.role === 'admin' ? '👑 Sees everyone' : w.member) + (m.status === 'invited' ? ' · 📩 not accepted yet' : '') + ' · ' + m.phone));
-    const b = el('button', 'bz-link', '⋯'); b.setAttribute('aria-label', 'Options for ' + m.name); b.onclick = () => sheet(m.name, (L) => { const a = (txt, fn, cls) => { const x = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), txt); x.onclick = () => { closeSheet('moreSheet'); fn(); }; L.append(x); }; a(m.role === 'admin' ? 'Make normal ' + w.member.toLowerCase() + ' (sees only self)' : '👑 Let them see everyone', () => save('/members/' + m.userId, 'PUT', { role: m.role === 'admin' ? 'staff' : 'admin' })); a('Remove from group', () => { if (confirm('Remove ' + m.name + '?')) save('/members/' + m.userId, 'DELETE'); }, 'warn'); }); r.append(b); ms.append(r); }
-  const add = el('button', 'bz-btn pri', '+ Add ' + w.member.toLowerCase()); add.onclick = () => sheet('+ Add ' + w.member.toLowerCase(), (L) => { const f = el('form', 'bz-form'); const l = el('label'); l.htmlFor = 'tmPh'; l.append(el('span', null, 'Mobile number (on Maata)')); const ph = el('input'); ph.id = 'tmPh'; ph.type = 'tel'; ph.inputMode = 'numeric'; l.append(ph); const rl = el('label'); rl.htmlFor = 'tmRole'; rl.append(el('span', null, 'Role')); const ro = el('select'); ro.id = 'tmRole'; ro.add(new Option(t.type === 'family' ? 'Family member (sees everyone)' : 'Staff (shares location, sees only self)', t.type === 'family' ? 'admin' : 'staff')); ro.add(new Option(t.type === 'family' ? 'Child / shares only (sees only self)' : 'Manager / GM (sees everyone)', t.type === 'family' ? 'staff' : 'admin')); rl.append(ro); f.append(l, rl, el('p', 'info-note', 'They get an invite and must accept before anything is shared.')); const ok = el('button', 'sheet-btn primary', 'Send invite'); ok.type = 'submit'; f.append(ok); f.onsubmit = async (e) => { e.preventDefault(); const n = await save('/members', 'POST', { phone: ph.value, role: ro.value }); if (n) { closeSheet('moreSheet'); toast('📩 Invite sent'); } }; L.append(f); setTimeout(() => ph.focus(), 250); });
+  for (const m of t.members) { const r = el('div', 'tm-mrow'); r.append(el('div', null, m.name + (m.userId === me.id ? ' (you)' : '')), el('small', null, (m.owner ? '👑 Group maker' : m.role === 'admin' ? '🛡️ Admin (sees members)' : w.member) + (m.status === 'invited' ? ' · 📩 not accepted yet' : '') + ' · ' + m.phone));
+    const canEdit = !m.owner && m.userId !== me.id && (t.isOwner || m.role !== 'admin');
+    if (canEdit) { const b = el('button', 'bz-link', '⋯'); b.setAttribute('aria-label', 'Options for ' + m.name); b.onclick = () => sheet(m.name, (L) => { const a = (txt, fn, cls) => { const x = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), txt); x.onclick = () => { closeSheet('moreSheet'); fn(); }; L.append(x); };
+      if (t.isOwner && m.status === 'active') a(m.role === 'admin' ? '⬇️ Remove admin permission' : '🛡️ Give admin permission (can see members)', () => { if (m.role !== 'admin' && !confirm(m.name + ' will see the live location of all members (not other admins). Continue?')) return; save('/members/' + m.userId, 'PUT', { role: m.role === 'admin' ? 'staff' : 'admin' }); });
+      a('Remove from group', () => { if (confirm('Remove ' + m.name + '?')) save('/members/' + m.userId, 'DELETE'); }, 'warn'); }); r.append(b); }
+    ms.append(r); }
+  const add = el('button', 'bz-btn pri', '+ Add ' + w.member.toLowerCase()); add.onclick = () => sheet('+ Add ' + w.member.toLowerCase(), (L) => { const f = el('form', 'bz-form'); const l = el('label'); l.htmlFor = 'tmPh'; l.append(el('span', null, 'Mobile number (on Maata)')); const ph = el('input'); ph.id = 'tmPh'; ph.type = 'tel'; ph.inputMode = 'numeric'; l.append(ph); const rl = el('label'); rl.htmlFor = 'tmRole'; rl.append(el('span', null, 'Permission')); const ro = el('select'); ro.id = 'tmRole'; ro.add(new Option(w.member + ' – shares location, sees nobody else', 'staff')); if (t.isOwner) ro.add(new Option('🛡️ Admin – can also see members', 'admin')); rl.append(ro); f.append(l); if (t.isOwner) f.append(rl); else f.append(ro.parentNode && el('p', 'bz-note', 'Only ' + (t.ownerName || 'the group maker') + ' can give admin permission.')); f.append(el('p', 'info-note', 'They get an invite and must accept before anything is shared.')); const ok = el('button', 'sheet-btn primary', 'Send invite'); ok.type = 'submit'; f.append(ok); f.onsubmit = async (e) => { e.preventDefault(); const n = await save('/members', 'POST', { phone: ph.value, role: ro.value }); if (n) { closeSheet('moreSheet'); toast('📩 Invite sent'); } }; L.append(f); setTimeout(() => ph.focus(), 250); });
   ms.append(add); area.append(ms);
   area.append(el('p', 'bz-note', t.type === 'family' ? '🔒 Each person accepts first, and shares only while their sharing is ON. History is deleted after 35 days.' : '⚖️ Tell your staff in writing that location is shared while they are on duty. Each person accepts first, sees a notification while sharing, and history is deleted after 35 days.'));
   if (t.members.find((m) => m.userId === me.id && m.role === 'admin')) { const del = el('button', 'bz-link warn', 'Delete this group'); del.onclick = async () => { if (!confirm('Delete ' + t.name + ' and all its location history?')) return; try { await api('/api/teams/' + t.id, { method: 'DELETE' }); $('#teamPage')?.remove(); openTeams(); } catch (e) { toast(e.message); } }; area.append(del); }
@@ -11090,6 +11159,7 @@ setTimeout(() => {
     if (!token || !me) return;
     const f = store.get('maata_bk_freq') || 'weekly', last = Number(store.get('maata_bk_last') || 0), asked = Number(store.get('maata_bk_asked') || 0);
     if (!bkDue(last, f) || Date.now() - asked < 86400000 || $('#mapPage')) return; // never while using Maata Maps
+    if (!$('#moreSheet').hidden || document.querySelector('#bizPage,#teamPage,#teamsPage,#ridePage,#orderPage,#mkPage')) return; // never on top of something the person is doing
     store.set('maata_bk_asked', String(Date.now()));
     if (!last && Date.now() - (me.createdAt || 0) < 3 * 86400000) return; // brand-new users: not yet
     sheet('☁️ Time to back up', (list) => {
@@ -12022,8 +12092,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 141;
-const APP_NOTES = ["📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 144;
+const APP_NOTES = ["🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
