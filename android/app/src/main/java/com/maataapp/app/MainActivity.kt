@@ -303,7 +303,10 @@ class MainActivity : Activity() {
         }
         pendingListen?.let { (id, lang) -> pendingListen = null; if (has(Manifest.permission.RECORD_AUDIO)) startListening(id, lang) else listenReply(id, false, "perm") }
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, has(Manifest.permission.ACCESS_FINE_LOCATION) || has(Manifest.permission.ACCESS_COARSE_LOCATION), false); pendingGeo = null }
+        if (pendingBt) { pendingBt = false; val st = BtPrinter.status(this); web.evaluateJavascript("window.maataBtPerm && maataBtPerm(" + org.json.JSONObject.quote(st) + ")", null) }
     }
+    private var pendingBt = false
+    private var btOut = java.io.ByteArrayOutputStream()
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -472,6 +475,20 @@ class MainActivity : Activity() {
             runOnUiThread { startActivity(Intent.createChooser(send, title)) }
             true
         } catch (e: Exception) { false }
+        // 🖨️ Bluetooth receipt printer
+        @JavascriptInterface fun btStatus(): String = BtPrinter.status(this@MainActivity)
+        @JavascriptInterface fun btPrinters(): String = BtPrinter.paired(this@MainActivity)
+        @JavascriptInterface fun btAskPermission() { runOnUiThread {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && BtPrinter.needsPermission(this@MainActivity)) { pendingBt = true; requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQ_PERMS) }
+            else web.evaluateJavascript("window.maataBtPerm && maataBtPerm(" + org.json.JSONObject.quote(BtPrinter.status(this@MainActivity)) + ")", null)
+        } }
+        @JavascriptInterface fun btOpenSettings() { runOnUiThread { try { startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) } catch (e: Exception) { } } }
+        @JavascriptInterface fun btPrintStart(): Boolean { btOut = java.io.ByteArrayOutputStream(); return true }
+        @JavascriptInterface fun btPrintChunk(b64: String): Boolean = try { btOut.write(android.util.Base64.decode(b64, android.util.Base64.DEFAULT)); btOut.size() < 8_000_000 } catch (e: Exception) { false }
+        @JavascriptInterface fun btPrintEnd(address: String, id: String) {
+            val bytes = btOut.toByteArray(); btOut = java.io.ByteArrayOutputStream()
+            BtPrinter.print(this@MainActivity, address, bytes) { ok, msg -> runOnUiThread { web.evaluateJavascript("window.maataBtDone && maataBtDone(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")", null) } }
+        }
         /** Same as shareFileEnd, plus a caption that apps like WhatsApp show with the photo. */
         @JavascriptInterface fun shareFileEndText(mime: String, title: String, text: String): Boolean = try {
             val f = shareOut ?: throw IllegalStateException("no file")
