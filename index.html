@@ -1564,6 +1564,25 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mk-send{width:48px;height:48px;border-radius:50%;border:0;background:#0F7A6E;display:grid;place-items:center;flex:none;cursor:pointer}.mk-send svg{width:22px;height:22px;fill:#fff;stroke:none}
 .mk-pick{display:flex;gap:10px;align-items:center;width:100%;padding:8px 4px;background:none;border:0;text-align:left;color:inherit;cursor:pointer}
 .bz-qr{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;margin:6px 0 10px;border-radius:16px;background:#fff;border:2px solid #0F7A6E;color:#13201E}.bz-qr b{font-size:30px;font-variant-numeric:tabular-nums}.bz-qr small{color:#55625F;text-align:center}.bz-qr img,.bz-qrsvg svg{width:min(260px,70vw);height:min(260px,70vw);display:block}.bz-upinote{flex-basis:100%;margin-top:4px}
+.tm-type{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tm-type button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;border-radius:14px;border:2px solid var(--line);background:var(--card,#fff);color:inherit;cursor:pointer}.tm-type button.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-type i{font-style:normal;font-size:28px}.tm-type small{color:var(--muted);text-align:center;font-size:12px}
+.tm-mine{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;margin-bottom:10px;border-radius:14px;border:1px solid var(--line);background:var(--card,#fff);color:inherit;font:inherit;font-weight:600;cursor:pointer}.tm-mine b{background:#0F7A6E;color:#fff;padding:6px 14px;border-radius:20px}.tm-mine.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-mine.on b{background:#C62828}
+.tm-hero{text-align:center}.tm-hero.on{border:2px solid #0F7A6E;background:rgba(15,122,110,.06)}.tm-hero h3{margin:6px 0 10px}
+.tm-consent{margin:4px 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;line-height:1.45}
+.tm-tabs{margin-bottom:10px}.tm-map{height:46vh;min-height:260px;margin-bottom:10px}
+.tm-count{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px;margin:0 0 10px}.tm-c{background:var(--card,#fff);border:1px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}.tm-c b{font-size:18px;font-variant-numeric:tabular-nums}.tm-c small{font-size:11.5px;color:var(--muted)}.tm-c.g b{color:#0F7A6E}.tm-c.o b{color:#C26A00}.tm-c.r b{color:#C62828}.tm-c.x b{color:var(--muted)}
+.tm-row{padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px}.tm-rtop{display:flex;justify-content:space-between;align-items:center;gap:8px}.tm-rtop b{font-size:15.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm-chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(0,0,0,.06);white-space:nowrap;flex:none}.tm-chip.s-site{background:#DDF3E9;color:#0B6B4F}.tm-chip.s-away{background:#FFEBD2;color:#9A4E00}.tm-chip.s-offline,.tm-chip.s-gps_off,.tm-chip.s-mock{background:#FDE2E1;color:#B42318}
+.tm-acts{display:flex;gap:6px;flex-wrap:wrap}.tm-acts .bz-btn{padding:6px 10px;min-height:34px;text-decoration:none;display:inline-flex;align-items:center}
+.tm-pin{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}.tm-pin b{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1E6FD9;color:#fff;font-size:13px;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}.tm-pin small{background:#fff;color:#13201E;font-size:11px;font-weight:700;padding:1px 6px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.25);white-space:nowrap}
+.tm-pin.s-site b{background:#0F7A6E}.tm-pin.s-away b{background:#E07B00}.tm-pin.s-offline b,.tm-pin.s-gps_off b,.tm-pin.s-mock b{background:#C62828}
+.tm-site{background:rgba(15,122,110,.92);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px;white-space:nowrap}
+.tm-se{background:#13201E;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px}.tm-se.end{background:#C62828}.tm-stop{width:24px;height:24px;border-radius:50%;background:#1E6FD9;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;border:2px solid #fff}.tm-stop.away{background:#E07B00}
+.tm-daybar{display:flex;gap:8px;margin-bottom:10px}.tm-daybar select{flex:1;min-width:0}.tm-daybar select,.tm-daybar input,.tm-pick+button{height:42px}
+.tm-ev{display:flex;flex-direction:column;gap:2px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 2px;color:inherit;font:inherit}.tm-ev small{color:var(--muted)}.tm-ev.bad b{color:#B42318}
+.tm-warn{background:#FDE2E1;color:#B42318;padding:10px;border-radius:10px;font-weight:700}
+.tm-mrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--line)}.tm-mrow small{grid-column:1;color:var(--muted)}.tm-mrow button{grid-row:1/3;grid-column:2;font-size:20px}
+.tm-pick{position:relative}.tm-pickpin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:34px;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.tm-ai{white-space:pre-wrap;font:inherit;font-size:14.5px;line-height:1.55;margin:0 0 10px}
 .od-card.new{border:2px solid #F79009}.od-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.od-tr{padding:4px 0}
 .od-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.od-acts .bz-btn{flex:1 1 auto;align-self:auto}.bz-btn.pri{background:var(--bz-acc);color:#fff}.bz-btn.bad{background:rgba(240,68,56,.1);color:#B42318}
 .od-cancel{color:#B42318!important}
@@ -2343,7 +2362,7 @@ async function start() {
   setTimeout(() => { registerNativePush(); if (!isNativeApp()) { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); } handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
   setTimeout(secStart, 2000);
-  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); }
+  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); const tmq = sp.get('team'); if (tmq) setTimeout(() => api('/api/teams/' + tmq).then((t) => (t.myStatus === 'invited' ? tmConsent(t) : t.admin ? tmAdmin(tmq) : tmStaff(tmq))).catch(() => openTeams()), 900); }
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -2356,7 +2375,7 @@ function connectSocket() {
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
   socket.on('announcement', showNotice);
-  socket.on('connect', secHello); odSocket(); rdSocket(); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
+  socket.on('connect', secHello); odSocket(); rdSocket(); tmSocket(); setTimeout(tmResume, 4000); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
   socket.on('user:removed', ({ id }) => {
     users = users.filter((u) => u.id !== id);
     if (activeId === id) { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; }
@@ -4938,6 +4957,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  team: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M18 7a3 3 0 0 1 0 6c-1.7 0-3-1.3-3-3"/><path d="M18 13s3 2.7 3 5"/></svg>',
   rides: '<svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-2-7h-3M13 10h3l2 7M6 14l2-4h3"/></svg>',
   shops: '<svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 2 3 3 0 0 1-5.4 0A3 3 0 0 1 4 11z"/><path d="M5 13v7h14v-7M10 20v-4h4v4"/></svg>',
   bizpos: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
@@ -6249,6 +6269,266 @@ function rdShare(id) {
   try { navigator.wakeLock && navigator.wakeLock.request('screen').then((w) => (RD.wake = w)).catch(() => {}); } catch {}
 }
 function rdStop() { if (RD.watch != null) try { navigator.geolocation.clearWatch(RD.watch); } catch {} clearInterval(RD.timer); RD.watch = null; RD.job = null; try { RD.wake && RD.wake.release(); } catch {} RD.wake = null; }
+// ==================== 📍 TEAM TRACKING (field staff on duty, admins watch live) ====================
+const TM = { teams: [], cur: null, tab: 'live', map: null, mk: new Map(), watch: null, timer: null, buf: [], sending: false, poll: null, permCb: null };
+const TM_STATE = { site: ['🟢', 'At camp'], away: ['🟠', 'Away from camp'], free: ['🟢', 'Live'], offline: ['🔴', 'No signal'], gps_off: ['🔴', 'GPS off'], mock: ['🚫', 'FAKE GPS'], waiting: ['⏳', 'Starting…'], off: ['⚪', 'Not sharing'] };
+const TM_EV = { duty_on: '▶️', duty_off: '⏹️', auto_off: '⏰', enter: '🟢', leave: '🚶', away: '🟠', offline: '🔴', back: '📶', gps_off: '📵', gps_on: '📍', mock: '🚫', joined: '👋', left: '👋' };
+const tmApp = () => !!(window.MaataAndroid && window.MaataAndroid.trackStart);
+const tmAgo = (ts) => { if (!ts) return '—'; const s = Math.round((Date.now() - ts) / 1000); return s < 60 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' h ago'; };
+const tmTime = (ts) => (ts ? new Date(ts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '—');
+const tmToday = () => { const d = new Date(Date.now() + 330 * 60000); return d.toISOString().slice(0, 10); };
+window.maataTrackPerm = (st) => { const f = TM.permCb; TM.permCb = null; if (f) f(st); };
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TMW = (t) => (t && t.type === 'family'
+  ? { on: '▶ Share my location', off: '⏹ Stop sharing', onNow: '📍 SHARING my location', offNow: 'Not sharing', hint: 'Tap the button to share your live location with your family', member: 'Member', icon: '👨‍👩‍👧' }
+  : { on: '▶ Start duty', off: '⏹ End duty', onNow: '📍 ON DUTY', offNow: 'Off duty', hint: 'Press Start duty when you begin work', member: 'Staff', icon: '👔' });
+// ---- list of my teams ----
+async function openTeams() {
+  const { body } = odPage('teamsPage', '📍 Live location groups', 'Work team or family');
+  let r = []; try { r = await api('/api/teams'); } catch (e) { return body.append(el('p', 'bz-empty', e.message)); }
+  TM.teams = r;
+  const list = el('div', 'bz-card');
+  if (!r.length) list.append(el('p', 'bz-empty', 'No groups yet. Make one for your staff or your family. People you add see the invite here.'));
+  for (const t of r) {
+    const w = TMW(t), b = el('button', 'bz-prow'); const st = t.myStatus === 'invited' ? '📩 Invite · tap to read' : (t.me && t.me.onDuty ? '📍 You are sharing · ' : '') + (t.admin ? ((t.members || []).filter((m) => m.onDuty).length) + ' sharing now' : w.member);
+    b.append(el('b', null, w.icon + ' ' + t.name), el('small', null, st)); b.onclick = () => (t.myStatus === 'invited' ? tmConsent(t) : t.admin ? tmAdmin(t.id) : tmStaff(t.id)); list.append(b);
+  }
+  const mk = el('button', 'bz-btn pri', '+ New group'); mk.onclick = tmCreate;
+  body.append(list, mk, el('p', 'bz-note', '🔒 A person shares location only after they accept, and only while they turn sharing ON. Their phone shows a notification the whole time.'));
+}
+function tmCreate() {
+  sheet('📍 New group', (L) => {
+    const f = el('form', 'bz-form'); let type = 'work';
+    const l = el('label'); l.htmlFor = 'tmName'; l.append(el('span', null, 'Group name')); const n = el('input'); n.id = 'tmName'; n.placeholder = 'e.g. Sri Finance – Collections'; l.append(n);
+    const ch = el('div', 'tm-type'); for (const [k, ic, tl, sub] of [['work', '👔', 'Work team', 'Manager sees staff on duty'], ['family', '👨‍👩‍👧', 'Family', 'Family members see each other']]) { const b = el('button', k === type ? 'on' : null); b.type = 'button'; b.append(el('i', null, ic), el('b', null, tl), el('small', null, sub)); b.onclick = () => { type = k; ch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); n.placeholder = k === 'family' ? 'e.g. Reddy family' : 'e.g. Sri Finance – Collections'; }; ch.append(b); }
+    f.append(ch, l);
+    const ok = el('button', 'sheet-btn primary', 'Create'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => { e.preventDefault(); try { const t = await api('/api/teams', { method: 'POST', body: JSON.stringify({ name: n.value, type }) }); closeSheet('moreSheet'); $('#teamsPage')?.remove(); TM.tab = 'setup'; tmAdmin(t.id); } catch (x) { toast(x.message); } };
+    L.append(f); setTimeout(() => n.focus(), 250);
+  });
+}
+// ---- staff: read and accept ----
+function tmConsent(t) {
+  sheet('📍 ' + t.name, (L) => {
+    const box = el('div', 'bz-form');
+    const w = TMW(t); box.append(el('p', 'info-note', 'You were added to this ' + (t.type === 'family' ? 'family group' : 'work team') + '. Please read before you accept:'));
+    const ul = el('ul', 'tm-consent');
+    for (const x of ['👀 Who sees: ' + (t.admins.join(', ') || 'the group admin') + '.', '📍 What: your live location, battery %, and whether a fake-GPS app is used.', '🔘 When: ONLY after you press "' + w.on.slice(2) + '". It stays on until you press "' + w.off.slice(2) + '".', '🔔 Your phone shows a notification the whole time you are sharing.', '🗑️ Location history is deleted after 35 days.', '🚪 You can leave the group any time.']) ul.append(el('li', null, x));
+    box.append(ul);
+    const al = el('label', 'sec-pick'); const cb = el('input'); cb.type = 'checkbox'; al.append(cb, el('span', null, 'I understand and agree to share my location while sharing is ON.')); box.append(al);
+    const ok = el('button', 'sheet-btn primary', '✅ Accept & join'); ok.onclick = async () => { if (!cb.checked) return toast('Tick the box to agree'); try { await api('/api/teams/' + t.id + '/accept', { method: 'POST', body: JSON.stringify({ agree: true }) }); closeSheet('moreSheet'); $('#teamsPage')?.remove(); toast('Joined ' + t.name); tmStaff(t.id); } catch (e) { toast(e.message); } };
+    const no = el('button', 'sheet-btn', 'Do not join'); no.onclick = async () => { if (!confirm('Decline this team?')) return; try { await api('/api/teams/' + t.id + '/leave', { method: 'POST', body: '{}' }); closeSheet('moreSheet'); openTeams(); } catch (e) { toast(e.message); } };
+    box.append(ok, no); L.append(box);
+  });
+}
+// ---- staff: duty screen ----
+async function tmStaff(id) {
+  let t; try { t = await api('/api/teams/' + id); } catch (e) { return toast(e.message); }
+  if (t.myStatus === 'invited') return tmConsent(t);
+  if (t.admin) return tmAdmin(id); // can see everyone: the live map page (with their own share switch)
+  const w = TMW(t); const { body } = odPage('teamPage', t.name, w.icon + ' ' + w.member);
+  const me = t.me || {}, on = me.onDuty;
+  const hero = el('div', 'bz-card tm-hero' + (on ? ' on' : ''));
+  hero.append(el('small', null, on ? w.onNow + ' since ' + tmTime(me.since) : w.offNow), el('h3', null, on ? (me.last ? '✅ Your location is going' : '⏳ Starting…') : w.hint));
+  if (on) hero.append(el('p', 'bz-note', 'Last location sent: ' + tmAgo(me.last && me.last.t) + (tmApp() ? ' · keeps working when the phone is locked' : ' · keep Maata open')));
+  const b = el('button', 'bz-big' + (on ? ' alt' : ''), on ? w.off : w.on); b.onclick = async () => { b.disabled = true; if (on) await tmDutyOff(t); else await tmDutyOn(t); b.disabled = false; $('#teamPage')?.remove(); tmStaff(id); };
+  hero.append(b); body.append(hero);
+  if (t.mySites.length) { const c = el('div', 'bz-card'); c.append(el('h3', null, '🏕️ Your camps / work places')); for (const s of t.mySites) c.append(el('div', 'bz-tr', '📍 ' + s.name + ' · ' + s.r + ' m area')); body.append(c); }
+  try { const d = await api('/api/teams/' + id + '/day'); const c = el('div', 'bz-card'); c.append(el('h3', null, '🗓️ Today'), el('p', 'bz-note', d.first ? 'From ' + tmTime(d.first) + ' to ' + tmTime(d.lastAt) + ' · ' + d.km + ' km' : 'Not shared today yet.')); body.append(c); } catch {}
+  body.append(el('p', 'bz-note', '🔒 Seen only by: ' + (t.admins.join(', ') || 'the group admin') + '. Only while sharing is ON.'));
+  if (on) { const pg0 = $('#teamPage'); setTimeout(() => { if ($('#teamPage') === pg0 && document.body.contains(pg0) && !$('#moreSheet:not([hidden])')) { pg0.remove(); tmStaff(id); } }, me.state === 'waiting' || !me.last ? 6000 : 60000); }
+  const lv = el('button', 'bz-link', 'Leave this group'); lv.onclick = async () => { if (!confirm('Leave ' + t.name + '? The admin will be told.')) return; try { await tmDutyOff(t, true); await api('/api/teams/' + id + '/leave', { method: 'POST', body: '{}' }); $('#teamPage')?.remove(); openTeams(); } catch (e) { toast(e.message); } }; body.append(lv);
+}
+function tmPerm() { // location permission + GPS on (Android app); browser asks by itself
+  return new Promise((ok) => {
+    if (!tmApp()) return ok('ok');
+    const A = window.MaataAndroid; const st = A.trackStatus();
+    if (st === 'ok') return ok('ok');
+    if (st === 'gps_off') { toast('Switch on Location (GPS), then press Start again'); A.openLocationSettings(); return ok('gps_off'); }
+    TM.permCb = (s2) => { if (s2 === 'gps_off') { toast('Switch on Location (GPS), then press Start again'); A.openLocationSettings(); } else if (s2 !== 'ok') toast('Allow location for Maata to start duty'); ok(s2); };
+    A.trackAskPermission();
+  });
+}
+async function tmDutyOn(t) {
+  if ((await tmPerm()) !== 'ok') return;
+  let r; try { r = await api('/api/teams/' + t.id + '/duty', { method: 'POST', body: JSON.stringify({ on: true }) }); } catch (e) { return toast(e.message); }
+  tmTrack(r); toast('📍 Sharing ON. Seen by ' + (t.admins.join(', ') || 'your group admin'));
+}
+async function tmDutyOff(t, quiet) {
+  try { await api('/api/teams/' + t.id + '/duty', { method: 'POST', body: JSON.stringify({ on: false }) }); } catch (e) { if (!quiet) toast(e.message); }
+  tmStopTrack(); if (!quiet) toast('⏹ Location sharing stopped.');
+}
+// start sending: native service (works locked / in background) or the open page (browser / old app)
+function tmTrack(t) {
+  TM.duty = { id: t.id, name: t.name, interval: t.interval || 60, endAt: t.endAt };
+  secPos().then((p) => { if (p && p.lat) tmPush({ t: Date.now(), lat: p.lat, lng: p.lng, acc: p.acc || 30 }); }); // first point at once
+  if (tmApp()) { window.MaataAndroid.trackStart(JSON.stringify({ base: location.origin, token, teamId: t.id, team: t.name, interval: TM.duty.interval, endAt: t.endAt })); return; }
+  if (!navigator.geolocation) return;
+  tmStopWeb();
+  TM.watch = navigator.geolocation.watchPosition((p) => { const c = p.coords, last = TM.buf[TM.buf.length - 1]; if (!last || Date.now() - last.t > TM.duty.interval * 800) TM.buf.push({ t: Date.now(), lat: c.latitude, lng: c.longitude, acc: c.accuracy, spd: c.speed || 0 }); }, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
+  TM.timer = setInterval(tmFlush, TM.duty.interval * 1000);
+}
+function tmPush(p) { TM.buf.push(p); tmFlush(); }
+async function tmFlush() {
+  if (!TM.duty || TM.sending || !TM.buf.length) return; TM.sending = true;
+  const pts = TM.buf.splice(0, TM.buf.length); let bat = null; try { if (navigator.getBattery) bat = Math.round((await navigator.getBattery()).level * 100); } catch {}
+  try { const r = await api('/api/teams/' + TM.duty.id + '/loc', { method: 'POST', body: JSON.stringify({ pts: pts.map((p) => ({ ...p, bat })) }) }); if (!r.on) tmStopTrack(); }
+  catch { TM.buf.unshift(...pts.slice(-200)); }
+  TM.sending = false;
+}
+function tmStopWeb() { if (TM.watch != null) navigator.geolocation.clearWatch(TM.watch); TM.watch = null; clearInterval(TM.timer); TM.timer = null; }
+function tmStopTrack() { tmStopWeb(); TM.duty = null; TM.buf = []; if (tmApp()) try { window.MaataAndroid.trackStop(); } catch {} }
+async function tmResume() { // app opened while on duty: make sure sharing is running
+  let r = []; try { r = await api('/api/teams'); } catch { return; }
+  const t = r.find((x) => x.me && x.me.onDuty); if (!t) { if (tmApp() && window.MaataAndroid.trackRunning()) window.MaataAndroid.trackStop(); return; }
+  if (tmApp() ? !window.MaataAndroid.trackRunning() : !TM.duty) tmTrack(t);
+}
+// ---- admin ----
+async function tmAdmin(id) {
+  let t; try { t = await api('/api/teams/' + id); } catch (e) { return toast(e.message); }
+  if (!t.admin) return tmStaff(id);
+  const w = TMW(t); TM.cur = t; const { pg, body } = odPage('teamPage', w.icon + ' ' + t.name, '👑 Admin · ' + t.members.filter((m) => m.status === 'active').length + ' members');
+  const tabs = el('div', 'bz-chips tm-tabs'); if (!['live', 'day', 'setup'].includes(TM.tab)) TM.tab = 'live';
+  for (const [k, l] of [['live', '📍 Live'], ['day', '🗓️ History'], ['setup', '👥 Members']]) { const b = el('button', TM.tab === k ? 'on' : null, l); b.onclick = () => { TM.tab = k; tabs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(); }; tabs.append(b); }
+  const area = el('div'); body.append(tabs, area);
+  const draw = () => { clearInterval(TM.poll); TM.map = null; TM.mk.clear(); area.innerHTML = ''; ({ live: tmLive, day: tmDayTab, setup: tmSetup })[TM.tab](area, TM.cur); };
+  TM.redraw = draw; draw();
+  const obs = new MutationObserver(() => { if (!document.body.contains(pg)) { clearInterval(TM.poll); obs.disconnect(); } }); obs.observe(document.body, { childList: true });
+}
+function tmCircle(lng, lat, r) { const pts = []; for (let i = 0; i <= 48; i++) { const a = (i / 48) * Math.PI * 2; pts.push([lng + (r / (111320 * Math.cos(lat * Math.PI / 180))) * Math.cos(a), lat + (r / 110540) * Math.sin(a)]); } return pts; }
+async function tmMapIn(box, sites, center) {
+  try { await loadMapLibre(); } catch { box.append(el('p', 'bz-note', 'Map could not load. Check internet.')); return null; }
+  const c = center || (sites[0] ? [sites[0].lng, sites[0].lat] : [79.1, 13.2]);
+  const m = new maplibregl.Map({ container: box, style: MAP_STYLES.colour.url, center: c, zoom: 13, attributionControl: { compact: true } });
+  await new Promise((ok) => { m.on('load', ok); setTimeout(ok, 6000); });
+  try {
+    m.addSource('tm-sites', { type: 'geojson', data: { type: 'FeatureCollection', features: sites.map((s) => ({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [tmCircle(s.lng, s.lat, s.r)] } })) } });
+    m.addLayer({ id: 'tm-sites-f', type: 'fill', source: 'tm-sites', paint: { 'fill-color': '#0F7A6E', 'fill-opacity': 0.12 } });
+    m.addLayer({ id: 'tm-sites-l', type: 'line', source: 'tm-sites', paint: { 'line-color': '#0F7A6E', 'line-width': 2, 'line-dasharray': [2, 1] } });
+  } catch {}
+  for (const s of sites) new maplibregl.Marker({ element: el('div', 'tm-site', '🏕️ ' + s.name) }).setLngLat([s.lng, s.lat]).addTo(m);
+  return m;
+}
+function tmPin(r) { const st = TM_STATE[r.state] || TM_STATE.free; const e = el('div', 'tm-pin s-' + r.state); e.append(el('b', null, (r.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()), el('small', null, st[0] + ' ' + r.name.split(' ')[0])); return e; }
+async function tmLive(area, t) {
+  const rows = () => t.members.filter((m) => m.status === 'active' && (m.userId !== me.id || m.onDuty));
+  const mine = t.members.find((m) => m.userId === me.id) || {};
+  const sw = el('button', 'tm-mine' + (mine.onDuty ? ' on' : '')); sw.append(el('span', null, mine.onDuty ? '📍 My location: ON' : '📍 My location: OFF'), el('b', null, mine.onDuty ? 'Stop' : 'Share'));
+  sw.onclick = async () => { sw.disabled = true; if (mine.onDuty) await tmDutyOff(t); else await tmDutyOn(t); try { Object.assign(t, await api('/api/teams/' + t.id)); } catch {} TM.redraw(); };
+  const cnt = el('div', 'tm-count'); const box = el('div', 'od-map tm-map'); const list = el('div', 'bz-card');
+  area.append(sw, cnt, box, list);
+  if (t.type !== 'family') { const ai = el('button', 'bz-btn', '🤖 AI report of today'); ai.onclick = () => tmAi(t); area.append(ai); }
+  const paint = () => {
+    const R = rows(), c = (k) => R.filter((r) => (k === 'on' ? r.onDuty : r.onDuty && r.state === k)).length;
+    cnt.innerHTML = ''; for (const [n, l, cls] of [[c('on') - c('offline') - c('gps_off') - c('mock'), 'Sharing now', 'g'], [c('offline') + c('gps_off') + c('mock'), 'Problem', 'r'], [R.filter((r) => !r.onDuty).length, 'Not sharing', 'x']]) { const d = el('div', 'tm-c ' + cls); d.append(el('b', null, String(n)), el('small', null, l)); cnt.append(d); }
+    list.innerHTML = ''; if (!R.length) list.append(el('p', 'bz-empty', 'Nobody added yet. Go to 👥 Members → + Add.'));
+    const order = { mock: 0, gps_off: 1, offline: 2, away: 3, waiting: 4, free: 5, site: 6, off: 7 };
+    for (const r of [...R].sort((a, b) => (order[a.state] ?? 9) - (order[b.state] ?? 9))) {
+      const st = TM_STATE[r.state] || TM_STATE.free, row = el('div', 'tm-row s-' + r.state);
+      const top = el('div', 'tm-rtop'); top.append(el('b', null, r.name), el('span', 'tm-chip s-' + r.state, st.join(' ')));
+      const info = r.onDuty ? ['updated ' + tmAgo(r.last && r.last.t), r.last && r.last.bat != null ? '🔋 ' + r.last.bat + '%' : '', r.km ? r.km + ' km today' : '', 'since ' + tmTime(r.since)].filter(Boolean).join(' · ') : 'Location sharing is OFF';
+      const acts = el('div', 'tm-acts');
+      const day = el('button', 'bz-btn', '🗺️ History'); day.onclick = () => { TM.tab = 'day'; TM.dayUid = r.userId; TM.redraw(); $('#teamPage .tm-tabs button:nth-child(2)')?.classList.add('on'); $('#teamPage .tm-tabs button:nth-child(1)')?.classList.remove('on'); };
+      const call = el('a', 'bz-btn', '📞 Call'); call.href = 'tel:' + r.phone;
+      const chat = el('button', 'bz-btn', '💬'); chat.setAttribute('aria-label', 'Chat'); chat.onclick = async () => { try { if (typeof ensureUser === 'function') await ensureUser(r.userId); } catch {} document.querySelectorAll('#teamPage,#teamsPage').forEach((x) => x.remove()); setTab('chats'); openChat(r.userId); };
+      if (r.last && TM.map) { const go = el('button', 'bz-btn', '🎯'); go.setAttribute('aria-label', 'Show on map'); go.onclick = () => { TM.map.flyTo({ center: [r.last.lng, r.last.lat], zoom: 16 }); box.scrollIntoView({ behavior: 'smooth' }); }; acts.append(go); }
+      acts.append(day, call, chat); row.append(top, el('small', 'bz-note', info), acts); list.append(row);
+    }
+    if (TM.map) { const seen = new Set();
+      for (const r of R) { if (!r.onDuty || !r.last) continue; seen.add(r.userId); let k = TM.mk.get(r.userId); if (!k) { k = new maplibregl.Marker({ element: tmPin(r) }).setLngLat([r.last.lng, r.last.lat]).addTo(TM.map); TM.mk.set(r.userId, k); } else { k.setLngLat([r.last.lng, r.last.lat]); const ne = tmPin(r), oe = k.getElement(); oe.className = ne.className; oe.innerHTML = ne.innerHTML; } }
+      for (const [uid, k] of TM.mk) if (!seen.has(uid)) { k.remove(); TM.mk.delete(uid); } }
+  };
+  paint();
+  TM.map = await tmMapIn(box, t.sites || []);
+  if (TM.map) { paint(); const pts = rows().filter((r) => r.onDuty && r.last).map((r) => [r.last.lng, r.last.lat]).concat((t.sites || []).map((s) => [s.lng, s.lat])); if (pts.length) { const b = new maplibregl.LngLatBounds(pts[0], pts[0]); pts.forEach((p) => b.extend(p)); TM.map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 0 }); } }
+  TM.paint = paint;
+  TM.poll = setInterval(async () => { if (!$('#teamPage') || TM.tab !== 'live') return clearInterval(TM.poll); try { const n = await api('/api/teams/' + t.id); Object.assign(t, n); TM.cur = t; paint(); } catch {} }, 30000);
+}
+async function tmDayTab(area, t) {
+  const staff = t.members.filter((m) => m.status === 'active');
+  const bar = el('div', 'tm-daybar'); const sel = el('select'); sel.setAttribute('aria-label', 'Staff'); for (const m of staff) sel.add(new Option(m.name + (m.role === 'admin' ? ' (admin)' : ''), m.userId)); sel.value = TM.dayUid || (staff.find((m) => m.role === 'staff') || staff[0] || {}).userId || '';
+  const dt = el('input'); dt.type = 'date'; dt.value = TM.dayDate || tmToday(); dt.max = tmToday(); dt.setAttribute('aria-label', 'Date');
+  bar.append(sel, dt); const out = el('div'); area.append(bar, out);
+  const load = async () => {
+    TM.dayUid = sel.value; TM.dayDate = dt.value; out.innerHTML = ''; out.append(el('p', 'bz-load', 'Loading…'));
+    let d; try { d = await api('/api/teams/' + t.id + '/day?uid=' + sel.value + '&day=' + dt.value); } catch (e) { out.innerHTML = ''; return out.append(el('p', 'bz-empty', e.message)); }
+    out.innerHTML = '';
+    const tiles = el('div', 'tm-count'); for (const [v, l, cls] of [[d.first ? tmTime(d.first) : '—', 'Started', ''], [d.lastAt ? tmTime(d.lastAt) : '—', 'Last seen', ''], [d.km + ' km', 'Travelled', ''], [String(d.stops.length), 'Stops', '']].concat((t.sites || []).length ? [[d.siteMin + ' min', 'At camp', 'g'], [d.awayMin + ' min', 'Away', d.awayMin > 30 ? 'o' : '']] : [])) { const x = el('div', 'tm-c ' + cls); x.append(el('b', null, v), el('small', null, l)); tiles.append(x); } out.append(tiles);
+    if (d.mock) out.append(el('p', 'tm-warn', '🚫 A fake-GPS app was used on this day. Locations may be false.'));
+    if (!d.pts.length) { out.append(el('p', 'bz-empty', 'No location on this day.')); }
+    else {
+      const box = el('div', 'od-map tm-map'); out.append(box);
+      const m = await tmMapIn(box, t.sites || [], [d.pts[0].lng, d.pts[0].lat]);
+      if (m) {
+        try { m.addSource('tm-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: d.pts.map((p) => [p.lng, p.lat]) } } }); m.addLayer({ id: 'tm-route', type: 'line', source: 'tm-route', paint: { 'line-color': '#1E6FD9', 'line-width': 4, 'line-opacity': 0.8 } }); } catch {}
+        const a = d.pts[0], z = d.pts[d.pts.length - 1];
+        new maplibregl.Marker({ element: el('div', 'tm-se', '▶ ' + tmTime(a.t)) }).setLngLat([a.lng, a.lat]).addTo(m);
+        new maplibregl.Marker({ element: el('div', 'tm-se end', '⏹ ' + tmTime(z.t)) }).setLngLat([z.lng, z.lat]).addTo(m);
+        d.stops.forEach((s, i) => new maplibregl.Marker({ element: el('div', 'tm-stop' + (s.away ? ' away' : ''), String(i + 1)) }).setLngLat([s.lng, s.lat]).addTo(m));
+        const b = new maplibregl.LngLatBounds([a.lng, a.lat], [a.lng, a.lat]); d.pts.forEach((p) => b.extend([p.lng, p.lat])); m.fitBounds(b, { padding: 50, maxZoom: 16, duration: 0 });
+      }
+      const sc = el('div', 'bz-card'); sc.append(el('h3', null, '⏸️ Stops (10+ min)'));
+      if (!d.stops.length) sc.append(el('p', 'bz-note', 'No long stops.'));
+      d.stops.forEach((s, i) => { const r = el('div', 'tm-ev' + (s.away ? ' bad' : '')); r.append(el('b', null, (i + 1) + '. ' + tmTime(s.from) + ' – ' + tmTime(s.to) + ' (' + s.min + ' min)'), el('small', null, s.site ? '🏕️ At ' + s.site : s.away ? '🟠 ' + (s.away / 1000).toFixed(1) + ' km from camp' : '📍 Stayed here')); const o = el('button', 'bz-link', 'Open in Maata Maps'); o.onclick = () => { $('#teamPage')?.remove(); openMaps({ name: 'Stop ' + (i + 1) + ' · ' + tmTime(s.from), lat: s.lat, lng: s.lng }); }; r.append(o); sc.append(r); });
+      out.append(sc);
+    }
+    const ec = el('div', 'bz-card'); ec.append(el('h3', null, '🔔 Events')); if (!d.events.length) ec.append(el('p', 'bz-note', 'Nothing.'));
+    for (const e of [...d.events].reverse()) { const r = el('div', 'tm-ev' + (['away', 'offline', 'gps_off', 'mock'].includes(e.kind) ? ' bad' : '')); r.append(el('b', null, (TM_EV[e.kind] || '•') + ' ' + tmTime(e.at)), el('small', null, e.text)); ec.append(r); }
+    out.append(ec);
+  };
+  sel.onchange = load; dt.onchange = load; if (sel.value) load(); else out.append(el('p', 'bz-empty', 'Add staff first.'));
+}
+async function tmAlerts(area, t) {
+  const dt = el('input'); dt.type = 'date'; dt.value = tmToday(); dt.max = tmToday(); dt.setAttribute('aria-label', 'Date'); const out = el('div', 'bz-card'); area.append(dt, out);
+  const load = async () => { out.innerHTML = ''; let r = []; try { r = await api('/api/teams/' + t.id + '/events?day=' + dt.value); } catch (e) { return out.append(el('p', 'bz-empty', e.message)); }
+    const imp = el('label', 'sec-pick'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = TM.onlyBad !== false; cb.onchange = () => { TM.onlyBad = cb.checked; load(); }; imp.append(cb, el('span', null, 'Only problems')); out.append(imp);
+    const list = r.filter((e) => !cb.checked || ['away', 'offline', 'gps_off', 'mock', 'auto_off', 'left'].includes(e.kind));
+    if (!list.length) out.append(el('p', 'bz-empty', cb.checked ? '✅ No problems on this day.' : 'Nothing on this day.'));
+    for (const e of list) { const x = el('button', 'tm-ev' + (['away', 'offline', 'gps_off', 'mock'].includes(e.kind) ? ' bad' : '')); x.append(el('b', null, (TM_EV[e.kind] || '•') + ' ' + e.name + ' · ' + tmTime(e.at)), el('small', null, e.text)); x.onclick = () => { TM.tab = 'day'; TM.dayUid = e.userId; TM.dayDate = dt.value; TM.redraw(); }; out.append(x); } };
+  dt.onchange = load; load();
+}
+async function tmAi(t) {
+  toast('🤖 Making the report…');
+  let r; try { r = await api('/api/teams/' + t.id + '/ai', { method: 'POST', body: JSON.stringify({ day: tmToday() }) }); } catch (e) { return toast(e.message); }
+  sheet('🤖 Today\'s team report', (L) => { L.append(el('pre', 'tm-ai', r.text)); const s = el('button', 'sheet-btn', '⇪ Share report'); s.onclick = () => shareTextOut(t.name + ' · ' + tmToday() + '\n' + r.text, 'Share report'); L.append(s); });
+}
+function tmSetup(area, t) {
+  const save = async (path, method, body) => { try { const n = await api('/api/teams/' + t.id + path, { method, body: JSON.stringify(body || {}) }); Object.assign(t, n); TM.cur = t; TM.redraw(); return n; } catch (e) { toast(e.message); return null; } };
+  // staff
+  const w = TMW(t), ms = el('div', 'bz-card'); ms.append(el('h3', null, '👥 Members (' + t.members.length + ')'));
+  for (const m of t.members) { const r = el('div', 'tm-mrow'); r.append(el('div', null, m.name), el('small', null, (m.role === 'admin' ? '👑 Sees everyone' : w.member) + (m.status === 'invited' ? ' · 📩 not accepted yet' : '') + ' · ' + m.phone));
+    const b = el('button', 'bz-link', '⋯'); b.setAttribute('aria-label', 'Options for ' + m.name); b.onclick = () => sheet(m.name, (L) => { const a = (txt, fn, cls) => { const x = el('button', 'sheet-btn' + (cls ? ' ' + cls : ''), txt); x.onclick = () => { closeSheet('moreSheet'); fn(); }; L.append(x); }; a(m.role === 'admin' ? 'Make normal ' + w.member.toLowerCase() + ' (sees only self)' : '👑 Let them see everyone', () => save('/members/' + m.userId, 'PUT', { role: m.role === 'admin' ? 'staff' : 'admin' })); a('Remove from group', () => { if (confirm('Remove ' + m.name + '?')) save('/members/' + m.userId, 'DELETE'); }, 'warn'); }); r.append(b); ms.append(r); }
+  const add = el('button', 'bz-btn pri', '+ Add ' + w.member.toLowerCase()); add.onclick = () => sheet('+ Add ' + w.member.toLowerCase(), (L) => { const f = el('form', 'bz-form'); const l = el('label'); l.htmlFor = 'tmPh'; l.append(el('span', null, 'Mobile number (on Maata)')); const ph = el('input'); ph.id = 'tmPh'; ph.type = 'tel'; ph.inputMode = 'numeric'; l.append(ph); const rl = el('label'); rl.htmlFor = 'tmRole'; rl.append(el('span', null, 'Role')); const ro = el('select'); ro.id = 'tmRole'; ro.add(new Option(t.type === 'family' ? 'Family member (sees everyone)' : 'Staff (shares location, sees only self)', t.type === 'family' ? 'admin' : 'staff')); ro.add(new Option(t.type === 'family' ? 'Child / shares only (sees only self)' : 'Manager / GM (sees everyone)', t.type === 'family' ? 'staff' : 'admin')); rl.append(ro); f.append(l, rl, el('p', 'info-note', 'They get an invite and must accept before anything is shared.')); const ok = el('button', 'sheet-btn primary', 'Send invite'); ok.type = 'submit'; f.append(ok); f.onsubmit = async (e) => { e.preventDefault(); const n = await save('/members', 'POST', { phone: ph.value, role: ro.value }); if (n) { closeSheet('moreSheet'); toast('📩 Invite sent'); } }; L.append(f); setTimeout(() => ph.focus(), 250); });
+  ms.append(add); area.append(ms);
+  area.append(el('p', 'bz-note', t.type === 'family' ? '🔒 Each person accepts first, and shares only while their sharing is ON. History is deleted after 35 days.' : '⚖️ Tell your staff in writing that location is shared while they are on duty. Each person accepts first, sees a notification while sharing, and history is deleted after 35 days.'));
+  if (t.members.find((m) => m.userId === me.id && m.role === 'admin')) { const del = el('button', 'bz-link warn', 'Delete this group'); del.onclick = async () => { if (!confirm('Delete ' + t.name + ' and all its location history?')) return; try { await api('/api/teams/' + t.id, { method: 'DELETE' }); $('#teamPage')?.remove(); openTeams(); } catch (e) { toast(e.message); } }; area.append(del); }
+}
+function tmSiteForm(t, save) {
+  sheet('🏕️ Add camp / work place', async (L) => {
+    const f = el('div', 'bz-form');
+    const nl = el('label'); nl.htmlFor = 'tmSN'; nl.append(el('span', null, 'Camp name')); const nm = el('input'); nm.id = 'tmSN'; nm.placeholder = 'e.g. Mangunta village camp'; nl.append(nm); f.append(nl);
+    const rl = el('label'); rl.htmlFor = 'tmSR'; rl.append(el('span', null, 'Area size (staff inside this circle = at camp)')); const rs = el('select'); rs.id = 'tmSR'; for (const [v, x] of [[100, '100 m (one building)'], [300, '300 m (a street)'], [500, '500 m'], [1000, '1 km (a village)'], [2000, '2 km'], [5000, '5 km (a town)']]) rs.add(new Option(x, v)); rs.value = '500'; rl.append(rs); f.append(rl);
+    f.append(el('p', 'info-note', 'Move the map so the 📍 pin is on the camp, or tap "Use my location" if you are there.'));
+    const wrap = el('div', 'tm-pick'); const box = el('div', 'od-map'); const pin = el('div', 'tm-pickpin', '📍'); wrap.append(box, pin); f.append(wrap);
+    const here = el('button', 'sheet-btn', '📍 Use my location'); f.append(here);
+    const who = el('div', 'tm-who'); who.append(el('div', 'th-title', 'Which staff work here? (none ticked = all staff)'));
+    const picks = []; for (const m of t.members.filter((x) => x.status !== 'removed' && x.role === 'staff')) { const l = el('label', 'sec-pick'); const c = el('input'); c.type = 'checkbox'; l.append(c, el('span', null, m.name)); who.append(l); picks.push([m.userId, c]); } f.append(who);
+    const ok = el('button', 'sheet-btn primary', 'Save camp'); f.append(ok); L.append(f);
+    const c0 = (t.sites && t.sites[0]) ? [t.sites[0].lng, t.sites[0].lat] : null;
+    let m = null; try { await loadMapLibre(); m = new maplibregl.Map({ container: box, style: MAP_STYLES.colour.url, center: c0 || [79.1, 13.2], zoom: c0 ? 14 : 5, attributionControl: { compact: true } }); } catch { box.append(el('p', 'bz-note', 'Map could not load.')); }
+    const useHere = async () => { here.textContent = '📍 Getting location…'; const p = await secPos(); here.textContent = '📍 Use my location'; if (p && p.lat && m) m.jumpTo({ center: [p.lng, p.lat], zoom: 15 }); else toast('Could not get location'); };
+    here.onclick = useHere; if (!c0) useHere();
+    ok.onclick = async () => { if (!m) return toast('Map not ready'); const c = m.getCenter(); const n = await save('/sites', 'POST', { name: nm.value, lat: c.lat, lng: c.lng, r: Number(rs.value), staff: picks.filter(([, c2]) => c2.checked).map(([u]) => u) }); if (n) { closeSheet('moreSheet'); toast('🏕️ Camp saved'); } };
+  });
+}
+function tmSocket() {
+  if (!socket) return;
+  socket.on('team:duty', (p) => { if (!p.on) { tmStopTrack(); toast('⏹ Location sharing stopped: ' + (p.why || '')); } });
+  socket.on('team:invite', () => toast('📩 You were added to a location group. Menu → Live location'));
+  socket.on('team:live', (p) => { if (TM.cur && TM.cur.id === p.teamId && $('#teamPage')) { const i = TM.cur.members.findIndex((m) => m.userId === p.row.userId); if (i > -1) TM.cur.members[i] = { ...TM.cur.members[i], ...p.row }; if (TM.tab === 'live' && TM.paint) TM.paint(); } });
+  socket.on('team:event', (p) => { if (['away', 'offline', 'gps_off', 'mock', 'auto_off', 'left'].includes(p.event.kind)) toast((TM_EV[p.event.kind] || '📍') + ' ' + p.event.name + ': ' + p.event.text); if (TM.cur && TM.cur.id === p.teamId && TM.tab === 'alerts' && TM.redraw) TM.redraw(); });
+}
+
 function rdSocket() {
   if (!socket) return;
   socket.on('order:track', (x) => { if (OD.liveFor === x.orderId && OD.liveDraw) OD.liveDraw(x); });
@@ -6278,6 +6558,7 @@ function openMainMenu(btn) {
   item('bizpos', 'Maata Business (billing)', () => openBiz());
   item('shops', 'Shops & my orders', openShops);
   item('rides', 'My deliveries', openRides);
+  item('team', 'Live location (team / family)', openTeams);
   item('broadcast', i18n('broadcast'), openBroadcast);
   item('quick', i18n('quick'), openQuickReplies);
   item('ai', i18n('aiAuto'), openAutoReply);
@@ -11741,8 +12022,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 139;
-const APP_NOTES = ["🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 141;
+const APP_NOTES = ["📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
