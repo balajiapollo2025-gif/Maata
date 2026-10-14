@@ -495,6 +495,28 @@ class MainActivity : Activity() {
             else web.evaluateJavascript("window.maataBtPerm && maataBtPerm(" + org.json.JSONObject.quote(BtPrinter.status(this@MainActivity)) + ")", null)
         } }
         @JavascriptInterface fun btOpenSettings() { runOnUiThread { try { startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) } catch (e: Exception) { } } }
+        @JavascriptInterface fun btScanStatus(): String = if (BtPrinter.needsScanPermission(this@MainActivity)) "perm" else BtPrinter.status(this@MainActivity)
+        @JavascriptInterface fun btAskScanPermission() { runOnUiThread {
+            val need = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT) else arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (BtPrinter.needsScanPermission(this@MainActivity)) { pendingBt = true; requestPermissions(need, REQ_PERMS) }
+            else web.evaluateJavascript("window.maataBtPerm && maataBtPerm(" + org.json.JSONObject.quote(BtPrinter.status(this@MainActivity)) + ")", null)
+        } }
+        @JavascriptInterface fun btScan() { runOnUiThread { BtPrinter.scan(this@MainActivity,
+            { j -> runOnUiThread { web.evaluateJavascript("window.maataBtFound && maataBtFound(" + j + ")", null) } },
+            { st -> runOnUiThread { web.evaluateJavascript("window.maataBtScanEnd && maataBtScanEnd(" + org.json.JSONObject.quote(st) + ")", null) } }) } }
+        @JavascriptInterface fun btStopScan() { runOnUiThread { BtPrinter.stopScan(this@MainActivity) } }
+        @JavascriptInterface fun btPair(address: String) { runOnUiThread { BtPrinter.pair(this@MainActivity, address) { st -> runOnUiThread { web.evaluateJavascript("window.maataBtPaired && maataBtPaired(" + org.json.JSONObject.quote(address) + "," + org.json.JSONObject.quote(st) + ")", null) } } } }
+        // 🔌 USB and 🌐 Wi-Fi / LAN receipt printers
+        @JavascriptInterface fun usbPrinters(): String = try { UsbNetPrinter.list(this@MainActivity) } catch (e: Exception) { "[]" }
+        @JavascriptInterface fun usbAskPermission(key: String) { runOnUiThread { UsbNetPrinter.askPermission(this@MainActivity, key) { ok -> runOnUiThread { web.evaluateJavascript("window.maataUsbPerm && maataUsbPerm(" + org.json.JSONObject.quote(key) + "," + ok + ")", null) } } } }
+        @JavascriptInterface fun usbPrintEnd(key: String, id: String) {
+            val bytes = btOut.toByteArray(); btOut = java.io.ByteArrayOutputStream()
+            UsbNetPrinter.printUsb(this@MainActivity, key, bytes) { ok, msg -> runOnUiThread { web.evaluateJavascript("window.maataBtDone && maataBtDone(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")", null) } }
+        }
+        @JavascriptInterface fun netPrintEnd(host: String, port: Int, id: String) {
+            val bytes = btOut.toByteArray(); btOut = java.io.ByteArrayOutputStream()
+            UsbNetPrinter.printNet(host, port, bytes) { ok, msg -> runOnUiThread { web.evaluateJavascript("window.maataBtDone && maataBtDone(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")", null) } }
+        }
         @JavascriptInterface fun btPrintStart(): Boolean { btOut = java.io.ByteArrayOutputStream(); return true }
         @JavascriptInterface fun btPrintChunk(b64: String): Boolean = try { btOut.write(android.util.Base64.decode(b64, android.util.Base64.DEFAULT)); btOut.size() < 8_000_000 } catch (e: Exception) { false }
         @JavascriptInterface fun btPrintEnd(address: String, id: String) {
