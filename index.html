@@ -5361,7 +5361,8 @@ function bzBill(body) {
   const q = el('input'); q.type = 'search'; q.id = 'bzQ'; q.placeholder = 'Search item or scan barcode'; q.setAttribute('aria-label', 'Search item or barcode'); q.autocomplete = 'off';
   const scan = el('button', 'bz-ib', '📷'); scan.setAttribute('aria-label', 'Scan barcode'); scan.onclick = () => bzScan((code) => { const p = BZ.prods.find((x) => x.barcode === code); if (p) { bzAdd(p); toast('Added ' + p.name); } else toast('No product with barcode ' + code); });
   const mic = el('button', 'bz-ib', '🎤'); mic.setAttribute('aria-label', 'Speak the items'); mic.onclick = bzVoice;
-  top.append(q, scan, mic); body.append(top);
+  const prn = el('button', 'bz-ib', '🖨️'); prn.setAttribute('aria-label', 'Bluetooth printer'); prn.title = 'Bluetooth printer'; prn.onclick = () => prSetup(); if (prCfg().address) prn.classList.add('on');
+  top.append(q, scan, mic, prn); body.append(top);
   const res = el('div', 'bz-picks'); res.id = 'bzPicks'; body.append(res);
   const draw = () => {
     const t = q.value.trim().toLowerCase(); res.innerHTML = '';
@@ -5562,7 +5563,9 @@ function prSetup(after) {
       f.append(el('div', 'th-title', 'Paper size'));
       const wch = el('div', 'bz-chips'); for (const [w, l] of [[80, '80 mm (3 inch)'], [58, '58 mm (2 inch)']]) { const b = el('button', cfg.width === w ? 'on' : null, l); b.type = 'button'; b.onclick = () => { cfg.width = w; prSave(cfg); draw(); }; wch.append(b); } f.append(wch);
       if (!prApp()) {
-        f.append(el('p', 'info-note', '🖨️ Bluetooth printing works in the Maata Android app (update it to the newest version). In a browser, "📄 PDF / other printer" opens the bill in a ' + cfg.width + ' mm layout for your printer app.'));
+        const inApp = !!window.MaataAndroid;
+        f.append(el('p', 'info-note', inApp ? '📲 Your Maata app is older. Bluetooth printing needs the newest Maata app. Tap Update, install it, then open this again.' : '🖨️ Bluetooth printing works in the Maata Android app. In a browser, "📄 PDF / other printer" opens the bill in a ' + cfg.width + ' mm layout for your printer app.'));
+        if (inApp) { const u = el('button', 'sheet-btn primary', '📲 Update Maata app'); u.onclick = () => startAppUpdate(); f.append(u); }
         L.append(f); return;
       }
       const st = window.MaataAndroid.btStatus();
@@ -5638,7 +5641,7 @@ function bzShowBill(i, phone) {
     const ph = phone || i.customer.phone;
     if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
     act('🔗 Share bill link', async () => { const u = bzBillLink(i); if (nativeShareText('Bill ' + i.number + ' – ' + bzRs(i.grand) + '\n' + u, 'Share bill')) return; try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
-    if (prApp()) act('🖨️ Print receipt (Bluetooth)', () => prPrintBill(i));
+    act('🖨️ Print receipt (Bluetooth)', () => (prApp() ? prPrintBill(i) : prSetup()));
     act('📄 PDF / other printer', () => window.open(bzBillLink(i) + '&paper=' + prCfg().width, '_blank', 'noopener'));
     if (i.status !== 'void' && i.payment.status !== 'paid') { if (i.shop.upi) act('✅ UPI payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v); }); act('💵 Paid in cash', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v); }); }
     if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
@@ -5787,6 +5790,7 @@ function bzSettings() {
     const ml = el('label'); ml.htmlFor = 'bzSM'; ml.append(el('span', null, 'Prices and GST')); const md = el('select'); md.id = 'bzSM'; for (const [k, t] of [['incl', 'My prices include GST'], ['excl', 'Add GST on top of my prices'], ['none', 'No GST on bills']]) md.add(new Option(t, k)); md.value = s.taxMode; ml.append(md); f.append(ml);
     const chk = (t, v) => { const l = el('label', 'sec-pick'); const c = el('input'); c.type = 'checkbox'; c.checked = v; l.append(c, el('span', null, t)); f.append(l); return c; };
     const ro = chk('Round off the total to the nearest rupee', s.roundOff), ng = chk('Allow selling when stock shows 0', s.allowNegative);
+    { const pb = el('button', 'sheet-btn', '🖨️ Bluetooth printer (58 / 80 mm)'); pb.type = 'button'; pb.onclick = () => { closeSheet('moreSheet'); prSetup(); }; f.append(pb); }
     if (s.upi) { const tq = el('button', 'sheet-btn', '📱 Show ₹1 test QR (check your UPI ID)'); tq.type = 'button'; tq.onclick = () => { closeSheet('moreSheet'); bzUpiTest(); }; f.append(tq); }
     const ok = el('button', 'sheet-btn primary', 'Save'); ok.type = 'submit'; f.append(ok);
     f.onsubmit = async (e) => { e.preventDefault(); try { BZ.info.settings = await bzApi('/settings', { method: 'PUT', body: JSON.stringify({ prefix: pre.value, gstin: gst.value, upi: upi.value, footer: ft.value, taxMode: md.value, roundOff: ro.checked, allowNegative: ng.checked }) }); closeSheet('moreSheet'); toast('Settings saved ✓'); } catch (x) { toast(x.message); } };
@@ -6506,14 +6510,14 @@ function openLockSettings() {
     const a = el('label'); a.append(el('span', null, cfg ? 'New PIN (4–6 digits)' : 'PIN (4–6 digits)')); const p1 = el('input'); p1.type = 'password'; p1.inputMode = 'numeric'; p1.maxLength = 6; a.append(p1);
     const b = el('label'); b.append(el('span', null, 'Enter PIN again')); const p2 = el('input'); p2.type = 'password'; p2.inputMode = 'numeric'; p2.maxLength = 6; b.append(p2);
     const t = el('label'); t.append(el('span', null, 'Lock automatically after'));
-    const sel = el('select'); for (const [v, l] of [[0, 'Immediately'], [1, '1 minute'], [5, '5 minutes'], [30, '30 minutes']]) sel.add(new Option(l, v)); sel.value = String(cfg ? cfg.minutes : 1); t.append(sel);
+    const sel = el('select'); for (const [v, l] of [[-1, 'Only when Maata is opened again (not after minimise)'], [0, 'Every time, also after minimise'], [1, 'After minimise for 1 minute'], [5, 'After minimise for 5 minutes'], [30, 'After minimise for 30 minutes']]) sel.add(new Option(l, v)); sel.value = String(cfg ? cfg.minutes : -1); t.append(sel);
     const save2 = el('button', 'primary', cfg ? 'Change PIN' : 'Turn on app lock');
     save2.onclick = async () => {
       if (!/^\d{4,6}$/.test(p1.value)) return toast('PIN must be 4 to 6 digits.');
       if (p1.value !== p2.value) return toast('The two PINs do not match.');
       const salt = Math.random().toString(36).slice(2);
       const prevBio = (lockCfg() || {}).bio, prevVoice = (lockCfg() || {}).voice;
-      store.set(LOCK_KEY, JSON.stringify({ salt, hash: await sha(salt + p1.value), minutes: Number(sel.value), ...(prevBio ? { bio: prevBio } : {}), ...(prevVoice ? { voice: prevVoice } : {}) }));
+      store.set(LOCK_KEY, JSON.stringify({ salt, v2: 1, hash: await sha(salt + p1.value), minutes: Number(sel.value), ...(prevBio ? { bio: prevBio } : {}), ...(prevVoice ? { voice: prevVoice } : {}) }));
       if (!cfg && !prevBio && (await bioAvailable()) && confirm('Also unlock Maata with your fingerprint?')) {
         try { const c2 = lockCfg(); c2.bio = await bioRegister(); store.set(LOCK_KEY, JSON.stringify(c2)); toast('App lock on 🔒 with fingerprint 👆'); closeSheet('moreSheet'); return; }
         catch { toast('Fingerprint not set up. PIN lock is on.'); }
@@ -6568,8 +6572,10 @@ function showLock() {
   L.addEventListener('keydown', (e) => { if (/^\d$/.test(e.key) && pin.length < 6) { pin += e.key; draw(); tryPin(); } else if (e.key === 'Backspace') { pin = pin.slice(0, -1); draw(); } });
   L.tabIndex = -1; document.body.append(L); draw(); L.focus();
 }
+// App lock asks on a fresh open of Maata (after it was closed). Minimise → back again does not ask, unless the owner chose a time.
+(() => { const c = lockCfg(); if (c && !c.v2) { c.minutes = -1; c.v2 = 1; store.set(LOCK_KEY, JSON.stringify(c)); } })();
 document.addEventListener('visibilitychange', () => {
-  const cfg = lockCfg(); if (!cfg || !token) return;
+  const cfg = lockCfg(); if (!cfg || !token || cfg.minutes < 0) return;
   if (Date.now() < bioBusyUntil) return; // the fingerprint sheet itself was on screen
   if (document.hidden) hiddenAt = Date.now();
   else if (hiddenAt && Date.now() - hiddenAt >= cfg.minutes * 60000) showLock();
@@ -11735,8 +11741,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 138;
-const APP_NOTES = ["🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 139;
+const APP_NOTES = ["🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
