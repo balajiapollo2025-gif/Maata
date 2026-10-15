@@ -504,6 +504,16 @@ class MainActivity : Activity() {
         @JavascriptInterface fun btScan() { runOnUiThread { BtPrinter.scan(this@MainActivity,
             { j -> runOnUiThread { web.evaluateJavascript("window.maataBtFound && maataBtFound(" + j + ")", null) } },
             { st -> runOnUiThread { web.evaluateJavascript("window.maataBtScanEnd && maataBtScanEnd(" + org.json.JSONObject.quote(st) + ")", null) } }) } }
+        /** Which Bluetooth permissions Maata has, and whether the app asks for them at all (for the printer check). */
+        @JavascriptInterface fun btPermInfo(): String = try {
+            val req = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS).requestedPermissions?.toList() ?: emptyList()
+            val s31 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            org.json.JSONObject().put("sdk", Build.VERSION.SDK_INT)
+                .put("connect", !s31 || has(Manifest.permission.BLUETOOTH_CONNECT)).put("scan", if (s31) has(Manifest.permission.BLUETOOTH_SCAN) else has(Manifest.permission.ACCESS_FINE_LOCATION))
+                .put("declared", !s31 || (req.contains(Manifest.permission.BLUETOOTH_SCAN) && req.contains(Manifest.permission.BLUETOOTH_CONNECT))).toString()
+        } catch (e: Exception) { "{}" }
+        /** Opens Android's page for Maata (Permissions → Nearby devices). */
+        @JavascriptInterface fun openAppSettings() { runOnUiThread { try { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { } } }
         @JavascriptInterface fun btStopScan() { runOnUiThread { BtPrinter.stopScan(this@MainActivity) } }
         @JavascriptInterface fun btPair(address: String) { runOnUiThread { BtPrinter.pair(this@MainActivity, address) { st -> runOnUiThread { web.evaluateJavascript("window.maataBtPaired && maataBtPaired(" + org.json.JSONObject.quote(address) + "," + org.json.JSONObject.quote(st) + ")", null) } } } }
         // 🔌 USB and 🌐 Wi-Fi / LAN receipt printers
