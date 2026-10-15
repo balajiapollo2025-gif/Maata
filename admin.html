@@ -193,6 +193,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="ads"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Ads <span class="count" id="adCount" hidden></span></button>
     <button data-view="reels"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 8h18M8 3l3 5M14 3l3 5"/><path d="M10 12v5l4.5-2.5z"/></svg>Reels <span class="count" id="rlCount" hidden></span></button>
     <button data-view="channels"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>Channels</button>
+    <button data-view="bm"><svg class="ico" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 10h1M14 10h1M9 14h1M14 14h1M10 21v-3h4v3"/></svg>Business API <span class="count" id="bmCount" hidden></span></button>
     <button data-view="helpdesk"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>Help desk <span class="count" id="hdCount" hidden></span></button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
@@ -298,6 +299,12 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="top"><h2>Channels</h2></div>
       <p class="muted" style="margin-top:-6px">Public channels anyone can follow. Remove channels that spread spam, scams, hate or adult content. You can restore them later.</p>
       <div class="card"><table><thead><tr><th>Channel</th><th>Owner</th><th>Followers</th><th>Updates</th><th>Created</th><th></th></tr></thead><tbody id="chTbody"></tbody></table></div>
+    </section>
+
+    <section data-page="bm" hidden>
+      <div class="top"><h2>Business messaging – verification</h2></div>
+      <p class="muted" style="margin-top:-6px">Organisations (banks, schools, hospitals, offices, shops) ask to send messages to customers from their software. Check that each one is real (call them, check website / GSTIN / registration) before you verify. Suspend anyone who sends spam or scams. Marketing templates also need your approval.</p>
+      <div id="bmList"></div>
     </section>
 
     <section data-page="reels" hidden>
@@ -442,7 +449,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -755,6 +762,25 @@ async function loadReelsAdmin() {
   $$('[data-rl]').forEach((b) => b.onclick = async () => { try { await api(`/admin/api/reels/${b.dataset.rl}/${b.dataset.act}`, { method: 'POST', body: '{}' }); toast('Done.'); loadReelsAdmin(); } catch (e) { toast(e.message); } });
 }
 
+// ---------- business messaging ----------
+async function loadBmAdmin() {
+  const list = await api('/admin/api/bm'); const pend = list.filter((b) => b.status === 'pending').length + list.reduce((a, b) => a + b.pendingTemplates.length, 0);
+  const c = $('#bmCount'); if (c) { c.hidden = !pend; c.textContent = pend; }
+  const tag = { pending: 't-amber', verified: 't-green', rejected: 't-red', suspended: 't-red' };
+  $('#bmList').innerHTML = list.length ? list.map((b) => `<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:16px">${esc(b.name)}</b> <span class="tag ${tag[b.status] || ''}">${esc(b.status)}</span><div class="muted">${esc(b.owner)} · ${esc(b.phone)} · sent 30 days: ${num(b.sent30)} · complaints: ${num(b.reports)} · daily limit: ${num(b.dailyLimit)}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">${b.status !== 'verified' && b.status !== 'suspended' ? `<button class="btn" data-bm="${esc(b.bizId)}" data-act="verify">✅ Verify</button><button class="btn danger" data-bm="${esc(b.bizId)}" data-act="reject">Reject</button>` : ''}${b.status === 'verified' ? `<button class="btn danger" data-bm="${esc(b.bizId)}" data-act="suspend">Suspend</button><button class="btn" data-bm="${esc(b.bizId)}" data-act="limit">Daily limit</button>` : ''}${b.status === 'suspended' ? `<button class="btn" data-bm="${esc(b.bizId)}" data-act="unsuspend">Restore</button>` : ''}</div></div>
+    ${b.apply ? `<table style="margin-top:8px"><tr><th>Legal name</th><td>${esc(b.apply.legalName)}</td></tr><tr><th>Type</th><td>${esc(b.apply.orgType)}</td></tr><tr><th>Reg. / GSTIN</th><td>${esc(b.apply.regNo || '—')}</td></tr><tr><th>Website</th><td>${esc(b.apply.website || '—')}</td></tr><tr><th>Contact</th><td>${esc(b.apply.contact || '—')}</td></tr><tr><th>Messages</th><td>${esc(b.apply.useCase)}</td></tr><tr><th>Applied</th><td>${dt(b.apply.at)}</td></tr></table>` : ''}
+    ${b.reason ? `<p class="muted">Reason: ${esc(b.reason)}</p>` : ''}
+    ${b.pendingTemplates.map((t) => `<div style="margin-top:10px;padding:10px;border:1px dashed #C9D3D0;border-radius:10px"><b>Marketing template: ${esc(t.name)}</b><div style="white-space:pre-wrap;margin:6px 0">${esc(t.title ? t.title + '\n' : '')}${esc(t.body)}</div><button class="btn" data-bmt="${esc(b.bizId)}" data-tid="${esc(t.id)}" data-ok="1">Approve</button> <button class="btn danger" data-bmt="${esc(b.bizId)}" data-tid="${esc(t.id)}" data-ok="">Reject</button></div>`).join('')}
+  </div>`).join('') : '<p class="muted">No organisation has applied yet.</p>';
+  $$('[data-bm]').forEach((x) => x.onclick = async () => { const act = x.dataset.act; let body = {};
+    if (act === 'reject' || act === 'suspend') { const r = prompt('Reason (the organisation will see it)'); if (r == null) return; body.reason = r; }
+    else if (act === 'limit') { const l = prompt('Messages per day for this organisation', '20000'); if (!l) return; body.limit = Number(l); }
+    else if (!confirm(act + ' this organisation?')) return;
+    try { await api('/admin/api/bm/' + x.dataset.bm + '/' + act, { method: 'POST', body: JSON.stringify(body) }); toast('Done'); loadBmAdmin(); } catch (e) { toast(e.message); } });
+  $$('[data-bmt]').forEach((x) => x.onclick = async () => { let reason = ''; if (!x.dataset.ok) { reason = prompt('Why is this template not allowed?') || ''; } try { await api('/admin/api/bm/' + x.dataset.bmt + '/template', { method: 'POST', body: JSON.stringify({ templateId: x.dataset.tid, ok: !!x.dataset.ok, reason }) }); toast('Done'); loadBmAdmin(); } catch (e) { toast(e.message); } });
+}
 // ---------- channels ----------
 async function loadChannelsAdmin() {
   const list = await api('/admin/api/channels');
