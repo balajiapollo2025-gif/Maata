@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 148;
+const MAATA_VERSION = 149;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4670,6 +4670,27 @@ app.delete('/admin/api/announcements/active', adminAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// 📁 Admin files: keep Maata's own documents (API guide, legal papers, designs, agreements) safe on the server
+const ADMIN_FILE_MAX = 25 * 1024 * 1024;
+const AF_CATS = ['Developer', 'Legal', 'Business', 'Design', 'Other'];
+const afOut = (f) => ({ id: f.id, name: f.name, mime: f.mime, size: f.size, category: f.category, note: f.note || '', createdAt: f.createdAt, by: f.by });
+app.get('/admin/api/files', adminAuth, (req, res) => res.json(db.adminFiles.slice().reverse().map(afOut)));
+app.post('/admin/api/files', adminAuth, express.raw({ type: () => true, limit: ADMIN_FILE_MAX }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a file.' });
+  const name = clip(String(req.query.name || 'file').replace(/[\\/:*?"<>|]+/g, '_'), 120) || 'file';
+  const mime = String(req.headers['content-type'] || 'application/octet-stream').split(';')[0].slice(0, 100);
+  const f = { id: newId(), fileId: newId(), name, mime, size: req.body.length, category: AF_CATS.includes(req.query.category) ? req.query.category : 'Other', note: clip(req.query.note, 300), createdAt: now(), by: req.admin };
+  try { await saveChatFile(f.fileId, req.body, mime); } catch { return res.status(500).json({ error: 'Could not save the file.' }); }
+  db.adminFiles.push(f); audit(req.admin, 'file-upload', f.id, name); save(); res.json(afOut(f));
+});
+app.get('/admin/api/files/:id/download', adminAuth, (req, res) => {
+  const f = db.adminFiles.find((x) => x.id === req.params.id); if (!f) return res.status(404).json({ error: 'File not found.' });
+  res.setHeader('Content-Type', f.mime); res.setHeader('Content-Length', f.size); res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Disposition', (req.query.view ? 'inline' : 'attachment') + '; filename*=UTF-8\'\'' + encodeURIComponent(f.name));
+  const st = chatFileStream(f.fileId, 0, f.size - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.put('/admin/api/files/:id', adminAuth, (req, res) => { const f = db.adminFiles.find((x) => x.id === req.params.id); if (!f) return res.status(404).json({ error: 'File not found.' }); if (req.body?.note !== undefined) f.note = clip(req.body.note, 300); if (AF_CATS.includes(req.body?.category)) f.category = req.body.category; save(); res.json(afOut(f)); });
+app.delete('/admin/api/files/:id', adminAuth, async (req, res) => { const f = db.adminFiles.find((x) => x.id === req.params.id); if (!f) return res.status(404).json({ error: 'File not found.' }); try { await deleteChatFile(f.fileId); } catch {} db.adminFiles = db.adminFiles.filter((x) => x !== f); audit(req.admin, 'file-delete', f.id, f.name); save(); res.json({ ok: true }); });
 app.get('/admin/api/audit', adminAuth, (req, res) => res.json(db.audit.slice(-300).reverse()));
 
 // ---------- Real-time ----------
