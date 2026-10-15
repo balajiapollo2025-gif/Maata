@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 144;
+const MAATA_VERSION = 148;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3088,6 +3088,15 @@ app.get('/api/biz/:bizId/dashboard', auth, (req, res) => {
 });
 // ---- products & stock ----
 app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
+// product photo (shown to customers in the online shop; not used in billing)
+app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
+  if (await savePhotoInto(p, req, res)) { bizLog(c, 'product-photo', p.id, p.name); res.json(bizProdOut(p)); }
+});
+app.delete('/api/biz/:bizId/products/:id/photo', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
+  if (p.photo) deleteChatFile(p.photo); delete p.photo; delete p.photoMime; delete p.photoSize; p.photoV = now(); save(); res.json(bizProdOut(p));
+});
 app.post('/api/biz/:bizId/products', auth, (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return;
   if (bizProducts(c.bizId).length >= 3000) return res.status(400).json({ error: 'You can have up to 3,000 products.' });
@@ -4897,6 +4906,278 @@ setInterval(() => {
   db.teamTracks = db.teamTracks.filter((x) => x.createdAt > cut); db.teamEvents = db.teamEvents.filter((x) => x.at > cut);
   if (changed || a !== db.teamTracks.length || b !== db.teamEvents.length) save();
 }, 60000);
+
+
+// ==================== 🏢 MAATA BUSINESS MESSAGING (API for banks, schools, hospitals, offices, shops) ====================
+// An organisation's own software sends messages to its customers in Maata through a REST API (/v1).
+// Trust rules: only VERIFIED organisations can send live messages; customers control each business
+// (All / Important only / None), can report & block; marketing needs the customer's opt-in; every message has a
+// state (accepted → delivered → read / failed); webhooks are signed; keys are stored only as hashes.
+const BM_KEEP_DAYS = 90;
+const BM_LIMITS = { test: { perMin: 30, perDay: 200 }, live: { perMin: 300, perDay: 20000 } };
+const BM_BAD = /\b(otp|one[\s-]?time password|password|passcode|pin|cvv|card number)\b/i; // never in templates
+const bmApi = (b) => { b.api = { status: 'none', webhook: null, autoTranslate: true, ...(b.api || {}) }; return b.api; };
+const bmSha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
+const bmBiz = (bizId) => { const u = userById(bizId); return u && u.business && u.status !== 'blocked' ? u : null; };
+const bmBizCard = (u) => ({ bizId: u.id, name: u.business.name, category: u.business.category || '', verified: bmApi(u.business).status === 'verified', photo: !!u.photo });
+const bmPref = (uid, bizId) => db.bmPrefs.find((p) => p.id === uid + ':' + bizId);
+function bmSetPref(uid, bizId, patch) { let p = bmPref(uid, bizId); if (!p) { p = { id: uid + ':' + bizId, userId: uid, bizId, level: 'important', createdAt: now() }; db.bmPrefs.push(p); } Object.assign(p, patch, { at: now() }); return p; }
+function bmRelation(uid, owner) { // the customer already deals with this business
+  if (db.invoices.some((i) => i.bizId === owner.id && cleanMobile(i.customer && i.customer.phone) === cleanMobile((userById(uid) || {}).phone))) return true;
+  if (db.orders.some((o) => o.bizId === owner.id && o.customerId === uid)) return true;
+  return db.bmMsgs.some((m) => m.bizId === owner.id && m.to === uid && m.dir === 'in');
+}
+function bmCanSend(owner, user, category) { // → null if allowed, else an error code
+  const p = bmPref(user.id, owner.id);
+  if (p && (p.blocked || p.level === 'none')) return 'opted_out';
+  if (category === 'marketing') return p && p.level === 'all' && p.optInAt ? null : 'no_marketing_consent';
+  if (p && p.optInAt) return null;
+  return bmRelation(user.id, owner) ? null : 'no_consent';
+}
+const BM_ERR = { not_on_maata: 'This number is not on Maata.', opted_out: 'The customer turned off messages from you.', no_consent: 'The customer has not opted in. Share your opt-in link or QR first.', no_marketing_consent: 'Marketing needs the customer to choose "All messages" for your business.', not_verified: 'Your business is not verified yet. Use a test key (mk_test_) until Maata verifies you.', test_only_team: 'Test keys can send only to your own team (owner and staff).', rate_limited: 'Too many messages. Slow down.', daily_limit: 'Daily message limit reached.', bad_template: 'Template not found or not approved.', missing_variable: 'A template variable is missing.', window_closed: 'Free text is allowed only within 24 hours after the customer messaged you. Use a template.', suspended: 'Messaging for this business is suspended.' };
+function bmRender(body, vars) { const miss = []; const out = String(body).replace(/\{\{\s*([a-z0-9_]{1,40})\s*\}\}/gi, (m0, k) => { const v = vars && vars[k]; if (v == null || v === '') { miss.push(k); return m0; } return clip(String(v), 300); }); return { text: out, miss }; }
+const bmVars = (body) => [...new Set([...String(body).matchAll(/\{\{\s*([a-z0-9_]{1,40})\s*\}\}/gi)].map((m) => m[1]))];
+function bmMsgOut(m) { return { id: m.id, to: m.toPhone, status: m.state, reason: m.reason || null, template: m.templateName || null, created_at: new Date(m.createdAt).toISOString(), delivered_at: m.deliveredAt ? new Date(m.deliveredAt).toISOString() : null, read_at: m.readAt ? new Date(m.readAt).toISOString() : null, send_at: m.sendAt ? new Date(m.sendAt).toISOString() : null }; }
+const bmHits = new Map();
+function bmRate(keyId, env) { const lim = BM_LIMITS[env]; const t = now(); const arr = (bmHits.get(keyId) || []).filter((x) => t - x < 60000); if (arr.length >= lim.perMin) return false; arr.push(t); bmHits.set(keyId, arr); return true; }
+const bmToday = (bizId, env) => db.bmMsgs.filter((m) => m.bizId === bizId && m.dir === 'out' && m.env === env && m.createdAt >= startOfToday()).length;
+// ---- webhooks (signed, retried with backoff) ----
+const BM_BACKOFF = [10e3, 60e3, 5 * 60e3, 30 * 60e3, 2 * 3600e3];
+function bmEvent(owner, type, data) {
+  const api = bmApi(owner.business); if (!api.webhook || !api.webhook.url || api.webhook.off) return;
+  db.bmJobs.push({ id: newId(), bizId: owner.id, createdAt: now(), next: now(), tries: 0, body: JSON.stringify({ id: 'evt_' + crypto.randomBytes(8).toString('hex'), type, created_at: new Date().toISOString(), data }) });
+}
+let bmWorking = false;
+async function bmWork() {
+  if (bmWorking) return; bmWorking = true;
+  try {
+    // 1) scheduled / accepted messages → deliver
+    for (const m of db.bmMsgs.filter((x) => x.dir === 'out' && (x.state === 'accepted' || (x.state === 'queued' && x.sendAt <= now()))).slice(0, 200)) await bmDeliver(m);
+    // 2) webhooks
+    for (const j of db.bmJobs.filter((x) => x.next <= now()).slice(0, 50)) {
+      const owner = bmBiz(j.bizId), hook = owner && bmApi(owner.business).webhook;
+      if (!hook || !hook.url) { j.dead = true; continue; }
+      const ts = Math.floor(now() / 1000), sig = crypto.createHmac('sha256', hook.secret).update(ts + '.' + j.body).digest('hex');
+      let ok = false, code = 0;
+      try { const r = await fetch(hook.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'Maata-Webhooks/1', 'X-Maata-Signature': 't=' + ts + ',v1=' + sig }, body: j.body, signal: AbortSignal.timeout(8000) }); code = r.status; ok = r.ok; } catch { code = 0; }
+      hook.lastCode = code; hook.lastAt = now();
+      if (ok) j.dead = 'done'; else { j.tries++; if (j.tries > BM_BACKOFF.length) j.dead = 'failed'; else j.next = now() + BM_BACKOFF[j.tries - 1] * (0.8 + Math.random() * 0.4); }
+    }
+    const before = db.bmJobs.length; db.bmJobs = db.bmJobs.filter((j) => !j.dead || (j.dead === 'failed' && now() - j.createdAt < 3 * 86400000));
+    const cut = now() - BM_KEEP_DAYS * 86400000; db.bmMsgs = db.bmMsgs.filter((m) => m.createdAt > cut);
+    if (before !== db.bmJobs.length) save();
+  } catch (e) { console.error('[bm] worker', e.message); }
+  bmWorking = false;
+}
+setInterval(bmWork, 5000);
+async function bmDeliver(m) {
+  const owner = bmBiz(m.bizId), user = userById(m.to);
+  if (!owner || !user) { m.state = 'failed'; m.reason = 'not_on_maata'; save(); return; }
+  // AI translation into the customer's language (original kept and shown on tap)
+  const api = bmApi(owner.business), want = user.lang && user.lang !== 'en' ? user.lang : null;
+  if (api.autoTranslate && want && GEMINI_KEY && !m.lang && AI_LANG_NAME[want]) {
+    try { const g = await gemini('Translate this business message into ' + AI_LANG_NAME[want] + '. Keep numbers, dates, amounts, names, links and codes exactly the same. Return only the translation.', [{ role: 'user', parts: [{ text: m.text }] }], { maxTokens: 600, temperature: 0.1 }); const tr = String(g.text || '').trim(); if (tr && tr.length < 4000) { m.original = m.text; m.text = tr; m.lang = want; } } catch { /* send the original */ }
+  }
+  m.state = 'sent'; m.sentAt = now();
+  io.to('user:' + user.id).emit('bm:msg', { bizId: owner.id, msg: bmCustOut(m), biz: bmBizCard(owner) });
+  const v = bmApi(owner.business).status === 'verified' ? ' ✔' : '';
+  pushTo(user, { type: 'msg', title: '🏢 ' + owner.business.name + v, body: m.sensitive ? 'You have a new message. Open Maata to read it.' : clip(m.title ? m.title + ': ' + m.text : m.text, 140), tag: 'bm-' + owner.id, url: '/?bm=' + owner.id }).catch(() => {});
+  save();
+}
+function bmMark(m, state) { // delivered / read (from the customer's app)
+  if (m.dir !== 'out') return false;
+  const order = { accepted: 0, queued: 0, sent: 1, delivered: 2, read: 3, failed: -1 };
+  if ((order[state] ?? -1) <= (order[m.state] ?? -1)) return false;
+  if (state === 'delivered' || state === 'read') { if (!m.deliveredAt) m.deliveredAt = now(); }
+  if (state === 'read') m.readAt = now();
+  m.state = state; const owner = bmBiz(m.bizId);
+  if (owner && m.env === 'live') bmEvent(owner, 'message.' + state, bmMsgOut(m));
+  return true;
+}
+const bmCustOut = (m) => ({ id: m.id, dir: m.dir, title: m.title || '', text: m.text, original: m.original || '', lang: m.lang || '', buttons: m.buttons || [], category: m.category, at: m.sentAt || m.createdAt, state: m.state, test: m.env === 'test' });
+// ---- create a message (shared by the API, the dashboard test console and replies) ----
+function bmCreate(owner, key, b, actorEnv) {
+  const api = bmApi(owner.business), env = key ? key.env : actorEnv;
+  if (api.status === 'suspended') return { code: 403, err: 'suspended' };
+  if (env === 'live' && api.status !== 'verified') return { code: 403, err: 'not_verified' };
+  const idem = clip(b.idempotency_key, 100);
+  if (idem) { const dup = db.bmMsgs.find((m) => m.bizId === owner.id && m.idem === idem); if (dup) return { msg: dup, dup: true }; }
+  if (key && !bmRate(key.id, env)) return { code: 429, err: 'rate_limited' };
+  if (bmToday(owner.id, env) >= (api.dailyLimit || BM_LIMITS[env].perDay)) return { code: 429, err: 'daily_limit' };
+  const raw = String((b.to && (b.to.phone || b.to)) || ''), user = raw.startsWith('user_') ? userById(raw.slice(5)) : findByMobile(cleanMobile(raw));
+  if (!user || user.status === 'blocked') return { code: 404, err: 'not_on_maata' };
+  if (env === 'test' && !(user.id === owner.id || (owner.business.members || []).some((x) => x.userId === user.id && x.status !== 'removed'))) return { code: 403, err: 'test_only_team' };
+  let text, title = '', buttons = [], category = 'transactional', tpl = null, sensitive = false;
+  if (b.template) {
+    tpl = db.bmTemplates.find((t) => t.bizId === owner.id && (t.id === b.template || t.name === b.template) && !t.deleted);
+    if (!tpl || tpl.status !== 'approved') return { code: 400, err: 'bad_template' };
+    const r = bmRender(tpl.body, b.variables || {}); if (r.miss.length) return { code: 400, err: 'missing_variable', detail: r.miss };
+    text = r.text; title = tpl.title ? bmRender(tpl.title, b.variables || {}).text : ''; buttons = (tpl.buttons || []).map((x) => ({ label: x.label, url: bmRender(x.url, b.variables || {}).text })); category = tpl.category; sensitive = !!tpl.sensitive;
+  } else {
+    text = clip(b.text, 2000); if (!text) return { code: 400, err: 'bad_template' };
+    const lastIn = db.bmMsgs.filter((m) => m.bizId === owner.id && m.to === user.id && m.dir === 'in').pop();
+    if (!lastIn || now() - lastIn.createdAt > 24 * 3600000) return { code: 400, err: 'window_closed' };
+  }
+  if (env === 'live') { const why = bmCanSend(owner, user, category); if (why) return { code: 403, err: why }; }
+  const sendAt = b.send_at ? Date.parse(b.send_at) : 0;
+  const m = { id: 'msg_' + crypto.randomBytes(10).toString('hex'), bizId: owner.id, keyId: key ? key.id : null, env, dir: 'out', to: user.id, toPhone: user.phone, templateId: tpl ? tpl.id : null, templateName: tpl ? tpl.name : null, title, text, buttons, category, sensitive, idem: idem || null,
+    state: sendAt > now() + 30000 && sendAt < now() + 30 * 86400000 ? 'queued' : 'accepted', sendAt: sendAt > now() + 30000 ? sendAt : null, createdAt: now() };
+  db.bmMsgs.push(m); save(); setImmediate(bmWork);
+  return { msg: m };
+}
+// ---- public REST API for the organisation's software ----
+function bmKeyAuth(req, res, next) {
+  const h = String(req.headers.authorization || ''), tok = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  const key = tok && db.bmKeys.find((k) => k.hash === bmSha(tok) && !k.revokedAt);
+  if (!key) return res.status(401).json({ error: { code: 'unauthorized', message: 'Missing or wrong API key. Use: Authorization: Bearer mk_live_… or mk_test_…' } });
+  const owner = bmBiz(key.bizId); if (!owner) return res.status(401).json({ error: { code: 'unauthorized', message: 'Business not found.' } });
+  key.lastUsedAt = now(); req.bmKey = key; req.bmOwner = owner; next();
+}
+const bmErr = (res, r) => res.status(r.code || 400).json({ error: { code: r.err, message: BM_ERR[r.err] || r.err, detail: r.detail || undefined } });
+app.post('/v1/messages', bmKeyAuth, (req, res) => { const r = bmCreate(req.bmOwner, req.bmKey, req.body || {}); if (r.err) return bmErr(res, r); res.status(r.dup ? 200 : 202).json(bmMsgOut(r.msg)); });
+app.get('/v1/messages/:id', bmKeyAuth, (req, res) => { const m = db.bmMsgs.find((x) => x.id === req.params.id && x.bizId === req.bmOwner.id); if (!m) return res.status(404).json({ error: { code: 'not_found', message: 'Message not found.' } }); res.json(bmMsgOut(m)); });
+app.get('/v1/templates', bmKeyAuth, (req, res) => res.json({ data: db.bmTemplates.filter((t) => t.bizId === req.bmOwner.id && !t.deleted).map((t) => ({ id: t.id, name: t.name, category: t.category, language: t.lang, status: t.status, variables: bmVars(t.body + ' ' + (t.title || '') + ' ' + (t.buttons || []).map((x) => x.url).join(' ')) })) }));
+app.get('/v1/usage', bmKeyAuth, (req, res) => { const env = req.bmKey.env, api = bmApi(req.bmOwner.business); res.json({ environment: env, verified: api.status === 'verified', today: bmToday(req.bmOwner.id, env), daily_limit: api.dailyLimit || BM_LIMITS[env].perDay, per_minute_limit: BM_LIMITS[env].perMin }); });
+app.get('/v1/customers/:phone', bmKeyAuth, (req, res) => { const u = findByMobile(cleanMobile(req.params.phone)); if (!u) return res.json({ on_maata: false, can_send: false }); const why = bmCanSend(req.bmOwner, u, 'transactional'), whyM = bmCanSend(req.bmOwner, u, 'marketing'); res.json({ on_maata: true, can_send: !why, can_send_marketing: !whyM, reason: why || null }); });
+// ---- customer side (Maata app) ----
+app.get('/api/bm/inbox', auth, (req, res) => {
+  const mine = db.bmMsgs.filter((m) => m.to === req.user.id && ['sent', 'delivered', 'read'].includes(m.state) || (m.to === req.user.id && m.dir === 'in'));
+  const by = new Map(); for (const m of mine) { const e = by.get(m.bizId) || { last: null, unread: 0 }; e.last = m; if (m.dir === 'out' && m.state !== 'read') e.unread++; by.set(m.bizId, e); }
+  const out = []; for (const [bizId, e] of by) { const o = bmBiz(bizId); if (!o) continue; const p = bmPref(req.user.id, bizId); out.push({ ...bmBizCard(o), last: { text: e.last.text.slice(0, 120), at: e.last.sentAt || e.last.createdAt, dir: e.last.dir }, unread: e.unread, level: p ? p.level : 'important', blocked: !!(p && p.blocked) }); }
+  out.sort((a, b) => b.last.at - a.last.at); res.json(out);
+});
+app.get('/api/bm/thread/:bizId', auth, (req, res) => {
+  const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' });
+  const list = db.bmMsgs.filter((m) => m.bizId === o.id && m.to === req.user.id && (m.dir === 'in' || ['sent', 'delivered', 'read'].includes(m.state))).slice(-200);
+  let ch = false; for (const m of list) if (m.dir === 'out' && m.state !== 'read') ch = bmMark(m, 'read') || ch; if (ch) save();
+  const p = bmPref(req.user.id, o.id);
+  res.json({ biz: { ...bmBizCard(o), address: o.business.address || '', phone: o.phone }, pref: { level: p ? p.level : 'important', optIn: !!(p && p.optInAt), blocked: !!(p && p.blocked) }, msgs: list.map(bmCustOut) });
+});
+app.post('/api/bm/delivered', auth, (req, res) => { const ids = Array.isArray(req.body?.ids) ? req.body.ids.slice(0, 100) : []; let ch = false; for (const id of ids) { const m = db.bmMsgs.find((x) => x.id === id && x.to === req.user.id); if (m) ch = bmMark(m, 'delivered') || ch; } if (ch) save(); res.json({ ok: true }); });
+app.post('/api/bm/thread/:bizId/reply', auth, (req, res) => {
+  const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' });
+  const text = clip(req.body?.text, 1000); if (!text) return res.status(400).json({ error: 'Write a message.' });
+  if (!db.bmMsgs.some((m) => m.bizId === o.id && m.to === req.user.id && m.dir === 'out')) return res.status(400).json({ error: 'You can reply after this business messages you.' });
+  const m = { id: 'msg_' + crypto.randomBytes(10).toString('hex'), bizId: o.id, env: 'live', dir: 'in', to: req.user.id, toPhone: req.user.phone, text, state: 'received', createdAt: now() };
+  db.bmMsgs.push(m);
+  if (/^\s*(stop|unsubscribe|aapu|aapandi|ఆపు)\s*$/i.test(text)) { bmSetPref(req.user.id, o.id, { level: 'none' }); bmEvent(o, 'customer.opted_out', { phone: req.user.phone, source: 'reply' }); }
+  bmEvent(o, 'message.received', { id: m.id, from: req.user.phone, name: req.user.name, text, received_at: new Date().toISOString() });
+  for (const id of [o.id, ...((o.business.members || []).filter((x) => x.status !== 'removed').map((x) => x.userId))]) io.to('user:' + id).emit('bm:reply', { bizId: o.id });
+  save(); res.json(bmCustOut(m));
+});
+app.put('/api/bm/prefs/:bizId', auth, (req, res) => {
+  const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' });
+  const level = ['all', 'important', 'none'].includes(req.body?.level) ? req.body.level : 'important', prev = bmPref(req.user.id, o.id);
+  const p = bmSetPref(req.user.id, o.id, { level, blocked: false, ...(req.body?.optIn ? { optInAt: now(), source: clip(req.body.source, 40) || 'app' } : {}) });
+  if (level === 'none' && (!prev || prev.level !== 'none')) bmEvent(o, 'customer.opted_out', { phone: req.user.phone, source: 'app' });
+  if (req.body?.optIn) bmEvent(o, 'customer.opted_in', { phone: req.user.phone, level, source: p.source });
+  save(); res.json({ level: p.level, optIn: !!p.optInAt });
+});
+app.get('/api/bm/biz/:bizId', auth, (req, res) => { const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' }); const p = bmPref(req.user.id, o.id); res.json({ ...bmBizCard(o), address: o.business.address || '', level: p ? p.level : null, optIn: !!(p && p.optInAt) }); });
+app.post('/api/bm/report/:bizId', auth, (req, res) => {
+  const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' });
+  bmSetPref(req.user.id, o.id, { level: 'none', blocked: true }); const api = bmApi(o.business); api.reports = (api.reports || 0) + 1;
+  db.reports.push({ id: newId(), by: req.user.id, reported: o.id, reason: 'Business messages: ' + (clip(req.body?.reason, 300) || 'spam'), ts: now(), status: 'open' });
+  bmEvent(o, 'customer.opted_out', { phone: req.user.phone, source: 'report' }); save(); res.json({ ok: true });
+});
+// ---- organisation dashboard (Maata Business → Business messaging API) ----
+const bmTplOut = (t) => ({ id: t.id, name: t.name, title: t.title || '', body: t.body, category: t.category, lang: t.lang, status: t.status, reason: t.reason || '', sensitive: !!t.sensitive, buttons: t.buttons || [], variables: bmVars(t.body + ' ' + (t.title || '') + ' ' + (t.buttons || []).map((x) => x.url).join(' ')), createdAt: t.createdAt });
+function bmDash(c) {
+  const api = bmApi(c.biz), mine = db.bmMsgs.filter((m) => m.bizId === c.bizId), since = now() - 30 * 86400000, out = mine.filter((m) => m.dir === 'out' && m.createdAt > since);
+  const cnt = (f) => out.filter(f).length;
+  return { status: api.status, apply: api.apply || null, reason: api.reason || '', autoTranslate: api.autoTranslate !== false, webhook: api.webhook ? { url: api.webhook.url, lastCode: api.webhook.lastCode ?? null, lastAt: api.webhook.lastAt || null, secretHint: api.webhook.secret ? api.webhook.secret.slice(0, 6) + '…' : '' } : null,
+    stats: { sent30: out.length, delivered: cnt((m) => ['delivered', 'read'].includes(m.state)), read: cnt((m) => m.state === 'read'), failed: cnt((m) => m.state === 'failed'), today: bmToday(c.bizId, 'live'), testToday: bmToday(c.bizId, 'test'), optedIn: db.bmPrefs.filter((p) => p.bizId === c.bizId && p.optInAt && p.level !== 'none').length, optedOut: db.bmPrefs.filter((p) => p.bizId === c.bizId && p.level === 'none').length, replies: mine.filter((m) => m.dir === 'in' && m.createdAt > since).length },
+    limits: { live: { ...BM_LIMITS.live, perDay: api.dailyLimit || BM_LIMITS.live.perDay }, test: BM_LIMITS.test },
+    keys: db.bmKeys.filter((k) => k.bizId === c.bizId && !k.revokedAt).map((k) => ({ id: k.id, name: k.name, env: k.env, hint: k.prefix + '…' + k.last4, createdAt: k.createdAt, lastUsedAt: k.lastUsedAt || null })),
+    templates: db.bmTemplates.filter((t) => t.bizId === c.bizId && !t.deleted).map(bmTplOut), optinLink: (process.env.PUBLIC_URL || 'https://maataapp.com').replace(/\/$/, '') + '/?optin=' + c.bizId };
+}
+app.get('/api/biz/:bizId/bm', auth, (req, res) => { const c = bizCtx(req, res, 'settings'); if (c) res.json(bmDash(c)); });
+app.get('/api/biz/:bizId/bm/optin-qr', auth, async (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json({ svg: await QRCode.toString(bmDash(c).optinLink, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) }); });
+app.post('/api/biz/:bizId/bm/apply', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return; const api = bmApi(c.biz), b = req.body || {};
+  if (api.status === 'verified') return res.json(bmDash(c)); if (api.status === 'suspended') return res.status(403).json({ error: BM_ERR.suspended });
+  const legal = clip(b.legalName, 100), kind = clip(b.orgType, 40), use = clip(b.useCase, 500); if (!legal || !kind || use.length < 15) return res.status(400).json({ error: 'Fill the legal name, organisation type and what messages you will send.' });
+  api.apply = { legalName: legal, orgType: kind, regNo: clip(b.regNo, 40), website: clip(b.website, 120), contact: clip(b.contact, 80), useCase: use, at: now(), by: req.user.id }; api.status = 'pending'; api.reason = '';
+  bizLog(c, 'bm-apply', '', legal); save(); res.json(bmDash(c));
+});
+app.post('/api/biz/:bizId/bm/keys', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return; const env = req.body?.env === 'live' ? 'live' : 'test';
+  if (env === 'live' && bmApi(c.biz).status !== 'verified') return res.status(403).json({ error: 'Live keys are given after Maata verifies your organisation. Use a test key now.' });
+  if (db.bmKeys.filter((k) => k.bizId === c.bizId && !k.revokedAt).length >= 10) return res.status(400).json({ error: 'Up to 10 active keys. Revoke an old one.' });
+  const secret = 'mk_' + env + '_' + crypto.randomBytes(24).toString('hex');
+  const k = { id: newId(), bizId: c.bizId, name: clip(req.body?.name, 40) || (env === 'live' ? 'Live key' : 'Test key'), env, hash: bmSha(secret), prefix: secret.slice(0, 12), last4: secret.slice(-4), createdAt: now(), by: req.user.id };
+  db.bmKeys.push(k); bizLog(c, 'bm-key', k.id, k.name + ' (' + env + ')'); save(); res.json({ key: secret, ...bmDash(c) }); // the full key is shown ONLY now
+});
+app.delete('/api/biz/:bizId/bm/keys/:id', auth, (req, res) => { const c = bizCtx(req, res, 'settings'); if (!c) return; const k = db.bmKeys.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!k) return res.status(404).json({ error: 'Key not found.' }); k.revokedAt = now(); bizLog(c, 'bm-key-revoke', k.id, k.name); save(); res.json(bmDash(c)); });
+app.post('/api/biz/:bizId/bm/templates', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return; const b = req.body || {};
+  const name = String(b.name || '').toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40); if (!name) return res.status(400).json({ error: 'Template name: letters, numbers and _ (e.g. fee_reminder).' });
+  const body = clip(b.body, 1500), title = clip(b.title, 80); if (body.length < 5) return res.status(400).json({ error: 'Write the message.' });
+  if (BM_BAD.test(body + ' ' + title)) return res.status(400).json({ error: 'For safety, templates cannot carry OTPs, passwords, PINs or card details.' });
+  const buttons = (Array.isArray(b.buttons) ? b.buttons : []).slice(0, 2).map((x) => ({ label: clip(x.label, 25), url: String(x.url || '').trim().slice(0, 300) })).filter((x) => x.label && /^https:\/\/\S+$/.test(x.url.replace(/\{\{[^}]+\}\}/g, 'x')));
+  const category = b.category === 'marketing' ? 'marketing' : 'transactional';
+  if (db.bmTemplates.some((t) => t.bizId === c.bizId && t.name === name && !t.deleted && t.id !== b.id)) return res.status(400).json({ error: 'A template with this name exists.' });
+  const t = { id: newId(), bizId: c.bizId, name, title, body, category, lang: clip(b.lang, 5) || 'en', buttons, sensitive: !!b.sensitive, status: category === 'marketing' ? 'pending' : 'approved', createdAt: now(), by: req.user.id };
+  if (category === 'marketing') t.reason = 'Marketing templates are checked by Maata before use.';
+  db.bmTemplates.push(t); bizLog(c, 'bm-template', t.id, name); save(); res.json(bmDash(c));
+});
+app.delete('/api/biz/:bizId/bm/templates/:id', auth, (req, res) => { const c = bizCtx(req, res, 'settings'); if (!c) return; const t = db.bmTemplates.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!t) return res.status(404).json({ error: 'Template not found.' }); t.deleted = true; save(); res.json(bmDash(c)); });
+app.put('/api/biz/:bizId/bm/settings', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return; const api = bmApi(c.biz), b = req.body || {};
+  if (b.autoTranslate !== undefined) api.autoTranslate = !!b.autoTranslate;
+  if (b.webhookUrl !== undefined) { const u = String(b.webhookUrl || '').trim(); if (!u) api.webhook = null; else { if (!process.env.BM_ALLOW_LOCAL && (!/^https:\/\/[^\s]+$/.test(u) || /localhost|127\.0\.0\.1|0\.0\.0\.0|\.local\b|169\.254\.|\b10\.\d+\.|192\.168\./i.test(u))) return res.status(400).json({ error: 'Webhook must be a public https:// address.' }); api.webhook = { url: u, secret: (api.webhook && api.webhook.secret && !b.newSecret) ? api.webhook.secret : 'whsec_' + crypto.randomBytes(20).toString('hex') }; } }
+  save(); const out = bmDash(c); if (b.webhookUrl && api.webhook) out.webhookSecret = api.webhook.secret; res.json(out);
+});
+app.post('/api/biz/:bizId/bm/webhook-test', auth, (req, res) => { const c = bizCtx(req, res, 'settings'); if (!c) return; if (!bmApi(c.biz).webhook) return res.status(400).json({ error: 'Add a webhook address first.' }); bmEvent(c.owner, 'test.ping', { hello: 'from Maata' }); save(); setImmediate(bmWork); res.json({ ok: true }); });
+app.post('/api/biz/:bizId/bm/test-send', auth, (req, res) => { const c = bizCtx(req, res, 'settings'); if (!c) return; const r = bmCreate(c.owner, null, { ...(req.body || {}), idempotency_key: null }, 'test'); if (r.err) return res.status(r.code || 400).json({ error: BM_ERR[r.err] || r.err }); res.json(bmMsgOut(r.msg)); });
+app.get('/api/biz/:bizId/bm/logs', auth, (req, res) => { const c = bizCtx(req, res, 'settings'); if (!c) return; res.json(db.bmMsgs.filter((m) => m.bizId === c.bizId).slice(-150).reverse().map((m) => ({ ...bmMsgOut(m), dir: m.dir, env: m.env, text: m.text.slice(0, 160), name: (userById(m.to) || {}).name || '' }))); });
+app.post('/api/biz/:bizId/bm/reply', auth, (req, res) => { const c = bizCtx(req, res, 'bill'); if (!c) return; const r = bmCreate(c.owner, null, { to: req.body?.phone, text: req.body?.text }, bmApi(c.biz).status === 'verified' ? 'live' : 'test'); if (r.err) return res.status(r.code || 400).json({ error: BM_ERR[r.err] || r.err }); res.json(bmMsgOut(r.msg)); });
+app.post('/api/biz/:bizId/bm/ai-template', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return; const goal = clip(req.body?.goal, 400); if (!goal) return res.status(400).json({ error: 'Say what the message is for.' });
+  if (!GEMINI_KEY) return res.status(503).json({ error: 'Maata AI is not switched on.' });
+  const g = await gemini('You write short, clear message templates for an Indian organisation (' + (c.biz.category || 'business') + ': ' + c.biz.name + ') to send to its customers in the Maata app. Use {{variable_name}} (lowercase, underscores) for every changing value such as names, dates, amounts, ids. Never include OTPs, passwords or card numbers. Language: ' + (AI_LANG_NAME[req.body?.lang] || 'English') + '. Return ONLY JSON: {"name":"short_snake_case","title":"short title","body":"message text (max 400 chars)","category":"transactional|marketing"}',
+    [{ role: 'user', parts: [{ text: goal }] }], { json: true, maxTokens: 500, temperature: 0.4 });
+  let d = null; try { d = JSON.parse(g.text || ''); } catch {}
+  if (!d || !d.body) return res.status(502).json({ error: 'AI could not write it. Try again with more detail.' });
+  res.json({ name: clip(d.name, 40), title: clip(d.title, 80), body: clip(d.body, 1500), category: d.category === 'marketing' ? 'marketing' : 'transactional' });
+});
+// ---- platform admin: verify organisations ----
+app.get('/admin/api/bm', adminAuth, (req, res) => res.json(db.users.filter((u) => u.business && u.business.api && u.business.api.status && u.business.api.status !== 'none').map((u) => { const a = u.business.api, out = db.bmMsgs.filter((m) => m.bizId === u.id && m.dir === 'out' && m.env === 'live'); return { bizId: u.id, name: u.business.name, phone: u.phone, owner: u.name, status: a.status, apply: a.apply || null, reason: a.reason || '', reports: a.reports || 0, sent30: out.filter((m) => m.createdAt > now() - 30 * 86400000).length, dailyLimit: a.dailyLimit || BM_LIMITS.live.perDay, pendingTemplates: db.bmTemplates.filter((t) => t.bizId === u.id && t.status === 'pending' && !t.deleted).map(bmTplOut) }; }).sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1))));
+app.post('/admin/api/bm/:bizId/:action', adminAuth, (req, res) => {
+  const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' }); const a = bmApi(o.business), act = req.params.action, why = clip(req.body?.reason, 200);
+  if (act === 'verify') { a.status = 'verified'; a.verifiedAt = now(); a.reason = ''; }
+  else if (act === 'reject') { a.status = 'rejected'; a.reason = why || 'Details could not be verified.'; }
+  else if (act === 'suspend') { a.status = 'suspended'; a.reason = why || 'Suspended after complaints.'; }
+  else if (act === 'unsuspend') { a.status = 'verified'; a.reason = ''; }
+  else if (act === 'limit') { a.dailyLimit = Math.max(10, Math.min(1e6, Math.round(Number(req.body?.limit) || BM_LIMITS.live.perDay))); }
+  else if (act === 'template') { const t = db.bmTemplates.find((x) => x.id === req.body?.templateId && x.bizId === o.id); if (!t) return res.status(404).json({ error: 'Template not found.' }); t.status = req.body?.ok ? 'approved' : 'rejected'; t.reason = req.body?.ok ? '' : why || 'Not allowed.'; }
+  else return res.status(400).json({ error: 'Unknown action.' });
+  audit(req.admin, 'bm-' + act, o.id, o.business.name + (why ? ' – ' + why : '')); save();
+  pushTo(o, { type: 'msg', title: '🏢 Business messaging', body: act === 'verify' || act === 'unsuspend' ? '✅ ' + o.business.name + ' is verified. You can now create live API keys.' : act === 'template' ? 'A template was ' + (req.body?.ok ? 'approved' : 'rejected') + '.' : 'Status: ' + a.status + (a.reason ? ' – ' + a.reason : ''), tag: 'bm-admin', url: '/?biz=' + o.id }).catch(() => {});
+  res.json({ ok: true, status: a.status });
+});
+// ---- developer docs ----
+app.get('/developers', (req, res) => {
+  const base = (process.env.PUBLIC_URL || 'https://maataapp.com').replace(/\/$/, '');
+  res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maata Business Messaging API</title><style>body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#13201E;background:#F6F8F7;line-height:1.55}main{max-width:820px;margin:0 auto;padding:24px 18px 60px}h1{color:#0F7A6E;margin:0 0 6px}h2{margin-top:30px;border-top:1px solid #DDE4E2;padding-top:18px}pre{background:#0E1B1A;color:#D7F5EE;padding:14px;border-radius:12px;overflow:auto;font-size:13px}code{background:#E6EFEC;padding:1px 5px;border-radius:5px}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #DDE4E2;padding:7px 6px;text-align:left;vertical-align:top}.tip{background:#E6F4F1;border-left:4px solid #0F7A6E;padding:10px 14px;border-radius:8px}</style></head><body><main>
+<h1>🏢 Maata Business Messaging API</h1><p>Send messages from your software (school, bank, hospital, office, shop) to customers in the Maata app. Version 1.</p>
+<div class="tip">1) Maata Business → More → <b>Business messaging API</b> → apply for verification. 2) Create a <b>test key</b> (<code>mk_test_…</code>) and try it on your own phone. 3) After verification, create a <b>live key</b> (<code>mk_live_…</code>). Keep keys on your server only — never in an app or web page.</div>
+<h2>Send a message</h2><pre>curl -X POST ${base}/v1/messages \\
+  -H "Authorization: Bearer mk_live_xxx" -H "Content-Type: application/json" \\
+  -d '{"to":"9876543210","template":"fee_reminder","variables":{"student_name":"Ravi","amount":"₹2,500","due_date":"20 Oct"},"idempotency_key":"fee-2026-10-ravi"}'</pre>
+<p>Response <code>202</code>: <code>{"id":"msg_…","status":"accepted",…}</code>. Optional: <code>"send_at":"2026-10-20T09:00:00+05:30"</code> to schedule. Free text (<code>"text":"…"</code> instead of a template) is allowed only within 24 hours after the customer replied.</p>
+<h2>Message states</h2><p><code>accepted</code> / <code>queued</code> → <code>sent</code> → <code>delivered</code> (reached the phone) → <code>read</code>, or <code>failed</code>. Check with <code>GET /v1/messages/{id}</code>.</p>
+<h2>Other endpoints</h2><table><tr><th>GET /v1/templates</th><td>Your templates, status and variables.</td></tr><tr><th>GET /v1/usage</th><td>Today's count and limits.</td></tr><tr><th>GET /v1/customers/{phone}</th><td>Is the person on Maata, and can you message them?</td></tr></table>
+<h2>Consent rules</h2><ul><li><b>Transactional</b> (fees, bills, appointments, orders): the customer has a relationship with you or opted in.</li><li><b>Marketing</b>: only customers who chose "All messages" for you.</li><li>Customers can choose All / Important only / None, reply STOP, or report you. Share your opt-in link: <code>${base}/?optin=YOUR_BUSINESS_ID</code></li><li>Templates must not contain OTPs, passwords, PINs or card numbers.</li></ul>
+<h2>Webhooks</h2><p>Add an https address in the dashboard. Maata POSTs JSON events: <code>message.delivered</code>, <code>message.read</code>, <code>message.received</code> (customer reply), <code>customer.opted_in</code>, <code>customer.opted_out</code>, <code>test.ping</code>. Failed deliveries are retried (10 s, 1 min, 5 min, 30 min, 2 h).</p>
+<p>Check the signature: header <code>X-Maata-Signature: t=TIMESTAMP,v1=HEX</code> where HEX = HMAC-SHA256(your <code>whsec_…</code> secret, <code>TIMESTAMP + "." + raw body</code>). Reject if older than 5 minutes.</p>
+<pre>// Node.js
+const [t, v1] = sig.split(',').map(s => s.split('=')[1]);
+const ok = crypto.createHmac('sha256', SECRET).update(t + '.' + rawBody).digest('hex') === v1;</pre>
+<h2>Errors</h2><table>${Object.entries(BM_ERR).map(([k, v]) => '<tr><th>' + k + '</th><td>' + v + '</td></tr>').join('')}</table>
+<h2>Limits</h2><p>Test keys: ${BM_LIMITS.test.perMin}/min, ${BM_LIMITS.test.perDay}/day, only to your own team. Live keys: ${BM_LIMITS.live.perMin}/min, ${BM_LIMITS.live.perDay}/day (can be raised).</p>
+</main></body></html>`);
+});
 
 io.on('connection', (socket) => {
   if (socket.isAdmin) {

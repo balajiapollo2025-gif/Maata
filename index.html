@@ -1466,7 +1466,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .sec-own{margin-top:16px;max-width:360px;width:100%}.sec-own summary{cursor:pointer;opacity:.8;padding:10px}
 .sec-own form{display:flex;flex-direction:column;gap:8px;text-align:left}.sec-own input{font:inherit;font-size:16px;padding:12px;border-radius:12px;border:0;min-height:44px}
 .sec-err{color:#FFB4BF}
-.map-head-btn svg{stroke:#0F7A6E}
+.map-head-btn svg{stroke:#0F7A6E}.shop-head-btn{margin-left:2px}.shop-head-btn svg{stroke:#E07B00}
 /* 🏪 Maata Business — uses the app's own theme tokens (light / dark) */
 .bz{--bz-acc:#0F7A6E;--bz-acc-ink:#fff;--bz-soft:rgba(15,122,110,.12);--bz-warn:#B54708;--bz-bad:#B42318;position:fixed;inset:0;z-index:37;background:var(--paper);color:var(--ink);display:flex;flex-direction:column}
 .bz-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -1563,7 +1563,8 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mk-foot{display:flex;gap:8px;align-items:center;padding:6px 8px 10px}.mk-foot input{flex:1;min-width:0;height:44px;border-radius:22px;border:0;padding:0 16px;font-size:16px;background:#2a2f32;color:#fff}
 .mk-send{width:48px;height:48px;border-radius:50%;border:0;background:#0F7A6E;display:grid;place-items:center;flex:none;cursor:pointer}.mk-send svg{width:22px;height:22px;fill:#fff;stroke:none}
 .mk-pick{display:flex;gap:10px;align-items:center;width:100%;padding:8px 4px;background:none;border:0;text-align:left;color:inherit;cursor:pointer}
-.bz-qr{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;margin:6px 0 10px;border-radius:16px;background:#fff;border:2px solid #0F7A6E;color:#13201E}.bz-qr b{font-size:30px;font-variant-numeric:tabular-nums}.bz-qr small{color:#55625F;text-align:center}.bz-qr img,.bz-qrsvg svg{width:min(260px,70vw);height:min(260px,70vw);display:block}.bz-upinote{flex-basis:100%;margin-top:4px}
+.bz-qr{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;margin:6px 0 10px;border-radius:16px;background:#fff;border:2px solid #0F7A6E;color:#13201E}.bz-qr b{font-size:30px;font-variant-numeric:tabular-nums}.bz-qr small{color:#55625F;text-align:center}.bz-qr img,.bz-qrsvg img{width:min(260px,70vw);height:min(260px,70vw);display:block}.bz-upinote{flex-basis:100%;margin-top:4px}
+.pr-help{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.04);font-size:14px;margin:6px 0}.pr-help.on{background:#FFF4E5;border:1px solid #F5B85A}.pr-help small{color:var(--muted)}
 .pr-type{grid-template-columns:repeat(3,1fr)!important}.pr-dev{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 4px;border-bottom:1px solid var(--line)}.pr-dev span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr-dev .bz-btn{flex:none;width:auto;margin:0}.pr-dev.on span{font-weight:700;color:#0F7A6E}
 .tm-type{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tm-type button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;border-radius:14px;border:2px solid var(--line);background:var(--card,#fff);color:inherit;cursor:pointer}.tm-type button.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-type i{font-style:normal;font-size:28px}.tm-type small{color:var(--muted);text-align:center;font-size:12px}
 .tm-mine{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;margin-bottom:10px;border-radius:14px;border:1px solid var(--line);background:var(--card,#fff);color:inherit;font:inherit;font-weight:600;cursor:pointer}.tm-mine>span{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}.tm-mine small{font-weight:400;color:var(--muted);font-size:12px}.tm-mine b{background:#0F7A6E;color:#fff;padding:6px 14px;border-radius:20px}.tm-mine.on{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.tm-mine.on b{background:#C62828}
@@ -1584,6 +1585,18 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .tm-mrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--line)}.tm-mrow small{grid-column:1;color:var(--muted)}.tm-mrow button{grid-row:1/3;grid-column:2;font-size:20px}
 .tm-pick{position:relative}.tm-pickpin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:34px;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
 .tm-ai{white-space:pre-wrap;font:inherit;font-size:14.5px;line-height:1.55;margin:0 0 10px}
+.bm-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 16px;border:0;border-bottom:1px solid var(--line);background:rgba(15,122,110,.06);color:inherit;font:inherit;text-align:left;cursor:pointer}.bm-row[hidden]{display:none}.bm-ico{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#0F7A6E;font-size:22px;flex:none}.bm-rt{flex:1;min-width:0;display:flex;flex-direction:column}.bm-rt small{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm-badge{min-width:22px;height:22px;border-radius:11px;background:#0F7A6E;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 6px}.bm-badge.zero{background:none;color:var(--muted);font-size:20px}
+.bm-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}.bm-av{width:42px;height:42px;border-radius:50%;background:#E6EFEC;color:#0F7A6E;font-weight:800;display:grid;place-items:center;flex:none}.bm-it{flex:1;min-width:0;display:flex;flex-direction:column}.bm-it small{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bm-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.bm-meta small{color:var(--muted);font-size:11.5px}
+.bm-thread{display:flex;flex-direction:column;gap:10px;padding-bottom:80px}.bm-card{position:relative;background:var(--card,#fff);border:1px solid var(--line);border-left:4px solid #0F7A6E;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;max-width:92%}.bm-card.mkt{border-left-color:#E07B00}.bm-card p{margin:0;white-space:pre-wrap;line-height:1.45}.bm-card small{color:var(--muted);font-size:11.5px;align-self:flex-end}.bm-test{position:absolute;top:8px;right:10px;font-size:10px;font-weight:800;background:#FFE7B3;color:#7A4B00;padding:1px 6px;border-radius:6px}
+.bm-btn{display:block;text-align:center;padding:9px;border-radius:10px;background:rgba(15,122,110,.1);color:#0F7A6E;font-weight:700;text-decoration:none}.bm-mine{align-self:flex-end;max-width:80%;background:#D9FDD3;color:#111B21;border-radius:14px;padding:8px 12px;display:flex;flex-direction:column;gap:2px}.bm-mine p{margin:0;white-space:pre-wrap}.bm-mine small{align-self:flex-end;color:#667781;font-size:11px}.bm-off{background:#FFF4E5;padding:10px;border-radius:10px;margin:0}
+.bm-reply{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--bg,#F6F8F7);border-top:1px solid var(--line);z-index:2}.bm-reply input{flex:1;min-width:0;height:44px;border-radius:22px;border:1px solid var(--line);padding:0 16px;font-size:16px;background:var(--card,#fff);color:inherit}.bm-send{width:46px;height:46px;border-radius:50%;border:0;background:#0F7A6E;display:grid;place-items:center;flex:none}.bm-send svg{width:20px;height:20px;fill:#fff;stroke:none}
+.bm-status.s-verified{border:2px solid #0F7A6E}.bm-status.s-pending{border:2px solid #F5B85A}.bm-status.s-suspended,.bm-status.s-rejected{border:2px solid #C62828}
+.bm-qr img{width:180px;height:180px;display:block;margin:6px auto;background:#fff;padding:6px;border-radius:10px}.bm-code{display:block;word-break:break-all;background:rgba(0,0,0,.05);padding:8px 10px;border-radius:8px;font-size:12.5px;margin:6px 0}.bm-code.big{font-size:14px;user-select:all}
+.bm-tpl{padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px}.bm-tb{margin:0;white-space:pre-wrap;background:rgba(0,0,0,.04);padding:8px 10px;border-radius:8px;font-size:14px}.bm-ai{display:flex;gap:6px}.bm-ai input{flex:1;min-width:0}.bm-pre{white-space:pre-wrap;word-break:break-all;background:#0E1B1A;color:#D7F5EE;padding:12px;border-radius:10px;font-size:12px}
+.bz-pphoto{display:flex;gap:12px;align-items:center;padding:4px 0 8px}.bz-pprev{width:84px;height:84px;border-radius:14px;overflow:hidden;background:rgba(15,122,110,.08);display:grid;place-items:center;font-size:34px;flex:none}.bz-pprev img{width:100%;height:100%;object-fit:cover}.bz-pacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}.bz-pacts small{flex-basis:100%;color:var(--muted)}.bz-pacts .bz-btn{padding:6px 10px}
+.od-ph img{cursor:zoom-in}
+.od-big{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}.od-big img{max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain;background:#fff}.od-bigcap{color:#fff;text-align:center;display:flex;flex-direction:column;gap:4px;max-width:520px}.od-bigcap small{opacity:.8}.od-bigx{position:absolute;top:max(14px,env(safe-area-inset-top));right:14px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:20px}
 .od-card.new{border:2px solid #F79009}.od-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.od-tr{padding:4px 0}
 .od-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}.od-acts .bz-btn{flex:1 1 auto;align-self:auto}.bz-btn.pri{background:var(--bz-acc);color:#fff}.bz-btn.bad{background:rgba(240,68,56,.1);color:#B42318}
 .od-cancel{color:#B42318!important}
@@ -1799,6 +1812,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
       <div class="brand-row"><svg class="mini" aria-hidden="true"><use href="#parrot"/></svg><div class="brand-txt"><div class="brand">Maata</div><div class="tagline">Connect · Chat · Share</div></div></div>
       <h1 class="page-title" id="pageTitle">Maata</h1>
       <button class="coin-pill" id="coinBtn" title="Maata coins" aria-label="My Maata coins"><span>🪙</span><b>0</b></button>
+      <button class="icon-btn cam-btn shop-head-btn" id="shopHeadBtn" title="Shops & my orders" aria-label="Shopping: shops and my orders"><svg viewBox="0 0 24 24"><path d="M6 7h12l-1.2 12.1a2 2 0 0 1-2 1.9H9.2a2 2 0 0 1-2-1.9z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg></button>
       <button class="icon-btn cam-btn map-head-btn" id="mapHeadBtn" title="Maata Maps" aria-label="Open Maata Maps" style="margin-left:auto"><svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
       <button class="icon-btn" id="mainMenuBtn" title="Menu" aria-label="Menu" style="margin-left:auto"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg></button>
       <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
@@ -1827,6 +1841,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
       <button id="csList" aria-label="Add to list" title="Add to list"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
       <button id="csDel" aria-label="Delete chats" title="Delete chats"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
     </div>
+    <button class="bm-row" id="bmRow" hidden aria-label="Business messages"></button>
     <ul class="contacts" id="contacts"></ul>
     <div id="statusPane" hidden style="flex:1;overflow-y:auto;min-height:0;padding:0 8px">
       <div id="stSponsored" hidden></div>
@@ -2363,7 +2378,7 @@ async function start() {
   setTimeout(() => { registerNativePush(); if (!isNativeApp()) { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); } handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
   setTimeout(secStart, 2000);
-  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); const tmq = sp.get('team'); if (tmq) setTimeout(() => api('/api/teams/' + tmq).then((t) => (t.myStatus === 'invited' ? tmConsent(t) : t.admin ? tmAdmin(tmq) : tmStaff(tmq))).catch(() => openTeams()), 900); }
+  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); const bmq = sp.get('bm'), oiq = sp.get('optin'); if (bmq) setTimeout(() => openBmThread(bmq), 900); if (oiq) setTimeout(() => bmOptin(oiq), 1200); const tmq = sp.get('team'); if (tmq) setTimeout(() => api('/api/teams/' + tmq).then((t) => (t.myStatus === 'invited' ? tmConsent(t) : t.admin ? tmAdmin(tmq) : tmStaff(tmq))).catch(() => openTeams()), 900); }
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -2376,7 +2391,7 @@ function connectSocket() {
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
   socket.on('announcement', showNotice);
-  socket.on('connect', secHello); odSocket(); rdSocket(); tmSocket(); setTimeout(tmResume, 4000); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
+  socket.on('connect', secHello); odSocket(); rdSocket(); tmSocket(); bmSocket(); setTimeout(bmRefresh, 2500); setTimeout(tmResume, 4000); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
   socket.on('user:removed', ({ id }) => {
     users = users.filter((u) => u.id !== id);
     if (activeId === id) { activeId = null; $('#app').classList.remove('in-chat'); $('#chatEmpty').hidden = false; $('#chatHead').hidden = true; $('#messages').hidden = true; $('#composer').hidden = true; }
@@ -4958,6 +4973,7 @@ $('#mediaView').addEventListener('click', (e) => { if (MV.pop && !e.target.close
 // ================= chat list menu (⋮): broadcast, quick replies, starred, select chats, lists, mark all read, app lock =================
 let prefs = { quickReplies: [], lists: [], favs: [] }, chatFilter = 'all', chatSel = null;
 const MI = {
+  bm: '<svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 10h1M14 10h1M9 14h1M14 14h1M10 21v-3h4v3"/></svg>',
   team: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M18 7a3 3 0 0 1 0 6c-1.7 0-3-1.3-3-3"/><path d="M18 13s3 2.7 3 5"/></svg>',
   rides: '<svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-2-7h-3M13 10h3l2 7M6 14l2-4h3"/></svg>',
   shops: '<svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 2 3 3 0 0 1-5.4 0A3 3 0 0 1 4 11z"/><path d="M5 13v7h14v-7M10 20v-4h4v4"/></svg>',
@@ -5602,7 +5618,22 @@ function prSetup(after) {
       if (cfg.type === 'bt' && !needNew) {
         const st = A.btScanStatus();
         if (st === 'nobt') f.append(el('p', 'info-note', PR_MSG.nobt));
-        else if (st === 'perm') { f.append(el('p', 'info-note', 'Maata needs the "Nearby devices" permission to find and use the printer.')); const b = el('button', 'sheet-btn primary', '✅ Allow Nearby devices'); b.onclick = () => { PR.permCb = () => draw(); A.btAskScanPermission(); }; f.append(b); }
+        else if (st === 'perm') {
+          let pi = {}; try { pi = JSON.parse(A.btPermInfo ? A.btPermInfo() : '{}'); } catch {}
+          if (pi.declared === false) f.append(el('p', 'tm-warn', '⚠️ This Maata app was built without the Bluetooth permission. Upload the newest AndroidManifest.xml to GitHub, wait for the app build, and update Maata.'));
+          f.append(el('p', 'info-note', 'Maata needs the "Nearby devices" permission to find and use the printer.'));
+          const b = el('button', 'sheet-btn primary', '✅ Allow Nearby devices');
+          b.onclick = () => { b.disabled = true; b.textContent = '⏳ Waiting for Android…'; let answered = false;
+            PR.permCb = () => { answered = true; if (A.btScanStatus() === 'perm') { PR.permDenied = true; toast('Android did not allow it. Tap ⚙️ Open Maata settings below.'); } draw(); };
+            A.btAskScanPermission();
+            setTimeout(() => { if (!answered) { PR.permDenied = true; draw(); } }, 8000); };
+          f.append(b);
+          const box = el('div', PR.permDenied ? 'pr-help on' : 'pr-help');
+          box.append(el('b', null, PR.permDenied ? '👉 Android did not show the "Allow" box?' : 'No popup?'), el('span', null, 'This happens if "Don\'t allow" was tapped before. Open Maata settings → Permissions → Nearby devices → Allow. Then come back here.'));
+          if (A.openAppSettings) { const o = el('button', 'sheet-btn' + (PR.permDenied ? ' primary' : ''), '⚙️ Open Maata settings'); o.onclick = () => A.openAppSettings(); box.append(o); }
+          else box.append(el('small', null, 'Phone Settings → Apps → Maata → Permissions → Nearby devices → Allow'));
+          f.append(box);
+        }
         else if (st === 'off') { f.append(el('p', 'info-note', 'Bluetooth is off.')); const b = el('button', 'sheet-btn primary', 'Switch on Bluetooth'); b.onclick = () => A.btOpenSettings(); f.append(b); const r = el('button', 'sheet-btn', '🔄 I switched it on'); r.onclick = draw; f.append(r); }
         else {
           let paired = []; try { paired = JSON.parse(A.btPrinters() || '[]'); } catch {}
@@ -5655,9 +5686,10 @@ function prSetup(after) {
       f.append(el('p', 'bz-note', 'Works with most 58 mm / 80 mm thermal receipt printers (ESC/POS). Settings are saved on this phone.'));
       L.append(f);
     };
-    draw();
+    PR.redraw = draw; draw();
   });
 }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && PR.redraw && !$('#moreSheet').hidden && $('#moreSheet').textContent.includes('Receipt printer')) { PR.permDenied = false; PR.redraw(); } }); // back from Android settings
 // 🔧 step-by-step check, in simple words
 async function prCheck(cfg) {
   const A = window.MaataAndroid, lines = [];
@@ -5708,7 +5740,7 @@ function bzUpiSetup(after) {
 async function bzUpiTest(after) {
   let d; try { d = await bzApi('/upi-qr?amount=100&note=Maata%20test'); } catch (e) { return toast(e.message); }
   sheet('📱 Test your UPI QR (₹1)', (L) => {
-    const b = el('div', 'bz-qr'); b.append(el('small', null, 'Scan with another phone'), el('b', null, '₹1.00')); const q = el('div', 'bz-qrsvg'); q.innerHTML = d.svg; b.append(q, el('small', null, 'UPI ID: ' + d.upi)); L.append(b);
+    const b = el('div', 'bz-qr'); b.append(el('small', null, 'Scan with another phone'), el('b', null, '₹1.00')); const q = el('div', 'bz-qrsvg'); const qi = el('img'); qi.alt = 'UPI test QR code'; qi.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg); q.append(qi); b.append(q, el('small', null, 'UPI ID: ' + d.upi)); L.append(b);
     L.append(el('p', 'info-note', 'Scan this from another phone. If the UPI app shows YOUR name, the UPI ID is correct (you can cancel without paying). If it shows a different name or an error, fix the UPI ID in More → Settings.'));
     const ok = el('button', 'sheet-btn primary', after ? '👍 It shows my name — continue' : '👍 Done'); ok.onclick = () => { closeSheet('moreSheet'); if (after) after(); }; L.append(ok);
   });
@@ -5787,7 +5819,15 @@ function bzEditProduct(p) {
   const P = p || {};
   sheet(p ? '✏️ ' + p.name : '➕ New product', (L) => {
     const f = el('form', 'bz-form');
-    if (!p) { const ai = el('button', 'sheet-btn', '📷 Fill with AI from a photo'); ai.type = 'button'; ai.onclick = () => bzAiPhoto(fill); f.append(ai); }
+    // 🖼️ product photo: customers see it in your online shop (bills stay without photos)
+    let photoBlob = null, dropPhoto = false;
+    const pw = el('div', 'bz-pphoto'); const pv = el('div', 'bz-pprev'); const pa = el('div', 'bz-pacts'); pw.append(pv, pa); f.append(pw);
+    const showPrev = (src) => { pv.innerHTML = ''; if (src) { const im = el('img'); im.src = src; im.alt = 'Product photo'; pv.append(im); } else pv.append(el('span', null, '🛍️')); pa.innerHTML = '';
+      const pick = (cap) => { const b = el('button', 'bz-btn', cap ? '📷 Camera' : '🖼️ Gallery'); b.type = 'button'; b.onclick = () => { const inp = el('input'); inp.type = 'file'; inp.accept = 'image/*'; if (cap) inp.capture = 'environment'; inp.onchange = async () => { const fl0 = inp.files[0]; if (!fl0) return; photoBlob = await bzShrink(fl0); dropPhoto = false; showPrev(URL.createObjectURL(photoBlob)); }; inp.click(); }; return b; };
+      pa.append(el('small', null, src ? 'Customers see this photo in your shop' : 'Add a photo for customers (optional)'), pick(true), pick(false));
+      if (src) { const rm = el('button', 'bz-link', 'Remove photo'); rm.type = 'button'; rm.onclick = () => { photoBlob = null; dropPhoto = true; showPrev(null); }; pa.append(rm); } };
+    showPrev(P.hasPhoto ? odPhoto(P) : null);
+    if (!p) { const ai = el('button', 'sheet-btn', '📷 Fill with AI from a photo'); ai.type = 'button'; ai.onclick = () => bzAiPhoto(fill, (blob) => { photoBlob = blob; dropPhoto = false; showPrev(URL.createObjectURL(blob)); }); f.append(ai); }
     const fl = (lab, id, val, type, ph) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el(type === 'select' ? 'select' : 'input'); i.id = id; if (type && type !== 'select') i.type = type; if (type === 'number') { i.inputMode = 'decimal'; i.step = 'any'; } if (ph) i.placeholder = ph; if (val != null && type !== 'select') i.value = val; l.append(i); f.append(l); return i; };
     const n = fl('Product name', 'bzPN', P.name, 'text', 'e.g. Sona Masoori Rice 1 kg');
     const pr = fl('Selling price ₹', 'bzPP', P.price, 'number');
@@ -5807,18 +5847,22 @@ function bzEditProduct(p) {
       e.preventDefault();
       const body = { name: n.value, price: pr.value, unit: un.value, taxRate: Number(tx.value), lowAt: lo.value, barcode: bc.value, category: ca.value, description: ds.value, available: avc.checked };
       if (!p && st.value !== '') { body.stock = st.value; body.trackStock = true; }
-      try { await (p ? bzApi('/products/' + p.id, { method: 'PUT', body: JSON.stringify(body) }) : bzApi('/products', { method: 'POST', body: JSON.stringify(body) })); closeSheet('moreSheet'); toast(p ? 'Saved ✓' : 'Product added ✓'); await bzLoadProducts(); bzTab(BZ.tab); } catch (x) { toast(x.message); }
+      try { const saved = await (p ? bzApi('/products/' + p.id, { method: 'PUT', body: JSON.stringify(body) }) : bzApi('/products', { method: 'POST', body: JSON.stringify(body) }));
+        const pid = (saved && saved.id) || (p && p.id);
+        if (pid && photoBlob) { const r = await fetch('/api/biz/' + BZ.id + '/products/' + pid + '/photo', { method: 'POST', headers: { 'Content-Type': photoBlob.type || 'image/jpeg', Authorization: 'Bearer ' + token }, body: photoBlob }); if (!r.ok) toast('Saved, but the photo did not upload. Try again.'); }
+        else if (pid && dropPhoto && P.hasPhoto) await bzApi('/products/' + pid + '/photo', { method: 'DELETE' }); closeSheet('moreSheet'); toast(p ? 'Saved ✓' : 'Product added ✓'); await bzLoadProducts(); bzTab(BZ.tab); } catch (x) { toast(x.message); }
     };
     L.append(f); if (!p) setTimeout(() => n.focus(), 250);
   });
 }
-function bzAiPhoto(fill) {
+function bzAiPhoto(fill, usePhoto) {
   const inp = el('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
   inp.onchange = async () => {
     const file = inp.files[0]; if (!file) return; toast('✨ AI is reading the photo…');
     try {
       const small = await bzShrink(file);
       const r = await fetch('/api/biz/' + BZ.id + '/ai/product-photo', { method: 'POST', headers: { 'Content-Type': small.type, Authorization: 'Bearer ' + token }, body: small });
+      if (usePhoto) usePhoto(small); // the same photo becomes the product photo
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'AI could not read the photo.'); fill(d);
     } catch (e) { toast(e.message); }
   };
@@ -5836,6 +5880,7 @@ function bzMore(body) {
   if (bzCan('staff')) a('👥 Staff', (BZ.info.staff.length || 'No') + ' staff · cashier, manager, stock', bzStaff);
   if (bzCan('settings')) a('⚙️ Bill settings', 'Bill number, GST mode, UPI, GSTIN', bzSettings);
   a('🖨️ Receipt printer', (() => { const p = prCfg(); return prReady(p) ? p.name + ' · ' + p.width + ' mm' + (p.auto ? ' · auto print' : '') : 'Bluetooth, USB or Wi-Fi · 58 / 80 mm'; })(), () => prSetup());
+  if (bzCan('settings')) a('🏢 Business messaging API', 'Send messages to customers from your software', openBmDash);
   if (bzCan('reports')) a('🕘 Activity log', 'Who did what, when', bzLog);
   if (BZ.info.role === 'owner') a('🏪 Business profile', 'Name, address, timings', editBusinessProfile);
   a('🔁 Switch business', 'If you work in more than one shop', () => openBiz());
@@ -5959,7 +6004,7 @@ async function openShop(bizId) {
     if (!list.length) grid.append(el('p', 'bz-empty', 'Nothing found. Try ✨ and type your list.'));
     for (const it of list) {
       const c = el('div', 'od-item' + (it.inStock ? '' : ' out'));
-      const ph = el('div', 'od-ph'); if (it.hasPhoto) { const im = el('img'); im.src = odPhoto(it); im.alt = ''; im.loading = 'lazy'; ph.append(im); } else ph.textContent = '🛍️';
+      const ph = el('div', 'od-ph'); if (it.hasPhoto) { const im = el('img'); im.src = odPhoto(it); im.alt = it.name; im.loading = 'lazy'; im.onclick = () => odPhotoBig(it); ph.append(im); } else ph.textContent = '🛍️';
       const tx = el('div', 'od-tx'); tx.append(el('b', null, it.name), el('small', null, bzRs(Math.round(it.price * 100)) + ' / ' + it.unit + (s.taxMode === 'excl' && it.taxRate ? ' + GST' : '')));
       if (!it.inStock) tx.append(el('small', 'bz-warn', 'Out of stock')); else if (it.left != null) tx.append(el('small', 'bz-warn', 'Only ' + it.left + ' left'));
       const q2 = OD.cart.get(it.id) || 0, ctl = el('div', 'od-ctl');
@@ -5971,6 +6016,11 @@ async function openShop(bizId) {
     odBar();
   }
   OD.redraw = draw; q.oninput = draw; draw();
+}
+function odPhotoBig(it) {
+  const o = el('div', 'od-big'); o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', it.name); const im = el('img'); im.src = odPhoto(it); im.alt = it.name;
+  const cap = el('div', 'od-bigcap'); cap.append(el('b', null, it.name), el('span', null, bzRs(Math.round(it.price * 100)) + ' / ' + it.unit)); if (it.description) cap.append(el('small', null, it.description));
+  const x = el('button', 'od-bigx', '✕'); x.setAttribute('aria-label', 'Close'); o.append(im, cap, x); o.onclick = (e) => { if (e.target === o || e.target === x) o.remove(); }; document.body.append(o);
 }
 function odSet(it, qty) {
   if (it.left != null && qty > it.left) { toast('Only ' + it.left + ' left'); qty = it.left; }
@@ -6598,6 +6648,175 @@ function tmSocket() {
   socket.on('team:event', (p) => { if (['away', 'offline', 'gps_off', 'mock', 'auto_off', 'left'].includes(p.event.kind)) toast((TM_EV[p.event.kind] || '📍') + ' ' + p.event.name + ': ' + p.event.text); if (TM.cur && TM.cur.id === p.teamId && TM.tab === 'alerts' && TM.redraw) TM.redraw(); });
 }
 
+// ==================== 🏢 BUSINESS MESSAGES (customer inbox) + BUSINESS MESSAGING API (organisation dashboard) ====================
+const BMI = { list: [], open: null };
+const bmName = (b) => b.name + (b.verified ? ' ✔' : '');
+const bmTime = (ts) => { const d = new Date(ts), t = new Date(); return d.toDateString() === t.toDateString() ? d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); };
+async function bmRefresh() {
+  try { BMI.list = await api('/api/bm/inbox'); } catch { return; }
+  const row = $('#bmRow'); if (!row) return; const unread = BMI.list.reduce((a, b) => a + (b.unread || 0), 0);
+  row.hidden = !BMI.list.length; row.innerHTML = ''; row.onclick = openBmInbox;
+  row.append(el('span', 'bm-ico', '🏢'), el('div', 'bm-rt'), el('span', unread ? 'bm-badge' : 'bm-badge zero', unread ? String(unread) : '›'));
+  row.children[1].append(el('b', null, 'Business messages'), el('small', null, BMI.list.slice(0, 3).map((b) => b.name).join(', ')));
+}
+async function openBmInbox() {
+  const { body } = odPage('bmInboxPage', '🏢 Business messages', 'Banks, schools, hospitals, shops you deal with');
+  await bmRefresh(); const list = el('div', 'bz-card');
+  if (!BMI.list.length) list.append(el('p', 'bz-empty', 'No business messages yet. When a bank, school, hospital or shop you use sends you an update on Maata, it comes here.'));
+  for (const b of BMI.list) { const r = el('button', 'bm-item'); const av = el('span', 'bm-av', (b.name || '?')[0].toUpperCase()); const tx = el('div', 'bm-it'); tx.append(el('b', null, bmName(b)), el('small', null, (b.last.dir === 'in' ? 'You: ' : '') + b.last.text)); const meta = el('div', 'bm-meta'); meta.append(el('small', null, bmTime(b.last.at))); if (b.unread) meta.append(el('span', 'bm-badge', String(b.unread))); else if (b.level === 'none') meta.append(el('small', null, '🔕')); r.append(av, tx, meta); r.onclick = () => openBmThread(b.bizId); list.append(r); }
+  body.append(list, el('p', 'bz-note', '✔ = organisation verified by Maata. You choose what each one may send: tap a business → ⋯.'));
+}
+async function openBmThread(bizId) {
+  let d; try { d = await api('/api/bm/thread/' + bizId); } catch (e) { return toast(e.message); }
+  BMI.open = bizId; const { pg, body, top } = odPage('bmThreadPage', bmName(d.biz), d.biz.verified ? 'Verified organisation' : 'Not verified yet');
+  const more = el('button', 'bz-ib', '⋯'); more.setAttribute('aria-label', 'Options'); more.onclick = () => bmPrefSheet(d, () => { $('#bmThreadPage')?.remove(); openBmThread(bizId); }); top.append(more);
+  const wrap = el('div', 'bm-thread'); body.append(wrap);
+  if (d.pref.level === 'none') wrap.append(el('p', 'bm-off', '🔕 You turned off messages from this business. Tap ⋯ to change.'));
+  for (const m of d.msgs) {
+    if (m.dir === 'in') { const b = el('div', 'bm-mine'); b.append(el('p', null, m.text), el('small', null, bmTime(m.at))); wrap.append(b); continue; }
+    const c = el('div', 'bm-card' + (m.category === 'marketing' ? ' mkt' : ''));
+    if (m.test) c.append(el('span', 'bm-test', 'TEST'));
+    if (m.title) c.append(el('b', null, m.title));
+    const p = el('p', null, m.text); c.append(p);
+    if (m.original) { const sw = el('button', 'bz-link', '🌐 Translated · show original'); let orig = false; sw.onclick = () => { orig = !orig; p.textContent = orig ? m.original : m.text; sw.textContent = orig ? '🌐 Show translation' : '🌐 Translated · show original'; }; c.append(sw); }
+    for (const btn of m.buttons || []) { const a = el('a', 'bm-btn', '🔗 ' + btn.label); a.href = btn.url; a.target = '_blank'; a.rel = 'noopener nofollow'; a.onclick = (e) => { let host = ''; try { host = new URL(btn.url).host; } catch {} if (!confirm('Open ' + host + '?')) e.preventDefault(); }; c.append(a); }
+    c.append(el('small', null, (m.category === 'marketing' ? '📣 Offer · ' : '') + bmTime(m.at)));
+    wrap.append(c);
+  }
+  const bar = el('form', 'bm-reply'); const inp = el('input'); inp.placeholder = 'Reply to ' + d.biz.name; inp.maxLength = 1000; inp.setAttribute('aria-label', 'Reply'); const go = el('button', 'bm-send'); go.type = 'submit'; go.setAttribute('aria-label', 'Send'); go.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg>';
+  bar.append(inp, go); pg.append(bar);
+  bar.onsubmit = async (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.value = ''; try { await api('/api/bm/thread/' + bizId + '/reply', { method: 'POST', body: JSON.stringify({ text: t }) }); $('#bmThreadPage')?.remove(); openBmThread(bizId); } catch (x) { toast(x.message); } };
+  setTimeout(() => { body.scrollTop = body.scrollHeight; }, 50); bmRefresh();
+  new MutationObserver((_, o) => { if (!document.body.contains(pg)) { BMI.open = null; o.disconnect(); } }).observe(document.body, { childList: true });
+}
+function bmPrefSheet(d, after) {
+  sheet(bmName(d.biz), (L) => {
+    const b = el('div', 'bz-form');
+    b.append(el('p', 'info-note', d.biz.verified ? '✔ Maata checked that this organisation is real.' : '⚠️ Maata has not verified this organisation yet. Be careful with links and never share OTPs or passwords.'));
+    b.append(el('div', 'th-title', 'What may they send you?'));
+    for (const [k, t, sub] of [['all', '📣 All messages', 'Updates and offers'], ['important', '📌 Important only', 'Bills, fees, appointments, orders – no offers'], ['none', '🔕 Nothing', 'Stop all messages from them']]) {
+      const l = el('label', 'sec-pick'); const r = el('input'); r.type = 'radio'; r.name = 'bmLvl'; r.checked = (d.pref.level || 'important') === k; l.append(r, el('span', null, t + ' – ' + sub));
+      r.onchange = async () => { try { await api('/api/bm/prefs/' + d.biz.bizId, { method: 'PUT', body: JSON.stringify({ level: k, optIn: k === 'all' }) }); toast('Saved'); closeSheet('moreSheet'); after && after(); } catch (e) { toast(e.message); } }; b.append(l);
+    }
+    const rep = el('button', 'sheet-btn warn', '🚫 Report spam & block'); rep.onclick = async () => { const why = prompt('What is wrong? (spam, fake, abuse…)'); if (why == null) return; try { await api('/api/bm/report/' + d.biz.bizId, { method: 'POST', body: JSON.stringify({ reason: why }) }); toast('Reported and blocked. Thank you.'); closeSheet('moreSheet'); after && after(); } catch (e) { toast(e.message); } };
+    b.append(rep); L.append(b);
+  });
+}
+async function bmOptin(bizId) {
+  let b; try { b = await api('/api/bm/biz/' + bizId); } catch (e) { return toast(e.message); }
+  sheet('🏢 ' + bmName(b), (L) => {
+    const f = el('div', 'bz-form');
+    f.append(el('p', 'info-note', b.name + ' wants to send you updates on Maata' + (b.verified ? ' (✔ verified organisation).' : '.') + ' You can change or stop this any time.'));
+    const go = (level) => async () => { try { await api('/api/bm/prefs/' + bizId, { method: 'PUT', body: JSON.stringify({ level, optIn: true, source: 'link' }) }); closeSheet('moreSheet'); toast('✅ You will get ' + (level === 'all' ? 'all messages' : 'important messages') + ' from ' + b.name); bmRefresh(); } catch (e) { toast(e.message); } };
+    const a1 = el('button', 'sheet-btn primary', '📌 Yes – important messages only'); a1.onclick = go('important');
+    const a2 = el('button', 'sheet-btn', '📣 Yes – all messages (with offers)'); a2.onclick = go('all');
+    const a3 = el('button', 'sheet-btn', 'No thanks'); a3.onclick = () => closeSheet('moreSheet');
+    f.append(a1, a2, a3); L.append(f);
+  });
+}
+function bmSocket() {
+  if (!socket) return;
+  socket.on('bm:msg', (p) => { api('/api/bm/delivered', { method: 'POST', body: JSON.stringify({ ids: [p.msg.id] }) }).catch(() => {}); if (BMI.open === p.bizId && $('#bmThreadPage')) { $('#bmThreadPage').remove(); openBmThread(p.bizId); } else { toast('🏢 ' + bmName(p.biz) + ': ' + (p.msg.title || p.msg.text).slice(0, 60)); bmRefresh(); } });
+  socket.on('bm:reply', (p) => { toast('💬 A customer replied to your business messages'); if ($('#bmDashPage') && BMD.tab === 'logs') BMD.draw(); });
+}
+// ---------- organisation dashboard ----------
+const BMD = { tab: 'home', d: null };
+const BM_ST = { none: ['⚪', 'Not started'], pending: ['⏳', 'Under review by Maata'], verified: ['✔', 'Verified'], rejected: ['❌', 'Not approved'], suspended: ['⛔', 'Suspended'] };
+async function openBmDash() {
+  const { body } = odPage('bmDashPage', '🏢 Business messaging API', BZ.info?.name || '');
+  const tabs = el('div', 'bz-chips tm-tabs'); const area = el('div'); body.append(tabs, area);
+  for (const [k, l] of [['home', '🏠 Overview'], ['tpl', '📝 Templates'], ['keys', '🔑 Keys & webhook'], ['logs', '📊 Messages'], ['docs', '📘 For developers']]) { const b = el('button', BMD.tab === k ? 'on' : null, l); b.onclick = () => { BMD.tab = k; tabs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(); }; tabs.append(b); }
+  const draw = async () => { area.innerHTML = ''; area.append(el('p', 'bz-load', 'Loading…')); try { BMD.d = await bzApi('/bm'); } catch (e) { area.innerHTML = ''; return area.append(el('p', 'bz-empty', e.message)); } area.innerHTML = ''; ({ home: bmdHome, tpl: bmdTpl, keys: bmdKeys, logs: bmdLogs, docs: bmdDocs })[BMD.tab](area, BMD.d); };
+  BMD.draw = draw; draw();
+}
+function bmdHome(area, d) {
+  const st = BM_ST[d.status] || BM_ST.none, c = el('div', 'bz-card bm-status s-' + d.status); c.append(el('h3', null, st[0] + ' ' + st[1]));
+  if (d.status === 'none' || d.status === 'rejected') { if (d.reason) c.append(el('p', 'bz-note', 'Reason: ' + d.reason)); c.append(el('p', 'bz-note', 'Banks, schools, hospitals, offices and shops can send messages to customers from their own software. First, Maata checks that your organisation is real.')); const b = el('button', 'bz-btn pri', '📝 Apply for verification'); b.onclick = bmdApply; c.append(b); }
+  else if (d.status === 'pending') c.append(el('p', 'bz-note', 'Maata is checking your details. Meanwhile, make templates and try a test key on your own phone.'));
+  else if (d.status === 'verified') c.append(el('p', 'bz-note', 'You can create live keys and message customers who opted in or already deal with you.'));
+  else if (d.status === 'suspended') c.append(el('p', 'bz-note', 'Reason: ' + (d.reason || 'complaints') + '. Contact Maata support.'));
+  area.append(c);
+  const s = d.stats, tiles = el('div', 'tm-count'); for (const [v, l, cls] of [[s.sent30, 'Sent (30 days)', ''], [s.delivered, 'Delivered', 'g'], [s.read, 'Read', 'g'], [s.failed, 'Failed', s.failed ? 'r' : ''], [s.replies, 'Replies', ''], [s.optedIn, 'Opted in', 'g'], [s.optedOut, 'Opted out', s.optedOut ? 'o' : '']]) { const x = el('div', 'tm-c ' + cls); x.append(el('b', null, String(v)), el('small', null, l)); tiles.append(x); } area.append(tiles);
+  const oc = el('div', 'bz-card'); oc.append(el('h3', null, '📲 Customer opt-in link & QR'), el('p', 'bz-note', 'Put this QR at your counter / on fee receipts, or send the link. Customers tap it and choose to get your messages.'));
+  const qr = el('div', 'bm-qr'); oc.append(qr); bzApi('/bm/optin-qr').then((r) => { const im = el('img'); im.alt = 'Opt-in QR code'; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(r.svg); qr.append(im); }).catch(() => {});
+  const ln = el('code', 'bm-code', d.optinLink); oc.append(ln); const sh = el('button', 'bz-btn', '⇪ Share link'); sh.onclick = () => shareTextOut('Get updates from ' + (BZ.info?.name || 'us') + ' on Maata: ' + d.optinLink, 'Share opt-in link'); oc.append(sh); area.append(oc);
+  const tc = el('div', 'bz-card'); tc.append(el('h3', null, '🧪 Send a test message'), el('p', 'bz-note', 'Test messages go only to you and your staff.'));
+  const tpls = d.templates.filter((t) => t.status === 'approved'); if (!tpls.length) tc.append(el('p', 'bz-note', 'Make a template first (📝 Templates).'));
+  else { const f = el('div', 'bz-form'); const sel = el('select'); sel.setAttribute('aria-label', 'Template'); for (const t of tpls) sel.add(new Option(t.name, t.id)); const vars = el('div'); const ph = el('input'); ph.placeholder = 'Phone (blank = me)'; ph.inputMode = 'numeric'; ph.setAttribute('aria-label', 'Phone');
+    const drawVars = () => { vars.innerHTML = ''; const t = tpls.find((x) => x.id === sel.value); for (const v of t.variables) { const l = el('label'); l.append(el('span', null, v)); const i = el('input'); i.dataset.v = v; l.append(i); vars.append(l); } }; sel.onchange = drawVars; drawVars();
+    const go = el('button', 'sheet-btn primary', 'Send test'); go.onclick = async () => { const variables = {}; vars.querySelectorAll('input').forEach((i) => { variables[i.dataset.v] = i.value; }); try { await bzApi('/bm/test-send', { method: 'POST', body: JSON.stringify({ to: ph.value.trim() || me.phone, template: sel.value, variables }) }); toast('🧪 Test sent. Check Business messages.'); } catch (e) { toast(e.message); } };
+    f.append(sel, vars, ph, go); tc.append(f); }
+  area.append(tc);
+  const tr = el('label', 'sec-pick'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = d.autoTranslate; cb.onchange = async () => { try { await bzApi('/bm/settings', { method: 'PUT', body: JSON.stringify({ autoTranslate: cb.checked }) }); toast('Saved'); } catch (e) { toast(e.message); } }; tr.append(cb, el('span', null, '🌐 AI translates messages into each customer\'s language (original kept)')); area.append(tr);
+}
+function bmdApply() {
+  sheet('📝 Verify your organisation', (L) => {
+    const f = el('form', 'bz-form'); const fl = (lab, id, ph, ta) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el(ta ? 'textarea' : 'input'); i.id = id; if (ta) i.rows = 3; if (ph) i.placeholder = ph; l.append(i); f.append(l); return i; };
+    const ln = fl('Legal name (as registered)', 'bmLn', 'e.g. Sri Vidya High School'), ty = el('select'); ty.id = 'bmTy'; for (const x of ['School / College', 'Hospital / Clinic', 'Bank / Finance', 'Government office', 'Private office', 'Shop / Business', 'Other']) ty.add(new Option(x, x)); const tl = el('label'); tl.htmlFor = 'bmTy'; tl.append(el('span', null, 'Organisation type'), ty); f.append(tl);
+    const rg = fl('Registration / GSTIN / licence no. (optional)', 'bmRg'), ws = fl('Website (optional)', 'bmWs', 'https://'), ct = fl('Contact person & designation', 'bmCt'), uc = fl('Which messages will you send?', 'bmUc', 'e.g. fee reminders, exam results ready, holiday notices', true);
+    f.append(el('p', 'info-note', 'Maata may call you to confirm. Never send OTPs or passwords through business messages.'));
+    const ok = el('button', 'sheet-btn primary', 'Submit for review'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => { e.preventDefault(); try { await bzApi('/bm/apply', { method: 'POST', body: JSON.stringify({ legalName: ln.value, orgType: ty.value, regNo: rg.value, website: ws.value, contact: ct.value, useCase: uc.value }) }); closeSheet('moreSheet'); toast('⏳ Sent to Maata for review'); BMD.draw(); } catch (x) { toast(x.message); } };
+    L.append(f);
+  });
+}
+function bmdTpl(area, d) {
+  const add = el('button', 'bz-btn pri', '+ New template'); add.onclick = () => bmdTplForm(); area.append(add);
+  const c = el('div', 'bz-card'); if (!d.templates.length) c.append(el('p', 'bz-empty', 'No templates yet. A template is a fixed message with blanks like {{student_name}} that your software fills.'));
+  for (const t of d.templates) { const r = el('div', 'bm-tpl'); const h = el('div', 'od-head'); h.append(el('b', null, t.name), el('span', 'bz-st ' + (t.status === 'approved' ? 'paid' : t.status === 'pending' ? 'due' : 'void'), t.status === 'approved' ? 'Approved' : t.status === 'pending' ? 'Waiting for Maata' : 'Rejected')); r.append(h);
+    r.append(el('small', 'bz-note', (t.category === 'marketing' ? '📣 Marketing' : '📌 Transactional') + (t.sensitive ? ' · 🔒 sensitive (hidden in notification)' : '') + (t.variables.length ? ' · variables: ' + t.variables.join(', ') : '')));
+    if (t.title) r.append(el('b', 'bm-tt', t.title)); r.append(el('p', 'bm-tb', t.body)); if (t.reason) r.append(el('small', 'bz-warn', t.reason));
+    const del = el('button', 'bz-link', 'Delete'); del.onclick = async () => { if (!confirm('Delete template ' + t.name + '?')) return; try { await bzApi('/bm/templates/' + t.id, { method: 'DELETE' }); BMD.draw(); } catch (e) { toast(e.message); } }; r.append(del); c.append(r); }
+  area.append(c);
+}
+function bmdTplForm() {
+  sheet('📝 New template', (L) => {
+    const f = el('form', 'bz-form');
+    const ai = el('div', 'bm-ai'); const goal = el('input'); goal.placeholder = '✨ Tell AI: e.g. remind parents about exam fee'; goal.setAttribute('aria-label', 'Describe the message for AI'); const aib = el('button', 'bz-btn', '✨ Write'); aib.type = 'button'; ai.append(goal, aib); f.append(ai);
+    const fl = (lab, id, ph, ta) => { const l = el('label'); l.htmlFor = id; l.append(el('span', null, lab)); const i = el(ta ? 'textarea' : 'input'); i.id = id; if (ta) i.rows = 4; if (ph) i.placeholder = ph; l.append(i); f.append(l); return i; };
+    const nm = fl('Template name', 'bmTn', 'fee_reminder'), ti = fl('Title (optional)', 'bmTt', 'Fee due {{due_date}}'), bd = fl('Message', 'bmTb', 'Dear parent, fee of {{amount}} for {{student_name}} is due on {{due_date}}.', true);
+    f.append(el('small', 'bz-note', 'Use {{name}} for values your software fills in. No OTPs, passwords or card numbers.'));
+    const cl = el('label'); cl.htmlFor = 'bmTc'; const cat = el('select'); cat.id = 'bmTc'; cat.add(new Option('📌 Transactional (bills, fees, appointments, results)', 'transactional')); cat.add(new Option('📣 Marketing (offers) – Maata checks first', 'marketing')); cl.append(el('span', null, 'Type'), cat); f.append(cl);
+    const bl = fl('Button text (optional)', 'bmBl', 'Pay now'), bu = fl('Button link (https://…)', 'bmBu', 'https://pay.school.in/{{student_id}}');
+    const sl = el('label', 'sec-pick'); const sens = el('input'); sens.type = 'checkbox'; sl.append(sens, el('span', null, '🔒 Sensitive (health / money details): hide text in phone notification')); f.append(sl);
+    aib.onclick = async () => { if (!goal.value.trim()) return toast('Write what the message is for'); aib.disabled = true; aib.textContent = '✨ Writing…'; try { const r = await bzApi('/bm/ai-template', { method: 'POST', body: JSON.stringify({ goal: goal.value, lang: (me && me.lang) || 'en' }) }); nm.value = r.name; ti.value = r.title; bd.value = r.body; cat.value = r.category; toast('✨ Check the text, then Save'); } catch (e) { toast(e.message); } aib.disabled = false; aib.textContent = '✨ Write'; };
+    const ok = el('button', 'sheet-btn primary', 'Save template'); ok.type = 'submit'; f.append(ok);
+    f.onsubmit = async (e) => { e.preventDefault(); try { await bzApi('/bm/templates', { method: 'POST', body: JSON.stringify({ name: nm.value, title: ti.value, body: bd.value, category: cat.value, sensitive: sens.checked, buttons: bl.value && bu.value ? [{ label: bl.value, url: bu.value }] : [] }) }); closeSheet('moreSheet'); toast('Template saved'); BMD.draw(); } catch (x) { toast(x.message); } };
+    L.append(f);
+  });
+}
+function bmdKeys(area, d) {
+  const c = el('div', 'bz-card'); c.append(el('h3', null, '🔑 API keys'), el('p', 'bz-note', 'Your software sends messages with a key. Keep it secret on your server (never in an app or website).'));
+  for (const k of d.keys) { const r = el('div', 'tm-mrow'); r.append(el('div', null, (k.env === 'live' ? '🟢 ' : '🧪 ') + k.name + ' · ' + k.hint), el('small', null, 'Made ' + new Date(k.createdAt).toLocaleDateString('en-IN') + ' · ' + (k.lastUsedAt ? 'last used ' + tmAgo(k.lastUsedAt) : 'not used yet'))); const x = el('button', 'bz-link', 'Revoke'); x.onclick = async () => { if (!confirm('Revoke ' + k.name + '? Software using it will stop working.')) return; try { await bzApi('/bm/keys/' + k.id, { method: 'DELETE' }); BMD.draw(); } catch (e) { toast(e.message); } }; r.append(x); c.append(r); }
+  const mk = (env) => async () => { const name = prompt('Name for this key (e.g. School ERP)', env === 'live' ? 'Live key' : 'Test key'); if (name == null) return; try { const r = await bzApi('/bm/keys', { method: 'POST', body: JSON.stringify({ env, name }) }); bmdShowSecret('🔑 Your new ' + env + ' key', r.key, 'Copy it now. For safety Maata will not show it again.'); BMD.draw(); } catch (e) { toast(e.message); } };
+  const t = el('button', 'bz-btn', '+ Test key'); t.onclick = mk('test'); const l = el('button', 'bz-btn pri', '+ Live key'); l.onclick = mk('live'); if (d.status !== 'verified') l.disabled = true; const row = el('div', 'od-acts'); row.append(t, l); c.append(row);
+  if (d.status !== 'verified') c.append(el('small', 'bz-note', 'Live keys come after verification.'));
+  area.append(c);
+  const w = el('div', 'bz-card'); w.append(el('h3', null, '🔔 Webhook (Maata tells your software)'), el('p', 'bz-note', 'Events: delivered, read, customer reply, opted in / out. Signed with your secret.'));
+  const f = el('div', 'bz-form'); const u = el('input'); u.type = 'url'; u.placeholder = 'https://your-server.in/maata-webhook'; u.value = d.webhook ? d.webhook.url : ''; u.setAttribute('aria-label', 'Webhook address'); f.append(u);
+  if (d.webhook) f.append(el('small', 'bz-note', 'Secret: ' + d.webhook.secretHint + ' · last delivery: ' + (d.webhook.lastAt ? (d.webhook.lastCode >= 200 && d.webhook.lastCode < 300 ? '✅ ' : '❌ ') + (d.webhook.lastCode || 'no answer') + ' · ' + tmAgo(d.webhook.lastAt) : 'none yet')));
+  const sv = el('button', 'sheet-btn primary', 'Save webhook'); sv.onclick = async () => { try { const r = await bzApi('/bm/settings', { method: 'PUT', body: JSON.stringify({ webhookUrl: u.value.trim() }) }); if (r.webhookSecret) bmdShowSecret('🔔 Webhook secret', r.webhookSecret, 'Use it to check the X-Maata-Signature header. Shown only now.'); else toast('Saved'); BMD.draw(); } catch (e) { toast(e.message); } };
+  const ts = el('button', 'sheet-btn', 'Send test event'); ts.onclick = async () => { try { await bzApi('/bm/webhook-test', { method: 'POST', body: '{}' }); toast('Test event sent. Refresh in a few seconds.'); } catch (e) { toast(e.message); } };
+  f.append(sv); if (d.webhook) f.append(ts); w.append(f); area.append(w);
+}
+function bmdShowSecret(title, secret, note) { sheet(title, (L) => { const b = el('div', 'bz-form'); b.append(el('p', 'tm-warn', note), el('code', 'bm-code big', secret)); const cp = el('button', 'sheet-btn primary', '⧉ Copy'); cp.onclick = () => copyText(secret); b.append(cp); L.append(b); }); }
+async function bmdLogs(area) {
+  let r = []; try { r = await bzApi('/bm/logs'); } catch (e) { return area.append(el('p', 'bz-empty', e.message)); }
+  const c = el('div', 'bz-card'); if (!r.length) c.append(el('p', 'bz-empty', 'No messages yet.'));
+  const chip = { accepted: 'due', queued: 'due', sent: 'due', delivered: 'paid', read: 'paid', failed: 'void', received: 'paid' };
+  for (const m of r) { const x = el('div', 'tm-ev'); const h = el('div', 'od-head'); h.append(el('b', null, (m.dir === 'in' ? '💬 ' : '📤 ') + (m.name || m.to) + (m.env === 'test' ? ' · TEST' : '')), el('span', 'bz-st ' + (chip[m.status] || 'due'), m.dir === 'in' ? 'Reply' : m.status)); x.append(h, el('small', null, m.text), el('small', null, new Date(m.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) + (m.reason ? ' · ' + m.reason : '')));
+    if (m.dir === 'in') { const rb = el('button', 'bz-btn', '↩ Reply'); rb.onclick = async () => { const t = prompt('Reply to ' + (m.name || m.to)); if (!t) return; try { await bzApi('/bm/reply', { method: 'POST', body: JSON.stringify({ phone: m.to, text: t }) }); toast('Sent'); BMD.draw(); } catch (e) { toast(e.message); } }; x.append(rb); }
+    c.append(x); }
+  area.append(c);
+}
+function bmdDocs(area, d) {
+  const c = el('div', 'bz-card'); const base = location.origin;
+  c.append(el('h3', null, '📘 Connect your software'), el('p', 'bz-note', 'Give this to your software developer. Full guide: ' + base + '/developers'));
+  const ex = el('pre', 'bm-pre', 'curl -X POST ' + base + '/v1/messages \\\n  -H "Authorization: Bearer mk_test_…" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"to":"' + (me.phone || '98xxxxxxxx') + '","template":"' + ((d.templates[0] || {}).name || 'fee_reminder') + '","variables":{' + ((d.templates[0] || {}).variables || ['student_name']).map((v) => '"' + v + '":"…"').join(',') + '},"idempotency_key":"unique-id-1"}\'');
+  c.append(ex); const o = el('button', 'bz-btn pri', '📘 Open developer guide'); o.onclick = () => window.open(base + '/developers', '_blank', 'noopener'); const cp = el('button', 'bz-btn', '⧉ Copy example'); cp.onclick = () => copyText(ex.textContent); const row = el('div', 'od-acts'); row.append(o, cp); c.append(row);
+  area.append(c, el('p', 'bz-note', 'States: accepted → sent → delivered → read (or failed). Same idempotency_key = no duplicate. Customers can reply; you get a message.received webhook and can answer for 24 hours.'));
+}
+
 function rdSocket() {
   if (!socket) return;
   socket.on('order:track', (x) => { if (OD.liveFor === x.orderId && OD.liveDraw) OD.liveDraw(x); });
@@ -6628,6 +6847,7 @@ function openMainMenu(btn) {
   item('shops', 'Shops & my orders', openShops);
   item('rides', 'My deliveries', openRides);
   item('team', 'Live location (team / family)', openTeams);
+  item('bm', 'Business messages', openBmInbox);
   item('broadcast', i18n('broadcast'), openBroadcast);
   item('quick', i18n('quick'), openQuickReplies);
   item('ai', i18n('aiAuto'), openAutoReply);
@@ -9101,6 +9321,7 @@ $('#fab').onclick = () => {
   else if (tab === 'contacts') $('#addContactBtn').click();
 };
 $('#mapHeadBtn').onclick = () => openMaps();
+$('#shopHeadBtn').onclick = () => openShops();
 // "Ask Maata AI or Search": press Enter on text that matches nobody → ask Maata AI
 $('#search').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || tab !== 'chats') return;
@@ -12092,8 +12313,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 144;
-const APP_NOTES = ["🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 148;
+const APP_NOTES = ["🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
