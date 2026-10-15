@@ -5497,7 +5497,7 @@ function bzBillRow(i) {
 // Bluetooth printing needs the Maata Android app; in a browser the bill page prints in an 80 / 58 mm layout.
 const PR = { cb: new Map(), seq: 0, permCb: null };
 const prApp = () => !!(window.MaataAndroid && window.MaataAndroid.btPrintEnd);
-const PR_DEF = { type: 'bt', address: '', name: '', usbKey: '', host: '', port: 9100, width: 80, auto: false, copies: 1, qr: true, big: false };
+const PR_DEF = { type: 'bt', address: '', name: '', usbKey: '', host: '', port: 9100, width: 80, auto: false, copies: 1, qr: true, big: false, cut: true, slow: false };
 const prReady = (c) => (c.type === 'usb' ? !!c.usbKey : c.type === 'net' ? !!c.host : !!c.address);
 const prHas = (fn) => !!(window.MaataAndroid && window.MaataAndroid[fn]);
 window.maataBtFound = (d) => { if (PR.onFound) PR.onFound(d); };
@@ -5560,14 +5560,17 @@ async function prReceipt(i, cfg) {
   const out = mkCanvas(W, y); out.getContext('2d').drawImage(c, 0, 0); return out;
 }
 // picture → ESC/POS raster bytes (GS v 0), in bands so small printers keep up
-function prEscpos(cv, copies) {
+// small bands (24 dot rows): if the printer misses a few bytes, only one thin strip is spoiled and the next band starts clean
+function prEscpos(cv, copies, cfg) {
+  cfg = cfg || {}; const BAND = 24;
   const w = cv.width, h = cv.height, bw = Math.ceil(w / 8), d = cv.getContext('2d').getImageData(0, 0, w, h).data;
   const one = []; one.push(0x1b, 0x40); // reset
-  for (let y0 = 0; y0 < h; y0 += 128) {
-    const bh = Math.min(128, h - y0); one.push(0x1d, 0x76, 0x30, 0, bw & 255, bw >> 8, bh & 255, bh >> 8);
+  for (let y0 = 0; y0 < h; y0 += BAND) {
+    const bh = Math.min(BAND, h - y0); one.push(0x1d, 0x76, 0x30, 0, bw & 255, bw >> 8, bh & 255, bh >> 8);
     for (let y = y0; y < y0 + bh; y++) for (let bx = 0; bx < bw; bx++) { let v = 0; for (let k = 0; k < 8; k++) { const x = bx * 8 + k; if (x >= w) continue; const p = (y * w + x) * 4; if (d[p + 3] > 100 && d[p] * 0.299 + d[p + 1] * 0.587 + d[p + 2] * 0.114 < 150) v |= 0x80 >> k; } one.push(v); }
   }
-  one.push(0x1b, 0x64, 4, 0x1d, 0x56, 0x42, 0); // feed and cut (printers without a cutter ignore it)
+  if (cfg.cut === false) one.push(0x1b, 0x64, 5); // feed out to tear by hand
+  else one.push(0x1b, 0x64, 6, 0x1d, 0x56, 0x01); // feed past the blade, then cut (GS V 1: works on almost every auto-cutter; printers without a cutter ignore it)
   const n = Math.max(1, Math.min(3, copies || 1)), out = new Uint8Array(one.length * n);
   for (let k = 0; k < n; k++) out.set(one, k * one.length); return out;
 }
@@ -5575,7 +5578,8 @@ function prSend(bytes, cfg) {
   return new Promise((ok) => {
     const A = window.MaataAndroid, id = 'p' + ++PR.seq; A.btPrintStart();
     const step = 48 * 1024; for (let i = 0; i < bytes.length; i += step) { let s2 = ''; const part = bytes.subarray(i, i + step); for (let k = 0; k < part.length; k += 8192) s2 += String.fromCharCode.apply(null, part.subarray(k, k + 8192)); if (!A.btPrintChunk(btoa(s2))) return ok({ ok: false, msg: 'error' }); }
-    const t = setTimeout(() => { PR.cb.delete(id); ok({ ok: false, msg: 'connect' }); }, 90000);
+    if (A.printPace) try { A.printPace(cfg.slow ? 2 : 1); } catch {} // the app sends slowly enough for the printer to keep up
+    const t = setTimeout(() => { PR.cb.delete(id); ok({ ok: false, msg: 'connect' }); }, 180000);
     PR.cb.set(id, (good, msg) => { clearTimeout(t); ok({ ok: good, msg }); });
     if (cfg.type === 'usb') A.usbPrintEnd(cfg.usbKey, id); else if (cfg.type === 'net') A.netPrintEnd(cfg.host, Number(cfg.port) || 9100, id); else A.btPrintEnd(cfg.address, id);
   });
@@ -5587,7 +5591,7 @@ async function prPrintBill(i, quiet) {
   if (cfg.type === 'bt') { const st = window.MaataAndroid.btStatus(); if (st !== 'ok') { toast(PR_MSG[st] || PR_MSG.error); if (st === 'perm' || st === 'off') prSetup(); return; } }
   if (!i.shop || !i.shop.name) i = { ...i, shop: { name: BZ.info?.name, address: BZ.info?.address, phone: BZ.info?.phone, gstin: BZ.info?.settings?.gstin, upi: BZ.info?.settings?.upi, footer: BZ.info?.settings?.footer, ...(i.shop || {}) } };
   toast('🖨️ Printing on ' + cfg.name + '…');
-  const r = await prSend(prEscpos(await prReceipt(i, cfg), cfg.copies), cfg);
+  const r = await prSend(prEscpos(await prReceipt(i, cfg), cfg.copies, cfg), cfg);
   toast(r.ok ? '🖨️ Printed ✓' : '🖨️ ' + (PR_MSG[r.msg] || PR_MSG.error));
   return r.ok;
 }
@@ -5676,7 +5680,8 @@ function prSetup(after) {
       }
       f.append(el('div', 'th-title', 'Options'));
       const chk = (t2, k) => { const l = el('label', 'sec-pick'); const c2 = el('input'); c2.type = 'checkbox'; c2.checked = !!cfg[k]; c2.onchange = () => { cfg[k] = c2.checked; prSave(cfg); }; l.append(c2, el('span', null, t2)); f.append(l); };
-      chk('🖨️ Print automatically after every bill', 'auto'); chk('📱 Print UPI QR (with the amount) on bills not yet paid', 'qr'); chk('🔠 Bigger letters', 'big');
+      chk('🖨️ Print automatically after every bill', 'auto'); chk('📱 Print UPI QR (with the amount) on bills not yet paid', 'qr'); chk('🔠 Bigger letters', 'big'); chk('✂️ Cut the paper automatically after printing', 'cut'); chk('🐢 Print slowly (tick this if strange letters / symbols come out)', 'slow');
+      if (!prHas('printPace')) f.append(el('p', 'tm-warn', '📲 Update the Maata app: the new app sends the bill slowly and safely so strange symbols do not print.'));
       const cl = el('label'); cl.htmlFor = 'prCopies'; cl.append(el('span', null, 'Copies')); const cs = el('select'); cs.id = 'prCopies'; for (const n of [1, 2, 3]) cs.add(new Option(String(n), String(n))); cs.value = String(cfg.copies); cs.onchange = () => { cfg.copies = Number(cs.value); prSave(cfg); }; cl.append(cs); f.append(cl);
       if (!needNew) {
         const t = el('button', 'sheet-btn primary', '🧪 Test print'); t.onclick = async () => { if (!prReady(cfg)) return toast('Choose your printer first'); t.disabled = true; await prPrintBill(prTestBill()); t.disabled = false; }; f.append(t);
@@ -5710,6 +5715,161 @@ async function prCheck(cfg) {
   });
 }
 function bzBillLink(i) { return location.origin + '/bill/' + i.id + '?k=' + i.key; }
+// ---------- 📄 A4 invoice PDF (made on the phone: Telugu and every language print right, works offline) ----------
+function inWords(rupees) {
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const t = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = (n) => n < 20 ? a[n] : t[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+  const three = (n) => (n >= 100 ? a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' : '') : '') + two(n % 100);
+  let n = Math.floor(rupees); if (!n) return 'Zero';
+  const out = []; const cr = Math.floor(n / 1e7); n %= 1e7; const la = Math.floor(n / 1e5); n %= 1e5; const th = Math.floor(n / 1000); n %= 1000;
+  if (cr) out.push((cr > 999 ? inWords(cr) : three(cr)) + ' Crore'); if (la) out.push(two(la) + ' Lakh'); if (th) out.push(two(th) + ' Thousand'); if (n) out.push(three(n));
+  return out.join(' ');
+}
+function invFill(i) { // old bills may not carry the shop details
+  if (i.shop && i.shop.name) return i;
+  return { ...i, shop: { name: BZ.info?.name, address: BZ.info?.address, phone: BZ.info?.phone, gstin: BZ.info?.settings?.gstin, upi: BZ.info?.settings?.upi, footer: BZ.info?.settings?.footer, ...(i.shop || {}) } };
+}
+async function invPages(i) {
+  i = invFill(i); const s = i.shop || {};
+  const W = 1240, H = 1754, M = 80, ACC = '#0F7A6E', pages = [];
+  let c, g, y;
+  const font = (sz, b) => (g.font = MK_FONT(b ? 700 : 400, sz));
+  const fit = (t, maxW) => { t = String(t ?? ''); if (g.measureText(t).width <= maxW) return t; while (t.length > 1 && g.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
+  const wrap = (t, maxW) => { const out = []; let line = ''; for (const w of String(t ?? '').split(/(\s+)/)) { if (!w) continue; if (g.measureText(line + w).width <= maxW || !line.trim()) line += w; else { out.push(line.trimEnd()); line = w.trimStart(); } } if (line.trim()) out.push(line.trimEnd()); return out.length ? out : ['']; };
+  const txt = (t, x, yy, { sz = 24, b = false, al = 'left', col = '#111' } = {}) => { font(sz, b); g.fillStyle = col; g.textAlign = al; g.fillText(t, x, yy); g.textAlign = 'left'; };
+  const hasHsn = i.items.some((l) => l.hsn), hasTax = i.items.some((l) => l.taxRate);
+  // columns: #, item, hsn, qty, rate, gst, amount (right edges)
+  const cols = [{ k: 'n', w: 60, al: 'left', h: '#' }, { k: 'name', w: 0, al: 'left', h: 'Item' }];
+  if (hasHsn) cols.push({ k: 'hsn', w: 140, al: 'left', h: 'HSN / Code' });
+  cols.push({ k: 'qty', w: 140, al: 'right', h: 'Qty' }, { k: 'rate', w: 160, al: 'right', h: 'Rate (₹)' });
+  if (hasTax) cols.push({ k: 'gst', w: 100, al: 'right', h: 'GST' });
+  cols.push({ k: 'amt', w: 190, al: 'right', h: 'Amount (₹)' });
+  cols[1].w = W - M * 2 - cols.reduce((a, x) => a + x.w, 0);
+  let x0 = M; for (const cl of cols) { cl.x = x0; x0 += cl.w; }
+  const cellX = (cl) => cl.al === 'right' ? cl.x + cl.w - 12 : cl.x + 12;
+  const newPage = (first) => {
+    c = mkCanvas(W, H); g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.textBaseline = 'top'; pages.push(c); y = M;
+    if (first) {
+      g.fillStyle = ACC; g.fillRect(0, 0, W, 14);
+      font(46, true); const nm = wrap(s.name || 'Shop', W - M * 2 - 380); for (const l of nm) { txt(l, M, y, { sz: 46, b: true, col: '#0b3b36' }); y += 56; }
+      let yy = y + 4; for (const l of [s.address, s.phone ? 'Phone: ' + s.phone : '', s.gstin ? 'GSTIN: ' + s.gstin : ''].filter(Boolean)) { font(22); for (const w2 of wrap(l, W - M * 2 - 380)) { txt(w2, M, yy, { sz: 22, col: '#444' }); yy += 30; } }
+      txt(s.gstin ? 'TAX INVOICE' : 'INVOICE', W - M, M + 4, { sz: 34, b: true, al: 'right', col: ACC });
+      txt(i.number, W - M, M + 52, { sz: 24, b: true, al: 'right' });
+      txt(new Date(i.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }), W - M, M + 86, { sz: 22, al: 'right', col: '#444' });
+      y = Math.max(yy, M + 130) + 16;
+      g.fillStyle = '#ddd'; g.fillRect(M, y, W - M * 2, 2); y += 22;
+      if (i.status === 'void') { txt('CANCELLED' + (i.voidReason ? ': ' + i.voidReason : ''), M, y, { sz: 28, b: true, col: '#c62828' }); y += 44; }
+      const cu = i.customer || {};
+      txt('Bill to', M, y, { sz: 20, col: '#777' }); y += 28;
+      txt(cu.name || cu.phone ? [cu.name, cu.phone].filter(Boolean).join('  ·  ') : 'Walk-in customer', M, y, { sz: 26, b: true }); y += 48;
+    } else { txt((s.name || '') + '  ·  ' + i.number + '  (continued)', M, y, { sz: 22, col: '#666' }); y += 44; }
+    g.fillStyle = '#E8F3F1'; g.fillRect(M, y, W - M * 2, 50);
+    for (const cl of cols) txt(cl.h, cellX(cl), y + 13, { sz: 21, b: true, al: cl.al === 'right' ? 'right' : 'left', col: '#0b3b36' });
+    y += 50;
+  };
+  newPage(true);
+  const money = (p) => (p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  i.items.forEach((l, k) => {
+    font(23); const nameLines = wrap(l.name, cols[1].w - 24); const rh = Math.max(56, 20 + nameLines.length * 30);
+    if (y + rh > H - M - 60) newPage(false);
+    if (k % 2) { g.fillStyle = '#FAFAFA'; g.fillRect(M, y, W - M * 2, rh); }
+    const v = { n: String(k + 1), hsn: l.hsn || '', qty: (+l.qty) + ' ' + (l.unit || ''), rate: money(l.price), gst: l.taxRate ? l.taxRate + '%' : '-', amt: money(l.total != null ? l.total : Math.round(l.qty * l.price)) };
+    for (const cl of cols) {
+      if (cl.k === 'name') { nameLines.forEach((nl, j) => txt(nl, cellX(cl), y + 14 + j * 30, { sz: 23, b: true })); continue; }
+      font(22); txt(fit(v[cl.k], cl.w - 20), cellX(cl), y + 15, { sz: 22, al: cl.al === 'right' ? 'right' : 'left' });
+    }
+    y += rh; g.fillStyle = '#eee'; g.fillRect(M, y - 1, W - M * 2, 1);
+  });
+  // totals block
+  const lines = [['Items total', money(i.items.reduce((a, l) => a + Math.round(l.qty * l.price), 0))]];
+  if (i.discount) lines.push(['Discount', '- ' + money(i.discount)]);
+  const taxRows = {}; for (const l of i.items) if (l.tax) taxRows[l.taxRate] = (taxRows[l.taxRate] || 0) + l.tax;
+  for (const [r, t] of Object.entries(taxRows)) { const inc = i.taxMode === 'incl' ? ' (incl.)' : ''; lines.push(['CGST ' + r / 2 + '%' + inc, money(Math.round(t / 2))], ['SGST ' + r / 2 + '%' + inc, money(t - Math.round(t / 2))]); }
+  if (i.roundOff) lines.push(['Round off', (i.roundOff > 0 ? '+ ' : '- ') + money(Math.abs(i.roundOff))]);
+  const paid = i.payment && i.payment.status === 'paid';
+  const wantQr = !paid && s.upi && i.status !== 'void' && i.key;
+  const need = lines.length * 38 + 200 + (wantQr ? 330 : 0) + 120;
+  if (y + need > H - M) newPage(false);
+  y += 24; const tx = W - M - 520;
+  for (const [a, b] of lines) { txt(a, tx, y, { sz: 23, col: '#444' }); txt(b, W - M, y, { sz: 23, al: 'right' }); y += 38; }
+  g.fillStyle = ACC; g.fillRect(tx - 16, y + 4, 520 + 16, 64);
+  txt('TOTAL', tx, y + 18, { sz: 30, b: true, col: '#fff' }); txt('₹ ' + money(i.grand), W - M - 14, y + 16, { sz: 32, b: true, al: 'right', col: '#fff' }); y += 84;
+  font(21); for (const l of wrap('Rupees ' + inWords(i.grand / 100) + (i.grand % 100 ? ' and ' + inWords(i.grand % 100) + ' Paise' : '') + ' Only', W - M * 2)) { txt(l, M, y, { sz: 21, col: '#444' }); y += 30; }
+  y += 10;
+  txt(paid ? '✓ Paid by ' + String(i.payment.method || 'cash').toUpperCase() : 'Payment due' + (i.payment && i.payment.method === 'upi' ? ' (UPI)' : ''), M, y, { sz: 26, b: true, col: paid ? '#1b7f3b' : '#b26a00' }); y += 46;
+  if (wantQr) {
+    try {
+      const r = await fetch('/bill/' + i.id + '/upi.svg?k=' + i.key); if (!r.ok) throw 0;
+      const im = await mkLoadImg(URL.createObjectURL(new Blob([await r.text()], { type: 'image/svg+xml' })));
+      g.imageSmoothingEnabled = false; g.drawImage(im, M, y, 260, 260);
+      txt('Scan & pay ₹ ' + money(i.grand), M + 290, y + 70, { sz: 28, b: true }); txt('UPI: ' + s.upi, M + 290, y + 116, { sz: 22, col: '#444' }); txt('Any UPI app: PhonePe, Google Pay, Paytm, BHIM', M + 290, y + 150, { sz: 20, col: '#777' });
+      y += 290;
+    } catch { /* no QR: the bill still saves */ }
+  }
+  const foot = s.footer || 'Thank you! Visit again';
+  txt(foot, W / 2, H - M - 30, { sz: 22, al: 'center', col: '#555' });
+  pages.forEach((p, k) => { const gg = p.getContext('2d'); gg.textBaseline = 'top'; gg.font = MK_FONT(400, 18); gg.fillStyle = '#999'; gg.textAlign = 'right'; gg.fillText('Made with Maata Business' + (pages.length > 1 ? '   ·   Page ' + (k + 1) + ' of ' + pages.length : ''), W - M, H - 46); });
+  return pages;
+}
+// canvases → a real PDF file (A4, one picture per page)
+async function pdfFromPages(pages) {
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const put = (x) => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body, stream) => { offs[n] = len; put(n + ' 0 obj\n' + body); if (stream) { put('\nstream\n'); put(stream); put('\nendstream'); } put('\nendobj\n'); };
+  const deflate = async (bytes) => { const cs = new CompressionStream('deflate'); const out = new Response(new Blob([bytes]).stream().pipeThrough(cs)); return new Uint8Array(await out.arrayBuffer()); };
+  put(new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10])); // %PDF-1.4 + binary marker
+  const n = pages.length, kids = [];
+  for (let k = 0; k < n; k++) kids.push((3 + k * 3) + ' 0 R');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>');
+  for (let k = 0; k < n; k++) {
+    const cv = pages[k], w = cv.width, h = cv.height, pn = 3 + k * 3;
+    let img, filt;
+    if (window.CompressionStream) { // sharp letters: lossless
+      const d = cv.getContext('2d').getImageData(0, 0, w, h).data, rgb = new Uint8Array(w * h * 3);
+      for (let p = 0, q = 0; p < d.length; p += 4) { rgb[q++] = d[p]; rgb[q++] = d[p + 1]; rgb[q++] = d[p + 2]; }
+      img = await deflate(rgb); filt = '/FlateDecode';
+    } else { img = new Uint8Array(await (await new Promise((ok) => cv.toBlob(ok, 'image/jpeg', 0.92))).arrayBuffer()); filt = '/DCTDecode'; }
+    const draw = enc.encode('q 595.28 0 0 841.89 0 0 cm /Im0 Do Q');
+    obj(pn, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ' + (pn + 2) + ' 0 R >> >> /Contents ' + (pn + 1) + ' 0 R >>');
+    obj(pn + 1, '<< /Length ' + draw.length + ' >>', draw);
+    obj(pn + 2, '<< /Type /XObject /Subtype /Image /Width ' + w + ' /Height ' + h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter ' + filt + ' /Length ' + img.length + ' >>', img);
+  }
+  const total = 3 + n * 3, xref = len;
+  let x = 'xref\n0 ' + total + '\n0000000000 65535 f \n'; for (let k = 1; k < total; k++) x += String(offs[k]).padStart(10, '0') + ' 00000 n \n';
+  put(x + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+  return new Blob(parts, { type: 'application/pdf' });
+}
+const invPdfName = (i) => 'Bill-' + String(i.number || 'Maata').replace(/[^A-Za-z0-9-]+/g, '-') + '.pdf';
+async function invPdf(i) { toast('📄 Making the PDF…'); return pdfFromPages(await invPages(i)); }
+async function invPdfDownload(i) {
+  let blob; try { blob = await invPdf(i); } catch (e) { return toast('Could not make the PDF. Try again.'); }
+  const name = invPdfName(i), A = window.MaataAndroid;
+  if (A && A.saveFileEnd && A.shareFileStart && A.shareFileStart(name)) { // app: straight into Downloads / Maata
+    const buf = new Uint8Array(await blob.arrayBuffer()), step = 768 * 1024; let ok = true;
+    for (let k = 0; k < buf.length && ok; k += step) { let s2 = ''; const part = buf.subarray(k, k + step); for (let j = 0; j < part.length; j += 8192) s2 += String.fromCharCode.apply(null, part.subarray(j, j + 8192)); ok = A.shareFileChunk(btoa(s2)); }
+    const r = ok ? A.saveFileEnd('application/pdf') : 'error';
+    if (r === 'ok') return invSavedSheet(i, blob, name);
+    if (r !== 'share') toast('Could not save. Choose "Save" / "Files" in the next menu.');
+  } else if (A) toast('Choose "Save to Files" / "Drive" in the menu. (Update Maata to save straight to Downloads.)');
+  if (A) { if (await shareFileAny(blob, name, 'application/pdf', 'Bill ' + i.number, 'Save bill PDF')) return; }
+  downloadBlob(blob, name); toast('📥 PDF downloaded');
+}
+function invSavedSheet(i, blob, name) {
+  sheet('✅ PDF saved', (L) => {
+    L.append(el('p', 'info-note', '📁 Saved in your phone: Downloads → Maata → ' + name));
+    const A = window.MaataAndroid;
+    if (A && A.openSavedFile) { const o = el('button', 'sheet-btn primary', '📖 Open PDF'); o.onclick = () => { if (!A.openSavedFile()) toast('No PDF app found. Install any PDF viewer.'); }; L.append(o); }
+    const sh = el('button', 'sheet-btn', '📤 Share PDF (WhatsApp, Gmail…)'); sh.onclick = () => shareFileAny(blob, name, 'application/pdf', 'Bill ' + i.number + ' – ' + bzRs(i.grand), 'Share bill PDF'); L.append(sh);
+    const d = el('button', 'sheet-btn', 'Done'); d.onclick = () => closeSheet('moreSheet'); L.append(d);
+  });
+}
+async function invPdfShare(i) {
+  let blob; try { blob = await invPdf(i); } catch (e) { return toast('Could not make the PDF. Try again.'); }
+  if (await shareFileAny(blob, invPdfName(i), 'application/pdf', 'Bill ' + i.number + ' – ' + bzRs(i.grand), 'Share bill PDF')) return;
+  downloadBlob(blob, invPdfName(i)); toast('📥 PDF downloaded. Share it from your Downloads.');
+}
 // 📱 UPI QR with the exact bill amount: the customer scans with any UPI app, the money goes straight to the shop's UPI ID
 function bzQrBox(i) { const b = el('div', 'bz-qr'); const im = el('img'); im.alt = 'UPI QR code for ' + bzRs(i.grand); im.src = '/bill/' + i.id + '/upi.svg?k=' + i.key; b.append(el('small', null, 'Scan & pay with any UPI app'), el('b', null, bzRs(i.grand)), im, el('small', null, 'UPI ID: ' + (i.shop.upi || '') + ' · ' + i.number)); return b; }
 async function bzMarkPaid(i, method) { try { const v = await bzApi('/invoices/' + i.id + '/pay', { method: 'POST', body: JSON.stringify({ method }) }); closeSheet('moreSheet'); toast(method === 'upi' ? '✅ UPI payment received' : '✅ Paid in cash'); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); return v; } catch (e) { toast(e.message); return null; } }
@@ -5759,7 +5919,9 @@ function bzShowBill(i, phone) {
     if (i.status !== 'void') act(ph ? '💬 Send bill on Maata to ' + ph : '💬 Send bill on Maata', async () => { let p = ph; if (!p) { p = prompt('Customer mobile number'); if (!p) return; } try { await bzApi('/invoices/' + i.id + '/send', { method: 'POST', body: JSON.stringify({ phone: p }) }); toast('Bill sent on Maata ✓'); } catch (e) { toast(e.message); } }, 'primary');
     act('🔗 Share bill link', async () => { const u = bzBillLink(i); if (nativeShareText('Bill ' + i.number + ' – ' + bzRs(i.grand) + '\n' + u, 'Share bill')) return; try { if (navigator.share) return await navigator.share({ title: i.number, text: 'Bill ' + i.number + ' – ' + bzRs(i.grand), url: u }); } catch { return; } try { await navigator.clipboard.writeText(u); toast('Link copied'); } catch { prompt('Copy this link', u); } });
     act('🖨️ Print receipt', () => (prApp() ? prPrintBill(i) : prSetup()));
-    act('📄 PDF / other printer', () => window.open(bzBillLink(i) + '&paper=' + prCfg().width, '_blank', 'noopener'));
+    act('📥 Download PDF', () => invPdfDownload(i));
+    act('📤 Share PDF (WhatsApp, Gmail…)', () => invPdfShare(i));
+    act('🖨️ Other printer (A4 / page)', () => window.open(bzBillLink(i) + '&paper=' + prCfg().width, '_blank', 'noopener'));
     if (i.status !== 'void' && i.payment.status !== 'paid') { if (i.shop.upi) act('✅ UPI payment received', async () => { const v = await bzMarkPaid(i, 'upi'); if (v) bzShowBill(v); }); act('💵 Paid in cash', async () => { const v = await bzMarkPaid(i, 'cash'); if (v) bzShowBill(v); }); }
     if (i.status !== 'void' && bzCan('void')) act('🚫 Cancel this bill', async () => { const why = prompt('Why are you cancelling this bill? (stock goes back)'); if (!why) return; try { await bzApi('/invoices/' + i.id + '/void', { method: 'POST', body: JSON.stringify({ reason: why }) }); closeSheet('moreSheet'); toast('Bill cancelled. Stock added back.'); await bzLoadProducts(); if (BZ.tab === 'bills' || BZ.tab === 'home') bzTab(BZ.tab); } catch (e) { toast(e.message); } }, 'warn');
   });
@@ -12313,8 +12475,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 150;
-const APP_NOTES = ["🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 152;
+const APP_NOTES = ["📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
