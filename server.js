@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 152;
+const MAATA_VERSION = 153;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3085,6 +3085,15 @@ app.get('/api/biz/:bizId/dashboard', auth, (req, res) => {
     recent: db.invoices.filter((i) => i.bizId === c.bizId && (see || i.by === c.actor.id)).slice(-8).reverse().map(invOut),
     orders: c.perms.includes('bill') ? { new: db.orders.filter((o) => o.bizId === c.bizId && o.status === 'PLACED').length, active: db.orders.filter((o) => o.bizId === c.bizId && ORD_ACTIVE.includes(o.status)).length } : null,
   });
+});
+// ---- 💾 business backup (owner / manager saves a copy to Google Drive or the phone; photos are added by the app) ----
+app.get('/api/biz/:bizId/backup', auth, (req, res) => {
+  const c = bizCtx(req, res, 'reports'); if (!c) return;
+  const b = c.biz;
+  res.json({ kind: 'maata-business-backup', v: 1, exportedAt: now(), by: c.actor.name,
+    business: { id: c.bizId, name: b.name, address: b.address || '', category: b.category || '', settings: { ...(b.settings || {}) } },
+    products: bizProducts(c.bizId).sort((x, y) => x.name.localeCompare(y.name)).map(bizProdOut),
+    invoices: db.invoices.filter((i) => i.bizId === c.bizId).map((i) => ({ ...invOut(i), shop: i.shop })) });
 });
 // ---- products & stock ----
 app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
