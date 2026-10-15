@@ -29,6 +29,9 @@ import java.util.UUID
 object BtPrinter {
     private val SPP: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     @Volatile private var busy = false
+    /** 1 = normal, 2 = slow. Cheap printers drop bytes when data comes faster than they print, and then print strange symbols. */
+    @Volatile var pace = 1
+    private fun rate() = if (pace >= 2) 7_000 else 16_000 // bytes per second
 
     private fun adapter(ctx: Context): BluetoothAdapter? = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
@@ -173,10 +176,10 @@ object BtPrinter {
                 }
                 if (!ok) return false
                 wrote.await(2, TimeUnit.SECONDS)
-                if (noResp) Thread.sleep(8) // let small printers keep up
+                Thread.sleep(maxOf(8L, part.size * 1000L / rate())) // let small printers keep up
                 off += part.size
             }
-            Thread.sleep(900)
+            Thread.sleep(2000) // the printer finishes and cuts before the link closes
             return true
         } catch (e: Exception) { return false }
         finally { try { g.disconnect() } catch (_: Exception) { }; try { g.close() } catch (_: Exception) { } }
@@ -210,12 +213,15 @@ object BtPrinter {
                 }
                 val os = sock!!.outputStream
                 var i = 0
+                val r = rate(); val step = 256
+                val t0 = System.currentTimeMillis()
                 while (i < data.size) {
-                    val n = minOf(1024, data.size - i)
+                    val n = minOf(step, data.size - i)
                     os.write(data, i, n); os.flush(); i += n
-                    Thread.sleep(25)
+                    val ahead = i * 1000L / r - (System.currentTimeMillis() - t0) // send no faster than the printer prints
+                    if (ahead > 0) Thread.sleep(ahead)
                 }
-                Thread.sleep(600) // let the printer finish before the link closes
+                Thread.sleep(2500) // let the printer finish and cut before the link closes (closing early loses the last bytes)
                 done(true, "ok")
             } catch (e: IllegalStateException) { done(false, e.message ?: "error")
             } catch (e: SecurityException) { done(false, "perm")

@@ -527,6 +527,30 @@ class MainActivity : Activity() {
             val bytes = btOut.toByteArray(); btOut = java.io.ByteArrayOutputStream()
             UsbNetPrinter.printNet(host, port, bytes) { ok, msg -> runOnUiThread { web.evaluateJavascript("window.maataBtDone && maataBtDone(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")", null) } }
         }
+        /** Save the file made by shareFileStart/Chunk into Downloads/Maata (bill PDFs). "ok", "share" (old Android: use the share menu) or "error". */
+        private var savedUri: Uri? = null
+        private var savedMime = "application/pdf"
+        @JavascriptInterface fun saveFileEnd(mime: String): String = try {
+            val f = shareOut ?: throw IllegalStateException("no file")
+            if (Build.VERSION.SDK_INT < 29) "share" else {
+                val cv = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, f.name)
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mime)
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Maata")
+                }
+                val uri = contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv) ?: throw IllegalStateException("insert")
+                contentResolver.openOutputStream(uri)?.use { o -> f.inputStream().use { it.copyTo(o) } } ?: throw IllegalStateException("open")
+                savedUri = uri; savedMime = mime; "ok"
+            }
+        } catch (e: Exception) { "error" }
+        /** Open the file saved last (PDF viewer). */
+        @JavascriptInterface fun openSavedFile(): Boolean = try {
+            val u = savedUri ?: throw IllegalStateException("none")
+            val v = Intent(Intent.ACTION_VIEW).setDataAndType(u, savedMime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            runOnUiThread { try { startActivity(v) } catch (_: Exception) { web.evaluateJavascript("toast('No PDF app found. Install any PDF viewer, or tap Share.')", null) } }
+            true
+        } catch (e: Exception) { false }
+        @JavascriptInterface fun printPace(n: Int) { BtPrinter.pace = n.coerceIn(1, 2) }
         @JavascriptInterface fun btPrintStart(): Boolean { btOut = java.io.ByteArrayOutputStream(); return true }
         @JavascriptInterface fun btPrintChunk(b64: String): Boolean = try { btOut.write(android.util.Base64.decode(b64, android.util.Base64.DEFAULT)); btOut.size() < 8_000_000 } catch (e: Exception) { false }
         @JavascriptInterface fun btPrintEnd(address: String, id: String) {
