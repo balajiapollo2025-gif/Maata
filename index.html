@@ -1466,7 +1466,7 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .sec-own{margin-top:16px;max-width:360px;width:100%}.sec-own summary{cursor:pointer;opacity:.8;padding:10px}
 .sec-own form{display:flex;flex-direction:column;gap:8px;text-align:left}.sec-own input{font:inherit;font-size:16px;padding:12px;border-radius:12px;border:0;min-height:44px}
 .sec-err{color:#FFB4BF}
-.map-head-btn svg{stroke:#0F7A6E}.shop-head-btn{margin-left:2px}.shop-head-btn .shop-ico{width:30px;height:30px;object-fit:contain;display:block;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.18))}
+.map-head-btn svg{stroke:#0F7A6E}.od-paybox{margin-top:12px;padding:14px;border-radius:16px;background:#ECFDF5;border:1px solid #A7E3C9;display:flex;flex-direction:column;gap:6px}.od-paybox small{color:#3B5367}.od-upigo{display:flex!important;flex-direction:column;align-items:center;text-decoration:none;gap:2px}.od-upigo small{font-weight:500;opacity:.9}.od-paid{background:#DCFCE7;color:#166534;border-radius:12px;padding:10px 14px;font-weight:800}.rd-pay{margin-bottom:10px}.tm-bg h3{margin:0 0 6px}.tm-bgrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line,#e5e7eb)}.tm-bgrow span{flex:1;font-weight:600}.tm-bgrow.ok b{color:#0F7A3B;font-size:20px}.od-pay{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 12px}.od-paybtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px;border-radius:16px;border:2px solid var(--line,#dfe6e3);background:var(--panel,#fff);color:inherit;cursor:pointer}.od-paybtn i{font-style:normal;font-size:30px}.od-paybtn b{font-size:17px}.od-paybtn small{opacity:.75;font-size:12.5px}.od-paybtn.sel{border-color:#0F8A5F;background:#E9F7F1;box-shadow:0 0 0 3px rgba(15,138,95,.15)}.shop-head-btn{margin-left:2px}.shop-head-btn .shop-ico{width:30px;height:30px;object-fit:contain;display:block;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.18))}
 /* 🏪 Maata Business — uses the app's own theme tokens (light / dark) */
 .bz{--bz-acc:#0F7A6E;--bz-acc-ink:#fff;--bz-soft:rgba(15,122,110,.12);--bz-warn:#B54708;--bz-bad:#B42318;position:fixed;inset:0;z-index:37;background:var(--paper);color:var(--ink);display:flex;flex-direction:column}
 .bz-top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -6321,7 +6321,7 @@ function odCheckout() {
     const f = el('form', 'bz-form');
     let mode = s.delivery ? 'delivery' : s.pickup ? 'pickup' : 'ship', pay = s.payCod ? 'cod' : 'upi';
     const mch = el('div', 'bz-chips'); const addrBox = el('div', 'od-addr'), shipBox = el('div', 'od-addr'), payHead = el('div', 'th-title', 'Payment'), shipPay = el('p', 'info-note');
-    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; shipBox.hidden = m !== 'ship'; pch.hidden = m === 'ship'; shipPay.hidden = m !== 'ship'; sum(); };
+    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; shipBox.hidden = m !== 'ship'; pch.hidden = m === 'ship'; shipPay.hidden = m !== 'ship'; if (typeof payNote !== 'undefined') { payNote.hidden = m === 'ship'; const cb = pch.querySelector('button'); if (cb && s.payCod) cb.textContent = m === 'pickup' ? '💵 Cash at pickup' : '💵 Cash on delivery'; payTxt(); } sum(); };
     if (s.delivery) { const b = el('button', null, '🛵 Delivery'); b.type = 'button'; b.dataset.m = 'delivery'; b.onclick = () => setMode('delivery'); mch.append(b); }
     if (s.pickup) { const b = el('button', null, '🏃 I will pick up'); b.type = 'button'; b.dataset.m = 'pickup'; b.onclick = () => setMode('pickup'); mch.append(b); }
     if (s.ship) { const b = el('button', null, '🚚 Courier / transport (other town)'); b.type = 'button'; b.dataset.m = 'ship'; b.onclick = () => setMode('ship'); mch.append(b); }
@@ -6339,7 +6339,9 @@ function odCheckout() {
     const gps = el('button', 'sheet-btn', pin ? '📍 Location added ✓ (tap to update)' : '📍 Add my location (helps the delivery person)'); gps.type = 'button'; gps.onclick = async () => { gps.textContent = '📍 Getting location…'; OD.loc = null; const p = await odHere(); if (p) { pin = { lat: p.lat, lng: p.lng }; gps.textContent = '📍 Location added ✓'; } else gps.textContent = '📍 Could not get location. Allow location and try again.'; };
     addrBox.append(al, ll, gps);
     const pch = el('div', 'bz-chips'); shipPay.textContent = s.payUpi ? '📱 Pay the shop by UPI' + (s.upi ? ' (' + s.upi + ')' : '') + '. The shop sends the parcel after the payment.' : '💬 The shop will tell you how to pay before sending the parcel.';
-    for (const [k, l, okk] of [['cod', '💵 Cash', s.payCod], ['upi', '📱 UPI', s.payUpi]]) if (okk) { const b = el('button', k === pay ? 'on' : null, l + ' on ' + (mode === 'delivery' ? 'delivery' : 'pickup')); b.type = 'button'; b.onclick = () => { pay = k; pch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); }; pch.append(b); }
+    const payNote = el('p', 'bz-note');
+    const payTxt = () => { payNote.textContent = pay === 'upi' ? '📱 After you place the order, pay with PhonePe, Google Pay, Paytm or any UPI app (or scan the QR). If UPI does not work, you can still pay cash at the door.' : '💵 Pay cash ' + (mode === 'delivery' ? 'to the delivery person' : 'at the shop') + '. You can also pay by UPI QR at the door.'; };
+    for (const [k, l, okk] of [['cod', '💵 Cash on delivery', s.payCod], ['upi', '📱 UPI payment', s.payUpi]]) if (okk) { const b = el('button', k === pay ? 'on' : null, k === 'cod' && mode === 'pickup' ? '💵 Cash at pickup' : l); b.type = 'button'; b.onclick = () => { pay = k; pch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); payTxt(); }; pch.append(b); }
     const nl = el('label'); nl.htmlFor = 'odNote'; nl.append(el('span', null, 'Note for the shop (optional)')); const note = el('input'); note.id = 'odNote'; note.placeholder = 'e.g. Call before coming'; nl.append(note);
     const tot = el('div', 'bz-tot');
     const go = el('button', 'sheet-btn primary'); go.type = 'submit';
@@ -6351,7 +6353,7 @@ function odCheckout() {
       go.textContent = 'Place order · ' + bzRs(t.sum + fee);
       if (s.minOrder && t.sum < s.minOrder) { go.disabled = true; go.textContent = 'Add ' + bzRs(s.minOrder - t.sum) + ' more (minimum ' + bzRs0(s.minOrder) + ')'; } else go.disabled = false;
     }
-    f.append(mch, addrBox, shipBox, payHead, pch, shipPay, nl, tot, go);
+    payTxt(); f.append(mch, addrBox, shipBox, payHead, pch, payNote, shipPay, nl, tot, go);
     setMode(mode);
     f.onsubmit = async (e) => {
       e.preventDefault(); if (go.disabled) return;
@@ -6363,10 +6365,24 @@ function odCheckout() {
       go.disabled = true; go.textContent = 'Placing order…';
       try {
         const o = await api('/api/shop/' + s.bizId + '/orders', { method: 'POST', body: JSON.stringify({ idem: OD.idem, items: [...OD.cart].map(([productId, qty]) => ({ productId, qty })), mode, address, shipPref, pay, note: note.value }) });
-        OD.cart = new Map(); OD.idem = null; closeSheet('moreSheet'); const sp = $('#shopPage'); if (sp) sp.remove(); toast('✅ Order placed'); openOrder(o.id, o);
+        OD.cart = new Map(); OD.idem = null; closeSheet('moreSheet'); const sp = $('#shopPage'); if (sp) sp.remove(); toast('✅ Order placed'); openOrder(o.id, o); if (o.pay === 'upi' && !o.paidBy) setTimeout(() => odUpiPay(o, true), 500);
       } catch (x) { toast(x.message); sum(); }
     };
     L.append(f);
+  });
+}
+// 📱 customer pays the shop by UPI: opens PhonePe / GPay / Paytm with the amount filled in, or shows the QR
+async function odUpiPay(o, auto) {
+  let d; try { d = await api('/api/my/orders/' + o.id + '/upi'); } catch (e) { return toast(e.message); }
+  sheet('📱 Pay ' + bzRs(o.grand) + ' by UPI', (L) => {
+    const go = el('a', 'sheet-btn primary od-upigo'); go.href = d.link; go.append(el('b', null, '📲 Pay with UPI app'), el('small', null, 'PhonePe · Google Pay · Paytm · BHIM · any UPI app')); L.append(go);
+    const q = el('div', 'bz-qr'); q.append(el('small', null, 'Or scan this QR from another phone'), el('b', null, bzRs(o.grand)));
+    const qi = el('img'); qi.alt = 'UPI QR code for ' + bzRs(o.grand); qi.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg); const qs = el('div', 'bz-qrsvg'); qs.append(qi); q.append(qs, el('small', null, 'To: ' + d.shop + ' · ' + d.upi)); L.append(q);
+    L.append(el('p', 'bz-note', 'After paying, tap “I have paid”. The shop checks its UPI app and confirms. The amount and order number are filled in for you.'));
+    const rl = el('label'); rl.htmlFor = 'odUtr'; rl.append(el('span', null, 'UPI reference / UTR (optional)')); const ri = el('input'); ri.id = 'odUtr'; ri.inputMode = 'numeric'; ri.placeholder = '12-digit number from your UPI app'; rl.append(ri); const rf = el('div', 'bz-form'); rf.append(rl); L.append(rf);
+    const ok = el('button', 'sheet-btn primary', '✅ I have paid'); ok.onclick = async () => { ok.disabled = true; try { const v = await api('/api/my/orders/' + o.id + '/upi-paid', { method: 'POST', body: JSON.stringify({ ref: ri.value.trim() }) }); closeSheet('moreSheet'); toast('✅ Thank you! The shop will confirm the payment.'); const pg = $('#orderPage .od-body, #orderPage [class*=body]'); if ($('#orderPage')) { $('#orderPage').remove(); openOrder(v.id, v); } } catch (e) { toast(e.message); ok.disabled = false; } }; L.append(ok);
+    const later = el('button', 'sheet-btn', 'UPI not working? Pay cash at the door'); later.onclick = () => { closeSheet('moreSheet'); toast('OK. Pay cash or scan the UPI QR at the door.'); }; L.append(later);
+    if (auto && /Android|iPhone/i.test(navigator.userAgent)) setTimeout(() => { try { go.click(); } catch {} }, 700); // open the UPI apps at once
   });
 }
 // ----- order tracking (customer) -----
@@ -6392,7 +6408,13 @@ function odOrderDraw(body, o) {
   for (const l of o.items) { const r = el('div', 'bz-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); items.append(r); }
   if (o.fee) { const r = el('div', 'bz-tr'); r.append(el('span', null, o.mode === 'ship' ? 'Courier / transport' : 'Delivery'), el('span', null, bzRs(o.fee))); items.append(r); }
   if (o.toPay) items.append(el('small', 'bz-note', '💰 Transport charges: you pay when you collect the parcel (To Pay).'));
-  const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Pay by UPI' : o.mode === 'ship' ? 'To pay' : 'Pay in cash'), el('b', null, bzRs(o.grand))); items.append(g);
+  const g = el('div', 'bz-grand'); g.append(el('span', null, o.paidBy ? '✅ Paid by ' + (o.paidBy === 'upi' ? 'UPI' : 'cash') : o.pay === 'upi' ? 'UPI payment' : o.mode === 'ship' ? 'To pay' : 'Cash on delivery'), el('b', null, bzRs(o.grand))); items.append(g);
+  if (o.pay === 'upi' && !o.paidBy && !bad && o.status !== 'DELIVERED') {
+    const pb = el('div', 'od-paybox');
+    if (o.custPaidAt) pb.append(el('b', null, '⏳ You said you paid by UPI'), el('small', null, 'The shop will check its UPI app and confirm. If the money did not go, pay again or pay cash at the door.'));
+    else pb.append(el('b', null, '📱 Pay ' + bzRs(o.grand) + ' by UPI'), el('small', null, 'PhonePe, Google Pay, Paytm, BHIM… or pay cash / UPI QR at the door.'));
+    const b = el('button', 'sheet-btn primary', o.custPaidAt ? '📱 Pay again / show QR' : '📱 Pay now by UPI'); b.onclick = () => odUpiPay(o); pb.append(b); items.append(pb);
+  }
   if (o.address) items.append(el('small', 'bz-note', '📍 ' + odAddrText(o.address)));
   if (o.shipPref) items.append(el('small', 'bz-note', '🚚 You asked for: ' + o.shipPref));
   body.append(items);
@@ -6434,7 +6456,7 @@ async function bzOrders(body) {
 function bzOrderCard(o) {
   const c = el('div', 'bz-card od-card' + (o.status === 'PLACED' ? ' new' : ''));
   const h = el('div', 'od-head'); h.append(el('b', null, o.number + ' · ' + o.customerName), el('span', 'bz-st ' + (o.status === 'PLACED' ? 'due' : ['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(o.status) ? 'void' : 'paid'), OD_LABEL[o.status])); c.append(h);
-  c.append(el('small', 'bz-note', odModeName(o.mode).replace('Home delivery', 'Delivery').replace('Pickup from shop', 'Pickup') + ' · ' + (o.pay === 'upi' ? 'UPI' : o.mode === 'ship' ? 'Pay before sending' : 'Cash') + (o.toPay ? ' · transport To Pay' : '') + ' · ' + new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
+  c.append(el('small', 'bz-note', odModeName(o.mode).replace('Home delivery', 'Delivery').replace('Pickup from shop', 'Pickup') + ' · ' + (o.paidBy ? '✅ Paid by ' + (o.paidBy === 'upi' ? 'UPI' : 'cash') : o.pay === 'upi' ? (o.custPaidAt ? '📱 UPI · customer says paid' + (o.custRef ? ' (ref ' + o.custRef + ')' : '') + ' — check your UPI app' : '📱 UPI payment (not paid yet)') : o.mode === 'ship' ? 'Pay before sending' : '💵 Cash on delivery') + (o.toPay ? ' · transport To Pay' : '') + ' · ' + new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
   for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
   const g = el('div', 'bz-grand'); g.append(el('span', null, 'Total' + (o.fee ? ' (incl. delivery ' + bzRs(o.fee) + ')' : '')), el('b', null, bzRs(o.grand))); c.append(g);
   if (o.shipPref) c.append(el('small', 'bz-note', '🚚 Customer wants: ' + o.shipPref));
@@ -6445,9 +6467,13 @@ function bzOrderCard(o) {
   if (o.mode === 'delivery' && (o.rider || o.riderId)) c.append(el('small', 'od-rider', '🛵 Delivery: ' + (o.rider ? o.rider.name : 'assigned') + (o.live ? ' · 📍 live' : '')));
   const acts = el('div', 'od-acts');
   const go = (to, label, cls, needReason, needOtp) => { const b = el('button', 'bz-btn' + (cls ? ' ' + cls : ''), label); b.onclick = async () => {
-      let reason = '', otp = ''; if (needReason) { reason = prompt('Reason for the customer'); if (!reason) return; } if (needOtp) { otp = prompt('Enter the 4-digit code from the customer'); if (!otp) return; }
-      b.disabled = true; try { await bzApi('/orders/' + o.id + '/status', { method: 'POST', body: JSON.stringify({ to, reason, otp }) }); toast(OD_LABEL[to] + ' ✓'); if (to === 'ACCEPTED' || to === 'DELIVERED' || to === 'CANCELLED') await bzLoadProducts(); bzTab('orders'); } catch (e) { toast(e.message); b.disabled = false; } };
+      let reason = '', otp = '', paidBy = ''; if (needReason) { reason = prompt('Reason for the customer'); if (!reason) return; }
+      if (needReason && o.prepaid && !confirm('This order is already paid by UPI. Please send ' + bzRs(o.grand) + ' back to the customer. Continue?')) return;
+      if (needOtp && to === 'DELIVERED' && o.mode !== 'ship' && !o.prepaid) { paidBy = await new Promise((ok) => odCollect(o, '/api/biz/' + BZ.id + '/upi-qr?amount=' + o.grand + '&note=' + encodeURIComponent(o.number), ok)); if (!paidBy) return; }
+      if (needOtp) { otp = prompt('Enter the 4-digit code from the customer'); if (!otp) return; }
+      b.disabled = true; try { await bzApi('/orders/' + o.id + '/status', { method: 'POST', body: JSON.stringify({ to, reason, otp, paidBy }) }); toast(OD_LABEL[to] + ' ✓'); if (to === 'ACCEPTED' || to === 'DELIVERED' || to === 'CANCELLED') await bzLoadProducts(); bzTab('orders'); } catch (e) { toast(e.message); b.disabled = false; } };
     acts.append(b); };
+  if (o.pay === 'upi' && !o.paidBy && !['CANCELLED', 'REJECTED', 'DELIVERED'].includes(o.status)) { const ub = el('button', 'bz-btn' + (o.custPaidAt ? ' pri' : ''), '✅ UPI money received'); ub.onclick = async () => { if (!confirm('Did ' + bzRs(o.grand) + ' come in your UPI app / sound box for ' + o.number + '?')) return; ub.disabled = true; try { await bzApi('/orders/' + o.id + '/upi-received', { method: 'POST', body: '{}' }); toast('✅ Marked paid. The delivery person will not collect money.'); bzTab('orders'); } catch (e) { toast(e.message); ub.disabled = false; } }; acts.append(ub); }
   if (o.status === 'PLACED') { go('ACCEPTED', '✅ Accept', 'pri'); go('REJECTED', 'Reject', 'bad', true); }
   if (o.status === 'ACCEPTED') go('PREPARING', '📦 Start packing', 'pri');
   if (o.status === 'PREPARING') go('READY', '✅ Ready', 'pri');
@@ -6532,7 +6558,7 @@ function bzStoreSettings() {
     const on = chk('🟢 Take online orders on Maata', s.on), dl = chk('🛵 Home delivery', s.delivery), pu = chk('🏃 Pickup from shop', s.pickup);
     const fee = fl('Delivery charge ₹', 'stFee', s.fee / 100, 'number'), free = fl('Free delivery above ₹ (0 = never)', 'stFree', s.freeAbove / 100, 'number'), min = fl('Minimum order ₹ (0 = none)', 'stMin', s.minOrder / 100, 'number');
     const eta = fl('Delivery time', 'stEta', s.eta, 'text', '30–45 min'), rad = fl('Deliver up to (km)', 'stRad', s.radiusKm, 'number'), area = fl('Areas you deliver to (shown to customers)', 'stArea', s.area, 'text', 'Vinjam, Puttur road…');
-    const cod = chk('💵 Cash on delivery / pickup', s.payCod), upi = chk('📱 UPI on delivery / pickup', s.payUpi);
+    const cod = chk('💵 Cash on delivery / pickup', s.payCod), upi = chk('📱 UPI payment (customer pays by UPI app / QR when ordering)', s.payUpi);
     f.append(el('div', 'th-title', '🚚 Other towns (courier / lorry transport)'));
     const sp = chk('🚚 Send to other towns by courier / transport', s.ship), stp = chk('💰 Customer pays transport charges on collection ("To Pay")', s.shipToPay);
     const sfee = fl('Courier / packing charge ₹ (when not "To Pay")', 'stSFee', s.shipFee / 100, 'number'), seta = fl('Usual time', 'stSEta', s.shipEta, 'text', '3–7 days'), snote = fl('Note for customers (optional)', 'stSNote', s.shipNote, 'text', 'We send by Navata / DTDC. UPI payment first.');
@@ -6613,18 +6639,52 @@ function rdDraw(body, o) {
   c.append(row);
   if (o.address && o.address.lat != null && o.status !== 'DELIVERED') { const mc = el('div', 'od-map'); c.append(mc); const info = el('p', 'bz-note'); info.id = 'rdInfo'; info.textContent = '🏠 Customer · 🛵 You (when you start)'; c.append(info); odTrackMap(mc, { dest: { lat: o.address.lat, lng: o.address.lng }, shop: o.shopLoc, track: o.track ? { ...o.track } : (RD.last ? { lat: RD.last.lat, lng: RD.last.lng, trail: [] } : null) }).then((T) => { RD.map = T; }); }
   for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
-  const g = el('div', 'bz-grand'); g.append(el('span', null, o.pay === 'upi' ? 'Customer pays by UPI' : 'Collect cash'), el('b', null, bzRs(o.grand))); c.append(g);
+  const g = el('div', 'bz-grand'); g.append(el('span', null, o.prepaid ? '✅ Already paid by UPI' : o.status === 'DELIVERED' && o.paidBy ? 'Paid by ' + (o.paidBy === 'upi' ? 'UPI' : 'cash') : o.pay === 'upi' ? 'Collect · customer chose UPI' : 'Collect · customer chose cash'), el('b', null, bzRs(o.grand))); c.append(g);
+  if (o.prepaid && o.status !== 'DELIVERED') c.append(el('p', 'od-paid', '✅ PAID — do not collect money. Just take the 4-digit code.'));
+  else if (o.status === 'OUT_FOR_DELIVERY') c.append(el('p', 'bz-note', o.custPaidAt ? '⏳ Customer says they paid by UPI — the shop has not confirmed yet. Check their phone shows “Payment successful”, or collect again.' : '💵 Cash or 📱 UPI QR — the customer can pay either way at the door.'));
   body.append(c);
   const acts = el('div', 'bz-qa');
   const act = (t, cls, fn) => { const b = el('button', 'bz-big' + (cls ? ' ' + cls : ''), t); b.onclick = async () => { b.disabled = true; try { await fn(); } catch (e) { toast(e.message); } b.disabled = false; }; acts.append(b); };
   if (['READY', 'DELIVERY_FAILED'].includes(o.status)) act('🛵 Start delivery', '', async () => { const v = await api('/api/rider/jobs/' + o.id + '/start', { method: 'POST', body: '{}' }); rdDraw(body, v); rdShare(o.id); toast('Started. Your location is shared with the customer.'); });
   if (['ACCEPTED', 'PREPARING'].includes(o.status)) acts.append(el('p', 'bz-note', 'The shop is still packing. You can start when it is Ready.'));
   if (o.status === 'OUT_FOR_DELIVERY') {
-    act('🤝 Delivered (enter code)', '', async () => { const otp = prompt('Enter the 4-digit code from the customer'); if (!otp) return; const v = await api('/api/rider/jobs/' + o.id + '/deliver', { method: 'POST', body: JSON.stringify({ otp }) }); rdStop(); rdDraw(body, v); toast('✅ Delivered. Thank you!'); });
+    const finish = async (paidBy) => {
+      const otp = prompt((paidBy ? 'Paid by ' + (paidBy === 'upi' ? 'UPI' : 'CASH') + ' ✓\n' : '') + 'Now enter the 4-digit code from the customer'); if (!otp) return;
+      try { const v = await api('/api/rider/jobs/' + o.id + '/deliver', { method: 'POST', body: JSON.stringify({ otp, paidBy }) }); rdStop(); rdDraw(body, v); toast('✅ Delivered' + (paidBy ? ' · paid by ' + (paidBy === 'upi' ? 'UPI' : 'cash') : '') + '. Thank you!'); } catch (e) { toast(e.message); } };
+    if (o.prepaid) act('✅ Deliver (enter code)', '', () => finish(''));
+    else {
+      const pay = el('div', 'od-pay rd-pay');
+      const cb = el('button', 'od-paybtn'); cb.append(el('i', null, '💵'), el('b', null, 'Cash'), el('small', null, 'Took ' + bzRs(o.grand) + ' cash'));
+      const ub = el('button', 'od-paybtn'); ub.append(el('i', null, '📱'), el('b', null, 'UPI QR'), el('small', null, 'Customer scans & pays'));
+      cb.onclick = () => odCollect(o, '/api/rider/jobs/' + o.id + '/upi-qr', finish, 'cash');
+      ub.onclick = () => odCollect(o, '/api/rider/jobs/' + o.id + '/upi-qr', finish, 'upi');
+      pay.append(cb, ub); acts.append(el('div', 'th-title', '💰 How did the customer pay?'), pay);
+    }
     act('Could not deliver', 'alt', async () => { const reason = prompt('Why could you not deliver? (the shop and customer will see this)'); if (!reason) return; const v = await api('/api/rider/jobs/' + o.id + '/fail', { method: 'POST', body: JSON.stringify({ reason }) }); rdStop(); rdDraw(body, v); });
   }
   if (['ACCEPTED', 'PREPARING', 'READY'].includes(o.status)) act('Decline this delivery', 'alt', async () => { const reason = prompt('Why are you declining?'); if (reason === null) return; await api('/api/rider/jobs/' + o.id + '/decline', { method: 'POST', body: JSON.stringify({ reason }) }); toast('Declined. The shop will assign someone else.'); $('#ridePage').remove(); });
   body.append(acts, el('p', 'bz-note', 'Your location is shared only while an order is "On the way", only with that customer and the shop, and it is deleted when the delivery ends.'));
+}
+// 💰 at the door: the customer may pay by cash or UPI, whatever they chose while ordering
+function odCollect(o, qrUrl, done, start) {
+  const chose = o.pay === 'upi' ? 'upi' : 'cash';
+  sheet('💰 Collect ' + bzRs(o.grand), (L) => {
+    L.append(el('p', 'info-note', (o.customerName || 'Customer') + ' chose ' + (chose === 'upi' ? '📱 UPI' : '💵 cash') + ' while ordering. If they want to pay the other way, that is fine — choose how you got the money.'));
+    const box = el('div', 'od-pay');
+    const cash = el('button', 'od-paybtn' + (chose === 'cash' ? ' sel' : '')); cash.append(el('i', null, '💵'), el('b', null, 'Cash'), el('small', null, 'Take ' + bzRs(o.grand) + ' in cash'));
+    const upi = el('button', 'od-paybtn' + (chose === 'upi' ? ' sel' : '')); upi.append(el('i', null, '📱'), el('b', null, 'UPI QR'), el('small', null, 'PhonePe, GPay, Paytm…'));
+    box.append(cash, upi); L.append(box);
+    const area = el('div'); L.append(area);
+    const showCash = () => { cash.classList.add('sel'); upi.classList.remove('sel'); area.innerHTML = '';
+      const ok = el('button', 'sheet-btn primary', '✅ I received ' + bzRs(o.grand) + ' in cash'); ok.onclick = () => { closeSheet('moreSheet'); done('cash'); }; area.append(ok); };
+    const showUpi = async () => { upi.classList.add('sel'); cash.classList.remove('sel'); area.innerHTML = ''; area.append(el('p', 'bz-load', 'Making the QR…'));
+      let d; try { d = await api(qrUrl); } catch (e) { area.innerHTML = ''; area.append(el('p', 'tm-warn', e.message)); return; }
+      area.innerHTML = ''; const q = el('div', 'bz-qr'); q.append(el('small', null, 'Customer scans with any UPI app'), el('b', null, bzRs(o.grand)));
+      const qi = el('img'); qi.alt = 'UPI QR code'; qi.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg); const qs = el('div', 'bz-qrsvg'); qs.append(qi); q.append(qs, el('small', null, 'UPI: ' + d.upi)); area.append(q);
+      area.append(el('p', 'bz-note', 'Check the customer\'s phone shows “Payment successful” to ' + (d.shop || 'the shop') + ' before you hand over the items.'));
+      const ok = el('button', 'sheet-btn primary', '✅ UPI payment received'); ok.onclick = () => { closeSheet('moreSheet'); done('upi'); }; area.append(ok); };
+    cash.onclick = showCash; upi.onclick = showUpi; ((start || chose) === 'upi' ? showUpi : showCash)();
+  });
 }
 function rdSend(id, p) {
   RD.sentAt = Date.now(); RD.last = p; RD.trail = (RD.trail || []).concat([[p.lat, p.lng]]).slice(-200);
@@ -6704,14 +6764,35 @@ async function tmStaff(id) {
   const me = t.me || {}, on = me.onDuty;
   const hero = el('div', 'bz-card tm-hero' + (on ? ' on' : ''));
   hero.append(el('small', null, on ? w.onNow + ' since ' + tmTime(me.since) : w.offNow), el('h3', null, on ? (me.last ? '✅ Your location is going' : '⏳ Starting…') : w.hint));
-  if (on) hero.append(el('p', 'bz-note', 'Last location sent: ' + tmAgo(me.last && me.last.t) + (tmApp() ? ' · keeps working when the phone is locked' : ' · keep Maata open')));
+  if (on) hero.append(el('p', 'bz-note', 'Last signal: ' + tmAgo(me.seen || (me.last && me.last.t)) + (tmApp() ? ' · keeps working when the phone is locked' : ' · keep Maata open')));
   const b = el('button', 'bz-big' + (on ? ' alt' : ''), on ? w.off : w.on); b.onclick = async () => { b.disabled = true; if (on) await tmDutyOff(t); else await tmDutyOn(t); b.disabled = false; $('#teamPage')?.remove(); tmStaff(id); };
   hero.append(b); body.append(hero);
+  { const bg = tmBgCard(() => { if ($('#teamPage')) { $('#teamPage').remove(); tmStaff(id); } }); if (bg) body.append(bg); }
   if (t.mySites.length) { const c = el('div', 'bz-card'); c.append(el('h3', null, '🏕️ Your camps / work places')); for (const s of t.mySites) c.append(el('div', 'bz-tr', '📍 ' + s.name + ' · ' + s.r + ' m area')); body.append(c); }
   try { const d = await api('/api/teams/' + id + '/day'); const c = el('div', 'bz-card'); c.append(el('h3', null, '🗓️ Today'), el('p', 'bz-note', d.first ? 'From ' + tmTime(d.first) + ' to ' + tmTime(d.lastAt) + ' · ' + d.km + ' km' : 'Not shared today yet.')); body.append(c); } catch {}
   body.append(el('p', 'bz-note', '🔒 Seen only by: ' + (t.admins.join(', ') || 'the group admin') + '. Only while sharing is ON.'));
   if (on) { const pg0 = $('#teamPage'); setTimeout(() => { if ($('#teamPage') === pg0 && document.body.contains(pg0) && !$('#moreSheet:not([hidden])')) { pg0.remove(); tmStaff(id); } }, me.state === 'waiting' || !me.last ? 6000 : 60000); }
   const lv = el('button', 'bz-link', 'Leave this group'); lv.onclick = async () => { if (!confirm('Leave ' + t.name + '? The admin will be told.')) return; try { await tmDutyOff(t, true); await api('/api/teams/' + id + '/leave', { method: 'POST', body: '{}' }); $('#teamPage')?.remove(); openTeams(); } catch (e) { toast(e.message); } }; body.append(lv);
+}
+// 🔋 what the phone still needs so sharing keeps going while Maata is closed (Android app)
+function tmBg() { const A = window.MaataAndroid; if (!A || !A.trackBgStatus) return null; try { return JSON.parse(A.trackBgStatus()); } catch { return null; } }
+function tmBgCard(redraw) {
+  if (!tmApp()) return null;
+  const A = window.MaataAndroid, st = tmBg(), c = el('div', 'bz-card tm-bg');
+  if (!st) { c.append(el('h3', null, '🔋 Keep sharing when Maata is closed'), el('p', 'tm-warn', '📲 Update the Maata app: the new app keeps sending your location when Maata is closed or the phone is locked.')); const u = el('button', 'sheet-btn primary', '📲 Update Maata app'); u.onclick = () => startAppUpdate(); c.append(u); return c; }
+  const steps = [
+    ['📍', 'Location: “Allow all the time”', st.bgLoc, 'Allow', () => A.trackAskBgLocation()],
+    ['🔋', 'Battery: “Unrestricted” / Don\'t optimise', st.battery, 'Allow', () => A.trackAskBattery()],
+  ];
+  if (!st.notif) steps.push(['🔔', 'Notifications on (shows that sharing is on)', false, 'Allow', () => A.openAppSettings && A.openAppSettings()]);
+  const done = steps.every((x) => x[2]);
+  c.append(el('h3', null, done ? '✅ Sharing keeps going when Maata is closed' : '⚠️ Keep sharing when Maata is closed'));
+  if (!done) c.append(el('p', 'bz-note', 'Some phones stop Maata when you close it, so the admin sees “offline”. Tap Allow on each step (one time only):'));
+  for (const [ic, label, ok, btn, fn] of steps) { const r = el('div', 'tm-bgrow' + (ok ? ' ok' : '')); r.append(el('span', null, ic + ' ' + label)); if (ok) r.append(el('b', null, '✓')); else { const b = el('button', 'bz-btn pri', btn); b.onclick = fn; r.append(b); } c.append(r); }
+  if (st.autostart) { const r = el('div', 'tm-bgrow'); r.append(el('span', null, '🚀 ' + (st.maker || 'Phone') + ': turn ON “Autostart” for Maata')); const b = el('button', 'bz-btn', 'Open'); b.onclick = () => A.trackOpenAutostart(); r.append(b); c.append(r); }
+  c.append(el('p', 'bz-note', 'Also: do not “Force stop” Maata, and in Recent apps you can lock Maata (🔒) so the phone does not clear it.'));
+  if (redraw) { const f = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', f); redraw(); } }; document.addEventListener('visibilitychange', f); }
+  return c;
 }
 function tmPerm() { // location permission + GPS on (Android app); browser asks by itself
   return new Promise((ok) => {
@@ -6727,6 +6808,7 @@ async function tmDutyOn(t) {
   if ((await tmPerm()) !== 'ok') return;
   let r; try { r = await api('/api/teams/' + t.id + '/duty', { method: 'POST', body: JSON.stringify({ on: true }) }); } catch (e) { return toast(e.message); }
   tmTrack(r); toast('📍 Sharing ON. Seen by ' + (t.admins.join(', ') || 'your group admin'));
+  const st = tmBg(); if (st && !(st.bgLoc && st.battery)) setTimeout(() => sheet('🔋 One more step', (L) => { const c = tmBgCard(); if (c) L.append(c); const d = el('button', 'sheet-btn', 'Done'); d.onclick = () => closeSheet('moreSheet'); L.append(d); }), 900);
 }
 async function tmDutyOff(t, quiet) {
   try { await api('/api/teams/' + t.id + '/duty', { method: 'POST', body: JSON.stringify({ on: false }) }); } catch (e) { if (!quiet) toast(e.message); }
@@ -6800,7 +6882,8 @@ async function tmLive(area, t) {
     for (const r of [...R].sort((a, b) => (order[a.state] ?? 9) - (order[b.state] ?? 9))) {
       const st = TM_STATE[r.state] || TM_STATE.free, row = el('div', 'tm-row s-' + r.state);
       const top = el('div', 'tm-rtop'); top.append(el('b', null, r.name), el('span', 'tm-chip s-' + r.state, st.join(' ')));
-      const info = r.onDuty ? ['updated ' + tmAgo(r.last && r.last.t), r.last && r.last.bat != null ? '🔋 ' + r.last.bat + '%' : '', r.km ? r.km + ' km today' : '', 'since ' + tmTime(r.since)].filter(Boolean).join(' · ') : 'Location sharing is OFF';
+      const stale = r.last && r.seen && r.seen - r.last.t > 5 * 60000;
+      const info = r.onDuty ? ['updated ' + tmAgo(r.seen || (r.last && r.last.t)) + (stale ? ' · 📍 same place since ' + tmTime(r.last.t) : ''), r.bat != null ? '🔋 ' + r.bat + '%' : r.last && r.last.bat != null ? '🔋 ' + r.last.bat + '%' : '', r.km ? r.km + ' km today' : '', 'since ' + tmTime(r.since)].filter(Boolean).join(' · ') : 'Location sharing is OFF';
       const acts = el('div', 'tm-acts');
       const day = el('button', 'bz-btn', '🗺️ History'); day.onclick = () => { TM.tab = 'day'; TM.dayUid = r.userId; TM.redraw(); $('#teamPage .tm-tabs button:nth-child(2)')?.classList.add('on'); $('#teamPage .tm-tabs button:nth-child(1)')?.classList.remove('on'); };
       const call = el('a', 'bz-btn', '📞 Call'); call.href = 'tel:' + r.phone;
@@ -12572,8 +12655,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 153;
-const APP_NOTES = ["💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 155;
+const APP_NOTES = ["📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }

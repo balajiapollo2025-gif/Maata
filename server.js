@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 153;
+const MAATA_VERSION = 155;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3374,8 +3374,8 @@ function storeOf(b) {
 const shopStaffIds = (owner) => [owner.id, ...((owner.business.members || []).filter((m) => m.status !== 'removed' && (BIZ_ROLES[m.role] || []).includes('bill')).map((m) => m.userId))];
 function ordOut(o, forShop) {
   return { id: o.id, number: o.number, bizId: o.bizId, shopName: o.shopName, shopPhone: o.shopPhone, customerId: o.customerId, customerName: o.customerName, customerPhone: forShop ? o.customerPhone : undefined,
-    items: o.items, subtotal: o.subtotal, discount: 0, tax: o.tax, fee: o.fee, grand: o.grand, mode: o.mode, address: o.address, note: o.note, pay: o.pay, status: o.status, history: o.history, createdAt: o.createdAt,
-    otp: !forShop && o.mode !== 'ship' && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track, ship: shipOut(o), shipPref: o.shipPref || '', toPay: !!o.toPay };
+    items: o.items, subtotal: o.subtotal, discount: 0, tax: o.tax, fee: o.fee, grand: o.grand, mode: o.mode, address: o.address, note: o.note, pay: o.pay, paidBy: o.paidBy || null, status: o.status, history: o.history, createdAt: o.createdAt,
+    otp: !forShop && o.mode !== 'ship' && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', custPaidAt: o.custPaidAt || null, custRef: o.custRef || '', prepaid: !!o.prepaid, taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track, ship: shipOut(o), shipPref: o.shipPref || '', toPay: !!o.toPay };
 }
 // 🚚 courier / lorry transport booking details (no photo bytes here; the receipt photo has its own link)
 const SHIP_KIND = { courier: 'Courier', transport: 'Lorry transport', post: 'India Post', bus: 'Bus parcel', other: 'Other' };
@@ -3403,7 +3403,7 @@ function ordToInvoice(o, owner, actor) { // a delivered order becomes a normal b
   if (o.fee) items.push({ productId: null, name: o.mode === 'ship' ? 'Courier / transport charge' : 'Delivery charge', unit: 'trip', qty: 1, price: o.fee, taxRate: 0, hsn: '', disc: 0, taxable: o.fee, tax: 0, total: o.fee });
   const inv = { id: newId(), bizId: owner.id, idem: 'order-' + o.id, key: crypto.randomBytes(12).toString('hex'), number: (s.prefix || 'INV') + '/' + fy + '/' + String(b.invSeq[fy]).padStart(4, '0'), createdAt: now(), by: actor.id, byName: actor.name,
     customer: { name: o.customerName, phone: o.customerPhone }, taxMode: o.taxMode, items, subtotal: o.subtotal + o.fee, discount: 0, taxable: items.reduce((x, l) => x + l.taxable, 0), tax: o.tax, roundOff: 0, grand: o.grand,
-    payment: { method: o.pay === 'upi' ? 'upi' : 'cash', status: 'paid', paidAt: now() }, status: 'final', orderId: o.id, history: [{ at: now(), by: actor.id, what: 'from online order ' + o.number }],
+    payment: { method: o.paidBy || (o.pay === 'upi' ? 'upi' : 'cash'), status: 'paid', paidAt: now() }, status: 'final', orderId: o.id, history: [{ at: now(), by: actor.id, what: 'from online order ' + o.number }],
     shop: { name: b.name, address: b.address || '', phone: owner.phone, gstin: s.gstin || '', upi: s.upi || '', footer: s.footer || '' } };
   db.invoices.push(inv); o.invoiceId = inv.id; o.invoiceKey = inv.key; return inv;
 }
@@ -3447,6 +3447,7 @@ app.post('/api/biz/:bizId/orders/:id/status', auth, (req, res) => {
   if (to === 'OUT_FOR_DELIVERY') { if (!o.riderId) o.riderId = c.actor.id; o.trail = []; }
   if (['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED', 'REJECTED'].includes(to)) trackStop(o);
   o.status = to; o.reason = reason; o.history.push({ s: to, at: now(), by: c.actor.name, why: reason });
+  if (to === 'DELIVERED' && o.mode !== 'ship' && !o.prepaid && ['cash', 'upi'].includes(req.body?.paidBy)) { const chose = o.pay === 'upi' ? 'upi' : 'cash'; o.paidBy = req.body.paidBy; o.history.push({ s: 'PAID', at: now(), by: c.actor.name, why: 'Paid by ' + o.paidBy.toUpperCase() + (o.paidBy !== chose ? ' (customer chose ' + (chose === 'upi' ? 'UPI' : 'cash') + ' while ordering)' : '') }); }
   if (to === 'DELIVERED') { if (!o.invoiceId) { if (!o.reserved) ordStock(o, c.owner, -1, c.actor); ordToInvoice(o, c.owner, c.actor); } o.deliveredAt = now(); }
   bizLog(c, 'order-' + to.toLowerCase(), o.id, o.number + (reason ? ' – ' + reason : '')); save(); ordNotify(o, 'shop');
   res.json(ordOut(o, true));
@@ -3572,6 +3573,35 @@ app.post('/api/my/orders/:id/cancel', auth, (req, res) => {
   o.status = 'CANCELLED'; o.reason = clip(req.body?.reason, 160) || 'Cancelled by customer'; o.history.push({ s: 'CANCELLED', at: now(), by: req.user.name, why: o.reason });
   trackStop(o); save(); ordNotify(o, 'customer'); res.json(ordOut(o, false));
 });
+// 📱 the customer pays the shop by UPI from their phone (QR / UPI app), then tells the shop "I have paid"; the shop or delivery person confirms the money came
+const ordPayOpen = (o) => o.pay === 'upi' && !o.paidBy && !['CANCELLED', 'REJECTED', 'DELIVERED'].includes(o.status);
+app.get('/api/my/orders/:id/upi', auth, async (req, res) => {
+  const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (!ordPayOpen(o)) return res.status(400).json({ error: 'Nothing to pay by UPI for this order.' });
+  const owner = userById(o.bizId); const s = owner && owner.business ? bizSettings(owner.business) : {};
+  if (!s.upi) return res.status(400).json({ error: 'This shop has not added its UPI ID yet. Pay in cash, or chat with the shop.' });
+  const link = upiLink(s.upi, owner.business.name, o.grand, o.number);
+  res.json({ link, svg: await upiSvg(link), upi: s.upi, amount: o.grand, shop: owner.business.name, number: o.number });
+});
+app.post('/api/my/orders/:id/upi-paid', auth, (req, res) => {
+  const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (!ordPayOpen(o)) return res.status(400).json({ error: 'This order does not need a UPI payment now.' });
+  o.custPaidAt = now(); o.custRef = clip(String(req.body?.ref || '').replace(/[^\w-]/g, ''), 30);
+  o.history.push({ s: 'CUST_PAID', at: now(), by: req.user.name, why: 'Customer says paid ' + (o.grand / 100).toFixed(2) + ' by UPI' + (o.custRef ? ' (ref ' + o.custRef + ')' : '') });
+  save(); ordNotify(o, 'customer');
+  const owner = userById(o.bizId); if (owner) for (const id of shopStaffIds(owner)) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title: '💰 ' + o.number + ' · UPI', body: o.customerName + ' says they paid ₹' + (o.grand / 100).toFixed(2) + ' by UPI. Check your UPI app / sound box.' }); }
+  res.json(ordOut(o, false));
+});
+// the shop saw the UPI money in its UPI app / sound box: the order is paid (the delivery person collects nothing)
+app.post('/api/biz/:bizId/orders/:id/upi-received', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return; const o = db.orders.find((x) => x.id === req.params.id && x.bizId === c.bizId); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  if (o.paidBy) return res.status(400).json({ error: 'This order is already paid.' });
+  if (['CANCELLED', 'REJECTED'].includes(o.status)) return res.status(400).json({ error: 'This order was cancelled.' });
+  o.paidBy = 'upi'; o.prepaid = true; o.paidAt = now(); o.history.push({ s: 'PAID', at: now(), by: c.actor.name, why: 'UPI payment received by the shop' + (o.custRef ? ' (ref ' + o.custRef + ')' : '') });
+  bizLog(c, 'order-upi-paid', o.id, o.number); save(); ordNotify(o, 'shop');
+  const cu = userById(o.customerId); if (cu) pushTo(cu, { type: 'msg', title: '✅ ' + o.shopName, body: 'Payment of ₹' + (o.grand / 100).toFixed(2) + ' received for ' + o.number + '. Thank you!', tag: 'ord-' + o.id });
+  res.json(ordOut(o, true));
+});
 app.post('/api/my/orders/:id/received', auth, (req, res) => { // the customer got the parcel
   const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
   if (o.mode !== 'ship' || o.status !== 'SHIPPED') return res.status(400).json({ error: 'This order is not on the way by courier.' });
@@ -3628,10 +3658,15 @@ app.post('/api/biz/:bizId/orders/:id/assign', auth, (req, res) => {
 });
 // delivery person
 const riderJob = (req, res) => { const o = db.orders.find((x) => x.id === req.params.id && x.riderId === req.user.id); if (!o) { res.status(404).json({ error: 'This delivery is not assigned to you.' }); return null; } const owner = userById(o.bizId); if (!owner || !owner.business || !riderOk(owner, req.user.id)) { res.status(403).json({ error: 'You are no longer delivery staff for this shop.' }); return null; } return { o, owner }; };
-const riderOut = (o) => ({ ...ordOut(o, true), customerPhone: o.customerPhone, otp: undefined, track: trackOut(o), shopAddress: (userById(o.bizId) || { business: {} }).business.address || '', shopLoc: (() => { const s = (userById(o.bizId) || {}).business?.store; return s && s.lat != null ? { lat: s.lat, lng: s.lng } : null; })() });
+const riderOut = (o) => ({ ...ordOut(o, true), shopUpi: !!bizSettings((userById(o.bizId) || { business: {} }).business || {}).upi, customerPhone: o.customerPhone, otp: undefined, track: trackOut(o), shopAddress: (userById(o.bizId) || { business: {} }).business.address || '', shopLoc: (() => { const s = (userById(o.bizId) || {}).business?.store; return s && s.lat != null ? { lat: s.lat, lng: s.lng } : null; })() });
 app.get('/api/rider/jobs', auth, (req, res) => res.json(db.orders.filter((o) => o.riderId === req.user.id && ['ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status)).map(riderOut)
   .concat(db.orders.filter((o) => o.riderId === req.user.id && o.status === 'DELIVERED' && now() - (o.deliveredAt || 0) < 86400000).map(riderOut))));
 app.get('/api/rider/jobs/:id', auth, (req, res) => { const j = riderJob(req, res); if (j) res.json(riderOut(j.o)); });
+app.get('/api/rider/jobs/:id/upi-qr', auth, async (req, res) => { // customer wants to pay by UPI at the door
+  const j = riderJob(req, res); if (!j) return; const { o, owner } = j; const s = bizSettings(owner.business);
+  if (!s.upi) return res.status(400).json({ error: 'The shop has not added its UPI ID yet. Take cash, or ask the shop to add UPI in Bill settings.' });
+  const link = upiLink(s.upi, owner.business.name, o.grand, o.number); res.json({ svg: await upiSvg(link), upi: s.upi, amount: o.grand, shop: owner.business.name });
+});
 app.post('/api/rider/jobs/:id/start', auth, (req, res) => {
   const j = riderJob(req, res); if (!j) return; const { o } = j;
   if (!['READY', 'DELIVERY_FAILED', 'PREPARING', 'ACCEPTED'].includes(o.status)) return res.status(400).json({ error: 'This order is ' + o.status.toLowerCase().replace(/_/g, ' ') + '.' });
@@ -3663,7 +3698,10 @@ app.post('/api/rider/jobs/:id/deliver', auth, (req, res) => {
   if (o.status !== 'OUT_FOR_DELIVERY') return res.status(400).json({ error: 'Start the delivery first.' });
   o.otpTries = (o.otpTries || 0) + 1; if (o.otpTries > 8) { save(); return res.status(429).json({ error: 'Too many wrong codes. Call the customer or the shop.' }); }
   if (String(req.body?.otp || '').trim() !== o.otp) { save(); return res.status(400).json({ error: 'Wrong code. Ask the customer for the 4-digit code in their Maata order.' }); }
-  o.status = 'DELIVERED'; o.history.push({ s: 'DELIVERED', at: now(), by: req.user.name }); o.deliveredAt = now();
+  const chose = o.pay === 'upi' ? 'upi' : 'cash';
+  const paidBy = o.prepaid ? o.paidBy : ['cash', 'upi'].includes(req.body?.paidBy) ? req.body.paidBy : chose; // how the money was really collected at the door (or already paid by UPI)
+  o.paidBy = paidBy;
+  o.status = 'DELIVERED'; o.history.push({ s: 'DELIVERED', at: now(), by: req.user.name, why: o.prepaid ? 'Already paid by UPI before delivery' : 'Paid by ' + paidBy.toUpperCase() + (paidBy !== chose ? ' (customer chose ' + (chose === 'upi' ? 'UPI' : 'cash') + ' while ordering)' : '') }); o.deliveredAt = now();
   if (!o.reserved) ordStock(o, owner, -1, req.user); ordToInvoice(o, owner, req.user); trackStop(o);
   db.bizLog.push({ id: newId(), bizId: owner.id, actor: req.user.id, actorName: req.user.name, action: 'order-delivered', ref: o.id, detail: o.number, at: now() });
   save(); ordNotify(o, 'shop'); trackEmit(o); res.json(riderOut(o));
@@ -4779,8 +4817,9 @@ function tmEvent(t, uid, kind, text, p, tell) {
 }
 function tmLiveRow(t, m) {
   const u = userById(m.userId) || {}, d = (t.duty || {})[m.userId] || {}, last = d.last || null;
-  let state = 'off'; if (d.on) state = !last ? 'waiting' : now() - last.t > (t.offlineMin || 15) * 60000 ? 'offline' : d.gpsOff ? 'gps_off' : d.mock ? 'mock' : d.state || 'free';
-  return { userId: m.userId, name: u.name || 'Staff', phone: u.phone || '', role: m.role, status: m.status, onDuty: !!d.on, since: d.since || null, state, site: d.siteName || '', awaySince: d.awaySince || null, last, km: d.km || 0 };
+  const seen = Math.max(last ? last.t : 0, d.ping || 0); // the phone's last signal (a new place, or "still here")
+  let state = 'off'; if (d.on) state = !last ? 'waiting' : now() - seen > (t.offlineMin || 15) * 60000 ? 'offline' : d.gpsOff ? 'gps_off' : d.mock ? 'mock' : d.state || 'free';
+  return { userId: m.userId, name: u.name || 'Staff', phone: u.phone || '', role: m.role, status: m.status, onDuty: !!d.on, since: d.since || null, state, site: d.siteName || '', awaySince: d.awaySince || null, last, seen: seen || null, bat: d.bat ?? (last ? last.bat : null), km: d.km || 0 };
 }
 function tmOut(t, uid) {
   const admin = tmIsAdmin(t, uid), me = tmMember(t, uid);
@@ -4866,6 +4905,10 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
   const raw = Array.isArray(req.body?.pts) ? req.body.pts.slice(-300) : [];
   const pts = raw.map((p) => ({ t: Math.min(now(), Math.round(Number(p.t) || now())), lat: Number(p.lat), lng: Number(p.lng), acc: Math.round(Number(p.acc) || 0), bat: p.bat == null ? null : Math.max(0, Math.min(100, Math.round(Number(p.bat)))), mock: !!p.mock, spd: Math.max(0, Number(p.spd) || 0) }))
     .filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 && (p.lat || p.lng) && p.t > (d.since || 0) - 60000 && p.acc < 2000).sort((a, b) => a.t - b.t);
+  if (req.body?.alive) { // phone heartbeat: Maata is running (also when closed / screen locked), even if the person has not moved
+    d.ping = now(); if (req.body.bat != null && Number(req.body.bat) >= 0) d.bat = Math.max(0, Math.min(100, Math.round(Number(req.body.bat))));
+    if (d.offlineTold && d.last) { d.offlineTold = false; tmEvent(t, req.user.id, 'back', 'Phone is online again', d.last); }
+  }
   if (req.body?.gps === 'off' && !d.gpsOff) { d.gpsOff = true; tmEvent(t, req.user.id, 'gps_off', 'Switched off location (GPS) on the phone', d.last, true); }
   for (const p of pts) {
     if (d.last && p.t <= d.last.t) continue;
@@ -4888,7 +4931,7 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
     } else Object.assign(d, { state: 'free', siteId: null, siteName: '' });
     d.last = p;
   }
-  if (pts.length) { const row = tmLiveRow(t, m); for (const a of tmAdmins(t)) if (tmCanSee(t, a, req.user.id)) io.to('user:' + a).emit('team:live', { teamId: t.id, row }); }
+  if (pts.length || req.body?.alive) { const row = tmLiveRow(t, m); for (const a of tmAdmins(t)) if (tmCanSee(t, a, req.user.id)) io.to('user:' + a).emit('team:live', { teamId: t.id, row }); }
   save(); res.json({ on: true, interval: t.interval, endAt: tmEndAt(t), state: d.state || 'free', site: d.siteName || '' });
 });
 // admin: one person's day (route, stops, events, numbers)
@@ -4929,8 +4972,8 @@ setInterval(() => {
   for (const t of db.teams) { if (t.deleted) continue;
     for (const [uid, d] of Object.entries(t.duty || {})) { if (!d.on) continue;
       if (!tmInHours(t)) { tmStopDuty(t, uid, 'Work hours are over', true); changed = true; continue; }
-      const ref = d.last ? d.last.t : d.since;
-      if (!d.offlineTold && now() - ref > (t.offlineMin || 15) * 60000) { d.offlineTold = true; tmEvent(t, uid, 'offline', 'No location for ' + (t.offlineMin || 15) + ' min (phone off, no internet, or Maata closed)', d.last, true); changed = true; }
+      const ref = Math.max(d.last ? d.last.t : d.since, d.ping || 0);
+      if (!d.offlineTold && now() - ref > (t.offlineMin || 15) * 60000) { d.offlineTold = true; tmEvent(t, uid, 'offline', 'No signal for ' + (t.offlineMin || 15) + ' min (phone switched off, no internet, or the phone stopped Maata — see “Keep sharing when Maata is closed”)', d.last, true); changed = true; }
     } }
   const cut = now() - TEAM_KEEP_DAYS * 86400000; const a = db.teamTracks.length, b = db.teamEvents.length;
   db.teamTracks = db.teamTracks.filter((x) => x.createdAt > cut); db.teamEvents = db.teamEvents.filter((x) => x.at > cut);
