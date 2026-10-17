@@ -1530,6 +1530,10 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .bz-billview{padding:4px 16px 8px;display:flex;flex-direction:column}.bz-void{color:var(--bz-bad);font-weight:800;margin:4px 0 8px}
 .bz-scan{position:fixed;inset:0;z-index:9990;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;padding:16px}
 .bz-scan video{width:100%;max-width:480px;border-radius:14px}
+.od-inshop{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#E8F7EF,#E6EEFF);border:1.5px solid #0F8A5F;color:#0B3B36}.od-inshop b{font-size:15px}.od-inshop small{color:#34524C}.od-inshop .bz-link{align-self:flex-start;padding:0}
+.od-toprow{display:flex;gap:8px;flex-wrap:wrap}.od-toprow .bz-btn{flex:1}.od-qrtag{font-size:11.5px;font-weight:800;color:#0B5E44;background:#DDF5E8;border-radius:20px;padding:3px 8px;white-space:nowrap}
+.sq-qr .sq-name{font-size:20px}.sq-spot{background:#0F8A5F;color:#fff;border-radius:10px;padding:2px 12px;font-weight:800}.sq-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 10px}.sq-stats div{background:var(--panel,#F3F6F5);border-radius:12px;padding:8px 4px;text-align:center}.sq-stats b{display:block;font-size:18px}.sq-stats small{font-size:11px;color:var(--muted)}
+.sq-how{display:flex;flex-direction:column;gap:4px;margin-top:12px;padding:12px;border-radius:12px;background:var(--panel,#F3F6F5)}.sq-how small{color:var(--muted);line-height:1.4}.bz-warnbox{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:#FFF4E5;border:1.5px solid #F59E0B;color:#7A4A00;margin-bottom:10px}
 .od-info{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
 .od-grid{display:flex;flex-direction:column;gap:8px;padding-bottom:80px}
 .od-item{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 10px}
@@ -2378,7 +2382,7 @@ async function start() {
   setTimeout(() => { registerNativePush(); if (!isNativeApp()) { renderNotifBanner(); if (pushSupported() && Notification.permission === 'granted') enablePush(true); } handleAppLink(location.href); }, 1200);
   setTimeout(loadChannels, 1500);
   setTimeout(secStart, 2000);
-  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); const bmq = sp.get('bm'), oiq = sp.get('optin'); if (bmq) setTimeout(() => openBmThread(bmq), 900); if (oiq) setTimeout(() => bmOptin(oiq), 1200); const tmq = sp.get('team'); if (tmq) setTimeout(() => api('/api/teams/' + tmq).then((t) => (t.myStatus === 'invited' ? tmConsent(t) : t.admin ? tmAdmin(tmq) : tmStaff(tmq))).catch(() => openTeams()), 900); }
+  { const sp = new URLSearchParams(location.search), bz = sp.get('biz'), od = sp.get('order'); if (bz) setTimeout(() => openBiz(bz), 900); if (od) setTimeout(() => openOrder(od), 900); const rd = sp.get('ride'); if (rd) setTimeout(() => openRide(rd), 900); const shq = sp.get('shop'); if (shq) setTimeout(() => openShop(shq, { via: sp.get('via') === 'qr' ? 'qr' : '', spot: sp.get('spot') || '' }), 900); const bmq = sp.get('bm'), oiq = sp.get('optin'); if (bmq) setTimeout(() => openBmThread(bmq), 900); if (oiq) setTimeout(() => bmOptin(oiq), 1200); const tmq = sp.get('team'); if (tmq) setTimeout(() => api('/api/teams/' + tmq).then((t) => (t.myStatus === 'invited' ? tmConsent(t) : t.admin ? tmAdmin(tmq) : tmStaff(tmq))).catch(() => openTeams()), 900); }
   api('/api/starred').then((ids) => { starred = new Set(ids); if (activeId) renderMessages(); }).catch(() => {});
   api('/api/config').then((c) => { serverCfg = c; }).catch(() => {});
   $('#langNotice').hidden = !!me.lang;
@@ -6130,11 +6134,66 @@ function bzRestorePick() {
   inp.click();
 }
 // ---------- ⚙️ More ----------
+// 📱 Shop QR · Scan & Order — a QR poster at the counter / tables. Any phone camera opens this shop in Maata.
+async function bzShopQr(spot) {
+  let d; try { d = await bzApi('/shop-qr' + (spot ? '?spot=' + encodeURIComponent(spot) : '')); } catch (e) { return toast(e.message); }
+  sheet('📱 Shop QR · Scan & Order', (L) => {
+    if (!d.storeOn) { const w = el('div', 'bz-warnbox'); w.append(el('b', null, '⚠️ Your online store is closed'), el('small', null, 'Customers can scan, but cannot order until you open it.')); const b = el('button', 'sheet-btn primary', '🛒 Open online store'); b.onclick = () => { closeSheet('moreSheet'); bzStoreSettings(); }; w.append(b); L.append(w); }
+    const q = el('div', 'bz-qr sq-qr'); q.append(el('b', 'sq-name', d.shop.name)); if (d.spot) q.append(el('span', 'sq-spot', d.spot));
+    const qi = el('img'); qi.alt = 'Scan & Order QR for ' + d.shop.name; qi.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg); const qs = el('div', 'bz-qrsvg'); qs.append(qi); q.append(qs, el('small', null, 'Scan with any phone camera → order → collect at counter'));
+    L.append(q);
+    const st = el('div', 'sq-stats'); for (const [n, l] of [[d.stats.today, 'Scans today'], [d.stats.scans, 'Total scans'], [d.stats.orders, 'QR orders'], [bzRs0(d.stats.sales), 'QR sales']]) { const x = el('div'); x.append(el('b', null, String(n)), el('small', null, l)); st.append(x); } L.append(st);
+    const f = el('form', 'bz-form'); const lb = el('label'); lb.htmlFor = 'sqSpot'; lb.append(el('span', null, 'Table / counter name (optional)')); const si = el('input'); si.id = 'sqSpot'; si.maxLength = 30; si.value = d.spot || ''; si.placeholder = 'e.g. Table 4, Counter 2, Medical section'; lb.append(si);
+    const ap = el('button', 'sheet-btn', d.spot ? '🔄 Update QR' : '➕ Make a QR for this table / counter'); ap.type = 'submit'; f.append(lb, ap); f.onsubmit = (e) => { e.preventDefault(); closeSheet('moreSheet'); bzShopQr(si.value.trim()); }; L.append(f);
+    L.append(el('p', 'bz-note', d.spot ? 'Orders from this QR show “' + d.spot + '” so you know where the customer is.' : 'Hotels / restaurants: make one QR per table, so every order shows the table number.'));
+    const posterUrl = location.origin + '/s/' + d.code + '/poster' + (d.spot ? '?t=' + encodeURIComponent(d.spot) : '');
+    const b1 = el('button', 'sheet-btn primary', '🖨️ Print A4 poster (colour)'); b1.onclick = () => { window.open(posterUrl, '_blank', 'noopener'); };
+    const b2 = el('button', 'sheet-btn', '🖼️ Save poster image (for WhatsApp status / print shop)'); b2.onclick = async () => { b2.disabled = true; try { const blob = await sqPosterPng(d); await shareFileAny(blob, 'Maata-ScanOrder-' + d.shop.name.replace(/[^\w]+/g, '-') + '.png', 'image/png', 'Scan & order from ' + d.shop.name + ' on Maata: ' + d.link, d.shop.name); } catch (e) { toast(e.message || 'Could not make the image'); } b2.disabled = false; };
+    const b3 = el('button', 'sheet-btn', '🧾 Print QR on receipt printer'); b3.onclick = () => sqPrintReceipt(d);
+    const b4 = el('button', 'sheet-btn', '🔗 Share shop link'); b4.onclick = async () => { const t = '🛍️ Order from ' + d.shop.name + ' on Maata: ' + d.link; try { if (navigator.share) await navigator.share({ title: d.shop.name, text: t }); else { await navigator.clipboard.writeText(d.link); toast('Link copied'); } } catch {} };
+    L.append(b1, b2, b3, b4);
+    const how = el('div', 'sq-how'); how.append(el('b', null, '💡 How it works'));
+    for (const t of ['Stick the poster at the counter, entrance, tables or shelves.', 'Customer scans with the phone camera (or Shops → 📷 Scan shop QR). Your shop opens in Maata.', 'They pick items (or 📷 scan product barcodes — Scan & Go), pay by UPI or cash and place the order.', 'You hear “Counter order from …” and see 🏪 In shop on the order. Pack it — the customer collects at the counter.']) how.append(el('small', null, '• ' + t));
+    L.append(how);
+  });
+}
+function sqImg(svg) { return new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('QR image failed')); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }); }
+async function sqPosterPng(d) { // 1080 × 1528 colourful poster
+  const W = 1080, H = 1528, c = mkCanvas(W, H), g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#0B5E44'); gr.addColorStop(.45, '#0F8A5F'); gr.addColorStop(1, '#1D4ED8'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  const pill = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); g.fill(); };
+  pill(W / 2 - 230, 70, 460, 76, 38, '#FFD166'); g.fillStyle = '#0B3B36'; g.font = MK_FONT(900, 40); g.fillText('📱 SCAN & ORDER', W / 2, 88);
+  g.fillStyle = '#fff'; let fs = 74; g.font = MK_FONT(900, fs); while (g.measureText(d.shop.name).width > W - 100 && fs > 36) { fs -= 4; g.font = MK_FONT(900, fs); } g.fillText(d.shop.name, W / 2, 180);
+  let y = 180 + fs + 16; if (d.shop.address) { g.font = MK_FONT(500, 30); g.globalAlpha = .9; g.fillText(d.shop.address.slice(0, 60), W / 2, y); g.globalAlpha = 1; y += 44; }
+  if (d.spot) { g.font = MK_FONT(900, 44); const w = g.measureText(d.spot).width + 60; pill(W / 2 - w / 2, y, w, 66, 18, '#fff'); g.fillStyle = '#0B5E44'; g.fillText(d.spot, W / 2, y + 10); y += 84; }
+  const Q = 560, qy = Math.max(y + 20, 380); pill(W / 2 - Q / 2 - 40, qy, Q + 80, Q + 80, 48, '#fff'); g.drawImage(await sqImg(d.svg), W / 2 - Q / 2, qy + 40, Q, Q);
+  y = qy + Q + 120; g.fillStyle = '#fff'; g.font = MK_FONT(900, 50); g.fillText('Scan with your phone camera', W / 2, y); y += 70;
+  g.fillStyle = '#FFD166'; g.font = MK_FONT(700, 38); g.fillText('ఫోన్ కెమెరాతో స్కాన్ చేసి ఆర్డర్ చేయండి', W / 2, y); y += 76;
+  const steps = ['1  Scan', '2  Choose', '3  ' + (d.shop.upi ? 'Pay UPI' : 'Pay'), '4  Collect'], sw = 228, gap = 18, sx = (W - (sw * 4 + gap * 3)) / 2;
+  steps.forEach((t, k) => { g.globalAlpha = .18; pill(sx + k * (sw + gap), y, sw, 80, 22, '#fff'); g.globalAlpha = 1; g.fillStyle = '#fff'; g.font = MK_FONT(800, 32); g.fillText(t, sx + k * (sw + gap) + sw / 2, y + 22); });
+  g.fillStyle = '#fff'; g.fillRect(0, H - 110, W, 110); [['#FF9933', 0], ['#ffffff', 1], ['#138808', 2]].forEach(([col, k]) => { g.fillStyle = col; g.fillRect(k * W / 3, H - 118, W / 3, 10); });
+  g.fillStyle = '#0B3B36'; g.font = MK_FONT(800, 36); g.fillText('🦜 Order on Maata · maataapp.com', W / 2, H - 84); g.fillStyle = '#4C6274'; g.font = MK_FONT(600, 26); g.fillText('No queue · prices & photos · Made in India 🇮🇳', W / 2, H - 40);
+  return await new Promise((ok) => c.toBlob(ok, 'image/png'));
+}
+async function sqPrintReceipt(d) { // QR stand on the thermal printer
+  const cfg = prCfg();
+  if (!prApp() || !prReady(cfg)) { if (!prApp()) return toast('Receipt printing needs the Maata Android app. Use 🖨️ Print A4 poster instead.'); return prSetup(() => sqPrintReceipt(d)); }
+  const W = cfg.width === 58 ? 384 : 576, Q = W - 40, H = Q + 300, c = mkCanvas(W, H), g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'top';
+  g.font = MK_FONT(900, cfg.width === 58 ? 30 : 40); g.fillText('SCAN & ORDER', W / 2, 6);
+  g.font = MK_FONT(700, cfg.width === 58 ? 22 : 28); g.fillText(d.shop.name.slice(0, 32), W / 2, 56); if (d.spot) { g.font = MK_FONT(900, 30); g.fillText(d.spot, W / 2, 92); }
+  g.drawImage(await sqImg(d.svg), 20, d.spot ? 136 : 100, Q, Q);
+  let y = (d.spot ? 136 : 100) + Q + 12; g.font = MK_FONT(600, cfg.width === 58 ? 18 : 22); g.fillText('Scan with phone camera → order → collect', W / 2, y); g.font = MK_FONT(600, cfg.width === 58 ? 18 : 22); g.fillText('ఫోన్ కెమెరాతో స్కాన్ చేయండి · maataapp.com', W / 2, y + 32);
+  const out = mkCanvas(W, y + 70); const og = out.getContext('2d'); og.fillStyle = '#fff'; og.fillRect(0, 0, W, y + 70); og.drawImage(c, 0, 0);
+  toast('🖨️ Printing QR…'); const r = await prSend(prEscpos(out, 1, cfg), cfg); toast(r.ok ? '🖨️ Printed ✓ — stick it at the counter' : '🖨️ ' + (PR_MSG[r.msg] || PR_MSG.error));
+}
 function bzMore(body) {
   const c = el('div', 'bz-card');
   const a = (t, s, fn) => { const b = el('button', 'bz-prow'); b.append(el('b', null, t), el('small', null, s)); b.onclick = fn; c.append(b); };
   if (bzCan('reports')) a('📊 Reports', 'Sales, GST, payments, top items', () => bzReport('7'));
   if (bzCan('settings')) a('🛒 Online store', 'Delivery, pickup, charges, open / close', bzStoreSettings);
+  if (bzCan('bill')) a('📱 Shop QR · Scan & Order', 'Customers scan at your counter and order — no queue', bzShopQr);
   if (bzCan('staff')) a('👥 Staff', (BZ.info.staff.length || 'No') + ' staff · cashier, manager, stock', bzStaff);
   if (bzCan('settings')) a('⚙️ Bill settings', 'Bill number, GST mode, UPI, GSTIN', bzSettings);
   a('🖨️ Receipt printer', (() => { const p = prCfg(); return prReady(p) ? p.name + ' · ' + p.width + ' mm' + (p.auto ? ' · auto print' : '') : 'Bluetooth, USB or Wi-Fi · 58 / 80 mm'; })(), () => prSetup());
@@ -6235,7 +6294,7 @@ async function odHere() { if (OD.loc) return OD.loc; const p = await secPos(); i
 async function openShops() {
   const { body } = odPage('shopsPage', 'Shops on Maata', 'Order from local shops');
   const q = el('input'); q.type = 'search'; q.placeholder = 'Search shops: grocery, medical…'; q.setAttribute('aria-label', 'Search shops'); const bar = el('div', 'bz-pos-top'); bar.append(q); body.append(bar);
-  const mine = el('button', 'bz-btn', '🧾 My orders'); mine.onclick = openMyOrders; body.append(mine);
+  const mine = el('button', 'bz-btn', '🧾 My orders'); mine.onclick = openMyOrders; const sq = el('button', 'bz-btn', '📷 Scan shop QR'); sq.onclick = () => scanQr('Point your camera at the shop\'s “Scan & Order” QR'); const rw = el('div', 'od-toprow'); rw.append(mine, sq); body.append(rw);
   const list = el('div', 'bz-card'); list.append(el('p', 'bz-load', 'Finding shops near you…')); body.append(list);
   const loc = await odHere();
   const load = async () => { let r = []; try { r = await api('/api/shops?q=' + encodeURIComponent(q.value.trim()) + (loc ? '&lat=' + loc.lat + '&lng=' + loc.lng : '')); } catch (e) { list.innerHTML = ''; return list.append(el('p', 'bz-empty', e.message)); }
@@ -6244,16 +6303,21 @@ async function openShops() {
   let t; q.oninput = () => { clearTimeout(t); t = setTimeout(load, 300); }; load();
 }
 // ----- one shop -----
-async function openShop(bizId) {
-  const loc = OD.loc;
+async function openShop(bizId, opt) {
+  const loc = OD.loc; opt = opt || {};
   let s; try { s = await api('/api/shop/' + bizId + (loc ? '?lat=' + loc.lat + '&lng=' + loc.lng : '')); } catch (e) { return toast(e.message); }
-  if (!OD.shop || OD.shop.bizId !== bizId) { OD.cart = new Map(); OD.idem = null; }
+  if (!OD.shop || OD.shop.bizId !== bizId) { OD.cart = new Map(); OD.idem = null; OD.via = ''; OD.spot = ''; }
+  if (opt.via === 'qr') { OD.via = 'qr'; OD.spot = String(opt.spot || '').slice(0, 30); try { navigator.vibrate && navigator.vibrate([20, 40, 20]); } catch {} }
   OD.shop = s; OD.cat = ''; OD.q = '';
   const { pg, body } = odPage('shopPage', s.name, [s.category, s.distKm != null ? s.distKm + ' km away' : '', s.delivery ? 'Delivery ' + s.eta : s.pickup ? 'Pickup' : '', s.ship ? '🚚 Courier to other towns' : ''].filter(Boolean).join(' · '));
   const info = el('div', 'od-info');
   info.append(el('span', null, s.delivery ? '🛵 Delivery ' + (s.fee ? bzRs0(s.fee) : 'free') + (s.freeAbove && s.fee ? ' · free above ' + bzRs0(s.freeAbove) : '') : s.pickup ? '🏃 Pickup from shop' : '🚚 Courier / transport only'), ...(s.ship ? [el('span', null, '🚚 Courier / transport to other towns · ' + (s.shipToPay ? 'charges paid on collection' : s.shipFee ? bzRs0(s.shipFee) : 'free') + (s.shipEta ? ' · ' + s.shipEta : ''))] : []), el('span', null, s.minOrder ? 'Minimum order ' + bzRs0(s.minOrder) : 'No minimum'), el('span', null, (s.payCod ? 'Cash' : '') + (s.payCod && s.payUpi ? ' / ' : '') + (s.payUpi ? 'UPI' : '') + ' on ' + (s.delivery ? 'delivery' : 'pickup')));
-  body.append(info);
-  const bar = el('div', 'bz-pos-top'); const q = el('input'); q.type = 'search'; q.placeholder = 'Search in ' + s.name; q.setAttribute('aria-label', 'Search items'); const ai = el('button', 'bz-ib', '✨'); ai.setAttribute('aria-label', 'Type or speak your shopping list'); ai.onclick = odAiList; bar.append(q, ai); body.append(bar);
+  if (OD.via === 'qr') { const w = el('div', 'od-inshop'); w.append(el('b', null, '🏪 You are in ' + s.name + (OD.spot ? ' · ' + OD.spot : '')), el('small', null, 'Pick your items here, place the order and collect at the counter — no waiting in the queue. ' + (s.payUpi ? 'Pay by UPI from your phone or cash at the counter.' : 'Pay at the counter.')));
+    const x = el('button', 'bz-link', 'Not in the shop? Order for delivery'); x.onclick = () => { OD.via = ''; OD.spot = ''; w.remove(); toast('OK — normal online order'); }; w.append(x); body.append(w); }
+  else body.append(info);
+  const bar = el('div', 'bz-pos-top'); const q = el('input'); q.type = 'search'; q.placeholder = 'Search in ' + s.name; q.setAttribute('aria-label', 'Search items'); const ai = el('button', 'bz-ib', '✨'); ai.setAttribute('aria-label', 'Type or speak your shopping list'); ai.onclick = odAiList; bar.append(q, ai);
+  if (s.items.some((i) => i.barcode)) { const sc = el('button', 'bz-ib', '📷'); sc.setAttribute('aria-label', 'Scan a product barcode'); sc.title = 'Scan & Go: scan the barcode on the product'; sc.onclick = () => odScanGo(); bar.append(sc); }
+  body.append(bar);
   const cats = [...new Set(s.items.map((i) => i.category).filter(Boolean))];
   if (cats.length) { const ch = el('div', 'bz-chips od-cats'); const mk = (k, l) => { const b = el('button', OD.cat === k ? 'on' : null, l); b.onclick = () => { OD.cat = k; ch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(); }; ch.append(b); }; mk('', 'All'); cats.forEach((c) => mk(c, c)); body.append(ch); }
   const grid = el('div', 'od-grid'); body.append(grid);
@@ -6288,6 +6352,17 @@ function odSet(it, qty) {
   if (!OD.idem) OD.idem = bzNewIdem(); try { navigator.vibrate && navigator.vibrate(10); } catch {}
   if (OD.redraw) OD.redraw();
 }
+// 📷 Scan & Go: in the shop, scan the barcode on a packet to add it to the cart
+function odScanGo() {
+  const s = OD.shop; if (!s) return;
+  bzScan((code) => {
+    const c = String(code || '').trim(), it = s.items.find((i) => i.barcode && String(i.barcode).trim() === c);
+    if (!it) { toast('❓ This product (' + c + ') is not in ' + s.name + '\'s Maata list. Ask at the counter.'); return; }
+    if (!it.inStock) { toast('😕 ' + it.name + ' is out of stock'); return; }
+    odSet(it, (OD.cart.get(it.id) || 0) + 1); toast('✅ ' + it.name + ' added · ' + bzRs(Math.round(it.price * 100)));
+    setTimeout(() => { if ($('#shopPage')) odScanGo(); }, 1100); // keep scanning the next packet
+  });
+}
 function odTotals() { // preview; the shop's server makes the final amount
   const s = OD.shop, mode = s.taxMode; let sum = 0, tax = 0;
   for (const [id, q] of OD.cart) { const it = s.items.find((x) => x.id === id); if (!it) continue; const base = Math.round(Math.round(it.price * 100) * q), r = mode === 'none' ? 0 : it.taxRate || 0; if (mode === 'excl') { const t = Math.round(base * r / 100); tax += t; sum += base + t; } else { tax += base - (r ? Math.round(base * 100 / (100 + r)) : base); sum += base; } }
@@ -6320,11 +6395,13 @@ function odCheckout() {
     for (const [id, q] of OD.cart) { const it = s.items.find((x) => x.id === id); if (!it) continue; const r = el('div', 'bz-tr'); r.append(el('span', null, it.name + ' × ' + q), el('span', null, bzRs(Math.round(Math.round(it.price * 100) * q)))); box.append(r); }
     L.append(box);
     const f = el('form', 'bz-form');
-    let mode = s.delivery ? 'delivery' : s.pickup ? 'pickup' : 'ship', pay = s.payCod ? 'cod' : 'upi';
+    const inShop = OD.via === 'qr';
+    let mode = inShop ? 'pickup' : s.delivery ? 'delivery' : s.pickup ? 'pickup' : 'ship', pay = inShop && s.payUpi ? 'upi' : s.payCod ? 'cod' : 'upi';
     const mch = el('div', 'bz-chips'); const addrBox = el('div', 'od-addr'), shipBox = el('div', 'od-addr'), payHead = el('div', 'th-title', 'Payment'), shipPay = el('p', 'info-note');
-    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; shipBox.hidden = m !== 'ship'; pch.hidden = m === 'ship'; shipPay.hidden = m !== 'ship'; if (typeof payNote !== 'undefined') { payNote.hidden = m === 'ship'; const cb = pch.querySelector('button'); if (cb && s.payCod) cb.textContent = m === 'pickup' ? '💵 Cash at pickup' : '💵 Cash on delivery'; payTxt(); } sum(); };
+    const setMode = (m) => { mode = m; mch.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.m === m)); addrBox.hidden = m !== 'delivery'; shipBox.hidden = m !== 'ship'; pch.hidden = m === 'ship'; shipPay.hidden = m !== 'ship'; if (typeof payNote !== 'undefined') { payNote.hidden = m === 'ship'; const cb = pch.querySelector('button'); if (cb && s.payCod) cb.textContent = m === 'pickup' ? (inShop ? '💵 Cash at counter' : '💵 Cash at pickup') : '💵 Cash on delivery'; payTxt(); } sum(); };
+    if (inShop) { const b = el('button', null, '🏪 Collect at counter' + (OD.spot ? ' · ' + OD.spot : '')); b.type = 'button'; b.dataset.m = 'pickup'; b.onclick = () => setMode('pickup'); mch.append(b); }
     if (s.delivery) { const b = el('button', null, '🛵 Delivery'); b.type = 'button'; b.dataset.m = 'delivery'; b.onclick = () => setMode('delivery'); mch.append(b); }
-    if (s.pickup) { const b = el('button', null, '🏃 I will pick up'); b.type = 'button'; b.dataset.m = 'pickup'; b.onclick = () => setMode('pickup'); mch.append(b); }
+    if (s.pickup && !inShop) { const b = el('button', null, '🏃 I will pick up'); b.type = 'button'; b.dataset.m = 'pickup'; b.onclick = () => setMode('pickup'); mch.append(b); }
     if (s.ship) { const b = el('button', null, '🚚 Courier / transport (other town)'); b.type = 'button'; b.dataset.m = 'ship'; b.onclick = () => setMode('ship'); mch.append(b); }
     { // out-of-town address
       const sv = (() => { try { return JSON.parse(store.get('maata_od_ship') || 'null'); } catch { return null; } })() || {};
@@ -6341,8 +6418,8 @@ function odCheckout() {
     addrBox.append(al, ll, gps);
     const pch = el('div', 'bz-chips'); shipPay.textContent = s.payUpi ? '📱 Pay the shop by UPI' + (s.upi ? ' (' + s.upi + ')' : '') + '. The shop sends the parcel after the payment.' : '💬 The shop will tell you how to pay before sending the parcel.';
     const payNote = el('p', 'bz-note');
-    const payTxt = () => { payNote.textContent = pay === 'upi' ? '📱 After you place the order, pay with PhonePe, Google Pay, Paytm or any UPI app (or scan the QR). If UPI does not work, you can still pay cash at the door.' : '💵 Pay cash ' + (mode === 'delivery' ? 'to the delivery person' : 'at the shop') + '. You can also pay by UPI QR at the door.'; };
-    for (const [k, l, okk] of [['cod', '💵 Cash on delivery', s.payCod], ['upi', '📱 UPI payment', s.payUpi]]) if (okk) { const b = el('button', k === pay ? 'on' : null, k === 'cod' && mode === 'pickup' ? '💵 Cash at pickup' : l); b.type = 'button'; b.onclick = () => { pay = k; pch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); payTxt(); }; pch.append(b); }
+    const payTxt = () => { payNote.textContent = pay === 'upi' ? '📱 After you place the order, pay with PhonePe, Google Pay, Paytm or any UPI app (or scan the QR). If UPI does not work, you can still pay cash at the door.' : (mode === 'pickup' && inShop ? '💵 Pay cash at the counter when you collect.' : '💵 Pay cash ' + (mode === 'delivery' ? 'to the delivery person' : 'at the shop') + '. You can also pay by UPI QR at the door.'); };
+    for (const [k, l, okk] of [['cod', '💵 Cash on delivery', s.payCod], ['upi', '📱 UPI payment', s.payUpi]]) if (okk) { const b = el('button', k === pay ? 'on' : null, k === 'cod' && mode === 'pickup' ? (inShop ? '💵 Cash at counter' : '💵 Cash at pickup') : l); b.type = 'button'; b.onclick = () => { pay = k; pch.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); payTxt(); }; pch.append(b); }
     const nl = el('label'); nl.htmlFor = 'odNote'; nl.append(el('span', null, 'Note for the shop (optional)')); const note = el('input'); note.id = 'odNote'; note.placeholder = 'e.g. Call before coming'; nl.append(note);
     const tot = el('div', 'bz-tot');
     const go = el('button', 'sheet-btn primary'); go.type = 'submit';
@@ -6365,7 +6442,7 @@ function odCheckout() {
         try { store.set('maata_od_ship', JSON.stringify({ ...address, pref: shipPref })); } catch {} }
       go.disabled = true; go.textContent = 'Placing order…';
       try {
-        const o = await api('/api/shop/' + s.bizId + '/orders', { method: 'POST', body: JSON.stringify({ idem: OD.idem, items: [...OD.cart].map(([productId, qty]) => ({ productId, qty })), mode, address, shipPref, pay, note: note.value }) });
+        const o = await api('/api/shop/' + s.bizId + '/orders', { method: 'POST', body: JSON.stringify({ idem: OD.idem, items: [...OD.cart].map(([productId, qty]) => ({ productId, qty })), mode, address, shipPref, pay, note: note.value, ...(inShop && mode === 'pickup' ? { via: 'qr', spot: OD.spot || '' } : {}) }) });
         OD.cart = new Map(); OD.idem = null; closeSheet('moreSheet'); const sp = $('#shopPage'); if (sp) sp.remove(); toast('✅ Order placed'); openOrder(o.id, o); if (o.pay === 'upi' && !o.paidBy) setTimeout(() => odUpiPay(o, true), 500);
       } catch (x) { toast(x.message); sum(); }
     };
@@ -6382,7 +6459,7 @@ async function odUpiPay(o, auto) {
     L.append(el('p', 'bz-note', 'After paying, tap “I have paid”. The shop checks its UPI app and confirms. The amount and order number are filled in for you.'));
     const rl = el('label'); rl.htmlFor = 'odUtr'; rl.append(el('span', null, 'UPI reference / UTR (optional)')); const ri = el('input'); ri.id = 'odUtr'; ri.inputMode = 'numeric'; ri.placeholder = '12-digit number from your UPI app'; rl.append(ri); const rf = el('div', 'bz-form'); rf.append(rl); L.append(rf);
     const ok = el('button', 'sheet-btn primary', '✅ I have paid'); ok.onclick = async () => { ok.disabled = true; try { const v = await api('/api/my/orders/' + o.id + '/upi-paid', { method: 'POST', body: JSON.stringify({ ref: ri.value.trim() }) }); closeSheet('moreSheet'); toast('✅ Thank you! The shop will confirm the payment.'); const pg = $('#orderPage .od-body, #orderPage [class*=body]'); if ($('#orderPage')) { $('#orderPage').remove(); openOrder(v.id, v); } } catch (e) { toast(e.message); ok.disabled = false; } }; L.append(ok);
-    const later = el('button', 'sheet-btn', 'UPI not working? Pay cash at the door'); later.onclick = () => { closeSheet('moreSheet'); toast('OK. Pay cash or scan the UPI QR at the door.'); }; L.append(later);
+    const later = el('button', 'sheet-btn', o.via === 'qr' || o.mode === 'pickup' ? 'UPI not working? Pay cash at the counter' : 'UPI not working? Pay cash at the door'); later.onclick = () => { closeSheet('moreSheet'); toast(o.via === 'qr' || o.mode === 'pickup' ? 'OK. Pay cash at the counter.' : 'OK. Pay cash or scan the UPI QR at the door.'); }; L.append(later);
     if (auto && /Android|iPhone/i.test(navigator.userAgent)) setTimeout(() => { try { go.click(); } catch {} }, 700); // open the UPI apps at once
   });
 }
@@ -6504,7 +6581,7 @@ async function bzOrders(body) {
 }
 function bzOrderCard(o) {
   const c = el('div', 'bz-card od-card' + (o.status === 'PLACED' ? ' new' : ''));
-  const h = el('div', 'od-head'); h.append(el('b', null, o.number + ' · ' + o.customerName), el('span', 'bz-st ' + (o.status === 'PLACED' ? 'due' : ['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(o.status) ? 'void' : 'paid'), OD_LABEL[o.status])); c.append(h);
+  const h = el('div', 'od-head'); h.append(el('b', null, o.number + ' · ' + o.customerName), ...(o.via === 'qr' ? [el('span', 'od-qrtag', '🏪 In shop' + (o.spot ? ' · ' + o.spot : ''))] : []), el('span', 'bz-st ' + (o.status === 'PLACED' ? 'due' : ['REJECTED', 'CANCELLED', 'DELIVERY_FAILED'].includes(o.status) ? 'void' : 'paid'), OD_LABEL[o.status])); c.append(h);
   c.append(el('small', 'bz-note', odModeName(o.mode).replace('Home delivery', 'Delivery').replace('Pickup from shop', 'Pickup') + ' · ' + (o.paidBy ? '✅ Paid by ' + (o.paidBy === 'upi' ? 'UPI' : 'cash') : o.pay === 'upi' ? (o.custPaidAt ? '📱 UPI · customer says paid' + (o.custRef ? ' (ref ' + o.custRef + ')' : '') + ' — check your UPI app' : '📱 UPI payment (not paid yet)') : o.mode === 'ship' ? 'Pay before sending' : '💵 Cash on delivery') + (o.toPay ? ' · transport To Pay' : '') + ' · ' + new Date(o.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })));
   for (const l of o.items) { const r = el('div', 'bz-tr od-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); c.append(r); }
   const g = el('div', 'bz-grand'); g.append(el('span', null, 'Total' + (o.fee ? ' (incl. delivery ' + bzRs(o.fee) + ')' : '')), el('b', null, bzRs(o.grand))); c.append(g);
@@ -10147,10 +10224,10 @@ async function openLinkedDevices() {
 }
 let jsqrLoading = null;
 function loadJsQR() { if (window.jsQR) return Promise.resolve(); if (!jsqrLoading) jsqrLoading = new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'; sc.onload = ok; sc.onerror = () => { jsqrLoading = null; bad(new Error('Scanner could not load. Check your internet.')); }; document.head.append(sc); }); return jsqrLoading; }
-async function scanQr() {
+async function scanQr(tipText) {
   const ov = el('section', 'qr-scan'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Scan QR code');
   const v = el('video'); v.playsInline = true; v.muted = true;
-  const frame = el('div', 'qr-frame'), tip = el('p', 'qr-tip', 'Point your camera at the QR code on the computer');
+  const frame = el('div', 'qr-frame'), tip = el('p', 'qr-tip', typeof tipText === 'string' ? tipText : 'Point your camera at the QR code on the computer');
   const close = el('button', 'icon-btn qr-close'); close.setAttribute('aria-label', 'Close'); close.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';
   ov.append(v, frame, tip, close); document.body.append(ov);
   let stream, done = false, timer;
@@ -10171,6 +10248,8 @@ async function scanQr() {
         else { cv.width = v.videoWidth; cv.height = v.videoHeight; cx.drawImage(v, 0, 0); const img = cx.getImageData(0, 0, cv.width, cv.height); const r = window.jsQR(img.data, img.width, img.height); code = r && r.data; }
       }
     } catch { /* keep scanning */ }
+    const shopM = code && String(code).match(/^https?:\/\/[^/]*maataapp\.com\/s\/([A-Za-z0-9]{6})(?:\?t=([^&#]*))?/i) || (code && String(code).match(new RegExp('^' + location.origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\/s\\/([A-Za-z0-9]{6})(?:\\?t=([^&#]*))?')));
+    if (shopM) { done = true; stop(); try { const r = await api('/api/shop-code/' + shopM[1]); openShop(r.bizId, { via: 'qr', spot: shopM[2] ? decodeURIComponent(shopM[2]) : '' }); } catch (e) { toast(e.message); } return; }
     if (code && code.startsWith('maata-link:')) {
       done = true; stop();
       try {
@@ -10181,7 +10260,7 @@ async function scanQr() {
       } catch (e) { toast(e.message); }
       return;
     }
-    if (code) tip.textContent = 'That is not a Maata QR code. Open maataapp.com on the computer.';
+    if (code) tip.textContent = 'That is not a Maata QR code. Scan a Maata shop QR, or open maataapp.com on the computer.';
     timer = setTimeout(tick, 250);
   };
   tick();
@@ -12705,8 +12784,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 157;
-const APP_NOTES = ["🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 158;
+const APP_NOTES = ["📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }

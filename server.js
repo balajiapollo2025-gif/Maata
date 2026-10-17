@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 157;
+const MAATA_VERSION = 158;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3095,6 +3095,44 @@ app.get('/api/biz/:bizId/backup', auth, (req, res) => {
     products: bizProducts(c.bizId).sort((x, y) => x.name.localeCompare(y.name)).map(bizProdOut),
     invoices: db.invoices.filter((i) => i.bizId === c.bizId).map((i) => ({ ...invOut(i), shop: i.shop })) });
 });
+
+// 📱 Shop QR: a poster at the counter — customers scan it with any phone camera and order from the shop in Maata
+const PUB = () => (process.env.PUBLIC_URL || 'https://maataapp.com').replace(/\/$/, '');
+function shopQrOf(owner) {
+  const b = owner.business, q = b.shopQr || (b.shopQr = {});
+  if (!q.code) { let c; do { c = crypto.randomBytes(5).toString('base64').replace(/[^A-Za-z0-9]/g, '').slice(0, 6); } while (c.length < 6 || db.users.some((u) => u.business && u.business.shopQr && u.business.shopQr.code === c)); q.code = c; save(); }
+  return q;
+}
+const shopByQr = (code) => db.users.find((u) => u.business && u.business.shopQr && u.business.shopQr.code === String(code || '') && u.status !== 'blocked');
+const qrScan = (owner) => { const q = shopQrOf(owner), d = new Date().toISOString().slice(0, 10); q.scans = (q.scans || 0) + 1; if (q.day !== d) { q.day = d; q.today = 0; } q.today++; save(); };
+app.get('/api/biz/:bizId/shop-qr', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return; const q = shopQrOf(c.owner), spot = clip(req.query.spot, 30);
+  const link = PUB() + '/s/' + q.code + (spot ? '?t=' + encodeURIComponent(spot) : '');
+  const d = new Date().toISOString().slice(0, 10);
+  res.json({ code: q.code, link, spot, svg: await QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'Q' }), storeOn: !!storeOf(c.biz).on,
+    stats: { scans: q.scans || 0, today: q.day === d ? q.today || 0 : 0, orders: q.orders || 0, sales: q.sales || 0 }, shop: { name: c.biz.name, address: c.biz.address || '', category: c.biz.category || '', upi: !!bizSettings(c.biz).upi } });
+});
+app.get('/api/shop-code/:code', auth, (req, res) => { const o = shopByQr(req.params.code); if (!o) return res.status(404).json({ error: 'This shop QR is not valid any more.' }); qrScan(o); res.json({ bizId: o.id, name: o.business.name }); });
+app.get('/s/:code', (req, res) => { // a phone camera opened the link
+  const o = shopByQr(req.params.code); if (!o) return res.redirect(302, '/');
+  qrScan(o); const t = clip(req.query.t, 30);
+  res.redirect(302, '/?shop=' + encodeURIComponent(o.id) + '&via=qr' + (t ? '&spot=' + encodeURIComponent(t) : ''));
+});
+app.get('/s/:code/poster', async (req, res) => { // printable A4 poster for the counter
+  const o = shopByQr(req.params.code); if (!o) return res.status(404).send('Not found');
+  const t = clip(req.query.t, 30), link = PUB() + '/s/' + o.business.shopQr.code + (t ? '?t=' + encodeURIComponent(t) : ''), e = (x) => String(x || '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const svg = await QRCode.toString(link, { type: 'svg', margin: 0, errorCorrectionLevel: 'Q', color: { dark: '#0B3B36', light: '#FFFFFF' } }), s = storeOf(o.business), upi = !!bizSettings(o.business).upi;
+  res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(o.business.name)} · Scan to order</title>
+<style>@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,'Noto Sans Telugu',sans-serif;background:#eee}.p{width:210mm;height:297mm;margin:0 auto;background:linear-gradient(160deg,#0B5E44,#0F8A5F 45%,#1D4ED8);color:#fff;padding:16mm 14mm;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;overflow:hidden}
+.k{background:#FFD166;color:#0B3B36;border-radius:30px;padding:3mm 8mm;font-weight:900;font-size:16pt;letter-spacing:.04em}h1{font-size:34pt;margin:7mm 0 1mm;line-height:1.1}.a{opacity:.9;font-size:12pt;margin:0}.q{background:#fff;border-radius:10mm;padding:9mm;margin:9mm 0 6mm;box-shadow:0 6mm 18mm rgba(0,0,0,.3)}.q svg{width:105mm;height:105mm;display:block}
+.big{font-size:26pt;font-weight:900;margin:0}.te{font-size:17pt;font-weight:700;margin:2mm 0 6mm;color:#FFD166}.st{display:flex;gap:3mm;justify-content:center;width:100%}.st div{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:6mm;padding:3mm 2mm;font-size:11.5pt;font-weight:700}.st b{display:block;font-size:18pt}
+.f{position:absolute;left:0;right:0;bottom:0;background:#fff;color:#0B3B36;padding:5mm;font-weight:800;font-size:12pt;border-top:2.5mm solid;border-image:linear-gradient(90deg,#FF9933 0 33%,#fff 33% 66%,#138808 66%) 1}.f small{display:block;font-weight:600;color:#4C6274;font-size:9.5pt;margin-top:1mm}
+.spot{background:#fff;color:#0B5E44;border-radius:4mm;padding:2mm 6mm;font-weight:900;font-size:18pt;margin-top:3mm}.pb{position:fixed;right:12px;top:12px;padding:12px 18px;border-radius:12px;border:0;background:#0F8A5F;color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.25)}@media print{body{background:#fff}.pb{display:none}}</style></head><body>
+<button class="pb" onclick="print()">🖨️ Print / Save PDF</button><div class="p"><span class="k">📱 SCAN &amp; ORDER</span><h1>${e(o.business.name)}</h1><p class="a">${e(o.business.address)}</p>${t ? `<div class="spot">${e(t)}</div>` : ''}
+<div class="q">${svg}</div><p class="big">Scan with your phone camera</p><p class="te">మీ ఫోన్ కెమెరాతో స్కాన్ చేసి ఆర్డర్ చేయండి</p>
+<div class="st"><div><b>1</b>Scan the QR</div><div><b>2</b>Choose items</div><div><b>3</b>${upi ? 'Pay by UPI' : 'Pay at counter'}</div><div><b>4</b>Collect at counter</div></div>
+<div class="f">🦜 Order on Maata · maataapp.com<small>No queue · See prices & photos · ${upi ? 'UPI or cash' : 'Cash'} · Made in India 🇮🇳</small></div></div></body></html>`);
+});
 // ---- products & stock ----
 app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
 // product photo (shown to customers in the online shop; not used in billing)
@@ -3375,7 +3413,7 @@ const shopStaffIds = (owner) => [owner.id, ...((owner.business.members || []).fi
 function ordOut(o, forShop) {
   return { id: o.id, number: o.number, bizId: o.bizId, shopName: o.shopName, shopPhone: o.shopPhone, customerId: o.customerId, customerName: o.customerName, customerPhone: forShop ? o.customerPhone : undefined,
     items: o.items, subtotal: o.subtotal, discount: 0, tax: o.tax, fee: o.fee, grand: o.grand, mode: o.mode, address: o.address, note: o.note, pay: o.pay, paidBy: o.paidBy || null, status: o.status, history: o.history, createdAt: o.createdAt,
-    otp: !forShop && o.mode !== 'ship' && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', custPaidAt: o.custPaidAt || null, custRef: o.custRef || '', prepaid: !!o.prepaid, taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track, ship: shipOut(o), shipPref: o.shipPref || '', toPay: !!o.toPay };
+    otp: !forShop && o.mode !== 'ship' && ['READY', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(o.status) ? o.otp : undefined, invoiceId: o.invoiceId || null, invoiceKey: o.invoiceKey || null, reason: o.reason || '', custPaidAt: o.custPaidAt || null, custRef: o.custRef || '', prepaid: !!o.prepaid, via: o.via || '', spot: o.spot || '', taxMode: o.taxMode, riderId: o.riderId || null, rider: riderPublic(o), live: o.status === 'OUT_FOR_DELIVERY' && !!o.track, ship: shipOut(o), shipPref: o.shipPref || '', toPay: !!o.toPay };
 }
 // 🚚 courier / lorry transport booking details (no photo bytes here; the receipt photo has its own link)
 const SHIP_KIND = { courier: 'Courier', transport: 'Lorry transport', post: 'India Post', bus: 'Bus parcel', other: 'Other' };
@@ -3384,9 +3422,9 @@ const shipSay = (o) => o.ship ? ' by ' + o.ship.carrier + ' · ' + (o.ship.kind 
 
 // 🔊 spoken alerts for shops and delivery persons (open app speaks it; a closed Android app speaks it from the push)
 const VA = {
-  new_order: { en: (o) => `New order from ${o.customerName}. ${o.items.length} item${o.items.length > 1 ? 's' : ''}, ${Math.round(o.grand / 100)} rupees. ${o.mode === 'delivery' ? 'Home delivery' : o.mode === 'ship' ? 'Courier' : 'Pickup'}. Please accept the order.`,
-               te: (o) => `కొత్త ఆర్డర్ వచ్చింది. ${o.customerName} నుండి, ${o.items.length} ఐటమ్స్, ${Math.round(o.grand / 100)} రూపాయలు. దయచేసి ఆర్డర్ యాక్సెప్ట్ చేయండి.`,
-               hi: (o) => `नया ऑर्डर आया है. ${o.customerName} से, ${o.items.length} आइटम, ${Math.round(o.grand / 100)} रुपये. कृपया ऑर्डर स्वीकार करें.` },
+  new_order: { en: (o) => o.via === 'qr' ? `Counter order from ${o.customerName}${o.spot ? ', ' + o.spot : ''}. ${o.items.length} item${o.items.length > 1 ? 's' : ''}, ${Math.round(o.grand / 100)} rupees. The customer is in the shop.` : `New order from ${o.customerName}. ${o.items.length} item${o.items.length > 1 ? 's' : ''}, ${Math.round(o.grand / 100)} rupees. ${o.mode === 'delivery' ? 'Home delivery' : o.mode === 'ship' ? 'Courier' : 'Pickup'}. Please accept the order.`,
+               te: (o) => o.via === 'qr' ? `షాప్ లోపల నుండి ఆర్డర్ వచ్చింది. ${o.customerName}${o.spot ? ', ' + o.spot : ''}, ${o.items.length} ఐటమ్స్, ${Math.round(o.grand / 100)} రూపాయలు. కస్టమర్ షాప్ లోనే ఉన్నారు.` : `కొత్త ఆర్డర్ వచ్చింది. ${o.customerName} నుండి, ${o.items.length} ఐటమ్స్, ${Math.round(o.grand / 100)} రూపాయలు. దయచేసి ఆర్డర్ యాక్సెప్ట్ చేయండి.`,
+               hi: (o) => o.via === 'qr' ? `दुकान के अंदर से ऑर्डर आया है. ${o.customerName}${o.spot ? ', ' + o.spot : ''}, ${o.items.length} आइटम, ${Math.round(o.grand / 100)} रुपये.` : `नया ऑर्डर आया है. ${o.customerName} से, ${o.items.length} आइटम, ${Math.round(o.grand / 100)} रुपये. कृपया ऑर्डर स्वीकार करें.` },
   order_wait: { en: (o) => `Reminder. The order from ${o.customerName} is still waiting. Please accept it.`,
                 te: (o) => `గుర్తు చేస్తున్నాను. ${o.customerName} ఆర్డర్ ఇంకా వేచి ఉంది. దయచేసి యాక్సెప్ట్ చేయండి.`,
                 hi: (o) => `याद दिला रहे हैं. ${o.customerName} का ऑर्डर अभी भी इंतज़ार में है. कृपया स्वीकार करें.` },
@@ -3406,7 +3444,7 @@ const VA = {
                te: (o) => `గుర్తు చేస్తున్నాను. ${o.customerName} ఆర్డర్ రెడీగా ఉంది. దయచేసి డెలివరీ మొదలు పెట్టండి.`,
                hi: (o) => `याद दिला रहे हैं. ${o.customerName} का ऑर्डर तैयार है. कृपया डिलीवरी शुरू करें.` },
 };
-const VA_TITLE = { new_order: (o) => '🛒 New order ' + o.number, order_wait: (o) => '⏰ Order ' + o.number + ' still waiting', cust_paid: (o) => '💰 ' + o.number + ' · UPI paid', cancelled: (o) => '❌ Order ' + o.number + ' cancelled',
+const VA_TITLE = { new_order: (o) => (o.via === 'qr' ? '🏪 Counter order ' : '🛒 New order ') + o.number + (o.spot ? ' · ' + o.spot : ''), order_wait: (o) => '⏰ Order ' + o.number + ' still waiting', cust_paid: (o) => '💰 ' + o.number + ' · UPI paid', cancelled: (o) => '❌ Order ' + o.number + ' cancelled',
   new_ride: (o) => '🛵 New delivery ' + o.number, ride_ready: (o) => '📦 ' + o.number + ' is ready', ride_wait: (o) => '⏰ ' + o.number + ' waiting for you' };
 function voiceAlert(u, kind, o) {
   if (!u || !VA[kind]) return;
@@ -3569,7 +3607,7 @@ app.get('/api/shop/:bizId', auth, (req, res) => {
   const s = storeOf(u.business); if (!s.on) return res.status(404).json({ error: 'This shop is not taking online orders right now.' });
   const la = Number(req.query.lat), lo = Number(req.query.lng);
   res.json({ ...shopCard(u, isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null), items: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).sort((a, b) => (a.category || 'zz').localeCompare(b.category || 'zz') || a.name.localeCompare(b.name))
-    .map((p) => ({ id: p.id, name: p.name, price: p.price, unit: p.unit || 'pcs', category: p.category || '', description: p.description || '', taxRate: p.taxRate || 0, hasPhoto: !!p.photo, photoV: p.photoV || 0, inStock: p.stock == null || p.stock > 0, left: p.stock != null && p.stock <= 5 ? Math.max(0, p.stock) : null })) });
+    .map((p) => ({ id: p.id, name: p.name, price: p.price, unit: p.unit || 'pcs', category: p.category || '', barcode: p.barcode || '', description: p.description || '', taxRate: p.taxRate || 0, hasPhoto: !!p.photo, photoV: p.photoV || 0, inStock: p.stock == null || p.stock > 0, left: p.stock != null && p.stock <= 5 ? Math.max(0, p.stock) : null })) });
 });
 const ordHits = new Map();
 app.post('/api/shop/:bizId/orders', auth, (req, res) => {
@@ -3579,7 +3617,7 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
   const idem = clip(b.idem, 64); if (idem) { const dup = db.orders.find((o) => o.customerId === req.user.id && o.idem === idem); if (dup) return res.json(ordOut(dup, false)); }
   const hits = (ordHits.get(req.user.id) || []).filter((t) => now() - t < 3600000); if (hits.length >= 15) return res.status(429).json({ error: 'Too many orders in an hour. Please wait.' }); hits.push(now()); ordHits.set(req.user.id, hits);
   const mode = b.mode === 'pickup' ? 'pickup' : b.mode === 'ship' ? 'ship' : 'delivery';
-  if (mode === 'delivery' && !s.delivery) return res.status(400).json({ error: s.ship ? 'This shop does not do home delivery. Choose 🚚 Courier / transport.' : 'This shop does pickup only.' }); if (mode === 'pickup' && !s.pickup) return res.status(400).json({ error: 'This shop does not do pickup.' });
+  if (mode === 'delivery' && !s.delivery) return res.status(400).json({ error: s.ship ? 'This shop does not do home delivery. Choose 🚚 Courier / transport.' : 'This shop does pickup only.' }); if (mode === 'pickup' && !s.pickup && b.via !== 'qr') return res.status(400).json({ error: 'This shop does not do pickup.' });
   if (mode === 'ship' && !s.ship) return res.status(400).json({ error: 'This shop does not send by courier / transport.' });
   const pay = mode === 'ship' ? (s.payUpi ? 'upi' : 'cod') : b.pay === 'upi' && s.payUpi ? 'upi' : s.payCod ? 'cod' : 'upi';
   const raw = Array.isArray(b.items) ? b.items.slice(0, 100) : []; if (!raw.length) return res.status(400).json({ error: 'Your cart is empty.' });
@@ -3611,8 +3649,9 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
   owner.business.ordSeq = (owner.business.ordSeq || 0) + 1;
   const o = { id: newId(), number: 'OD' + String(owner.business.ordSeq).padStart(5, '0'), bizId: owner.id, shopName: owner.business.name, shopPhone: owner.phone, customerId: req.user.id, customerName: req.user.name, customerPhone: req.user.phone, idem: idem || null,
     items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, taxable: l.taxable, tax: l.tax, total: l.total })), subtotal: pr.subtotal, tax: pr.tax, fee, grand: pr.total + fee, taxMode: set.taxMode,
-    mode, address, shipPref, toPay: mode === 'ship' && !!s.shipToPay, note: clip(b.note, 200), pay, status: 'PLACED', otp: String(crypto.randomInt(1000, 10000)), createdAt: now(), history: [{ s: 'PLACED', at: now(), by: req.user.name }] };
-  db.orders.push(o); save(); ordNotify(o, 'customer');
+    mode, address, shipPref, toPay: mode === 'ship' && !!s.shipToPay, note: clip(b.note, 200), pay, via: b.via === 'qr' ? 'qr' : '', spot: b.via === 'qr' ? clip(b.spot, 30) : '', status: 'PLACED', otp: String(crypto.randomInt(1000, 10000)), createdAt: now(), history: [{ s: 'PLACED', at: now(), by: req.user.name }] };
+  db.orders.push(o); if (o.via === 'qr') { const q = owner.business.shopQr || (owner.business.shopQr = {}); q.orders = (q.orders || 0) + 1; q.sales = (q.sales || 0) + o.grand; }
+  save(); ordNotify(o, 'customer');
   res.json(ordOut(o, false));
 });
 app.get('/api/my/orders', auth, (req, res) => res.json(db.orders.filter((o) => o.customerId === req.user.id).slice(-60).reverse().map((o) => ordOut(o, false))));
