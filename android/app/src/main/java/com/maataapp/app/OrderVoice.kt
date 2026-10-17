@@ -30,7 +30,7 @@ object OrderVoice {
         try {
             if (!ready.await(8, TimeUnit.SECONDS) || !ok) return
             val t = tts
-            t.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            t.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             val loc = Locale.forLanguageTag(if (lang.contains('-')) lang else "$lang-IN")
             val has = try { t.isLanguageAvailable(loc) >= TextToSpeech.LANG_AVAILABLE } catch (_: Exception) { false }
             val say = if (has) { t.language = loc; text } else { t.language = Locale("en", "IN"); fallbackEn.ifBlank { text } }
