@@ -486,6 +486,22 @@ class MainActivity : Activity() {
             if (!has(Manifest.permission.ACCESS_FINE_LOCATION)) { pendingTrack = true; requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_PERMS) }
             else web.evaluateJavascript("window.maataTrackPerm && maataTrackPerm(" + org.json.JSONObject.quote(TeamTrackService.status(this@MainActivity)) + ")", null)
         } }
+        @JavascriptInterface fun trackBgStatus(): String = TeamTrackService.bgStatus(this@MainActivity).toString()
+        /** "Allow all the time" location (Android 10+: Android shows its own settings page for this). */
+        @JavascriptInterface fun trackAskBgLocation() { runOnUiThread {
+            try {
+                if (Build.VERSION.SDK_INT >= 29 && !has(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                    if (!has(Manifest.permission.ACCESS_FINE_LOCATION)) requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_PERMS)
+                    else requestPermissions(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), REQ_PERMS)
+                }
+            } catch (e: Exception) { openAppSettings() }
+        } }
+        /** Ask Android not to put Maata to sleep (battery optimisation off) so sharing keeps running when Maata is closed. */
+        @JavascriptInterface fun trackAskBattery() { runOnUiThread {
+            try { startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:" + packageName))) }
+            catch (e: Exception) { try { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } catch (_: Exception) { } }
+        } }
+        @JavascriptInterface fun trackOpenAutostart() { runOnUiThread { TeamTrackService.openAutostart(this@MainActivity) } }
         @JavascriptInterface fun openLocationSettings() { runOnUiThread { try { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (e: Exception) { } } }
         // 🖨️ Bluetooth receipt printer
         @JavascriptInterface fun btStatus(): String = BtPrinter.status(this@MainActivity)
