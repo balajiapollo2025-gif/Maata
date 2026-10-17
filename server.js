@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 155;
+const MAATA_VERSION = 156;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3381,10 +3381,61 @@ function ordOut(o, forShop) {
 const SHIP_KIND = { courier: 'Courier', transport: 'Lorry transport', post: 'India Post', bus: 'Bus parcel', other: 'Other' };
 function shipOut(o) { const x = o.ship; if (!x) return null; return { kind: x.kind, kindName: SHIP_KIND[x.kind] || 'Other', carrier: x.carrier, ref: x.ref, link: x.link || '', eta: x.eta || '', pieces: x.pieces || 0, note: x.note || '', toPay: !!x.toPay, hasPhoto: !!(o.shipPhoto && o.shipPhoto.data), photoV: (o.shipPhoto && o.shipPhoto.v) || 0, at: x.at, by: x.byName || '' }; }
 const shipSay = (o) => o.ship ? ' by ' + o.ship.carrier + ' · ' + (o.ship.kind === 'transport' ? 'LR' : 'Ref') + ' no. ' + o.ship.ref : '';
+
+// 🔊 spoken alerts for shops and delivery persons (open app speaks it; a closed Android app speaks it from the push)
+const VA = {
+  new_order: { en: (o) => `New order from ${o.customerName}. ${o.items.length} item${o.items.length > 1 ? 's' : ''}, ${Math.round(o.grand / 100)} rupees. ${o.mode === 'delivery' ? 'Home delivery' : o.mode === 'ship' ? 'Courier' : 'Pickup'}. Please accept the order.`,
+               te: (o) => `కొత్త ఆర్డర్ వచ్చింది. ${o.customerName} నుండి, ${o.items.length} ఐటమ్స్, ${Math.round(o.grand / 100)} రూపాయలు. దయచేసి ఆర్డర్ యాక్సెప్ట్ చేయండి.`,
+               hi: (o) => `नया ऑर्डर आया है. ${o.customerName} से, ${o.items.length} आइटम, ${Math.round(o.grand / 100)} रुपये. कृपया ऑर्डर स्वीकार करें.` },
+  order_wait: { en: (o) => `Reminder. The order from ${o.customerName} is still waiting. Please accept it.`,
+                te: (o) => `గుర్తు చేస్తున్నాను. ${o.customerName} ఆర్డర్ ఇంకా వేచి ఉంది. దయచేసి యాక్సెప్ట్ చేయండి.`,
+                hi: (o) => `याद दिला रहे हैं. ${o.customerName} का ऑर्डर अभी भी इंतज़ार में है. कृपया स्वीकार करें.` },
+  cust_paid: { en: (o) => `${o.customerName} says they paid ${Math.round(o.grand / 100)} rupees by U P I. Please check your U P I app.`,
+               te: (o) => `${o.customerName} ${Math.round(o.grand / 100)} రూపాయలు యూపీఐ లో కట్టారు. దయచేసి మీ యూపీఐ యాప్ చూడండి.`,
+               hi: (o) => `${o.customerName} ने ${Math.round(o.grand / 100)} रुपये यूपीआई से भेजे हैं. कृपया अपना यूपीआई ऐप देखें.` },
+  cancelled: { en: (o) => `Order from ${o.customerName} was cancelled by the customer.`,
+               te: (o) => `${o.customerName} ఆర్డర్ క్యాన్సిల్ చేశారు.`,
+               hi: (o) => `${o.customerName} ने ऑर्डर रद्द कर दिया.` },
+  new_ride: { en: (o) => `New delivery for you. Order from ${o.shopName}${o.address && o.address.text ? ', to ' + o.address.text.split(',')[0] : ''}. ${o.status === 'READY' ? 'It is ready. Please pick it up.' : 'Please get ready to deliver.'}`,
+              te: (o) => `మీకు కొత్త డెలివరీ వచ్చింది. ${o.shopName} నుండి ఆర్డర్. ${o.status === 'READY' ? 'ఆర్డర్ రెడీగా ఉంది, తీసుకుని డెలివరీ చేయండి.' : 'డెలివరీకి సిద్ధంగా ఉండండి.'}`,
+              hi: (o) => `आपके लिए नई डिलीवरी है. ${o.shopName} से ऑर्डर. ${o.status === 'READY' ? 'ऑर्डर तैयार है, लेकर डिलीवर करें.' : 'डिलीवरी के लिए तैयार रहें.'}` },
+  ride_ready: { en: (o) => `Order for ${o.customerName} is ready at ${o.shopName}. Please pick it up and deliver.`,
+                te: (o) => `${o.customerName} ఆర్డర్ ${o.shopName} లో రెడీగా ఉంది. దయచేసి తీసుకుని డెలివరీ చేయండి.`,
+                hi: (o) => `${o.customerName} का ऑर्डर ${o.shopName} पर तैयार है. कृपया लेकर डिलीवर करें.` },
+  ride_wait: { en: (o) => `Reminder. The order for ${o.customerName} is ready and waiting for you. Please start the delivery.`,
+               te: (o) => `గుర్తు చేస్తున్నాను. ${o.customerName} ఆర్డర్ రెడీగా ఉంది. దయచేసి డెలివరీ మొదలు పెట్టండి.`,
+               hi: (o) => `याद दिला रहे हैं. ${o.customerName} का ऑर्डर तैयार है. कृपया डिलीवरी शुरू करें.` },
+};
+const VA_TITLE = { new_order: (o) => '🛒 New order ' + o.number, order_wait: (o) => '⏰ Order ' + o.number + ' still waiting', cust_paid: (o) => '💰 ' + o.number + ' · UPI paid', cancelled: (o) => '❌ Order ' + o.number + ' cancelled',
+  new_ride: (o) => '🛵 New delivery ' + o.number, ride_ready: (o) => '📦 ' + o.number + ' is ready', ride_wait: (o) => '⏰ ' + o.number + ' waiting for you' };
+function voiceAlert(u, kind, o) {
+  if (!u || !VA[kind]) return;
+  const lang = VA[kind][u.lang] ? u.lang : 'en', say = VA[kind][lang](o), sayEn = VA[kind].en(o);
+  const rider = kind.startsWith('ride') || kind === 'new_ride';
+  const url = rider ? '/?ride=' + o.id : '/?biz=' + o.bizId;
+  const body = rider ? o.shopName + ' → ' + (o.address ? o.address.text : o.customerName) : o.customerName + ' · ' + rupees(o.grand) + ' · ' + (o.mode === 'delivery' ? 'Delivery' : o.mode === 'ship' ? 'Courier / transport' : 'Pickup');
+  const title = VA_TITLE[kind](o);
+  io.to('user:' + u.id).emit('voice:alert', { kind, say: u.voiceAlerts === false ? '' : say, sayEn, lang, title, body, url, orderId: o.id, bizId: o.bizId });
+  pushTo(u, { type: 'order_alert', title, body, tag: (rider ? 'rider-' : 'border-') + o.id, url, say: u.voiceAlerts === false ? '' : say, sayEn: u.voiceAlerts === false ? '' : sayEn, lang }, { urgency: 'high' }).catch(() => {});
+}
+app.put('/api/me/voice-alerts', auth, (req, res) => { req.user.voiceAlerts = !!req.body?.on; save(); res.json({ on: req.user.voiceAlerts }); });
+// reminders: an order nobody accepted, a ready order nobody picked up
+setInterval(() => {
+  const t = now();
+  for (const o of db.orders) {
+    if (o.status === 'PLACED' && t - o.createdAt < 60 * 60000) { // after 2 min and again after 5 min
+      const age = t - o.createdAt, stage = age > 5 * 60000 ? 2 : age > 2 * 60000 ? 1 : 0;
+      if (stage > (o.remStage || 0)) { o.remStage = stage; const owner = userById(o.bizId); if (owner) for (const id of shopStaffIds(owner)) voiceAlert(userById(id), 'order_wait', o); }
+    }
+    if (o.status === 'READY' && o.riderId && !o.remRide && o.readyAt && t - o.readyAt > 5 * 60000 && t - o.readyAt < 60 * 60000) { o.remRide = true; voiceAlert(userById(o.riderId), 'ride_wait', o); }
+  }
+}, 30000);
 function ordNotify(o, who) {
   const owner = userById(o.bizId), cust = userById(o.customerId);
   if (who !== 'customer' && cust) { io.to('user:' + cust.id).emit('order:update', ordOut(o, false)); pushTo(cust, { type: 'msg', title: '🛒 ' + o.shopName, body: ORD_SAY[o.status] + (o.status === 'SHIPPED' ? shipSay(o) : '') + (o.status === 'OUT_FOR_DELIVERY' ? '. Your delivery code: ' + o.otp : '') + (o.reason ? ' (' + o.reason + ')' : ''), tag: 'order-' + o.id, url: '/?order=' + o.id }).catch(() => {}); }
-  if (owner) for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); if (who === 'customer' && (o.status === 'PLACED' || o.status === 'CANCELLED')) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title: o.status === 'PLACED' ? '🛒 New order ' + o.number : '❌ Order ' + o.number + ' cancelled', body: o.customerName + ' · ' + rupees(o.grand) + ' · ' + (o.mode === 'delivery' ? 'Delivery' : o.mode === 'ship' ? 'Courier / transport' : 'Pickup'), tag: 'border-' + o.id, url: '/?biz=' + o.bizId }).catch(() => {}); } }
+  if (owner) for (const id of shopStaffIds(owner)) { io.to('user:' + id).emit('biz:order', { bizId: o.bizId, order: ordOut(o, true) }); if (who === 'customer' && (o.status === 'PLACED' || o.status === 'CANCELLED')) voiceAlert(userById(id), o.status === 'PLACED' ? 'new_order' : 'cancelled', o); }
+  // the delivery person hears it the moment the order is ready
+  if (o.status === 'READY' && o.riderId && who !== 'rider') { o.readyAt = o.readyAt || now(); if (!o.readyTold) { o.readyTold = true; voiceAlert(userById(o.riderId), 'ride_ready', o); } }
 }
 function ordStock(o, owner, dir, actor) { // dir -1 reserve, +1 release
   const ctx = { bizId: owner.id, actor };
@@ -3589,7 +3640,7 @@ app.post('/api/my/orders/:id/upi-paid', auth, (req, res) => {
   o.custPaidAt = now(); o.custRef = clip(String(req.body?.ref || '').replace(/[^\w-]/g, ''), 30);
   o.history.push({ s: 'CUST_PAID', at: now(), by: req.user.name, why: 'Customer says paid ' + (o.grand / 100).toFixed(2) + ' by UPI' + (o.custRef ? ' (ref ' + o.custRef + ')' : '') });
   save(); ordNotify(o, 'customer');
-  const owner = userById(o.bizId); if (owner) for (const id of shopStaffIds(owner)) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title: '💰 ' + o.number + ' · UPI', body: o.customerName + ' says they paid ₹' + (o.grand / 100).toFixed(2) + ' by UPI. Check your UPI app / sound box.' }); }
+  const owner = userById(o.bizId); if (owner) for (const id of shopStaffIds(owner)) { voiceAlert(userById(id), 'cust_paid', o); }
   res.json(ordOut(o, false));
 });
 // the shop saw the UPI money in its UPI app / sound box: the order is paid (the delivery person collects nothing)
@@ -3653,7 +3704,7 @@ app.post('/api/biz/:bizId/orders/:id/assign', auth, (req, res) => {
   const rid = String(req.body?.riderId || ''); if (!riderOk(c.owner, rid)) return res.status(400).json({ error: 'Choose one of your delivery staff.' });
   o.riderId = rid; o.riderAt = now(); o.history.push({ s: 'ASSIGNED', at: now(), by: c.actor.name, why: (userById(rid) || {}).name || '' });
   bizLog(c, 'order-assign', o.id, o.number + ' → ' + ((userById(rid) || {}).name || '')); save();
-  if (rid !== c.actor.id) { const r = userById(rid); if (r) { io.to('user:' + rid).emit('rider:job', { orderId: o.id }); pushTo(r, { type: 'msg', title: '🛵 New delivery ' + o.number, body: o.shopName + ' → ' + (o.address ? o.address.text : ''), tag: 'rider-' + o.id, url: '/?ride=' + o.id }).catch(() => {}); } }
+  if (rid !== c.actor.id) { const r = userById(rid); if (r) { io.to('user:' + rid).emit('rider:job', { orderId: o.id }); o.readyTold = o.status === 'READY'; if (o.status === 'READY') o.readyAt = now(); voiceAlert(r, 'new_ride', o); } }
   ordNotify(o, 'shop'); res.json(ordOut(o, true));
 });
 // delivery person
