@@ -38,6 +38,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 class MainActivity : Activity() {
     companion object {
         const val EXTRA_URL = "maata_url"
+        @Volatile var foreground = false
         const val EXTRA_STOP_RING = "maata_stop_ring"
         const val EXTRA_HANGUP = "maata_hangup"
         private const val REQ_FILE = 11
@@ -402,8 +403,9 @@ class MainActivity : Activity() {
     }
 
     // leaving Maata with an update downloaded: install it quietly (Android 12+), like Play Store apps
+    override fun onStart() { super.onStart(); foreground = true }
     override fun onStop() {
-        super.onStop()
+        super.onStop(); foreground = false
         if (updFile != null && !CallService.running && canSilentUpdate()) try { installDownloaded() } catch (_: Exception) { }
     }
 
@@ -486,6 +488,10 @@ class MainActivity : Activity() {
             if (!has(Manifest.permission.ACCESS_FINE_LOCATION)) { pendingTrack = true; requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), REQ_PERMS) }
             else web.evaluateJavascript("window.maataTrackPerm && maataTrackPerm(" + org.json.JSONObject.quote(TeamTrackService.status(this@MainActivity)) + ")", null)
         } }
+        /** 🔊 spoken order alert while Maata is open (same voice as when it is closed) */
+        @JavascriptInterface fun speakAlert(text: String, lang: String, fallbackEn: String) { Thread { OrderVoice.speakBlocking(this@MainActivity, text, lang, fallbackEn, force = true) }.start() }
+        @JavascriptInterface fun voiceAlertsOn(): Boolean = OrderVoice.enabled(this@MainActivity)
+        @JavascriptInterface fun setVoiceAlerts(on: Boolean) { OrderVoice.setEnabled(this@MainActivity, on) }
         @JavascriptInterface fun trackBgStatus(): String = TeamTrackService.bgStatus(this@MainActivity).toString()
         /** "Allow all the time" location (Android 10+: Android shows its own settings page for this). */
         @JavascriptInterface fun trackAskBgLocation() { runOnUiThread {

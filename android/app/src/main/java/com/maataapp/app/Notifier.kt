@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 object Notifier {
     const val CH_CALLS = "maata_calls_v1"
     const val CH_MSGS = "maata_messages_v1"
+    const val CH_ORDERS = "maata_orders_v1"
     const val CALL_NOTIF_ID = 4242
     private const val PREFS = "maata"
 
@@ -39,6 +40,12 @@ object Notifier {
             description = "New messages, missed calls and updates"
             enableVibration(true)
         }
+        val orders = NotificationChannel(CH_ORDERS, "Orders & deliveries", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "New shop orders and new deliveries (with a spoken alert)"
+            enableVibration(true); vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 700)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        nm.createNotificationChannel(orders)
         nm.createNotificationChannel(calls)
         nm.createNotificationChannel(msgs)
     }
@@ -119,6 +126,16 @@ object Notifier {
     }
 
     // ---------- messages, missed calls ----------
+    fun showOrder(ctx: Context, title: String, body: String, tag: String, url: String) {
+        if (!canPost(ctx)) return
+        val n = NotificationCompat.Builder(ctx, CH_ORDERS)
+            .setSmallIcon(R.drawable.ic_notification).setColor(0xFF0F8A5F.toInt())
+            .setContentTitle(title).setContentText(body).setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_EVENT)
+            .setAutoCancel(true).setContentIntent(openAppIntent(ctx, url, tag.hashCode()))
+            .build()
+        try { NotificationManagerCompat.from(ctx).notify(tag, 2, n) } catch (_: SecurityException) {}
+    }
     fun showMessage(ctx: Context, title: String, body: String, tag: String, url: String) {
         if (!canPost(ctx)) return
         val n = NotificationCompat.Builder(ctx, CH_MSGS)
