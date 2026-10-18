@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 158;
+const MAATA_VERSION = 159;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4909,7 +4909,14 @@ function tmLiveRow(t, m) {
   const u = userById(m.userId) || {}, d = (t.duty || {})[m.userId] || {}, last = d.last || null;
   const seen = Math.max(last ? last.t : 0, d.ping || 0); // the phone's last signal (a new place, or "still here")
   let state = 'off'; if (d.on) state = !last ? 'waiting' : now() - seen > (t.offlineMin || 15) * 60000 ? 'offline' : d.gpsOff ? 'gps_off' : d.mock ? 'mock' : d.state || 'free';
-  return { userId: m.userId, name: u.name || 'Staff', phone: u.phone || '', role: m.role, status: m.status, onDuty: !!d.on, since: d.since || null, state, site: d.siteName || '', awaySince: d.awaySince || null, last, seen: seen || null, bat: d.bat ?? (last ? last.bat : null), km: d.km || 0 };
+  return { userId: m.userId, name: u.name || 'Staff', phone: u.phone || '', role: m.role, status: m.status, onDuty: !!d.on, since: d.since || null, state, site: d.siteName || '', awaySince: d.awaySince || null, last, seen: seen || null, bat: d.bat ?? (last ? last.bat : null), km: d.km || 0,
+    diag: d.diag || null, wokeAt: d.wokeAt || null, wakeOk: d.wakeOk || null };
+}
+// 📲 the phone is quiet (Android paused Maata while it is closed): a high-priority push wakes it, and it sends its place at once
+function tmWake(t, uid, gap) {
+  const d = (t.duty || {})[uid], u = userById(uid); if (!d || !d.on || !u || !(u.fcmTokens || []).length) return false;
+  if (now() - (d.wokeAt || 0) < gap) return false;
+  d.wokeAt = now(); fcmTo(u, { type: 'track_wake', teamId: t.id }, 300).catch(() => {}); return true;
 }
 function tmOut(t, uid) {
   const admin = tmIsAdmin(t, uid), me = tmMember(t, uid);
@@ -4936,7 +4943,15 @@ app.post('/api/teams', auth, (req, res) => {
     hours: { start: '09:00', end: '18:00', days: [1, 2, 3, 4, 5, 6] }, interval: 60, awayMin: 20, offlineMin: 15, sites: [], duty: {} };
   db.teams.push(t); save(); res.json(tmOut(t, req.user.id));
 });
-app.get('/api/teams/:id', auth, (req, res) => { const c = tmCtx(req, res); if (c) res.json(tmOut(c.t, req.user.id)); });
+app.get('/api/teams/:id', auth, (req, res) => { const c = tmCtx(req, res); if (!c) return;
+  if (tmIsAdmin(c.t, req.user.id)) for (const [uid, d] of Object.entries(c.t.duty || {})) // the admin is looking: wake quiet phones now
+    if (uid !== req.user.id && d.on && tmCanSee(c.t, req.user.id, uid) && now() - Math.max(d.last ? d.last.t : 0, d.ping || 0) > 2 * 60000) tmWake(c.t, uid, 2 * 60000);
+  res.json(tmOut(c.t, req.user.id)); });
+app.post('/api/teams/:id/wake/:uid', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const uid = String(req.params.uid);
+  if (!tmCanSee(c.t, req.user.id, uid)) return res.status(403).json({ error: 'You cannot see this person\'s location.' });
+  const d = (c.t.duty || {})[uid]; if (!d || !d.on) return res.status(400).json({ error: 'Location sharing is OFF for this person.' });
+  const u = userById(uid); if (!u || !(u.fcmTokens || []).length) return res.status(400).json({ error: 'This phone has no Maata app notifications. Ask them to open the Maata app once.' });
+  tmWake(c.t, uid, 15000); save(); res.json({ ok: true }); });
 app.put('/api/teams/:id', auth, (req, res) => {
   const c = tmCtx(req, res, true); if (!c) return; const t = c.t, b = req.body || {};
   if (b.name !== undefined) t.name = clip(b.name, 60) || t.name;
@@ -4995,6 +5010,8 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
   const raw = Array.isArray(req.body?.pts) ? req.body.pts.slice(-300) : [];
   const pts = raw.map((p) => ({ t: Math.min(now(), Math.round(Number(p.t) || now())), lat: Number(p.lat), lng: Number(p.lng), acc: Math.round(Number(p.acc) || 0), bat: p.bat == null ? null : Math.max(0, Math.min(100, Math.round(Number(p.bat)))), mock: !!p.mock, spd: Math.max(0, Number(p.spd) || 0) }))
     .filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 && (p.lat || p.lng) && p.t > (d.since || 0) - 60000 && p.acc < 2000).sort((a, b) => a.t - b.t);
+  const dg = req.body?.diag; if (dg && typeof dg === 'object') d.diag = { bgLoc: dg.bgLoc !== false, battery: dg.battery !== false, notif: dg.notif !== false, autostart: !!dg.autostart, maker: clip(dg.maker, 30), perm: dg.perm !== false, gps: dg.gps !== false, at: now() };
+  if (req.body?.via === 'wake') d.wakeOk = now();
   if (req.body?.alive) { // phone heartbeat: Maata is running (also when closed / screen locked), even if the person has not moved
     d.ping = now(); if (req.body.bat != null && Number(req.body.bat) >= 0) d.bat = Math.max(0, Math.min(100, Math.round(Number(req.body.bat))));
     if (d.offlineTold && d.last) { d.offlineTold = false; tmEvent(t, req.user.id, 'back', 'Phone is online again', d.last); }
@@ -5063,6 +5080,7 @@ setInterval(() => {
     for (const [uid, d] of Object.entries(t.duty || {})) { if (!d.on) continue;
       if (!tmInHours(t)) { tmStopDuty(t, uid, 'Work hours are over', true); changed = true; continue; }
       const ref = Math.max(d.last ? d.last.t : d.since, d.ping || 0);
+      if (now() - ref > 4 * 60000) tmWake(t, uid, 5 * 60000);
       if (!d.offlineTold && now() - ref > (t.offlineMin || 15) * 60000) { d.offlineTold = true; tmEvent(t, uid, 'offline', 'No signal for ' + (t.offlineMin || 15) + ' min (phone switched off, no internet, or the phone stopped Maata — see “Keep sharing when Maata is closed”)', d.last, true); changed = true; }
     } }
   const cut = now() - TEAM_KEEP_DAYS * 86400000; const a = db.teamTracks.length, b = db.teamEvents.length;
