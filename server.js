@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 159;
+const MAATA_VERSION = 160;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5010,7 +5010,7 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
   const raw = Array.isArray(req.body?.pts) ? req.body.pts.slice(-300) : [];
   const pts = raw.map((p) => ({ t: Math.min(now(), Math.round(Number(p.t) || now())), lat: Number(p.lat), lng: Number(p.lng), acc: Math.round(Number(p.acc) || 0), bat: p.bat == null ? null : Math.max(0, Math.min(100, Math.round(Number(p.bat)))), mock: !!p.mock, spd: Math.max(0, Number(p.spd) || 0) }))
     .filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 && (p.lat || p.lng) && p.t > (d.since || 0) - 60000 && p.acc < 2000).sort((a, b) => a.t - b.t);
-  const dg = req.body?.diag; if (dg && typeof dg === 'object') d.diag = { bgLoc: dg.bgLoc !== false, battery: dg.battery !== false, notif: dg.notif !== false, autostart: !!dg.autostart, maker: clip(dg.maker, 30), perm: dg.perm !== false, gps: dg.gps !== false, at: now() };
+  const dg = req.body?.diag; if (dg && typeof dg === 'object') d.diag = { bgLoc: dg.bgLoc !== false, battery: dg.battery !== false, notif: dg.notif !== false, autostart: !!dg.autostart, maker: clip(dg.maker, 30), perm: dg.perm !== false, gps: dg.gps !== false, app: clip(dg.app, 20), at: now() };
   if (req.body?.via === 'wake') d.wakeOk = now();
   if (req.body?.alive) { // phone heartbeat: Maata is running (also when closed / screen locked), even if the person has not moved
     d.ping = now(); if (req.body.bat != null && Number(req.body.bat) >= 0) d.bat = Math.max(0, Math.min(100, Math.round(Number(req.body.bat))));
@@ -5080,7 +5080,7 @@ setInterval(() => {
     for (const [uid, d] of Object.entries(t.duty || {})) { if (!d.on) continue;
       if (!tmInHours(t)) { tmStopDuty(t, uid, 'Work hours are over', true); changed = true; continue; }
       const ref = Math.max(d.last ? d.last.t : d.since, d.ping || 0);
-      if (now() - ref > 4 * 60000) tmWake(t, uid, 5 * 60000);
+      if (now() - ref > 3 * 60000) tmWake(t, uid, 3 * 60000); // a quiet phone is woken every 3 min → a fresh place at least every ~3–5 min
       if (!d.offlineTold && now() - ref > (t.offlineMin || 15) * 60000) { d.offlineTold = true; tmEvent(t, uid, 'offline', 'No signal for ' + (t.offlineMin || 15) + ' min (phone switched off, no internet, or the phone stopped Maata — see “Keep sharing when Maata is closed”)', d.last, true); changed = true; }
     } }
   const cut = now() - TEAM_KEEP_DAYS * 86400000; const a = db.teamTracks.length, b = db.teamEvents.length;
