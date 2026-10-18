@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 162;
+const MAATA_VERSION = 164;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4910,7 +4910,7 @@ function tmLiveRow(t, m) {
   const seen = Math.max(last ? last.t : 0, d.ping || 0); // the phone's last signal (a new place, or "still here")
   let state = 'off'; if (d.on) state = !last ? 'waiting' : now() - seen > (t.offlineMin || 15) * 60000 ? 'offline' : d.gpsOff ? 'gps_off' : d.mock ? 'mock' : d.state || 'free';
   return { userId: m.userId, name: u.name || 'Staff', phone: u.phone || '', role: m.role, status: m.status, onDuty: !!d.on, since: d.since || null, state, site: d.siteName || '', awaySince: d.awaySince || null, last, seen: seen || null, bat: d.bat ?? (last ? last.bat : null), km: d.km || 0,
-    diag: d.diag || null, wokeAt: d.wokeAt || null, wakeOk: d.wakeOk || null, appv: u.androidVer || '', appLatest: latestApk() };
+    diag: d.diag || null, wokeAt: d.wokeAt || null, wakeOk: d.wakeOk || null, appv: u.androidVer || '', appLatest: latestApk(), via: d.via || '' };
 }
 let apkVer = { v: 0, at: 0 }; // newest Android app build (from app-version.json, read at most once a minute)
 function latestApk() { if (now() - apkVer.at > 60000) { apkVer.at = now(); for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { apkVer.v = Number(JSON.parse(fs.readFileSync(f, 'utf8')).version) || 0; break; } catch { /* next */ } } } return apkVer.v; }
@@ -4946,6 +4946,7 @@ app.post('/api/teams', auth, (req, res) => {
   db.teams.push(t); save(); res.json(tmOut(t, req.user.id));
 });
 app.get('/api/teams/:id', auth, (req, res) => { const c = tmCtx(req, res); if (!c) return;
+  if (tmIsAdmin(c.t, req.user.id)) c.t.watchAt = now(); // an admin is looking at the map: phones send every 30 s for a while
   if (tmIsAdmin(c.t, req.user.id)) for (const [uid, d] of Object.entries(c.t.duty || {})) // the admin is looking: wake quiet phones now
     if (uid !== req.user.id && d.on && tmCanSee(c.t, req.user.id, uid) && now() - Math.max(d.last ? d.last.t : 0, d.ping || 0) > 2 * 60000) tmWake(c.t, uid, 2 * 60000);
   res.json(tmOut(c.t, req.user.id)); });
@@ -5020,6 +5021,7 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
     .filter((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 && (p.lat || p.lng) && p.t > (d.since || 0) - 60000 && p.acc < 2000).sort((a, b) => a.t - b.t);
   const dg = req.body?.diag; if (dg && typeof dg === 'object') d.diag = { bgLoc: dg.bgLoc !== false, battery: dg.battery !== false, notif: dg.notif !== false, autostart: !!dg.autostart, maker: clip(dg.maker, 30), perm: dg.perm !== false, gps: dg.gps !== false, app: clip(dg.app, 20), at: now() };
   if (req.body?.via === 'wake') d.wakeOk = now();
+  if (['web', 'service', 'wake'].includes(req.body?.via)) d.via = req.body.via;
   if (req.body?.alive) { // phone heartbeat: Maata is running (also when closed / screen locked), even if the person has not moved
     d.ping = now(); if (req.body.bat != null && Number(req.body.bat) >= 0) d.bat = Math.max(0, Math.min(100, Math.round(Number(req.body.bat))));
     if (d.offlineTold && d.last) { d.offlineTold = false; tmEvent(t, req.user.id, 'back', 'Phone is online again', d.last); }
@@ -5047,7 +5049,7 @@ app.post('/api/teams/:id/loc', auth, (req, res) => {
     d.last = p;
   }
   if (pts.length || req.body?.alive) { const row = tmLiveRow(t, m); for (const a of tmAdmins(t)) if (tmCanSee(t, a, req.user.id)) io.to('user:' + a).emit('team:live', { teamId: t.id, row }); }
-  save(); res.json({ on: true, interval: t.interval, endAt: tmEndAt(t), state: d.state || 'free', site: d.siteName || '' });
+  save(); res.json({ on: true, interval: now() - (t.watchAt || 0) < 3 * 60000 ? Math.min(t.interval || 60, 30) : t.interval, endAt: tmEndAt(t), state: d.state || 'free', site: d.siteName || '' });
 });
 // admin: one person's day (route, stops, events, numbers)
 function tmStops(pts) { // places where the person stayed 10+ minutes within ~150 m
