@@ -8,9 +8,8 @@ import android.content.Intent
 class TrackBootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (!TeamTrackService.onDuty(ctx)) return
-        TeamTrackService.watchdog(ctx, true) // the next check in ~10 min (also in deep sleep)
-        if (TeamTrackService.running) return
-        // sharing was stopped by the phone: start it again, and send one place now
+        TeamTrackService.watchdog(ctx, true) // the next check in ~5 min (also in deep sleep)
+        // every ~5 min (also in deep sleep): start sharing again if the phone stopped it, and send one place now
         val pr = goAsync()
         Thread { try { TeamTrackService.wakeNow(ctx, 8000) } finally { pr.finish() } }.start()
     }

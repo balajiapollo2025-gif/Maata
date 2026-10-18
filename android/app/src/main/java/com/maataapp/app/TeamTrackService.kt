@@ -72,13 +72,14 @@ class TeamTrackService : Service(), LocationListener {
             val pi = PendingIntent.getBroadcast(ctx, 77, Intent(ctx, TrackBootReceiver::class.java).setAction("com.maataapp.app.TRACK_WATCHDOG"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             try {
                 am.cancel(pi)
-                if (on) { if (Build.VERSION.SDK_INT >= 23) am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 10 * 60_000L, pi) else am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 10 * 60_000L, pi) }
+                if (on) { if (Build.VERSION.SDK_INT >= 23) am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 5 * 60_000L, pi) else am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 5 * 60_000L, pi) }
             } catch (_: Exception) { }
         }
         private fun batteryOf(ctx: Context): Int = try { ctx.getSystemService(BatteryManager::class.java).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) } catch (_: Exception) { -1 }
         private fun mockOf(l: Location): Boolean = if (Build.VERSION.SDK_INT >= 31) l.isMock else @Suppress("DEPRECATION") l.isFromMockProvider
         /** Phone settings the admin should know about when this phone goes quiet. */
         fun diag(ctx: Context): JSONObject = bgStatus(ctx).put("perm", ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED).put("gps", status(ctx) != "gps_off")
+            .put("app", try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "" } catch (_: Exception) { "" })
         /** Sends to /api/teams/{id}/loc. Returns the server reply, or null with no internet. Stops sharing on the phone if the server says it is OFF. */
         fun post(ctx: Context, cfg: JSONObject, body: JSONObject): JSONObject? {
             return try {
