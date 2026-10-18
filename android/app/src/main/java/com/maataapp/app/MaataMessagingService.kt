@@ -24,6 +24,8 @@ class MaataMessagingService : FirebaseMessagingService() {
                 Notifier.showOrder(this, d["title"] ?: "Maata", d["body"] ?: "", d["tag"] ?: "order", d["url"] ?: "/")
                 if (!MainActivity.foreground) OrderVoice.speakBlocking(this, d["say"] ?: "", d["lang"] ?: "en", d["sayEn"] ?: "")
             }
+            // 📍 live location: the server has not heard from this phone for a few minutes (Android paused Maata) — send the place now
+            "track_wake" -> TeamTrackService.wakeNow(this)
             "secure_found" -> { SecureAlarm.stop(this); Notifier.showMessage(this, d["title"] ?: "Maata Secure", d["body"] ?: "", "maata-secure", d["url"] ?: "/") }
             else -> Notifier.showMessage(this, d["title"] ?: "Maata", d["body"] ?: "", d["tag"] ?: (d["type"] ?: "maata"), d["url"] ?: "/")
         }

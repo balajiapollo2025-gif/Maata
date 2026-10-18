@@ -29,6 +29,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * 📍 Team tracking: while a staff member is ON DUTY, sends the phone location to their team every 30 s – 5 min,
@@ -63,13 +65,70 @@ class TeamTrackService : Service(), LocationListener {
             val i = Intent(ctx, TeamTrackService::class.java)
             try { if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i) } catch (_: Exception) { }
         }
-        /** Every ~10 min the phone checks that sharing is still running (OEM battery savers sometimes kill it when Maata is closed). */
+        /** Every ~10 min the phone checks that sharing is still running (OEM battery savers sometimes kill it when Maata is closed).
+         *  "AllowWhileIdle" so it also fires in Doze (deep sleep with the screen off), where normal repeating alarms wait for hours. */
         fun watchdog(ctx: Context, on: Boolean) {
             val am = ctx.getSystemService(AlarmManager::class.java) ?: return
             val pi = PendingIntent.getBroadcast(ctx, 77, Intent(ctx, TrackBootReceiver::class.java).setAction("com.maataapp.app.TRACK_WATCHDOG"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             try {
-                if (on) am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 10 * 60_000L, 10 * 60_000L, pi) else am.cancel(pi)
+                am.cancel(pi)
+                if (on) { if (Build.VERSION.SDK_INT >= 23) am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 10 * 60_000L, pi) else am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 10 * 60_000L, pi) }
             } catch (_: Exception) { }
+        }
+        private fun batteryOf(ctx: Context): Int = try { ctx.getSystemService(BatteryManager::class.java).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) } catch (_: Exception) { -1 }
+        private fun mockOf(l: Location): Boolean = if (Build.VERSION.SDK_INT >= 31) l.isMock else @Suppress("DEPRECATION") l.isFromMockProvider
+        /** Phone settings the admin should know about when this phone goes quiet. */
+        fun diag(ctx: Context): JSONObject = bgStatus(ctx).put("perm", ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED).put("gps", status(ctx) != "gps_off")
+        /** Sends to /api/teams/{id}/loc. Returns the server reply, or null with no internet. Stops sharing on the phone if the server says it is OFF. */
+        fun post(ctx: Context, cfg: JSONObject, body: JSONObject): JSONObject? {
+            return try {
+                val c = URL(cfg.getString("base") + "/api/teams/" + cfg.getString("teamId") + "/loc").openConnection() as HttpURLConnection
+                c.requestMethod = "POST"; c.connectTimeout = 12000; c.readTimeout = 15000; c.doOutput = true
+                c.setRequestProperty("Content-Type", "application/json"); c.setRequestProperty("Authorization", "Bearer " + cfg.getString("token"))
+                c.outputStream.use { it.write(body.toString().toByteArray()) }
+                val code = c.responseCode
+                val r = if (code in 200..299) JSONObject(c.inputStream.bufferedReader().readText()) else if (code == 401 || code == 403 || code == 404) JSONObject().put("on", false) else null
+                c.disconnect(); r
+            } catch (_: Exception) { null }
+        }
+        /** One location fix right now (waits up to [waitMs]); a recent saved fix if the phone cannot get a new one. */
+        @SuppressLint("MissingPermission")
+        fun oneFix(ctx: Context, waitMs: Long): Location? {
+            val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            var best: Location? = null
+            val keep = { l: Location? -> if (l != null && System.currentTimeMillis() - l.time < 10 * 60_000L) synchronized(lm) { if (best == null || l.accuracy < best!!.accuracy || l.time > best!!.time + 60_000) best = l } }
+            val pvs = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { try { lm.isProviderEnabled(it) } catch (_: Exception) { false } }
+            for (pv in pvs + LocationManager.PASSIVE_PROVIDER) try { keep(lm.getLastKnownLocation(pv)) } catch (_: Exception) { }
+            if (pvs.isEmpty()) return best
+            val latch = CountDownLatch(pvs.size)
+            val listeners = mutableListOf<LocationListener>()
+            for (pv in pvs) try {
+                if (Build.VERSION.SDK_INT >= 30) lm.getCurrentLocation(pv, null, ctx.mainExecutor) { l -> keep(l); latch.countDown() }
+                else { val li = object : LocationListener { override fun onLocationChanged(l: Location) { keep(l); latch.countDown() }
+                        override fun onProviderDisabled(p: String) { latch.countDown() } override fun onProviderEnabled(p: String) { }
+                        @Deprecated("Deprecated in Java") override fun onStatusChanged(p: String?, s: Int, e: Bundle?) { } }
+                    listeners.add(li); @Suppress("DEPRECATION") lm.requestSingleUpdate(pv, li, Looper.getMainLooper()) }
+            } catch (_: Exception) { latch.countDown() }
+            try { latch.await(waitMs, TimeUnit.MILLISECONDS) } catch (_: Exception) { }
+            for (li in listeners) try { lm.removeUpdates(li) } catch (_: Exception) { }
+            return best
+        }
+        /**
+         * The server says this phone has been quiet (a push when Android paused Maata while it is closed), or the watchdog fired:
+         * start the sharing service again, and send one fresh place + "I am online" + phone settings straight away. Runs on a background thread.
+         */
+        fun wakeNow(ctx: Context, waitMs: Long = 18000) {
+            val saved = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("cfg", null) ?: return
+            val cfg = try { JSONObject(saved) } catch (_: Exception) { return }
+            if (!running) try { val i = Intent(ctx, TeamTrackService::class.java); if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i) } catch (_: Exception) { }
+            val dg = diag(ctx)
+            val pts = JSONArray()
+            if (dg.optBoolean("perm")) oneFix(ctx, waitMs)?.let { l ->
+                pts.put(JSONObject().put("t", System.currentTimeMillis()).put("lat", l.latitude).put("lng", l.longitude).put("acc", l.accuracy.toDouble())
+                    .put("spd", if (l.hasSpeed()) l.speed.toDouble() else 0.0).put("bat", batteryOf(ctx)).put("mock", mockOf(l))) }
+            val body = JSONObject().put("pts", pts).put("alive", true).put("bat", batteryOf(ctx)).put("diag", dg).put("via", "wake").apply { if (!dg.optBoolean("gps", true)) put("gps", "off") }
+            val r = post(ctx, cfg, body)
+            if (r != null && !r.optBoolean("on", true)) stop(ctx)
         }
         /** What is still needed so sharing keeps going while Maata is closed. */
         fun bgStatus(ctx: Context): JSONObject {
@@ -111,6 +170,7 @@ class TeamTrackService : Service(), LocationListener {
     private var lastQueuedAt = 0L
     private var lastFixAt = 0L
     private var lastBeat = 0L
+    private var lastDiag = 0L
     private var gpsOff = false
     private var sending = false
     private var lock: PowerManager.WakeLock? = null
@@ -194,7 +254,7 @@ class TeamTrackService : Service(), LocationListener {
         lastBeat = System.currentTimeMillis()
         sending = true
         val batch = JSONArray(); for (k in 0 until queue.length()) batch.put(queue.get(k))
-        val body = JSONObject().put("pts", batch).put("alive", true).put("bat", battery()).apply { if (gpsOff) put("gps", "off") }.toString()
+        val body = JSONObject().put("pts", batch).put("alive", true).put("bat", battery()).put("via", "service").apply { if (gpsOff) put("gps", "off"); if (System.currentTimeMillis() - lastDiag > 10 * 60_000L) { lastDiag = System.currentTimeMillis(); put("diag", diag(this@TeamTrackService)) } }.toString()
         Thread {
             var keepGoing = true
             try {
