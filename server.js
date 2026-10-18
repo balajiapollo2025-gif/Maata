@@ -1680,7 +1680,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 160;
+const MAATA_VERSION = 162;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4910,8 +4910,10 @@ function tmLiveRow(t, m) {
   const seen = Math.max(last ? last.t : 0, d.ping || 0); // the phone's last signal (a new place, or "still here")
   let state = 'off'; if (d.on) state = !last ? 'waiting' : now() - seen > (t.offlineMin || 15) * 60000 ? 'offline' : d.gpsOff ? 'gps_off' : d.mock ? 'mock' : d.state || 'free';
   return { userId: m.userId, name: u.name || 'Staff', phone: u.phone || '', role: m.role, status: m.status, onDuty: !!d.on, since: d.since || null, state, site: d.siteName || '', awaySince: d.awaySince || null, last, seen: seen || null, bat: d.bat ?? (last ? last.bat : null), km: d.km || 0,
-    diag: d.diag || null, wokeAt: d.wokeAt || null, wakeOk: d.wakeOk || null };
+    diag: d.diag || null, wokeAt: d.wokeAt || null, wakeOk: d.wakeOk || null, appv: u.androidVer || '', appLatest: latestApk() };
 }
+let apkVer = { v: 0, at: 0 }; // newest Android app build (from app-version.json, read at most once a minute)
+function latestApk() { if (now() - apkVer.at > 60000) { apkVer.at = now(); for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { apkVer.v = Number(JSON.parse(fs.readFileSync(f, 'utf8')).version) || 0; break; } catch { /* next */ } } } return apkVer.v; }
 // 📲 the phone is quiet (Android paused Maata while it is closed): a high-priority push wakes it, and it sends its place at once
 function tmWake(t, uid, gap) {
   const d = (t.duty || {})[uid], u = userById(uid); if (!d || !d.on || !u || !(u.fcmTokens || []).length) return false;
@@ -4952,6 +4954,12 @@ app.post('/api/teams/:id/wake/:uid', auth, (req, res) => { const c = tmCtx(req, 
   const d = (c.t.duty || {})[uid]; if (!d || !d.on) return res.status(400).json({ error: 'Location sharing is OFF for this person.' });
   const u = userById(uid); if (!u || !(u.fcmTokens || []).length) return res.status(400).json({ error: 'This phone has no Maata app notifications. Ask them to open the Maata app once.' });
   tmWake(c.t, uid, 15000); save(); res.json({ ok: true }); });
+// 📲 ask a member to update the Maata app on their phone (old app = location stops when Maata is closed)
+app.post('/api/teams/:id/ask-update/:uid', auth, (req, res) => { const c = tmCtx(req, res, true); if (!c) return; const uid = String(req.params.uid);
+  if (!tmCanSee(c.t, req.user.id, uid)) return res.status(403).json({ error: 'Not allowed.' }); const u = userById(uid); if (!u) return res.status(404).json({ error: 'Not found.' });
+  const d = (c.t.duty || {})[uid] || {}; if (now() - (d.askedUpd || 0) < 60000) return res.json({ ok: true }); if (c.t.duty && c.t.duty[uid]) c.t.duty[uid].askedUpd = now();
+  pushTo(u, { type: 'msg', title: '📲 Please update Maata', body: (req.user.name || 'Your group admin') + ' asks you to update the Maata app, so your live location keeps working when Maata is closed. Tap here.', tag: 'maata-update', url: '/?appupdate=1' }).catch(() => {});
+  save(); res.json({ ok: true }); });
 app.put('/api/teams/:id', auth, (req, res) => {
   const c = tmCtx(req, res, true); if (!c) return; const t = c.t, b = req.body || {};
   if (b.name !== undefined) t.name = clip(b.name, 60) || t.name;
@@ -5080,7 +5088,10 @@ setInterval(() => {
     for (const [uid, d] of Object.entries(t.duty || {})) { if (!d.on) continue;
       if (!tmInHours(t)) { tmStopDuty(t, uid, 'Work hours are over', true); changed = true; continue; }
       const ref = Math.max(d.last ? d.last.t : d.since, d.ping || 0);
-      if (now() - ref > 3 * 60000) tmWake(t, uid, 3 * 60000); // a quiet phone is woken every 3 min → a fresh place at least every ~3–5 min
+      if (now() - ref > 3 * 60000) tmWake(t, uid, 3 * 60000);
+      { const u = userById(uid), lv = latestApk(), v = u && u.androidVer ? Number(String(u.androidVer).split('.').pop()) || 0 : 0; // old Maata app while sharing: ask it to update itself, once a day
+        if (u && lv && v && v < lv && now() - (u.updAskedAt || 0) > 20 * 3600000) { u.updAskedAt = now(); changed = true;
+          pushTo(u, { type: 'msg', title: '📲 Update Maata', body: 'A new Maata app is ready. Tap to update — your live location keeps working when Maata is closed.', tag: 'maata-update', url: '/?appupdate=1' }).catch(() => {}); } } // a quiet phone is woken every 3 min → a fresh place at least every ~3–5 min
       if (!d.offlineTold && now() - ref > (t.offlineMin || 15) * 60000) { d.offlineTold = true; tmEvent(t, uid, 'offline', 'No signal for ' + (t.offlineMin || 15) + ' min (phone switched off, no internet, or the phone stopped Maata — see “Keep sharing when Maata is closed”)', d.last, true); changed = true; }
     } }
   const cut = now() - TEAM_KEEP_DAYS * 86400000; const a = db.teamTracks.length, b = db.teamEvents.length;
