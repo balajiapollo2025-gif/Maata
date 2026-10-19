@@ -1530,6 +1530,12 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .bz-billview{padding:4px 16px 8px;display:flex;flex-direction:column}.bz-void{color:var(--bz-bad);font-weight:800;margin:4px 0 8px}
 .bz-scan{position:fixed;inset:0;z-index:9990;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;padding:16px}
 .bz-scan video{width:100%;max-width:480px;border-radius:14px}
+.fa{position:fixed;inset:0;z-index:10050;background:linear-gradient(170deg,#06231E,#0B3B36 55%,#10233F);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px 16px;text-align:center}.fa h2{margin:0;font-size:22px}.fa-kick{opacity:.75;font-size:12px}
+.fa-ring{width:min(64vw,260px);height:min(64vw,260px);border-radius:50%;overflow:hidden;border:5px solid rgba(255,255,255,.35);box-shadow:0 0 0 8px rgba(255,255,255,.06);transition:border-color .25s,box-shadow .25s;background:#000}.fa-ring video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.fa-ring.good{border-color:#3DDC97;box-shadow:0 0 0 8px rgba(61,220,151,.18)}.fa-ring.bad{border-color:#FF6B6B}.fa-ring.done{box-shadow:0 0 0 18px rgba(61,220,151,.25)}.fa-msg{margin:0;font-size:17px;font-weight:700;min-height:24px}
+.fa-steps{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.fa-steps span{font-size:13px;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.1);opacity:.7}.fa-steps span.on{background:#FFD166;color:#0B3B36;opacity:1;font-weight:800}.fa-steps span.ok{background:#3DDC97;color:#06231E;opacity:1}
+.fa-bar{width:min(70vw,280px);height:6px;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden}.fa-bar i{display:block;height:100%;width:0;background:#3DDC97;transition:width .3s}.fa .linkbtn{color:#cfe;margin-top:6px}
+.fa-intr{display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line,#e5e5e5)}.fa-intr img{width:84px;height:84px;object-fit:cover;border-radius:12px}.fa-noimg{width:84px;height:84px;border-radius:12px;display:grid;place-items:center;background:var(--panel,#eee);font-size:34px}.fa-intr small{display:block;color:var(--muted)}
 .tm-setup{position:fixed;inset:0;z-index:9999;background:rgba(6,30,26,.72);display:flex;align-items:center;justify-content:center;padding:16px}.tm-setupc{background:var(--bg,#fff);color:var(--text,#13201E);border-radius:22px;padding:22px 20px;max-width:380px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.35)}.tm-setupc small{color:var(--muted)}.tm-setupi{font-size:54px;line-height:1}.tm-setupc h2{margin:0;font-size:21px}.tm-setupc p{margin:0;font-size:15px;line-height:1.45}.tm-setupc .tm-setupw{color:var(--muted);font-size:13px}.tm-setupc .bz-link{align-self:center}
 .tm-phone .bz-link{display:block;margin-top:4px;padding:0;font-weight:700}.tm-phone{display:block;margin:6px 0 2px;font-size:12.5px;line-height:1.35;padding:6px 10px;border-radius:10px}.tm-phone.ok{background:#E8F7EF;color:#0B5E44}.tm-phone.bad{background:#FFF4E5;color:#7A4A00}.tm-mcall{background:#0F8A5F!important;color:#fff!important}
 .tm-why{display:flex;flex-direction:column;gap:4px;margin:8px 0 4px;padding:10px 12px;border-radius:12px;background:#FFF4F2;border:1px solid #F3B8AE}.tm-why b{color:#B42318;font-size:14px}.tm-why small{color:#5B3A35;line-height:1.4}.tm-why .tm-whyfix{color:#0B5E44;font-weight:600}.tm-why .bz-btn{margin-top:4px;align-self:flex-start}
@@ -7047,7 +7053,8 @@ async function tmResume() { // app opened while on duty: make sure sharing is ru
 async function tmAdmin(id) {
   let t; try { t = await api('/api/teams/' + id); } catch (e) { return toast(e.message); }
   if (!t.admin) return tmStaff(id);
-  const w = TMW(t); TM.cur = t; const { pg, body } = odPage('teamPage', w.icon + ' ' + t.name, '👑 Admin · ' + t.members.filter((m) => m.status === 'active').length + ' members');
+  const w = TMW(t); TM.cur = t; const { pg, body, top } = odPage('teamPage', w.icon + ' ' + t.name, '👑 Admin · ' + t.members.filter((m) => m.status === 'active').length + ' members');
+  { const ed = el('button', 'bz-ib', '✏️'); ed.setAttribute('aria-label', 'Edit group name'); ed.title = 'Edit group name'; ed.onclick = () => tmRename(t); top.append(ed); }
   const tabs = el('div', 'bz-chips tm-tabs'); if (!['live', 'day', 'setup'].includes(TM.tab)) TM.tab = 'live';
   for (const [k, l] of [['live', '📍 Live'], ['day', '🗓️ History'], ['setup', '👥 Members']]) { const b = el('button', TM.tab === k ? 'on' : null, l); b.onclick = () => { TM.tab = k; tabs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(); }; tabs.append(b); }
   const area = el('div'); body.append(tabs, area);
@@ -7167,9 +7174,22 @@ async function tmAi(t) {
   let r; try { r = await api('/api/teams/' + t.id + '/ai', { method: 'POST', body: JSON.stringify({ day: tmToday() }) }); } catch (e) { return toast(e.message); }
   sheet('🤖 Today\'s team report', (L) => { L.append(el('pre', 'tm-ai', r.text)); const s = el('button', 'sheet-btn', '⇪ Share report'); s.onclick = () => shareTextOut(t.name + ' · ' + tmToday() + '\n' + r.text, 'Share report'); L.append(s); });
 }
+// ✏️ change the group's name (admins); everyone in the group sees the new name
+function tmRename(t) {
+  sheet('✏️ Group name', (L) => {
+    const f = el('form', 'bz-form'), l = el('label'); l.htmlFor = 'tmName'; l.append(el('span', null, 'Group name'));
+    const i = el('input'); i.id = 'tmName'; i.maxLength = 60; i.value = t.name; i.required = true; l.append(i);
+    const go = el('button', 'sheet-btn primary', 'Save'); go.type = 'submit'; f.append(l, go);
+    f.onsubmit = async (e) => { e.preventDefault(); const n = i.value.trim(); if (!n) return toast('Write a group name'); if (n === t.name) return closeSheet('moreSheet'); go.disabled = true;
+      try { const r = await api('/api/teams/' + t.id, { method: 'PUT', body: JSON.stringify({ name: n }) }); Object.assign(t, r); closeSheet('moreSheet'); toast('✅ Group name changed'); const tb = $('#teamPage .bz-title b'); if (tb) tb.textContent = TMW(t).icon + ' ' + t.name; $('#teamPage')?.setAttribute('aria-label', TMW(t).icon + ' ' + t.name); }
+      catch (x) { toast(x.message); go.disabled = false; } };
+    L.append(f); setTimeout(() => { i.focus(); i.select(); }, 200);
+  });
+}
 function tmSetup(area, t) {
   const save = async (path, method, body) => { try { const n = await api('/api/teams/' + t.id + path, { method, body: JSON.stringify(body || {}) }); Object.assign(t, n); TM.cur = t; TM.redraw(); return n; } catch (e) { toast(e.message); return null; } };
   // staff
+  { const nm = el('div', 'bz-card'); const r = el('button', 'bz-prow'); r.append(el('b', null, '✏️ Group name'), el('small', null, t.name)); r.onclick = () => tmRename(t); nm.append(r); area.append(nm); }
   const w = TMW(t), ms = el('div', 'bz-card'); ms.append(el('h3', null, '👥 Members (' + t.members.length + ')'));
   for (const m of t.members) { const r = el('div', 'tm-mrow'); r.append(el('div', null, m.name + (m.userId === me.id ? ' (you)' : '')), el('small', null, (m.owner ? '👑 Group maker' : m.role === 'admin' ? '🛡️ Admin (sees members)' : w.member) + (m.status === 'invited' ? ' · 📩 not accepted yet' : '') + ' · ' + m.phone));
     const canEdit = !m.owner && m.userId !== me.id && (t.isOwner || m.role !== 'admin');
@@ -7635,7 +7655,7 @@ function openLockSettings() {
   const cfg = lockCfg();
   sheet('🔒 App lock', (list) => {
     const box = el('div', 'formcol'); box.style.padding = '12px';
-    box.append(el('p', 'info-note', cfg ? 'App lock is ON. Maata asks for your fingerprint or PIN when you open it.' + (cfg.bio ? '' : ' Turn on 👆 fingerprint below.') : 'Protect Maata with a PIN on this device, then unlock with your fingerprint 👆. Your chats stay hidden until you unlock.'));
+    box.append(el('p', 'info-note', cfg ? 'App lock is ON. Maata asks for your face, fingerprint or PIN when you open it.' : 'Protect Maata with a PIN on this device, then unlock with your 🙂 face or 👆 fingerprint. Your chats stay hidden until you unlock.'));
     if (!window.crypto || !crypto.subtle) { box.append(el('p', 'info-note', 'App lock needs a secure (https) connection.')); list.append(box); return; }
     const a = el('label'); a.append(el('span', null, cfg ? 'New PIN (4–6 digits)' : 'PIN (4–6 digits)')); const p1 = el('input'); p1.type = 'password'; p1.inputMode = 'numeric'; p1.maxLength = 6; a.append(p1);
     const b = el('label'); b.append(el('span', null, 'Enter PIN again')); const p2 = el('input'); p2.type = 'password'; p2.inputMode = 'numeric'; p2.maxLength = 6; b.append(p2);
@@ -7655,9 +7675,10 @@ function openLockSettings() {
       closeSheet('moreSheet'); toast('App lock is on 🔒');
     };
     if (cfg) { const ph = el('div'); box.append(ph); bioSettingRow(ph); }
+    if (cfg) faceSettingBlock(box, cfg);
     if (cfg) {
       const vb = el('div', 'vl-set');
-      vb.append(el('b', null, '🦜 Voice password ' + (cfg.voice ? '— ON ✅' : '')), el('small', null, 'Chilaka the parrot comes forward and asks for your password. Say it → Maata opens. 3 wrong tries → it says sorry and goes back (use PIN). It checks the WORDS you say, not your voice sound — choose 3–4 secret words and do not say them in front of others.'));
+      vb.append(el('b', null, '🦜 Voice password ' + (cfg.voice ? '— ON ✅' : '')), el('small', null, 'Chilaka the parrot comes forward and asks for your password. Say it → Maata opens. 3 wrong tries → it says sorry and goes back (use PIN). It checks the WORDS you say, not your voice sound — so anyone who hears your words could open Maata. ' + (cfg.face ? (cfg.voiceFace !== false ? '✅ Safe: your face is also checked after the words.' : '⚠️ Turn ON “Voice password also needs my face” below.') : '⚠️ For safety, set up 🙂 Face unlock above — then the voice password also needs your face.')));
       const go = el('button', 'primary', cfg.voice ? '🎤 Change voice password' : '🎤 Set voice password'); go.onclick = () => { closeSheet('moreSheet'); voiceSetup(); }; vb.append(go);
       if (cfg.voice) { const tr = el('button', 'sheet-btn', '▶️ Try it now'); tr.onclick = () => { closeSheet('moreSheet'); voiceUnlock(lockCfg(), () => toast('✅ Voice password works')); }; const vo = el('button', 'danger-btn', 'Turn off voice password'); vo.onclick = () => { const c2 = lockCfg(); delete c2.voice; store.set(LOCK_KEY, JSON.stringify(c2)); closeSheet('moreSheet'); toast('Voice password turned off'); }; vb.append(tr, vo); }
       box.append(vb);
@@ -7667,6 +7688,148 @@ function openLockSettings() {
     list.append(box);
   });
 }
+// ==================== 🙂 FACE UNLOCK (Maata AI) + 🕵️ INTRUDER PHOTO ====================
+// The face is checked ON THIS PHONE by an AI model (face-api, runs in Maata). Only 128 numbers that describe the face are kept,
+// on this phone only — never a photo, never sent to the server. A live check (blink + turn the head) stops photos and videos.
+const FA = { ready: null, CDN: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/' };
+const FA_MATCH = 0.45, FA_OTHER = 0.6; // face distance: below = same person, above = someone else
+function faLoad() {
+  if (FA.ready) return FA.ready;
+  FA.ready = (async () => {
+    if (!window.faceapi) await new Promise((ok, bad) => { const s = document.createElement('script'); s.src = FA.CDN + 'dist/face-api.js'; s.onload = ok; s.onerror = () => bad(new Error('net')); document.head.append(s); });
+    const f = window.faceapi; try { await f.tf.setBackend('webgl'); } catch { try { await f.tf.setBackend('cpu'); } catch {} } await f.tf.ready();
+    const m = FA.CDN + 'model';
+    await Promise.all([f.nets.tinyFaceDetector.loadFromUri(m), f.nets.faceLandmark68Net.loadFromUri(m), f.nets.faceRecognitionNet.loadFromUri(m)]);
+    return f;
+  })().catch((e) => { FA.ready = null; throw e; });
+  return FA.ready;
+}
+const faPt = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const faEAR = (e) => (faPt(e[1], e[5]) + faPt(e[2], e[4])) / (2 * faPt(e[0], e[3]) || 1);
+function faPose(lm) { // eyes open/closed + head turn, from the 68 face points
+  const L = lm.getLeftEye(), R = lm.getRightEye(), n = lm.getNose()[3], cx = (p) => p.reduce((s, q) => s + q.x, 0) / p.length, lx = cx(L), rx = cx(R);
+  return { ear: (faEAR(L) + faEAR(R)) / 2, yaw: (n.x - (lx + rx) / 2) / (Math.abs(rx - lx) || 1) };
+}
+function faDist(a, b) { let s = 0; for (let i = 0; i < 128; i++) { const d = a[i] - b[i]; s += d * d; } return Math.sqrt(s); }
+const faBest = (d, tpl) => Math.min(...tpl.map((t) => faDist(d, t)));
+const faMed = (a) => { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+function faSnap(v, w) { try { const c = mkCanvas(w || 360, (w || 360) * (v.videoHeight || 480) / (v.videoWidth || 640)), g = c.getContext('2d'); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(v, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.6); } catch { return ''; } }
+/**
+ * mode 'enroll': learn the owner's face. mode 'verify': is this the owner, and a live person?
+ * Resolves { ok, why: 'other'|'time'|'cancel'|'cam'|'net'|'pin', descs, photo }.
+ */
+async function faceSession(mode, opts) {
+  opts = opts || {}; const tpl = mode === 'verify' ? faTemplate(opts.cfg || lockCfg()) : null;
+  const ov = el('div', 'fa'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', mode === 'enroll' ? 'Set up face unlock' : 'Face unlock');
+  const ring = el('div', 'fa-ring'), v = el('video'); v.playsInline = true; v.muted = true; v.autoplay = true; ring.append(v);
+  const title = el('h2', null, opts.title || (mode === 'enroll' ? 'Set up face unlock' : 'Look at your phone')), msg = el('p', 'fa-msg', '🧠 Starting Maata AI…'), bar = el('div', 'fa-bar'), fill = el('i'); bar.append(fill);
+  const steps = el('div', 'fa-steps'), pin = el('button', 'linkbtn', mode === 'enroll' ? 'Cancel' : 'Use PIN instead');
+  ov.append(el('small', 'fa-kick', '🙂 Maata AI · face stays on this phone'), title, ring, msg, steps, bar, pin); document.body.append(ov);
+  let stream = null, done = false, finish;
+  const result = new Promise((ok) => { finish = (r) => { if (done) return; done = true; try { stream && stream.getTracks().forEach((t) => t.stop()); } catch {} setTimeout(() => ov.remove(), r.ok ? 650 : 0); ok(r); }; });
+  pin.onclick = () => finish({ ok: false, why: mode === 'enroll' ? 'cancel' : 'pin' });
+  let f; try { [f, stream] = await Promise.all([faLoad(), navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })]); }
+  catch (e) { finish({ ok: false, why: e && e.message === 'net' ? 'net' : 'cam' }); return result; }
+  if (done) { stream.getTracks().forEach((t) => t.stop()); return result; }
+  v.srcObject = stream; try { await v.play(); } catch {}
+  const opt = new f.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+  const order = Math.random() < 0.5 ? ['blink', 'turn'] : ['turn', 'blink']; // random order, so a recorded video does not fit
+  const label = { blink: '👁️ Blink your eyes', turn: '↔️ Slowly turn your head to one side' };
+  const drawSteps = (k) => { steps.innerHTML = ''; order.forEach((s, i) => steps.append(el('span', i < k ? 'ok' : i === k ? 'on' : null, (i < k ? '✓ ' : '') + label[s].slice(3)))); };
+  const ears = [], yaws = [], descs = [], t0 = Date.now(); let step = 0, closed = false, turned = false, before = 0, after = 0, other = 0, lastDesc = 0, best = 9, photo = '';
+  drawSteps(0); msg.textContent = mode === 'enroll' ? 'Hold the phone in front of your face' : 'Look at the camera';
+  while (!done) {
+    if (Date.now() - t0 > (mode === 'enroll' ? 40000 : 22000)) { photo = faSnap(v); finish({ ok: false, why: 'time', photo }); break; }
+    let det = null; try { det = v.readyState >= 2 ? await f.detectSingleFace(v, opt).withFaceLandmarks().withFaceDescriptor() : null; } catch {}
+    if (done) break;
+    if (!det) { msg.textContent = '🙂 Show your whole face inside the circle'; ring.className = 'fa-ring'; await new Promise((r) => setTimeout(r, 120)); continue; }
+    const box = det.detection.box, vw = v.videoWidth || 640;
+    if (box.width < vw * 0.22) { msg.textContent = '🔍 Come a little closer'; await new Promise((r) => setTimeout(r, 80)); continue; }
+    const p = faPose(det.landmarks), d = Array.from(det.descriptor);
+    if (ears.length < 6) { ears.push(p.ear); yaws.push(p.yaw); }
+    const ear0 = faMed(ears), yaw0 = faMed(yaws), frontal = Math.abs(p.yaw - yaw0) < 0.1 && p.ear > ear0 * 0.85;
+    if (tpl) { // same person?
+      const dist = faBest(d, tpl); best = Math.min(best, dist);
+      if (dist > FA_OTHER) { other++; if (!before) { if (other >= 8) { photo = faSnap(v); finish({ ok: false, why: 'other', photo }); break; } ring.className = 'fa-ring bad'; msg.textContent = '🤔 Checking your face…'; await new Promise((r) => setTimeout(r, 60)); continue; } }
+      if (dist < FA_MATCH && frontal) { if (step < order.length) before++; else after++; if (dist < 0.38 && descs.length < 2) descs.push(d); }
+    } else if (frontal && Date.now() - lastDesc > 280 && descs.length < 8) { // learning the face
+      if (descs.length >= 2) { const mean = descs[0].map((_, i) => descs.reduce((s, x) => s + x[i], 0) / descs.length); if (faDist(d, mean) > 0.5) { descs.length = 0; msg.textContent = '↺ Only one person please — starting again'; continue; } }
+      descs.push(d); lastDesc = Date.now();
+    }
+    ring.className = 'fa-ring good';
+    if (ears.length < 6) { msg.textContent = 'Hold still…'; continue; }
+    if (step < order.length) { // live check
+      const s = order[step]; msg.textContent = label[s];
+      if (s === 'blink') { if (p.ear < ear0 * 0.72) closed = true; else if (closed && p.ear > ear0 * 0.85) { step++; closed = false; drawSteps(step); try { navigator.vibrate && navigator.vibrate(15); } catch {} } }
+      else { if (Math.abs(p.yaw - yaw0) > 0.22) turned = true; else if (turned && Math.abs(p.yaw - yaw0) < 0.1) { step++; turned = false; drawSteps(step); try { navigator.vibrate && navigator.vibrate(15); } catch {} } if (turned) msg.textContent = '👍 Now look at the camera again'; }
+      fill.style.width = Math.round(step / order.length * 70) + '%'; continue;
+    }
+    if (mode === 'enroll') { fill.style.width = Math.min(100, 70 + descs.length * 4) + '%'; msg.textContent = '📸 Hold still… learning your face'; if (descs.length >= 8) { msg.textContent = '✅ Face saved'; ring.className = 'fa-ring good done'; finish({ ok: true, descs }); break; } continue; }
+    fill.style.width = Math.min(100, 70 + after * 10) + '%'; msg.textContent = '✅ Hold still…';
+    if (before >= 2 && after >= 2) { msg.textContent = '✅ Welcome back'; ring.className = 'fa-ring good done'; finish({ ok: true, best, descs }); break; }
+  }
+  return result;
+}
+const faRound = (d) => d.map((x) => Math.round(x * 10000) / 10000);
+function faTemplate(cfg) { const F = cfg && cfg.face; return F ? [...(F.d || []), ...(F.r || [])] : []; }
+async function faceUnlock(cfg, opts) { // true when it is the owner
+  const r = await faceSession('verify', { ...(opts || {}), cfg });
+  if (r.ok) { const c2 = lockCfg(); if (c2 && c2.face && r.descs && r.descs.length) { c2.face.r = [...(c2.face.r || []), ...r.descs.map(faRound)].slice(-6); store.set(LOCK_KEY, JSON.stringify(c2)); } return true; } // learns small changes (beard, glasses, light)
+  if (r.why === 'other') { toast('🚫 Face not recognised. Use your PIN.'); intruderSave('face', r.photo); }
+  else if (r.why === 'time') toast('⏱️ Could not confirm your face. Try again in better light, or use your PIN.');
+  else if (r.why === 'net') toast('📶 Face unlock needs internet the first time (to load Maata AI). Use your PIN.');
+  else if (r.why === 'cam') toast('📷 Allow the camera for Maata to use face unlock.');
+  return false;
+}
+async function faceSetup() {
+  const cfg = lockCfg(); if (!cfg) return toast('Turn on the PIN lock first.');
+  const r = await faceSession('enroll', { title: 'Set up face unlock' });
+  if (!r.ok) { if (r.why === 'net') toast('📶 Connect to the internet to set up face unlock (Maata AI loads once).'); else if (r.why === 'cam') toast('📷 Allow the camera for Maata, then try again.'); else if (r.why === 'time') toast('⏱️ Took too long. Try again in good light, face the camera.'); return; }
+  const c2 = lockCfg(); c2.face = { v: 1, d: r.descs.map(faRound), r: [], at: Date.now() }; if (c2.intruder === undefined) c2.intruder = true; if (c2.voice && c2.voiceFace === undefined) c2.voiceFace = true;
+  store.set(LOCK_KEY, JSON.stringify(c2)); toast('🙂 Face unlock is ON'); setTimeout(openLockSettings, 400);
+}
+// 🕵️ someone tried to open Maata: keep a photo on this phone (shown to the owner after the next unlock)
+const INTR_KEY = 'maata_intruders';
+const intruders = () => { try { return JSON.parse(store.get(INTR_KEY) || '[]'); } catch { return []; } };
+function intruderSave(kind, img) {
+  const cfg = lockCfg(); if (!cfg || cfg.intruder === false) return;
+  const add = (pic) => { try { const a = intruders(); a.push({ at: Date.now(), kind, img: pic || '', seen: false }); while (a.length > 8) a.shift(); store.set(INTR_KEY, JSON.stringify(a)); } catch { try { store.set(INTR_KEY, JSON.stringify([{ at: Date.now(), kind, img: '', seen: false }])); } catch {} } };
+  if (img || !cfg.face) return add(img); // photo only when the camera was allowed before (face unlock set up)
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: false }).then((s) => {
+    const v = el('video'); v.muted = true; v.playsInline = true; v.srcObject = s; v.play().catch(() => {});
+    setTimeout(() => { const pic = faSnap(v, 360); s.getTracks().forEach((t) => t.stop()); add(pic); }, 900);
+  }).catch(() => add(''));
+}
+const INTR_KIND = { pin: 'wrong PIN 3 times', voice: 'wrong voice password 3 times', face: 'a different face' };
+function intruderShowNew() {
+  const a = intruders(), fresh = a.filter((x) => !x.seen); if (!fresh.length) return;
+  a.forEach((x) => (x.seen = true)); try { store.set(INTR_KEY, JSON.stringify(a)); } catch {}
+  setTimeout(() => intruderList('⚠️ Someone tried to open Maata', fresh), 700);
+}
+function intruderList(title, list) {
+  sheet(title || '🕵️ Unlock attempts', (L) => {
+    if (!list.length) { L.append(el('p', 'info-note', 'Nobody tried to open Maata. 👍')); return; }
+    L.append(el('p', 'info-note', 'Maata keeps these on this phone only.'));
+    for (const x of [...list].reverse()) { const r = el('div', 'fa-intr'); if (x.img) { const im = el('img'); im.src = x.img; im.alt = 'Photo of the person who tried'; r.append(im); } else r.append(el('span', 'fa-noimg', '🕵️')); const t = el('div'); t.append(el('b', null, new Date(x.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })), el('small', null, INTR_KIND[x.kind] || x.kind)); r.append(t); L.append(r); }
+    const del = el('button', 'danger-btn', 'Delete all'); del.onclick = () => { store.del(INTR_KEY); closeSheet('moreSheet'); toast('Deleted'); }; L.append(del);
+  });
+}
+// settings block inside App lock
+function faceSettingBlock(box, cfg) {
+  const fb = el('div', 'vl-set fa-set');
+  fb.append(el('b', null, '🙂 Face unlock (Maata AI) ' + (cfg.face ? '— ON ✅' : '')), el('small', null, 'Look at your phone, blink and turn your head a little → Maata opens. The AI checks it is really YOUR face and a live person (a photo or video does not work). Your face stays on this phone only.'));
+  const go = el('button', 'primary', cfg.face ? '🔄 Scan my face again' : '🙂 Set up face unlock'); go.onclick = () => { closeSheet('moreSheet'); faceSetup(); }; fb.append(go);
+  if (cfg.face) {
+    const tr = el('button', 'sheet-btn', '▶️ Try it now'); tr.onclick = async () => { closeSheet('moreSheet'); if (await faceUnlock(lockCfg(), { title: 'Test face unlock' })) toast('✅ Face unlock works'); };
+    const off = el('button', 'danger-btn', 'Turn off face unlock'); off.onclick = () => { const c2 = lockCfg(); delete c2.face; store.set(LOCK_KEY, JSON.stringify(c2)); closeSheet('moreSheet'); toast('Face unlock turned off'); }; fb.append(tr, off);
+  }
+  box.append(fb);
+  const sw = (label, sub, key, def, onOn) => { const r = el('div', 'set-row'); r.style.padding = '10px 0'; const t = el('div', 'txt'); t.append(el('b', null, label), el('small', null, sub)); const l = el('label', 'switch-ui'), cb = el('input'); cb.type = 'checkbox'; cb.checked = cfg[key] === undefined ? def : !!cfg[key]; cb.setAttribute('aria-label', label); cb.onchange = async () => { const c2 = lockCfg(); c2[key] = cb.checked; store.set(LOCK_KEY, JSON.stringify(c2)); if (cb.checked && onOn) onOn(cb); }; l.append(cb, el('span')); r.append(t, l); box.append(r); };
+  if (cfg.voice && cfg.face) sw('🦜 + 🙂 Voice password also needs my face', 'Safer: even if someone hears your words, Maata opens only for your face.', 'voiceFace', true);
+  sw('🕵️ Photo of anyone who tries to open Maata', 'After 3 wrong tries (PIN, voice or a different face) the front camera takes a photo. You see it next time you open Maata.', 'intruder', !!cfg.face,
+    async (cb) => { try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }); s.getTracks().forEach((t) => t.stop()); } catch { cb.checked = false; const c2 = lockCfg(); c2.intruder = false; store.set(LOCK_KEY, JSON.stringify(c2)); toast('📷 Allow the camera for Maata first.'); } });
+  const n = intruders().length, ib = el('button', 'sheet-btn', '🕵️ Unlock attempts' + (n ? ' (' + n + ')' : '')); ib.onclick = () => { closeSheet('moreSheet'); intruderList('🕵️ Unlock attempts', intruders()); }; box.append(ib);
+}
 function showLock() {
   const cfg = lockCfg(); if (!cfg || $('#lockScreen')) return;
   const L = el('div', 'lock'); L.id = 'lockScreen'; L.setAttribute('role', 'dialog'); L.setAttribute('aria-label', 'Maata is locked');
@@ -7674,11 +7837,12 @@ function showLock() {
   const dots = el('div', 'dots'); for (let i = 0; i < 6; i++) dots.append(el('i')); L.append(dots);
   const err = el('div', 'err'); L.append(err);
   let pin = '';
+  const unlocked = () => { L.remove(); intruderShowNew(); };
   const draw = () => [...dots.children].forEach((d, i) => { d.classList.toggle('on', i < pin.length); d.style.display = i < Math.max(4, pin.length) ? '' : 'none'; });
   const tryPin = async () => {
     if (pin.length < 4) return;
-    if ((await sha(cfg.salt + pin)) === cfg.hash) { L.remove(); return; }
-    if (pin.length >= 6) { if (++SEC.fails % 3 === 0) secUnlockFail(); err.textContent = 'Wrong PIN, try again'; L.classList.add('shake'); setTimeout(() => L.classList.remove('shake'), 400); pin = ''; draw(); }
+    if ((await sha(cfg.salt + pin)) === cfg.hash) { unlocked(); return; }
+    if (pin.length >= 6) { if (++SEC.fails % 3 === 0) { secUnlockFail(); intruderSave('pin'); } err.textContent = 'Wrong PIN, try again'; L.classList.add('shake'); setTimeout(() => L.classList.remove('shake'), 400); pin = ''; draw(); }
   };
   const pad = el('div', 'pad');
   for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫']) {
@@ -7689,13 +7853,17 @@ function showLock() {
   L.append(pad);
   if (cfg.bio && (!nativeBio() || cfg.bio === 'native')) {
     const fp = el('button', 'fp-btn'); fp.innerHTML = '<span aria-hidden="true">👆</span> Unlock with fingerprint'; fp.setAttribute('aria-label', 'Unlock with fingerprint');
-    const tryBio = async () => { err.textContent = ''; try { if (await bioCheck(cfg.bio)) { L.remove(); return; } } catch {} err.textContent = 'Fingerprint not recognised. Use your PIN.'; };
+    const tryBio = async () => { err.textContent = ''; try { if (await bioCheck(cfg.bio)) { unlocked(); return; } } catch {} err.textContent = 'Fingerprint not recognised. Use your PIN.'; };
     fp.onclick = tryBio; L.append(fp);
-    if (!cfg.voice) setTimeout(tryBio, 350);
+    if (!cfg.voice && !cfg.face) setTimeout(tryBio, 350);
+  }
+  if (cfg.face) {
+    const fb = el('button', 'fp-btn'); fb.innerHTML = '<span aria-hidden="true">🙂</span> Unlock with face'; const tryFace = async () => { err.textContent = ''; if (await faceUnlock(lockCfg())) { if ($('#lockScreen')) unlocked(); } }; fb.onclick = tryFace; L.append(fb);
+    if (!cfg.voice) setTimeout(() => { if ($('#lockScreen')) tryFace(); }, 350);
   }
   if (cfg.voice) {
-    const vb = el('button', 'fp-btn'); vb.innerHTML = '<span aria-hidden="true">🦜</span> Voice password'; vb.onclick = () => voiceUnlock(lockCfg(), () => L.remove()); L.append(vb);
-    setTimeout(() => { if ($('#lockScreen')) voiceUnlock(cfg, () => { const x = $('#lockScreen'); if (x) x.remove(); }); }, 400);
+    const vb = el('button', 'fp-btn'); vb.innerHTML = '<span aria-hidden="true">🦜</span> Voice password'; vb.onclick = () => voiceUnlock(lockCfg(), () => { if ($('#lockScreen')) unlocked(); }); L.append(vb);
+    setTimeout(() => { if ($('#lockScreen')) voiceUnlock(cfg, () => { if ($('#lockScreen')) unlocked(); }); }, 400);
   }
   const forgot = el('button', 'linkbtn', 'Forgot PIN? Log out'); forgot.onclick = () => { if (confirm('Log out? You can log in again with your mobile number and password.')) { store.del(LOCK_KEY); logout(); } };
   L.append(forgot);
@@ -7875,8 +8043,10 @@ async function voiceUnlock(cfg, onPass) {
       }
       if (!c.alive) return;
       const hs = await Promise.all(alts.map((a) => sha(V.salt + vlNorm(a))));
-      if (hs.some((h) => V.hashes.includes(h))) { c.happy(); await c.say(P.ok.replace('{name}', name), V.lang); await c.leave(); onPass(); return; }
-      if (++wrong >= 3) { window.vlCoolUntil = Date.now() + 30000; secUnlockFail(); await c.no(); return c.bye(P.bye, V.lang); }
+      if (hs.some((h) => V.hashes.includes(h))) {
+        if (cfg.face && cfg.voiceFace !== false) { c.happy(); await c.leave(); if (await faceUnlock(lockCfg(), { title: '🦜 Words correct — now your face' })) onPass(); return; } // words alone are not enough: anyone could say them
+        c.happy(); await c.say(P.ok.replace('{name}', name), V.lang); await c.leave(); onPass(); return; }
+      if (++wrong >= 3) { window.vlCoolUntil = Date.now() + 30000; secUnlockFail(); intruderSave('voice'); await c.no(); return c.bye(P.bye, V.lang); }
       c.no(); await c.say(P.wrong + (wrong === 2 ? ' ' + P.last : ''), V.lang);
     }
   } finally { vlBusy = false; }
@@ -8768,7 +8938,7 @@ async function bioSettingRow(box) {
   }
   const cfg = lockCfg(); if (!cfg) return;
   const r = el('div', 'set-row'); r.style.padding = '12px 0';
-  const t = el('div', 'txt'); t.append(el('b', null, '👆 Unlock with fingerprint'), el('small', null, 'Use your phone fingerprint or face to open Maata. PIN still works as a backup.'));
+  const t = el('div', 'txt'); t.append(el('b', null, '👆 Phone fingerprint / face'), el('small', null, 'Uses your phone\'s own fingerprint (or face unlock, if your phone allows apps to use it). PIN still works as a backup.'));
   const l = el('label', 'switch-ui'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!cfg.bio; cb.setAttribute('aria-label', 'Unlock with fingerprint');
   cb.onchange = async () => {
     const c2 = lockCfg(); if (!c2) return;
@@ -12875,8 +13045,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 164;
-const APP_NOTES = ["📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 166;
+const APP_NOTES = ["🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
