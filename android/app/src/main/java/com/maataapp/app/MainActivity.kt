@@ -649,7 +649,7 @@ class MainActivity : Activity() {
             runOnUiThread {
                 try {
                     val b = android.hardware.biometrics.BiometricPrompt.Builder(this@MainActivity)
-                        .setTitle(title.ifBlank { "Unlock Maata" }).setSubtitle("Touch the fingerprint sensor")
+                        .setTitle(title.ifBlank { "Unlock Maata" }).setSubtitle("Use your fingerprint or face")
                         .setNegativeButton("Use PIN", mainExecutor) { _, _ -> bioReply(id, false, "PIN") }
                     if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK)
                     if (Build.VERSION.SDK_INT >= 29) b.setConfirmationRequired(false)
