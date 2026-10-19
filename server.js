@@ -202,6 +202,30 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '100kb' }));
 // HTML files can sit in a "public" folder or right next to server.js (easier to upload from a phone)
 const PAGES = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
+// 📉 Less internet data (hosting bandwidth): API answers bigger than 1.4 KB go out gzip-compressed (about 4× smaller)
+const zlib = require('zlib');
+const gzOk = (req) => /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
+app.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => {
+    const txt = JSON.stringify(body);
+    if (txt === undefined || txt.length < 1400 || !gzOk(req) || res.headersSent) return json(body);
+    try { const gz = zlib.gzipSync(txt, { level: 6 }); res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Content-Encoding', 'gzip'); res.setHeader('Vary', 'Accept-Encoding'); res.setHeader('Content-Length', gz.length); return res.end(gz); }
+    catch { return json(body); }
+  };
+  next();
+});
+// the app page (1.5 MB) is sent compressed (~0.35 MB) and only when it changed; otherwise the phone uses its saved copy (304)
+const pageCache = new Map();
+function sendPage(req, res, file) {
+  let st; try { st = fs.statSync(file); } catch { return res.status(404).end(); }
+  let c = pageCache.get(file);
+  if (!c || c.mtime !== st.mtimeMs) { const raw = fs.readFileSync(file); c = { mtime: st.mtimeMs, raw, gz: zlib.gzipSync(raw, { level: 9 }), etag: '"' + require('crypto').createHash('sha1').update(raw).digest('hex').slice(0, 20) + '"' }; pageCache.set(file, c); }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Cache-Control', 'no-cache'); res.setHeader('ETag', c.etag); res.setHeader('Vary', 'Accept-Encoding');
+  if (req.headers['if-none-match'] === c.etag) return res.status(304).end();
+  if (gzOk(req)) { res.setHeader('Content-Encoding', 'gzip'); res.setHeader('Content-Length', c.gz.length); return res.end(c.gz); }
+  res.setHeader('Content-Length', c.raw.length); res.end(c.raw);
+}
 // ---------- Installable app (PWA / Play Store TWA) + push notifications when the app is closed ----------
 const webpush = require('web-push');
 const APP_ORIGIN = (process.env.APP_ORIGIN || 'https://maataapp.com').replace(/\/$/, '');
@@ -433,7 +457,7 @@ self.addEventListener('notificationclick', (e) => {
   }));
 });`;
 
-app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PAGES, 'index.html')));
+app.get(['/', '/index.html'], (req, res) => sendPage(req, res, path.join(PAGES, 'index.html')));
 // Newest Android app version (written by the GitHub build next to maata.apk) — installed apps compare with it
 app.get('/app-version.json', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
@@ -441,12 +465,20 @@ app.get('/app-version.json', (req, res) => {
   res.json({ version: 0 });
 });
 // Android app download: put the newest APK in public/ as maata.apk (from GitHub Actions → Artifacts)
+let apkMirror = (process.env.APK_URL || '').trim(); // e.g. the GitHub copy of maata.apk — downloads then do not use the hosting bandwidth
+(async () => { if (apkMirror) return; const repo = (process.env.GITHUB_REPO || 'balajiapollo2025-gif/Maata').trim();
+  for (const u of ['https://raw.githubusercontent.com/' + repo + '/main/public/maata.apk', 'https://raw.githubusercontent.com/' + repo + '/main/maata.apk']) {
+    try { const r = await fetch(u, { method: 'HEAD', signal: AbortSignal.timeout(8000) }); if (r.ok && Number(r.headers.get('content-length') || 0) > 1e6) { apkMirror = u; console.log('[apk] downloads served from', u); return; } } catch { /* try next */ } } })();
+app.get(['/download', '/app', '/maata.apk'], (req, res, next) => {
+  if (apkMirror && req.query.local !== '1') { res.setHeader('Cache-Control', 'no-cache'); return res.redirect(302, apkMirror + '?v=' + Date.now()); }
+  next();
+});
 app.get(['/download', '/app', '/maata.apk'], (req, res) => {
   const f = [path.join(PAGES, 'maata.apk'), path.join(__dirname, 'maata.apk')].find((x) => fs.existsSync(x));
   if (f) { res.setHeader('Content-Type', 'application/vnd.android.package-archive'); res.setHeader('Cache-Control', 'no-cache'); return res.download(f, 'Maata.apk'); }
   res.status(404).type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:24px;line-height:1.5"><h2>🦜 Maata Android app</h2><p>The download is being prepared. Please try again soon, or use Maata in your browser at <a href="/">maataapp.com</a>.</p></body>');
 });
-app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(PAGES, 'admin.html')));
+app.get(['/admin', '/admin.html'], (req, res) => sendPage(req, res, path.join(PAGES, 'admin.html')));
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 3e6 }); // allows short speech clips for live translation
 
@@ -1680,7 +1712,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 166;
+const MAATA_VERSION = 168;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });

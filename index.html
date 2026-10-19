@@ -7707,8 +7707,8 @@ function faLoad() {
 const faPt = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const faEAR = (e) => (faPt(e[1], e[5]) + faPt(e[2], e[4])) / (2 * faPt(e[0], e[3]) || 1);
 function faPose(lm) { // eyes open/closed + head turn, from the 68 face points
-  const L = lm.getLeftEye(), R = lm.getRightEye(), n = lm.getNose()[3], cx = (p) => p.reduce((s, q) => s + q.x, 0) / p.length, lx = cx(L), rx = cx(R);
-  return { ear: (faEAR(L) + faEAR(R)) / 2, yaw: (n.x - (lx + rx) / 2) / (Math.abs(rx - lx) || 1) };
+  const L = lm.getLeftEye(), R = lm.getRightEye(), n = lm.getNose()[3], m = lm.getMouth(), cx = (p) => p.reduce((s, q) => s + q.x, 0) / p.length, lx = cx(L), rx = cx(R);
+  return { ear: (faEAR(L) + faEAR(R)) / 2, yaw: (n.x - (lx + rx) / 2) / (Math.abs(rx - lx) || 1), mar: faPt(m[14], m[18]) / (faPt(m[0], m[6]) || 1) };
 }
 function faDist(a, b) { let s = 0; for (let i = 0; i < 128; i++) { const d = a[i] - b[i]; s += d * d; } return Math.sqrt(s); }
 const faBest = (d, tpl) => Math.min(...tpl.map((t) => faDist(d, t)));
@@ -7732,27 +7732,29 @@ async function faceSession(mode, opts) {
   catch (e) { finish({ ok: false, why: e && e.message === 'net' ? 'net' : 'cam' }); return result; }
   if (done) { stream.getTracks().forEach((t) => t.stop()); return result; }
   v.srcObject = stream; try { await v.play(); } catch {}
-  const opt = new f.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+  const opt = new f.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 }); // smaller = faster on phones, so a quick blink is not missed
   const order = Math.random() < 0.5 ? ['blink', 'turn'] : ['turn', 'blink']; // random order, so a recorded video does not fit
-  const label = { blink: '👁️ Blink your eyes', turn: '↔️ Slowly turn your head to one side' };
+  const label = { blink: '👁️ Close your eyes for a moment, then open', turn: '↔️ Slowly turn your head to one side' };
   const drawSteps = (k) => { steps.innerHTML = ''; order.forEach((s, i) => steps.append(el('span', i < k ? 'ok' : i === k ? 'on' : null, (i < k ? '✓ ' : '') + label[s].slice(3)))); };
-  const ears = [], yaws = [], descs = [], t0 = Date.now(); let step = 0, closed = false, turned = false, before = 0, after = 0, other = 0, lastDesc = 0, best = 9, photo = '';
+  const ears = [], yaws = [], descs = [], t0 = Date.now(); let step = 0, closed = false, turned = false, before = 0, after = 0, other = 0, lastDesc = 0, best = 9, photo = '', frameN = 0, stepAt = Date.now(), mouthOpen = false;
   drawSteps(0); msg.textContent = mode === 'enroll' ? 'Hold the phone in front of your face' : 'Look at the camera';
   while (!done) {
     if (Date.now() - t0 > (mode === 'enroll' ? 40000 : 22000)) { photo = faSnap(v); finish({ ok: false, why: 'time', photo }); break; }
-    let det = null; try { det = v.readyState >= 2 ? await f.detectSingleFace(v, opt).withFaceLandmarks().withFaceDescriptor() : null; } catch {}
+    frameN++; const inLive = ears.length >= 6 && step < order.length; // during the live check only the 68 face points are needed (faster)
+    const needDesc = !inLive || (mode === 'verify' && (before < 2 || frameN % 3 === 0)) || (mode === 'enroll' && descs.length < 8 && frameN % 2 === 0);
+    let det = null; try { det = v.readyState < 2 ? null : needDesc ? await f.detectSingleFace(v, opt).withFaceLandmarks().withFaceDescriptor() : await f.detectSingleFace(v, opt).withFaceLandmarks(); } catch {}
     if (done) break;
     if (!det) { msg.textContent = '🙂 Show your whole face inside the circle'; ring.className = 'fa-ring'; await new Promise((r) => setTimeout(r, 120)); continue; }
     const box = det.detection.box, vw = v.videoWidth || 640;
     if (box.width < vw * 0.22) { msg.textContent = '🔍 Come a little closer'; await new Promise((r) => setTimeout(r, 80)); continue; }
-    const p = faPose(det.landmarks), d = Array.from(det.descriptor);
-    if (ears.length < 6) { ears.push(p.ear); yaws.push(p.yaw); }
-    const ear0 = faMed(ears), yaw0 = faMed(yaws), frontal = Math.abs(p.yaw - yaw0) < 0.1 && p.ear > ear0 * 0.85;
-    if (tpl) { // same person?
+    const p = faPose(det.landmarks), d = det.descriptor ? Array.from(det.descriptor) : null;
+    if (ears.length < 6) { ears.push(p.ear); yaws.push(p.yaw); } else if (!closed && Math.abs(p.yaw - faMed(yaws)) < 0.1 && ears.length < 20) ears.push(p.ear); // learn how wide THIS person's eyes are open
+    const ear0 = [...ears].sort((x, y) => x - y)[Math.floor(ears.length * 0.75)], yaw0 = faMed(yaws), frontal = Math.abs(p.yaw - yaw0) < 0.1 && p.ear > ear0 * 0.85;
+    if (tpl && d) { // same person?
       const dist = faBest(d, tpl); best = Math.min(best, dist);
       if (dist > FA_OTHER) { other++; if (!before) { if (other >= 8) { photo = faSnap(v); finish({ ok: false, why: 'other', photo }); break; } ring.className = 'fa-ring bad'; msg.textContent = '🤔 Checking your face…'; await new Promise((r) => setTimeout(r, 60)); continue; } }
       if (dist < FA_MATCH && frontal) { if (step < order.length) before++; else after++; if (dist < 0.38 && descs.length < 2) descs.push(d); }
-    } else if (frontal && Date.now() - lastDesc > 280 && descs.length < 8) { // learning the face
+    } else if (d && frontal && Date.now() - lastDesc > 280 && descs.length < 8) { // learning the face
       if (descs.length >= 2) { const mean = descs[0].map((_, i) => descs.reduce((s, x) => s + x[i], 0) / descs.length); if (faDist(d, mean) > 0.5) { descs.length = 0; msg.textContent = '↺ Only one person please — starting again'; continue; } }
       descs.push(d); lastDesc = Date.now();
     }
@@ -7760,8 +7762,12 @@ async function faceSession(mode, opts) {
     if (ears.length < 6) { msg.textContent = 'Hold still…'; continue; }
     if (step < order.length) { // live check
       const s = order[step]; msg.textContent = label[s];
-      if (s === 'blink') { if (p.ear < ear0 * 0.72) closed = true; else if (closed && p.ear > ear0 * 0.85) { step++; closed = false; drawSteps(step); try { navigator.vibrate && navigator.vibrate(15); } catch {} } }
-      else { if (Math.abs(p.yaw - yaw0) > 0.22) turned = true; else if (turned && Math.abs(p.yaw - yaw0) < 0.1) { step++; turned = false; drawSteps(step); try { navigator.vibrate && navigator.vibrate(15); } catch {} } if (turned) msg.textContent = '👍 Now look at the camera again'; }
+      const pass = () => { step++; closed = false; turned = false; mouthOpen = false; stepAt = Date.now(); drawSteps(step); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
+      if (s === 'blink') { // eyes closed → open again. Some eyes look half-open to the AI, so the limit adapts; after 6 s an open mouth also counts
+        if (p.ear < Math.min(ear0 * 0.8, ear0 - 0.035)) { closed = true; msg.textContent = '👍 Now open your eyes'; }
+        else if (closed && p.ear > ear0 * 0.88) pass();
+        else if (Date.now() - stepAt > 6000) { msg.textContent = '😮 Or open your mouth wide'; if (p.mar > 0.32) mouthOpen = true; else if (mouthOpen && p.mar < 0.15) pass(); }
+      } else { if (Math.abs(p.yaw - yaw0) > 0.22) turned = true; else if (turned && Math.abs(p.yaw - yaw0) < 0.1) pass(); if (turned) msg.textContent = '👍 Now look at the camera again'; }
       fill.style.width = Math.round(step / order.length * 70) + '%'; continue;
     }
     if (mode === 'enroll') { fill.style.width = Math.min(100, 70 + descs.length * 4) + '%'; msg.textContent = '📸 Hold still… learning your face'; if (descs.length >= 8) { msg.textContent = '✅ Face saved'; ring.className = 'fa-ring good done'; finish({ ok: true, descs }); break; } continue; }
@@ -13045,7 +13051,7 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 166;
+const APP_VERSION = 168;
 const APP_NOTES = ["🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
