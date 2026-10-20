@@ -2923,6 +2923,7 @@ async function flushIce() {
 }
 function onConnected() {
   stopRing(); clearTimeout(call.timeout);
+  if (!call.adaptTimer && call.kind === 'video') call.adaptTimer = setInterval(adaptCall, 3000); // keeps the voice clear when the network is weak
   callEl.classList.add('live');
   if (!call.startedAt) {
     call.startedAt = Date.now();
@@ -2933,7 +2934,6 @@ function onConnected() {
   }
   setCallStatus('00:00');
   if (!tr.on && translationWanted()) startTranslation();
-  else if (settings.liveTranslate && me.lang && serverCfg.serverSpeech) trAsk(true); // Maata AI listens to the other person: anything NOT in my language is translated for me
 }
 // tell the other phone: "send me your voice clips, I want to hear you in my language" (or stop)
 function trAsk(on) { if (call && socket) { socket.emit('call:tr', { to: call.peerId, callId: call.id, on: !!on }); trLog((on ? '▶ asked ' : '⏹ stopped ') + (call.peerName || '') + ' to send voice · my lang ' + me.lang + ' · v' + APP_VERSION); } }
@@ -2956,7 +2956,7 @@ async function startCall(kind) {
   call.pc = createPeer(); attachLocal();
   const offer = await call.pc.createOffer();
   offer.sdp = hdSdp(offer.sdp);
-  await call.pc.setLocalDescription(offer); tuneSenders(call.pc);
+  offer.sdp = hdSdp(offer.sdp, callQ().abr); await call.pc.setLocalDescription(offer); tuneSenders(call.pc);
   socket.emit('call:offer', { to: call.peerId, callId: call.id, kind, sdp: call.pc.localDescription });
   setCallStatus('Ringing…'); ring('outgoing');
   call.timeout = setTimeout(() => { if (call && !call.startedAt) endCall(call.peerName + ' did not answer.', true); }, 45000);
@@ -2990,7 +2990,7 @@ $('#acceptBtn').onclick = async () => {
   attachLocal();
   const answer = await call.pc.createAnswer();
   answer.sdp = hdSdp(answer.sdp);
-  await call.pc.setLocalDescription(answer); tuneSenders(call.pc);
+  answer.sdp = hdSdp(answer.sdp, callQ().abr); await call.pc.setLocalDescription(answer); tuneSenders(call.pc);
   socket.emit('call:answer', { to: call.peerId, callId: call.id, sdp: call.pc.localDescription });
   await flushIce();
 };
@@ -3014,7 +3014,7 @@ function endCall(reason, notifyPeer = false) {
   stopScreenShare(true);
   if (notifyPeer) socket.emit('call:end', { to: call.peerId, callId: call.id });
   stopTranslation();
-  stopRing(); clearTimeout(call.timeout); clearInterval(call.ticker);
+  stopRing(); clearTimeout(call.timeout); clearInterval(call.ticker); clearInterval(call.adaptTimer);
   if (call.local) call.local.getTracks().forEach((t) => t.stop());
   if (call.pc) { call.pc.ontrack = call.pc.onicecandidate = call.pc.onconnectionstatechange = null; call.pc.close(); }
   $('#remoteVideo').srcObject = null; $('#localVideo').srcObject = null;
@@ -3059,7 +3059,7 @@ function trLog(t) { const d = new Date(); TRLOG.push(String(d.getHours()).padSta
 const tr = { on: false, peerWants: false, rec: null, speaking: false, restart: null, warnedVoice: {} };
 const peerLang = () => (call && ((userById(call.peerId) || {}).lang || call.peerLang)) || null;
 const langName = (c) => (LANGS[c] ? LANGS[c].name : 'their language');
-function translationWanted() { return !!(call && settings.liveTranslate && me.lang && (!peerLang() || peerLang() !== me.lang)); }
+function translationWanted() { return !!(call && settings.liveTranslate && me.lang && peerLang() && peerLang() !== me.lang); } // same language → off (tap 🌐 for mixed English)
 
 function updateTrUi() {
   $('#trBtn').setAttribute('aria-pressed', String(tr.on));
@@ -10636,12 +10636,15 @@ async function scanQr(tipText) {
 }
 
 // ================= Call quality: HD voice + Full HD video =================
+// Voice first (like WhatsApp): the voice gets a fixed share of the internet and the highest priority; video takes what is left.
 const CALL_Q = {
-  saver: { label: 'Data saver', w: 640, h: 360, fps: 24, vbr: 600000, abr: 32000 },
-  hd: { label: 'HD 720p', w: 1280, h: 720, fps: 30, vbr: 1800000, abr: 64000 },
-  fhd: { label: 'Full HD 1080p', w: 1920, h: 1080, fps: 30, vbr: 3500000, abr: 96000 },
+  auto: { label: 'Auto — clear voice, sharp video (recommended)', w: 1280, h: 720, fps: 24, vbr: 1200000, abr: 40000 },
+  saver: { label: 'Data saver', w: 640, h: 360, fps: 20, vbr: 450000, abr: 32000 },
+  hd: { label: 'HD 720p', w: 1280, h: 720, fps: 30, vbr: 1600000, abr: 48000 },
+  fhd: { label: 'Full HD 1080p (fast Wi-Fi only)', w: 1920, h: 1080, fps: 30, vbr: 2500000, abr: 48000 },
 };
-const callQ = () => CALL_Q[store.get('maata_callq') || 'fhd'] || CALL_Q.fhd;
+(() => { try { if (!store.get('maata_callq_v2')) { store.set('maata_callq_v2', '1'); if ((store.get('maata_callq') || 'fhd') === 'fhd') store.set('maata_callq', 'auto'); } } catch {} })(); // 1080p made the voice break on phones / 4G
+const callQ = () => CALL_Q[store.get('maata_callq') || 'auto'] || CALL_Q.auto;
 const HD_AUDIO = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }, sampleSize: { ideal: 16 } };
 // Opus (the voice codec) at a high bit-rate with error correction = clear voice even on shaky networks
 function hdSdp(sdp, abr) {
@@ -10659,18 +10662,37 @@ function tuneSenders(pc, group) {
     if (!s.track || !s.getParameters) continue;
     try {
       const p = s.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}];
-      if (s.track.kind === 'video') { p.encodings[0].maxBitrate = group ? Math.min(q.vbr, 900000) : q.vbr; p.encodings[0].maxFramerate = q.fps; p.degradationPreference = 'balanced'; }
+      if (s.track.kind === 'video') { p.encodings[0].maxBitrate = group ? Math.min(q.vbr, 900000) : q.vbr; p.encodings[0].maxFramerate = q.fps; p.encodings[0].priority = 'low'; p.encodings[0].networkPriority = 'low'; p.degradationPreference = 'balanced'; }
       else { p.encodings[0].maxBitrate = q.abr; p.encodings[0].priority = 'high'; p.encodings[0].networkPriority = 'high'; }
       s.setParameters(p).catch(() => {});
     } catch { /* older browsers */ }
   }
+}
+async function adaptCall() {
+  if (!call || !call.pc || call.pc.connectionState !== 'connected') return;
+  const vs = call.pc.getSenders().find((x) => x.track && x.track.kind === 'video'); if (!vs || !vs.getParameters) return;
+  let st; try { st = await call.pc.getStats(); } catch { return; }
+  let loss = 0, rtt = 0, jit = 0, lim = '';
+  st.forEach((r) => {
+    if (r.type === 'remote-inbound-rtp') { loss = Math.max(loss, r.fractionLost || 0); rtt = Math.max(rtt, r.roundTripTime || 0); if (r.kind === 'audio') jit = Math.max(jit, r.jitter || 0); }
+    if (r.type === 'outbound-rtp' && r.kind === 'video' && r.qualityLimitationReason && r.qualityLimitationReason !== 'none') lim = r.qualityLimitationReason;
+  });
+  const A = call.adapt || (call.adapt = { level: 0, good: 0 });
+  const bad = loss > 0.03 || jit > 0.05 || rtt > 0.45 || lim === 'cpu';
+  const prev = A.level;
+  if (bad) { A.level = Math.min(3, A.level + 1); A.good = 0; } else if (++A.good >= 4 && A.level > 0) { A.level--; A.good = 0; }
+  if (A.level === prev && !A.first) return; A.first = false;
+  const q = callQ(), L = [[1, 1, q.fps], [0.55, 1.5, 24], [0.3, 2, 20], [0.15, 3, 15]][A.level];
+  try { const p = vs.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}];
+    Object.assign(p.encodings[0], { maxBitrate: Math.round(q.vbr * L[0]), scaleResolutionDownBy: L[1], maxFramerate: Math.min(q.fps, L[2]) }); await vs.setParameters(p); } catch {}
+  if (typeof trLog === 'function' && A.level !== prev) trLog('📶 network ' + (bad ? 'weak' : 'better') + ' → video level ' + A.level + ' (loss ' + Math.round(loss * 100) + '%, rtt ' + Math.round(rtt * 1000) + ' ms' + (lim ? ', ' + lim : '') + ')');
 }
 function openCallQuality() {
   closeSettings();
   sheet('🎧 Call quality', (list) => {
     const box = el('div'); box.style.padding = '8px 14px 20px';
     box.append(el('p', 'info-note', 'Voice is always HD (clear, noise-free). Choose video sharpness. Higher quality uses more internet data; Maata lowers it by itself when the network is weak, so calls do not drop.'));
-    const cur = store.get('maata_callq') || 'fhd';
+    const cur = store.get('maata_callq') || 'auto';
     for (const [k, q] of Object.entries(CALL_Q)) {
       const r = el('button', 'mt-lang'); r.setAttribute('aria-pressed', String(k === cur));
       const t = el('span', 'txt'); t.append(el('b', null, q.label), el('small', null, k === 'saver' ? 'Uses the least data' : k === 'hd' ? 'Sharp video, normal data' : 'Sharpest video · best on Wi-Fi / 5G'));
@@ -13153,8 +13175,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 176;
-const APP_NOTES = ["🗣️ Call translation is more accurate (Maata AI remembers the last sentences of the call, speaks everyday Telugu/Hindi) and no longer goes silent: short words are heard, a lost sentence is tried again, and you are told if it could not be understood.", "🗣️ Call translation: you now hear ONE voice — only the translation in your language (their original voice is silent while they speak another language). The other person no longer hears your phone reading the translation, and sees only their own words.", "🗣️ Call translation: now the LISTENER decides — when your language is Telugu and the other person speaks English (or any language), Maata AI translates it for you automatically. New 🎤 Test live translation button in Settings → Language & Translation.", "🎙️ Translated voice: choose Female or Male in Settings → Language & Translation. Male now really speaks with a man voice (Maata AI voice).", "🗣️ Live call translation fixed: Maata AI now hears the voice itself and finds the language spoken (English, Telugu, Hindi… or mixed), then you hear it in YOUR language — also in the Maata Android app. Tap 🌐 in a call to translate even when both chose the same language.", "🙂 Face unlock is now automatic: set it up once, then just look at the phone — Maata AI scans and opens by itself (no head turning each time). It asks to close your eyes only when it is not fully sure.", "🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 177;
+const APP_NOTES = ["📹 Video calls: clear voice like WhatsApp — the voice now always gets priority, video is sharp but lowers itself when the network is weak (new Auto quality). Live translation starts by itself only when you two chose different languages (tap 🌐 otherwise).", "🗣️ Call translation is more accurate (Maata AI remembers the last sentences of the call, speaks everyday Telugu/Hindi) and no longer goes silent: short words are heard, a lost sentence is tried again, and you are told if it could not be understood.", "🗣️ Call translation: you now hear ONE voice — only the translation in your language (their original voice is silent while they speak another language). The other person no longer hears your phone reading the translation, and sees only their own words.", "🗣️ Call translation: now the LISTENER decides — when your language is Telugu and the other person speaks English (or any language), Maata AI translates it for you automatically. New 🎤 Test live translation button in Settings → Language & Translation.", "🎙️ Translated voice: choose Female or Male in Settings → Language & Translation. Male now really speaks with a man voice (Maata AI voice).", "🗣️ Live call translation fixed: Maata AI now hears the voice itself and finds the language spoken (English, Telugu, Hindi… or mixed), then you hear it in YOUR language — also in the Maata Android app. Tap 🌐 in a call to translate even when both chose the same language.", "🙂 Face unlock is now automatic: set it up once, then just look at the phone — Maata AI scans and opens by itself (no head turning each time). It asks to close your eyes only when it is not fully sure.", "🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }
