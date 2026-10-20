@@ -770,6 +770,32 @@ const TTS_KEY = process.env.GOOGLE_TTS_KEY || process.env.GOOGLE_TRANSLATE_KEY |
 // Safari/iPhone) and uses the call's own microphone stream, so there is no microphone conflict on phones.
 const SPEECH_KEY = process.env.GOOGLE_SPEECH_KEY || process.env.GOOGLE_TRANSLATE_KEY || '';
 const STT_LANG = { te: 'te-IN', hi: 'hi-IN', en: 'en-IN', ta: 'ta-IN', kn: 'kn-IN', ml: 'ml-IN', mr: 'mr-IN', bn: 'bn-IN', gu: 'gu-IN', pa: 'pa-Guru-IN', ur: 'ur-IN', or: 'or-IN' };
+// which language a sentence is really in, from its letters (people often speak English while their setting is Telugu)
+const SCRIPT_LANG = [[/[\u0C00-\u0C7F]/g, 'te'], [/[\u0900-\u097F]/g, 'hi'], [/[\u0B80-\u0BFF]/g, 'ta'], [/[\u0C80-\u0CFF]/g, 'kn'], [/[\u0D00-\u0D7F]/g, 'ml'], [/[\u0980-\u09FF]/g, 'bn'], [/[\u0A80-\u0AFF]/g, 'gu'], [/[\u0A00-\u0A7F]/g, 'pa'], [/[\u0B00-\u0B7F]/g, 'or'], [/[\u0600-\u06FF]/g, 'ur'], [/[A-Za-z]/g, 'en']];
+function scriptLang(text, fallback) {
+  let best = null, n = 0; for (const [re, l] of SCRIPT_LANG) { const c = (String(text).match(re) || []).length; if (c > n) { n = c; best = l; } }
+  if (!best) return fallback; if (best === 'hi' && fallback === 'mr') return 'mr'; return best;
+}
+// 🎧 Maata AI interpreter: one short voice clip → what was said (any language, auto-detected) + the listener's language
+function pcm16Wav(b64) {
+  const pcm = Buffer.from(b64, 'base64'), h = Buffer.alloc(44);
+  h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVE', 8); h.write('fmt ', 12); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22);
+  h.writeUInt32LE(16000, 24); h.writeUInt32LE(32000, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([h, pcm]).toString('base64');
+}
+async function aiHearTranslate(b64, speakerLang, toLang) {
+  const L = (c) => AI_LANG_NAME[c] || 'English';
+  const sys = 'You are a live phone-call interpreter in India. You get one short voice clip from a phone call. ' +
+    '1) Write exactly what was said, in the script of the language spoken (detect it yourself — people often speak English, or mix English with Telugu/Hindi). ' +
+    '2) Translate it naturally into ' + L(toLang) + ', short and spoken style, keeping names and numbers. ' +
+    'Reply ONLY JSON: {"heard":"...","lang":"<2-letter code of the spoken language>","translated":"..."}. If there is no clear speech, reply {"heard":""}.';
+  const r = await gemini(sys, [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/wav', data: pcm16Wav(b64) } }, { text: 'The speaker usually speaks ' + L(speakerLang) + '. The listener understands ' + L(toLang) + '.' }] }], { json: true, maxTokens: 400, temperature: 0.1 });
+  if (r.error) return { error: r.error === 'busy' || r.error === 'limit' ? 'busy' : 'service' };
+  let d; try { d = JSON.parse(String(r.text).replace(/^```(json)?|```$/g, '').trim()); } catch { return { error: 'service' }; }
+  const heard = String(d.heard || '').trim().slice(0, 500); if (!heard) return { text: '' };
+  const lang = LANGS.includes(String(d.lang || '').slice(0, 2)) ? String(d.lang).slice(0, 2) : scriptLang(heard, speakerLang);
+  return { text: heard, lang, translated: String(d.translated || '').trim().slice(0, 600) };
+}
 async function speechToText(base64, lang) {
   if (!SPEECH_KEY || !STT_LANG[lang]) return { error: 'not-configured' };
   try {
@@ -791,7 +817,7 @@ async function speechToText(base64, lang) {
 app.get('/api/config', auth, (req, res) => res.json({
   maxFile: R2_ON ? MAX_BIG_FILE : MAX_FILE,
   groupCallMax: GCALL_MAX,
-  serverSpeech: !!SPEECH_KEY,
+  serverSpeech: !!SPEECH_KEY || !!GEMINI_KEY, // Google speech, or the Maata AI interpreter (hears every language, also in the Android app)
   serverVoice: !!(process.env.GOOGLE_TTS_KEY || process.env.GOOGLE_TRANSLATE_KEY),
   aiVoice: !!GEMINI_KEY,
   translate: GOOGLE_TRANSLATE_KEY ? 'google' : 'free',
@@ -1062,12 +1088,12 @@ app.get('/api/secure/report', auth, (req, res) => {
 
 // Free backup voice: Gemini speech (uses the same GEMINI_API_KEY). Returns a WAV sound.
 const pcmToWav = (pcm, rate) => { const h = Buffer.alloc(44); h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVE', 8); h.write('fmt ', 12); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(rate, 24); h.writeUInt32LE(rate * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40); return Buffer.concat([h, pcm]); };
-async function geminiTts(text) {
+async function geminiTts(text, gender) {
   if (!GEMINI_KEY) return null;
   for (const model of ['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts']) {
     if (busyUntil.get(model) > now()) continue;
     try {
-      const r = await geminiFetch('models/' + model + ':generateContent', geminiAuthOk || 'header', { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } } }) });
+      const r = await geminiFetch('models/' + model + ':generateContent', geminiAuthOk || 'header', { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: gender === 'MALE' ? 'Charon' : 'Kore' } } } } }) }); // Kore = woman, Charon = man
       const d = await r.json().catch(() => ({}));
       if (r.status === 429 || r.status >= 500) { busyUntil.set(model, now() + 60000); console.error('[tts] ' + model + ' busy ' + r.status); continue; }
       const part = (d.candidates?.[0]?.content?.parts || []).find((x) => x.inlineData?.data);
@@ -1084,8 +1110,9 @@ app.post('/api/tts', auth, async (req, res) => {
     const text = String(req.body?.text || '').trim().slice(0, 400); if (!text) return res.status(400).json({ error: 'Nothing to speak.' });
     const list = (ttsHits.get(req.user.id) || []).filter((t) => now() - t < 60_000); list.push(now()); ttsHits.set(req.user.id, list);
     if (list.length > 25) return res.status(429).json({ error: 'Too many voice requests. Wait a minute.' });
-    const key = 'g|' + text; if (ttsCache.has(key)) return res.json({ audio: ttsCache.get(key), mime: 'audio/wav' });
-    const audio = await geminiTts(text); if (!audio) return res.status(502).json({ error: 'Voice not available right now.' });
+    const gender = req.body?.gender === 'MALE' ? 'MALE' : 'FEMALE';
+    const key = 'g|' + gender + '|' + text; if (ttsCache.has(key)) return res.json({ audio: ttsCache.get(key), mime: 'audio/wav' });
+    const audio = await geminiTts(text, gender); if (!audio) return res.status(502).json({ error: 'Voice not available right now.' });
     ttsCache.set(key, audio); if (ttsCache.size > 300) ttsCache.delete(ttsCache.keys().next().value);
     return res.json({ audio, mime: 'audio/wav' });
   }
@@ -1713,7 +1740,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 170;
+const MAATA_VERSION = 172;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5702,12 +5729,12 @@ io.on('connection', (socket) => {
   // into the listener's language, and the listener's browser shows subtitles and speaks it aloud.
   // Languages always come from each person's own Settings (stored on the server), so a Telugu speaker's
   // words always reach a Tamil listener in Tamil, whatever phone or browser either of them uses.
-  async function relayCaption(rec, toId, text) {
-    const from = socket.user.lang || 'en';
+  async function relayCaption(rec, toId, text, heardLang, ready) {
     const to = userById(toId)?.lang || 'en';
-    const translated = from === to ? text : await translate(text, from, to);
+    const from = heardLang || scriptLang(text, socket.user.lang || 'en'); // the language REALLY spoken (English words while the setting is Telugu → English)
+    const translated = from === to ? text : ready || await translate(text, from, to);
     rec.translated = (rec.translated || 0) + 1;
-    const out = { callId: rec.id, text, translated: translated || text, fromLang: from, toLang: to, ok: !!translated || from === to };
+    const out = { callId: rec.id, text, translated: translated || text, fromLang: from, toLang: to, ok: !!translated || from === to, same: from === to };
     io.to(room(toId)).emit('call:caption', out);
     socket.emit('call:caption:self', out);
   }
@@ -5724,14 +5751,15 @@ io.on('connection', (socket) => {
     const rec = recFor(p);
     if (!rec || rec.status !== 'answered') return;
     sttTimes = sttTimes.filter((t) => now() - t < 60_000);
-    if (sttBusy >= 2 || sttTimes.length >= 40) return socket.emit('call:stt', { callId: rec.id, status: 'busy' });
+    if (sttBusy >= 3 || sttTimes.length >= 40) return socket.emit('call:stt', { callId: rec.id, status: 'busy' });
     sttBusy++; sttTimes.push(now());
     try {
-      const r = await speechToText(p.audio, socket.user.lang || 'en');
+      const toLang = userById(p.to)?.lang || 'en';
+      const r = SPEECH_KEY ? await speechToText(p.audio, socket.user.lang || 'en') : await aiHearTranslate(p.audio, socket.user.lang || 'en', toLang);
       rec.sttClips = (rec.sttClips || 0) + 1;
       if (r.error) return socket.emit('call:stt', { callId: rec.id, status: r.error });
       if (!r.text) return socket.emit('call:stt', { callId: rec.id, status: 'empty' });
-      await relayCaption(rec, p.to, r.text.slice(0, 500));
+      await relayCaption(rec, p.to, r.text.slice(0, 500), r.lang, r.lang && r.lang !== toLang ? r.translated : null);
     } finally { sttBusy--; }
   });
 
