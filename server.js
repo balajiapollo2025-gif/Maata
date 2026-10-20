@@ -789,7 +789,7 @@ async function aiHearTranslate(b64, speakerLang, toLang) {
     '1) Write exactly what was said, in the script of the language spoken (detect it yourself — people often speak English, or mix English with Telugu/Hindi). ' +
     '2) Translate it naturally into ' + L(toLang) + ', short and spoken style, keeping names and numbers. ' +
     'Reply ONLY JSON: {"heard":"...","lang":"<2-letter code of the spoken language>","translated":"..."}. If there is no clear speech, reply {"heard":""}.';
-  const r = await gemini(sys, [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/wav', data: pcm16Wav(b64) } }, { text: 'The speaker usually speaks ' + L(speakerLang) + '. The listener understands ' + L(toLang) + '.' }] }], { json: true, maxTokens: 400, temperature: 0.1 });
+  const r = await gemini(sys, [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/wav', data: pcm16Wav(b64) } }, { text: 'The speaker usually speaks ' + L(speakerLang) + '. The listener understands ' + L(toLang) + '.' }] }], { json: true, maxTokens: 1500, temperature: 0.1, fast: true });
   if (r.error) return { error: r.error === 'busy' || r.error === 'limit' ? 'busy' : 'service' };
   let d; try { d = JSON.parse(String(r.text).replace(/^```(json)?|```$/g, '').trim()); } catch { return { error: 'service' }; }
   const heard = String(d.heard || '').trim().slice(0, 500); if (!heard) return { text: '' };
@@ -1104,6 +1104,14 @@ async function geminiTts(text, gender) {
   }
   return null;
 }
+app.post('/api/tr/test', auth, async (req, res) => {
+  const a = String(req.body?.audio || ''); if (!a || a.length > 1_200_000) return res.status(400).json({ error: 'No sound.' });
+  if (!SPEECH_KEY && !GEMINI_KEY) return res.json({ error: 'not-configured' });
+  const to = String(req.body?.to || req.user.lang || 'te').slice(0, 2), t0 = now();
+  const r = SPEECH_KEY ? await speechToText(a, req.user.lang || 'en') : await aiHearTranslate(a, req.user.lang || 'en', to);
+  if (SPEECH_KEY && r.text) { r.lang = scriptLang(r.text, req.user.lang || 'en'); r.translated = r.lang === to ? r.text : await translate(r.text, r.lang, to); }
+  res.json({ ...r, ms: now() - t0, engine: SPEECH_KEY ? 'google' : 'ai', aiError: r.error ? aiLastError : null });
+});
 app.post('/api/tts', auth, async (req, res) => {
   if (!TTS_KEY) { // no Google Cloud voice key: use Gemini speech
     if (!GEMINI_KEY) return res.status(501).json({ error: 'Server voice is not set up.' });
@@ -1740,7 +1748,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 172;
+const MAATA_VERSION = 173;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2636,11 +2644,12 @@ async function discoverModels() {
 const GEMINI_SPARES = ['gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
 const busyUntil = new Map(); // model -> time; skip a model for a minute after it says "busy"
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function gemini(system, contents, { json = false, maxTokens = 600, temperature = 0.7 } = {}) {
+async function gemini(system, contents, { json = false, maxTokens = 600, temperature = 0.7, fast = false } = {}) {
   if (!GEMINI_KEY) return { error: 'not-configured' };
   await discoverModels();
-  const body = JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents,
-    generationConfig: { temperature, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) } });
+  // fast: no "thinking" (live call interpreter must answer in 1–2 s, and thinking can use up the whole answer)
+  const bodyFor = (model) => JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents,
+    generationConfig: { temperature, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}), ...(fast && /2\.5-flash/.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}) } });
   // the model that worked last time first, then the others, then spares; models that were busy a moment ago go last
   const all = [...new Set([geminiModelOk, ...GEMINI_MODELS, ...GEMINI_SPARES].filter(Boolean))];
   const models = [...all.filter((m) => !(busyUntil.get(m) > now())), ...all.filter((m) => busyUntil.get(m) > now())].slice(0, 6);
@@ -2650,7 +2659,7 @@ async function gemini(system, contents, { json = false, maxTokens = 600, tempera
     for (const way of ways) {
       let r, d;
       for (let attempt = 0; attempt < 2; attempt++) { // a busy model gets one quick retry before we move on
-        try { r = await geminiFetch('models/' + model + ':generateContent', way, { method: 'POST', body }); d = await r.json().catch(() => ({})); }
+        try { r = await geminiFetch('models/' + model + ':generateContent', way, { method: 'POST', body: bodyFor(model) }); d = await r.json().catch(() => ({})); }
         catch (e) { r = null; d = { error: { message: e.message } }; }
         const busy = !r || [500, 502, 503, 504].includes(r.status) || /overloaded|high demand|UNAVAILABLE|try again later/i.test(String(d?.error?.message || d?.error?.status || ''));
         if (!busy) break;
@@ -5738,6 +5747,11 @@ io.on('connection', (socket) => {
     io.to(room(toId)).emit('call:caption', out);
     socket.emit('call:caption:self', out);
   }
+  // the LISTENER asks: "send me your voice, I want it in my language" → the other phone starts sending short voice clips
+  socket.on('call:tr', (p) => {
+    if (!valid(p)) return; const rec = recFor(p); if (!rec) return;
+    io.to(room(p.to)).emit('call:tr', { from: me, callId: String(p.callId).slice(0, 64), on: !!p.on, lang: socket.user.lang || 'en' });
+  });
   socket.on('call:caption', async (p) => {
     if (!valid(p)) return;
     const rec = recFor(p);
@@ -5752,13 +5766,16 @@ io.on('connection', (socket) => {
     if (!rec || rec.status !== 'answered') return;
     sttTimes = sttTimes.filter((t) => now() - t < 60_000);
     if (sttBusy >= 3 || sttTimes.length >= 40) return socket.emit('call:stt', { callId: rec.id, status: 'busy' });
+    const toLang = userById(p.to)?.lang || 'en', key = me + '>' + p.to; rec.trSame = rec.trSame || {};
+    const st = rec.trSame[key] || (rec.trSame[key] = { n: 0, until: 0 });
+    if (now() < st.until) return; // the person has been speaking the listener's own language: no need to translate for now
     sttBusy++; sttTimes.push(now());
     try {
-      const toLang = userById(p.to)?.lang || 'en';
       const r = SPEECH_KEY ? await speechToText(p.audio, socket.user.lang || 'en') : await aiHearTranslate(p.audio, socket.user.lang || 'en', toLang);
       rec.sttClips = (rec.sttClips || 0) + 1;
       if (r.error) return socket.emit('call:stt', { callId: rec.id, status: r.error });
       if (!r.text) return socket.emit('call:stt', { callId: rec.id, status: 'empty' });
+      if (r.lang && r.lang === toLang) { if (++st.n >= 3) { st.until = now() + 20000; st.n = 0; } } else st.n = 0;
       await relayCaption(rec, p.to, r.text.slice(0, 500), r.lang, r.lang && r.lang !== toLang ? r.translated : null);
     } finally { sttBusy--; }
   });
