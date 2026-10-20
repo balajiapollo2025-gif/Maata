@@ -783,15 +783,23 @@ function pcm16Wav(b64) {
   h.writeUInt32LE(16000, 24); h.writeUInt32LE(32000, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
   return Buffer.concat([h, pcm]).toString('base64');
 }
-async function aiHearTranslate(b64, speakerLang, toLang) {
+async function aiHearTranslate(b64, speakerLang, toLang, ctx) {
   const L = (c) => AI_LANG_NAME[c] || 'English';
-  const sys = 'You are a live phone-call interpreter in India. You get one short voice clip from a phone call. ' +
-    '1) Write exactly what was said, in the script of the language spoken (detect it yourself — people often speak English, or mix English with Telugu/Hindi). ' +
-    '2) Translate it naturally into ' + L(toLang) + ', short and spoken style, keeping names and numbers. ' +
-    'Reply ONLY JSON: {"heard":"...","lang":"<2-letter code of the spoken language>","translated":"..."}. If there is no clear speech, reply {"heard":""}.';
-  const r = await gemini(sys, [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/wav', data: pcm16Wav(b64) } }, { text: 'The speaker usually speaks ' + L(speakerLang) + '. The listener understands ' + L(toLang) + '.' }] }], { json: true, maxTokens: 1500, temperature: 0.1, fast: true });
-  if (r.error) return { error: r.error === 'busy' || r.error === 'limit' ? 'busy' : 'service' };
-  let d; try { d = JSON.parse(String(r.text).replace(/^```(json)?|```$/g, '').trim()); } catch { return { error: 'service' }; }
+  const sys = 'You are an expert live phone-call interpreter in India (like a human interpreter sitting between two people). You get one short voice clip from a phone call.\n' +
+    '1) "heard": write exactly what was said, in the script of the language spoken. Detect the language yourself — people often speak English with an Indian accent, or mix English words into Telugu/Hindi. Listen carefully; use the earlier sentences of this call to understand unclear words.\n' +
+    '2) "translated": translate the MEANING (not word by word) into everyday spoken ' + L(toLang) + ', the way people really talk on the phone in India. Keep it short and natural. ' +
+    'English words that ' + L(toLang) + ' speakers normally use (phone, bus, office, ticket, doctor, okay, sorry, sir, madam, bank, online) may stay as they are but written in ' + L(toLang) + ' script. ' +
+    'Keep names, places, money and numbers exactly (write numbers as digits). Questions must stay questions. Never add explanations, never leave anything out.\n' +
+    'Reply ONLY JSON: {"heard":"...","lang":"<2-letter code of the language spoken>","translated":"..."}. If there is no clear speech at all (only noise), reply {"heard":""}.';
+  const prev = (ctx || []).slice(-4).map((x) => '- ' + x).join('\n');
+  const parts = [{ inline_data: { mime_type: 'audio/wav', data: pcm16Wav(b64) } }, { text: 'The speaker usually speaks ' + L(speakerLang) + '. The listener understands ' + L(toLang) + '.' + (prev ? '\nEarlier in this call the speaker said:\n' + prev : '') }];
+  let r;
+  for (let i = 0; i < 2; i++) { // one retry: a lost sentence feels like the call went silent
+    r = await gemini(sys, [{ role: 'user', parts }], { json: true, maxTokens: 1500, temperature: 0.1, fast: true });
+    if (!r.error || r.error === 'busy' || r.error === 'limit' || r.error === 'not-configured') break;
+  }
+  if (r.error) return { error: r.error === 'busy' || r.error === 'limit' ? 'busy' : r.error === 'not-configured' ? 'not-configured' : 'service' };
+  let d; try { d = JSON.parse(String(r.text).replace(/^```(json)?|```$/g, '').trim()); } catch { const m = /\{[\s\S]*\}/.exec(String(r.text)); try { d = JSON.parse(m ? m[0] : ''); } catch { return { error: 'service' }; } }
   const heard = String(d.heard || '').trim().slice(0, 500); if (!heard) return { text: '' };
   const lang = LANGS.includes(String(d.lang || '').slice(0, 2)) ? String(d.lang).slice(0, 2) : scriptLang(heard, speakerLang);
   return { text: heard, lang, translated: String(d.translated || '').trim().slice(0, 600) };
@@ -1748,7 +1756,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 173;
+const MAATA_VERSION = 175;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5744,7 +5752,7 @@ io.on('connection', (socket) => {
     const translated = from === to ? text : ready || await translate(text, from, to);
     rec.translated = (rec.translated || 0) + 1;
     const out = { callId: rec.id, text, translated: translated || text, fromLang: from, toLang: to, ok: !!translated || from === to, same: from === to };
-    io.to(room(toId)).emit('call:caption', out);
+    io.to(room(toId)).emit('call:caption', out); // same language: the listener just hears them normally (nothing extra shown)
     socket.emit('call:caption:self', out);
   }
   // the LISTENER asks: "send me your voice, I want it in my language" → the other phone starts sending short voice clips
@@ -5767,15 +5775,17 @@ io.on('connection', (socket) => {
     sttTimes = sttTimes.filter((t) => now() - t < 60_000);
     if (sttBusy >= 3 || sttTimes.length >= 40) return socket.emit('call:stt', { callId: rec.id, status: 'busy' });
     const toLang = userById(p.to)?.lang || 'en', key = me + '>' + p.to; rec.trSame = rec.trSame || {};
-    const st = rec.trSame[key] || (rec.trSame[key] = { n: 0, until: 0 });
+    const st = rec.trSame[key] || (rec.trSame[key] = { n: 0, until: 0, ctx: [] });
     if (now() < st.until) return; // the person has been speaking the listener's own language: no need to translate for now
     sttBusy++; sttTimes.push(now());
     try {
-      const r = SPEECH_KEY ? await speechToText(p.audio, socket.user.lang || 'en') : await aiHearTranslate(p.audio, socket.user.lang || 'en', toLang);
+      const r = SPEECH_KEY ? await speechToText(p.audio, socket.user.lang || 'en') : await aiHearTranslate(p.audio, socket.user.lang || 'en', toLang, st.ctx);
       rec.sttClips = (rec.sttClips || 0) + 1;
-      if (r.error) return socket.emit('call:stt', { callId: rec.id, status: r.error });
+      if (r.error) { socket.emit('call:stt', { callId: rec.id, status: r.error }); io.to(room(p.to)).emit('call:stt', { callId: rec.id, status: r.error, peer: true }); return; }
       if (!r.text) return socket.emit('call:stt', { callId: rec.id, status: 'empty' });
-      if (r.lang && r.lang === toLang) { if (++st.n >= 3) { st.until = now() + 20000; st.n = 0; } } else st.n = 0;
+      st.ctx.push(r.text.slice(0, 200)); if (st.ctx.length > 4) st.ctx.shift();
+      // only when BOTH chose the same language and they keep speaking it: listen a little less (saves the free AI limit)
+      if (r.lang && r.lang === toLang && (socket.user.lang || 'en') === toLang) { if (++st.n >= 4) { st.until = now() + 8000; st.n = 0; } } else st.n = 0;
       await relayCaption(rec, p.to, r.text.slice(0, 500), r.lang, r.lang && r.lang !== toLang ? r.translated : null);
     } finally { sttBusy--; }
   });
