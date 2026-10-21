@@ -1756,7 +1756,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 178;
+const MAATA_VERSION = 179;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5755,6 +5755,8 @@ io.on('connection', (socket) => {
     io.to(room(toId)).emit('call:caption', out); // same language: the listener just hears them normally (nothing extra shown)
     socket.emit('call:caption:self', out);
   }
+  // ⏺️ "this call is being recorded" → shown on the other phone
+  socket.on('call:rec', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:rec', { from: me, callId: String(p.callId).slice(0, 64), on: !!p.on }); });
   // the LISTENER asks: "send me your voice, I want it in my language" → the other phone starts sending short voice clips
   socket.on('call:tr', (p) => {
     if (!valid(p)) return; const rec = recFor(p); if (!rec) return;
