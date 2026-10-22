@@ -1750,6 +1750,54 @@ html.in-android #lpGetApp{display:none!important}html.in-android .lp-alt{grid-te
 .mp-you{display:flex;align-items:center;gap:12px;margin-bottom:6px}.mp-you div{display:flex;flex-direction:column}.mp-you small{color:#5D6E7C}
 .mp-sheet .th-title{margin-top:12px}.mp-sheet .formcol label{color:#13202B}
 @media (min-width:900px){.mp-sheet{bottom:74px}.mp-fabs{bottom:84px}}
+
+.net-bar{position:fixed;left:0;right:0;top:0;z-index:99990;background:#B42318;color:#fff;font:600 12.5px/1.3 Sora,system-ui,sans-serif;padding:calc(env(safe-area-inset-top,0px) + 5px) 12px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;box-shadow:0 2px 8px #0003}
+.net-bar[hidden]{display:none}
+body.is-offline .app{height:calc(100% - var(--netbar,0px));margin-top:var(--netbar,0px)}
+.off-boot{position:fixed;inset:0;z-index:99991;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#0A3A47;color:#fff;font-family:Sora,system-ui,sans-serif;text-align:center;padding:24px}
+.off-boot p{opacity:.85;margin:0 0 14px}
+
+.ctr-entry{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:calc(100% - 24px);margin:10px 12px 0;padding:12px 14px;border:0;border-radius:14px;background:linear-gradient(135deg,#0F7A6E,#0B5D54);color:#fff;text-align:left;font:inherit}
+.ctr-entry b{font-size:16px}.ctr-entry small{opacity:.85;font-size:12.5px}
+.bz-big.ctr-go{background:linear-gradient(135deg,#0F7A6E,#0B5D54);color:#fff}
+.ctr{position:fixed;inset:0;z-index:40;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;padding-top:var(--netbar,0px)}
+.ctr-head{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;background:#0F7A6E;color:#fff}
+.ctr-x{border:0;background:transparent;color:#fff;font-size:24px;width:40px;height:40px}
+.ctr-tt{flex:1;min-width:0;display:flex;flex-direction:column}.ctr-tt b{font-size:17px}.ctr-tt small{opacity:.9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctr-ib{border:0;border-radius:12px;background:rgba(255,255,255,.16);color:inherit;font-size:20px;width:44px;height:44px;flex:none}
+.ctr-search .ctr-ib{background:var(--bz-soft,rgba(15,122,110,.12))}.ctr-ib.on{box-shadow:inset 0 0 0 2px #7CE3B5}
+.ctr-held{display:flex;gap:8px;overflow-x:auto;padding:8px 10px 0}.ctr-held[hidden]{display:none}
+.ctr-chip{flex:none;border:1.5px dashed #B54708;background:#FFF6ED;color:#93370D;border-radius:999px;padding:8px 14px;font:600 13px/1 inherit}
+.ctr-search{display:flex;gap:8px;padding:8px 10px}.ctr-search input{flex:1;min-width:0;height:46px;border-radius:12px;border:1.5px solid var(--line,#d0d5dd);padding:0 12px;font-size:16px;background:var(--card,#fff);color:inherit}
+.ctr-grid{flex:1 1 40%;min-height:120px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;padding:2px 10px 10px;align-content:start}
+.ctr-tile{position:relative;min-height:78px;border-radius:14px;border:1.5px solid var(--line,#d0d5dd);background:var(--card,#fff);color:inherit;padding:8px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;font:inherit;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.ctr-tile b{font-size:14px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ctr-tile small{font-size:12px;opacity:.75}
+.ctr-tile.in{border-color:#0F7A6E;background:rgba(15,122,110,.08)}.ctr-tile.out{opacity:.55}
+.ctr-tile.amt{background:#FFF8E1;border-color:#F5B700}
+.ctr-tile:active{transform:scale(.96)}
+.ctr-badge{position:absolute;top:-6px;right:-6px;min-width:24px;height:24px;border-radius:12px;background:#0F7A6E;color:#fff;font:700 13px/24px inherit;text-align:center;font-style:normal;padding:0 6px}
+.ctr-cart{flex:0 1 auto;max-height:32vh;overflow-y:auto;border-top:1px solid var(--line,#e4e7ec);padding:4px 10px;background:var(--card,#fff)}
+.ctr-empty{text-align:center;opacity:.7;margin:10px 0;font-size:14px}
+.ctr-line{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line,#f2f4f7);flex-wrap:wrap}
+.ctr-ln{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ctr-line>b{min-width:78px;text-align:right;font-size:14px}
+.ctr-q{width:34px;height:34px;border-radius:10px;border:0;background:var(--bz-soft,rgba(15,122,110,.12));font-size:20px;color:inherit}
+.ctr-qv{min-width:42px;height:34px;border:0;background:transparent;font:700 15px inherit;color:inherit;text-decoration:underline dotted}
+.ctr-bar{display:flex;align-items:center;gap:8px;padding:10px 10px calc(env(safe-area-inset-bottom,0px) + 10px);background:var(--card,#fff);box-shadow:0 -2px 10px #0001}
+.ctr-hold{height:52px;border-radius:14px;border:1.5px solid var(--line,#d0d5dd);background:transparent;color:inherit;padding:0 12px;font:600 14px inherit}.ctr-hold:disabled{opacity:.4}
+.ctr-n{font-size:12px;opacity:.7}
+.ctr-pay{flex:1;height:56px;border:0;border-radius:16px;background:#1B9E5A;color:#fff;font:800 19px inherit}.ctr-pay:disabled{background:#98A2B3}
+.ctr-total{text-align:center;margin:4px 0 10px}.ctr-total small{display:block;opacity:.7}.ctr-total b{font-size:34px}
+.ctr-how{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ctr-m{height:52px;border-radius:14px;border:2px solid var(--line,#d0d5dd);background:transparent;color:inherit;font:700 17px inherit}.ctr-m.on{border-color:#1B9E5A;background:rgba(27,158,90,.1)}
+.ctr-cash{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}.ctr-cash[hidden]{display:none}
+.ctr-notes{display:flex;gap:6px;flex-wrap:wrap}.ctr-notes button{flex:1;min-width:64px;height:44px;border-radius:12px;border:1.5px solid var(--line,#d0d5dd);background:var(--card,#fff);color:inherit;font:700 15px inherit}.ctr-notes button.on{border-color:#1B9E5A;background:rgba(27,158,90,.12)}
+.ctr-cash input{height:48px;border-radius:12px;border:1.5px solid var(--line,#d0d5dd);padding:0 12px;font-size:20px;background:var(--card,#fff);color:inherit}
+.ctr-back{display:flex;justify-content:space-between;align-items:center;min-height:8px}.ctr-back b{font-size:28px;color:#1B9E5A}.ctr-back span{font-weight:700}.ctr-back .bad{color:#B42318}
+.ctr-done{font-size:18px!important;min-height:54px}
+.ctr-pad-v{font:800 34px/1.2 inherit;text-align:center;padding:10px;border-radius:14px;background:var(--bz-soft,rgba(15,122,110,.1));margin-bottom:10px}
+.ctr-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.ctr-pad button{height:56px;border-radius:14px;border:1.5px solid var(--line,#d0d5dd);background:var(--card,#fff);color:inherit;font:700 22px inherit}
+.ctr-ok{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:12px 14px;border-radius:14px;background:#0B5D54;color:#fff;box-shadow:0 6px 20px #0004}
+.ctr-ok b{flex-basis:100%}.ctr-ok span{flex:1;font-weight:700;font-size:16px}.ctr-ok .bz-link{color:#BFF3DA}
 </style>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -2274,11 +2322,65 @@ let call = null; // current call state
 
 // ---------------- helpers ----------------
 async function api(path, opts = {}) {
-  const res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } });
+  let res;
+  try { res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } }); }
+  catch { netState(false); const er = new Error('📵 No internet. Check your connection.'); er.offline = true; throw er; }
+  const off = res.headers.get('X-Maata-Offline') === '1'; if (off) netState(false);
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && token) { logout(); }
-  if (!res.ok) throw new Error(data.error || 'Something went wrong. Try again.');
+  if (!res.ok) { const er = new Error(off ? '📵 No internet. Check your connection.' : (data.error || 'Something went wrong. Try again.')); er.status = res.status; er.offline = off || res.status >= 502; throw er; }
   return data;
+}
+// ---------------- offline (like WhatsApp) ----------------
+// The service worker keeps the app page and the last chats/contacts on the phone, so Maata opens without internet.
+// Text messages typed offline wait with a 🕓 clock and are sent by themselves when the internet comes back.
+let NET_ON = navigator.onLine !== false, wasOffline = !NET_ON;
+function netState(on) {
+  if (on === NET_ON && document.getElementById('netBar')) return;
+  NET_ON = on; if (!on) wasOffline = true;
+  let b = document.getElementById('netBar');
+  if (!b) { b = document.createElement('div'); b.id = 'netBar'; b.className = 'net-bar'; document.body.append(b); }
+  b.textContent = on ? '' : '📵 No internet · showing saved chats';
+  b.hidden = on; document.body.classList.toggle('is-offline', !on);
+  document.documentElement.style.setProperty('--netbar', on ? '0px' : b.offsetHeight + 'px');
+}
+addEventListener('offline', () => netState(false));
+addEventListener('online', () => { netState(true); if (!me && token) location.reload(); else if (socket && !socket.connected) try { socket.connect(); } catch {} });
+const OUTBOX_KEY = 'maata_outbox';
+function outbox() { try { return JSON.parse(store.get(OUTBOX_KEY) || '[]'); } catch { return []; } }
+function outboxSave(l) { if (l.length) store.set(OUTBOX_KEY, JSON.stringify(l.slice(-200))); else store.del(OUTBOX_KEY); }
+function outboxAdd(temp) { const l = outbox(); l.push({ id: temp.id, to: temp.to, text: temp.text, ts: temp.ts, replyTo: temp.replyTo || null }); outboxSave(l); }
+function outboxFor(to) { return outbox().filter((x) => x.to === to).map((x) => ({ id: x.id, from: me && me.id, to: x.to, text: x.text, ts: x.ts, replyTo: x.replyTo, status: 'pending', queued: true })); }
+let outboxBusy = false;
+async function outboxFlush() {
+  if (outboxBusy || !socket || !socket.connected) return; outboxBusy = true;
+  try {
+    for (const x of outbox()) {
+      if (!socket.connected) break;
+      const res = await new Promise((ok) => socket.timeout(10000).emit('msg:send', { to: x.to, text: x.text, replyTo: x.replyTo ? x.replyTo.id : null }, (err, r) => ok(err ? null : r)));
+      if (!res) break; // still no connection: try again later
+      outboxSave(outbox().filter((y) => y.id !== x.id));
+      const list = messagesCache[x.to] || []; const i = list.findIndex((m) => m.id === x.id);
+      if (res.message) { if (i > -1) list[i] = res.message; const u = userById(x.to); if (u) u.lastMessage = res.message; } else if (i > -1) list.splice(i, 1);
+      if (activeId === x.to) renderMessages();
+    }
+    renderContacts();
+  } finally { outboxBusy = false; }
+}
+function backOnline() { // socket connected again → fresh chats, then send what waited
+  netState(true);
+  if (wasOffline) {
+    wasOffline = false;
+    for (const k of Object.keys(messagesCache)) if (k !== AI_ID) delete messagesCache[k];
+    reloadUsers().then(() => { if (activeId && activeId !== AI_ID) openChat(activeId); });
+  }
+  setTimeout(outboxFlush, 600);
+}
+function offlineBoot() { // no internet AND nothing saved yet on this phone
+  $('#auth').hidden = true; $('#app').hidden = true;
+  let o = document.getElementById('offBoot');
+  if (!o) { o = document.createElement('div'); o.id = 'offBoot'; o.className = 'off-boot'; o.innerHTML = '<div style="font-size:64px">🦜</div><h2>No internet</h2><p>Maata will open by itself when the internet is back.</p><button class="btn primary">Try again</button>'; o.querySelector('button').onclick = () => location.reload(); document.body.append(o); }
+  const t = setInterval(() => { if (navigator.onLine) fetch('/api/version', { cache: 'no-store' }).then((r) => { if (r.ok) { clearInterval(t); location.reload(); } }).catch(() => {}); }, 5000);
 }
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
@@ -2311,6 +2413,7 @@ const userById = (id) => users.find((u) => u.id === id);
 let mode = 'login';
 function setMode(m) {
   mode = m;
+  try { if (OTP && OTP.ticket !== undefined) { OTP.ticket = null; const f = $('#otpField'); if (f) f.hidden = true; $('#phone').closest('label').hidden = false; $('#password').closest('label').hidden = false; } } catch {}
   $('#nameField').hidden = m === 'login';
   $('#emailField').hidden = m === 'login'; $('#forgotBtn').hidden = m !== 'login';
   $('#authSubmit').textContent = m === 'login' ? i18n('login') : i18n('create');
@@ -2330,6 +2433,13 @@ $('#authForm').onsubmit = async (e) => {
   try {
     let r;
     if (pinTicket) { r = await api('/api/login/pin', { method: 'POST', body: JSON.stringify({ ticket: pinTicket, pin: $('#loginPin').value }) }); }
+    else if (OTP.ticket) {
+      const code = ($('#signupOtp').value || '').replace(/\D/g, '');
+      if (code.length !== 6) throw new Error('Type the 6-digit code we sent to your email.');
+      try { r = await api('/api/register', { method: 'POST', body: JSON.stringify({ ticket: OTP.ticket, code }) }); }
+      catch (er) { if (er.status === 409) otpBack(); throw er; }
+      otpDone();
+    }
     else {
       const mobile = cleanMobileInput($('#phone').value);
       if (!/^[6-9]\d{9}$/.test(mobile)) throw new Error('Enter your 10-digit mobile number (without +91 or 0).');
@@ -2341,6 +2451,7 @@ $('#authForm').onsubmit = async (e) => {
       }
       r = await api('/api/' + (mode === 'login' ? 'login' : 'register'), { method: 'POST', body: JSON.stringify(body) });
       if (r.needPin) { showPinStep(r); return; }
+      if (r.needOtp) { OTP.body = body; showOtpStep(r); return; }
     }
     pinTicket = null;
     token = r.token; store.set('maata_token', token);
@@ -2362,7 +2473,8 @@ async function logout() {
     try { await Promise.race([fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t0 }, body: JSON.stringify({ endpoint, fcm }) }), new Promise((r) => setTimeout(r, 2500))]); } catch {}
   }
   // 2) forget the login on this device
-  token = null; store.del('maata_token');
+  token = null; store.del('maata_token'); store.del(OUTBOX_KEY);
+  try { caches.delete('maata-api-v1'); } catch {}
   try { if (socket) { socket.removeAllListeners(); socket.disconnect(); } } catch {}
   try { window.MaataAndroid && window.MaataAndroid.callEnded && window.MaataAndroid.callEnded(); } catch {}
   // 3) show the login screen right away (inside the Android app a page reload can be skipped, so do not rely on it)
@@ -2380,8 +2492,14 @@ $('#logoutBtn').onclick = logout;
 async function start() {
   try {
     me = await api('/api/me');
-    [iceServers, users] = await Promise.all([api('/api/ice'), api('/api/users')]);
-  } catch { $('#auth').hidden = false; $('#app').hidden = true; return; }
+  } catch (e) {
+    me = null;
+    if (token && e.status !== 401 && (e.offline || !navigator.onLine || !e.status)) return offlineBoot();
+    $('#auth').hidden = false; $('#app').hidden = true; return;
+  }
+  [iceServers, users] = await Promise.all([api('/api/ice').catch(() => iceServers || []), api('/api/users').catch(() => [])]);
+  if (!Array.isArray(users)) users = [];
+  if (!navigator.onLine) netState(false);
   $('#auth').hidden = true; $('#app').hidden = false;
   const box = $('#meBox'); box.innerHTML = '';
   renderMeBox();
@@ -2413,6 +2531,7 @@ function connectSocket() {
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('force-logout', (p) => { alert(p?.reason || 'You were logged out.'); logout(); });
   socket.on('announcement', showNotice);
+  socket.on('connect', backOnline); socket.on('disconnect', () => { if (!navigator.onLine) netState(false); });
   socket.on('connect', secHello); odSocket(); rdSocket(); tmSocket(); bmSocket(); setTimeout(bmRefresh, 2500); setTimeout(tmResume, 4000); socket.on('secure:cmd', (p) => p && secRun(p.cmd));
   socket.on('user:removed', ({ id }) => {
     users = users.filter((u) => u.id !== id);
@@ -2554,7 +2673,8 @@ async function openChat(id) {
   if (id === AI_ID && !messagesCache[id]) await loadAiChat();
   if (!messagesCache[id]) {
     $('#messages').innerHTML = '';
-    try { messagesCache[id] = await api('/api/messages/' + id); } catch (e) { toast(e.message); messagesCache[id] = []; }
+    try { messagesCache[id] = await api('/api/messages/' + id); } catch (e) { if (!e.offline) toast(e.message); else toast('📵 No internet — this chat was not saved on the phone yet.'); messagesCache[id] = []; }
+    if (Array.isArray(messagesCache[id])) for (const q of outboxFor(id)) if (!messagesCache[id].some((m) => m.id === q.id)) messagesCache[id].push(q);
   }
   if (activeId !== id) return;
   renderMessages(); markRead();
@@ -2643,8 +2763,10 @@ $('#composer').onsubmit = (e) => {
   (messagesCache[to] = messagesCache[to] || []).push(temp);
   input.value = ''; input.style.height = 'auto'; renderMessages();
   const rTo = replyTo ? replyTo.id : null; if (rTo) { temp.replyTo = { id: rTo, from: replyTo.from, text: isText(replyTo) ? replyTo.text : previewText(replyTo) }; cancelReply(); }
+  if (!socket || !socket.connected) { temp.queued = true; outboxAdd(temp); const u = userById(to); if (u) u.lastMessage = temp; renderContacts(); if (!NET_ON || !navigator.onLine) toast('🕓 No internet — it will be sent when you are back online.'); else setTimeout(outboxFlush, 1500); return; }
   socket.timeout(10000).emit('msg:send', { to, text, replyTo: rTo }, (err, res) => {
     const list = messagesCache[to]; const i = list.indexOf(temp);
+    if (err && !socket.connected) { temp.queued = true; outboxAdd(temp); toast('🕓 Internet lost — it will be sent when you are back online.'); if (activeId === to) renderMessages(); return; }
     if (err || res?.error) { if (i > -1) list.splice(i, 1); input.value = text; toast('Message not sent. Check your internet and try again.'); }
     else { if (i > -1) list[i] = res.message; const u = userById(to); if (u) u.lastMessage = res.message; renderContacts(); }
     if (activeId === to) renderMessages();
@@ -5329,8 +5451,16 @@ function secRender() {
   const fld = (id, label, val, ph, type) => { const l = el('label', 'sec-fld'); l.htmlFor = id; l.append(el('span', null, label)); const i = el(type === 'area' ? 'textarea' : 'input'); i.id = id; i.value = val || ''; i.placeholder = ph; if (type === 'tel') i.type = 'tel'; if (type === 'num') i.inputMode = 'numeric'; l.append(i); ls.append(l); return i; };
   const msg = fld('secMsg', 'Message', st.lostMsg, 'This phone is lost. Please call me. Reward offered.', 'area');
   const call = fld('secCall', 'Number to call (a family member\'s)', st.lostCall, '98xxxxxxxx', 'tel');
-  const imei = fld('secImei', 'IMEI (dial *#06# to see it)', st.imei, '15 digits', 'num');
-  const sv = el('button', 'sec-btn pri', 'Save'); sv.onclick = async () => { try { SEC.st = await api('/api/secure/settings', { method: 'POST', body: JSON.stringify({ lostMsg: msg.value, lostCall: call.value, imei: imei.value, dev: secDev() }) }); toast('Saved ✓'); secRender(); } catch (e) { toast(e.message); } };
+  const im = String(st.imei || '').split(/[,\s]+/).filter(Boolean);
+  const imei = fld('secImei', 'IMEI 1 (dial *#06# to see it)', im[0] || '', '15 digits', 'num');
+  const imei2 = fld('secImei2', 'IMEI 2 (dual-SIM phones have two)', st.imei2 || im[1] || '', '15 digits (leave empty if only one)', 'num');
+  for (const i of [imei, imei2]) { i.maxLength = 15; i.oninput = () => { i.value = i.value.replace(/\D/g, '').slice(0, 15); }; }
+  const dial = el('p', 'sec-p', '📞 Dial *#06# in the phone app: dual-SIM phones show IMEI 1 and IMEI 2. Save both. They are also on the phone box and bill.'); imei2.closest('label').after(dial);
+  const sv = el('button', 'sec-btn pri', 'Save'); sv.onclick = async () => {
+    for (const [i, n] of [[imei, 1], [imei2, 2]]) if (i.value && !imeiOk(i.value)) return toast('⚠️ IMEI ' + n + ' looks wrong. It must be the 15 digits shown after dialling *#06#.');
+    if (imei.value && imei.value === imei2.value) return toast('⚠️ IMEI 1 and IMEI 2 are the same. Check *#06#.');
+    try { SEC.st = await api('/api/secure/settings', { method: 'POST', body: JSON.stringify({ lostMsg: msg.value, lostCall: call.value, imei: imei.value || imei2.value, imei2: imei.value ? imei2.value : '', dev: secDev() }) }); toast('Saved ✓'); secRender(); } catch (e) { toast(e.message); }
+  };
   ls.append(sv); w.append(ls);
   // account protection
   const ac = el('div', 'sec-card'); ac.append(el('h3', null, 'Account protection'), el('p', 'sec-p', 'Phone stolen? Log out Maata everywhere else. Your chats stay safe on your account.'));
@@ -5459,7 +5589,7 @@ async function bzHome(body) {
   }
   if (d.orders && d.orders.active) { const oc = el('button', 'bz-card od-card' + (d.orders.new ? ' new' : '')); oc.append(el('h3', null, '🛒 ' + (d.orders.new ? d.orders.new + ' new order' + (d.orders.new > 1 ? 's' : '') + ' waiting' : d.orders.active + ' active order' + (d.orders.active > 1 ? 's' : ''))), el('small', 'bz-note', 'Tap to open Orders')); oc.onclick = () => bzTab('orders'); body.prepend(oc); }
   const qa = el('div', 'bz-qa');
-  if (bzCan('bill')) { const b = el('button', 'bz-big', '🧾 New bill'); b.onclick = () => bzTab('bill'); qa.append(b); }
+  if (bzCan('bill')) { const c = el('button', 'bz-big ctr-go', '🏪 Counter billing'); c.onclick = openCounter; qa.append(c); const b = el('button', 'bz-big alt', '🧾 New bill'); b.onclick = () => bzTab('bill'); qa.append(b); }
   if (bzCan('stock')) { const b = el('button', 'bz-big alt', '➕ Add product'); b.onclick = () => bzEditProduct(null); qa.append(b); }
   body.append(qa);
   if (d.reorder.length) {
@@ -5494,7 +5624,8 @@ function bzBill(body) {
   const scan = el('button', 'bz-ib', '📷'); scan.setAttribute('aria-label', 'Scan barcode'); scan.onclick = () => bzScan((code) => { const p = BZ.prods.find((x) => x.barcode === code); if (p) { bzAdd(p); toast('Added ' + p.name); } else toast('No product with barcode ' + code); });
   const mic = el('button', 'bz-ib', '🎤'); mic.setAttribute('aria-label', 'Speak the items'); mic.onclick = bzVoice;
   const prn = el('button', 'bz-ib', '🖨️'); prn.setAttribute('aria-label', 'Bluetooth printer'); prn.title = 'Bluetooth printer'; prn.onclick = () => prSetup(); if (prReady(prCfg())) prn.classList.add('on');
-  top.append(q, scan, mic, prn); body.append(top);
+  top.append(q, scan, mic, prn);
+  const go = el('button', 'ctr-entry'); go.append(el('b', null, '🏪 Counter billing'), el('small', null, 'Walk-in customers: big buttons, cash change, hold bill')); go.onclick = openCounter; body.append(go, top);
   const res = el('div', 'bz-picks'); res.id = 'bzPicks'; body.append(res);
   const draw = () => {
     const t = q.value.trim().toLowerCase(); res.innerHTML = '';
@@ -5559,6 +5690,203 @@ function bzCustomItem() {
     const ok = el('button', 'sheet-btn primary', 'Add to bill'); ok.type = 'submit'; f.append(ok);
     f.onsubmit = (e) => { e.preventDefault(); if (!n.value.trim() || !(Number(p.value) >= 0) || p.value === '' || !(Number(q.value) > 0)) return toast('Fill name, price and quantity'); BZ.cart.push({ productId: null, name: n.value.trim(), unit: 'pcs', price: Number(p.value), taxRate: 0, qty: Number(q.value), stock: null }); if (!BZ.idem) BZ.idem = bzNewIdem(); closeSheet('moreSheet'); bzCartDraw(); };
     L.append(f); setTimeout(() => n.focus(), 250);
+  });
+}
+// ==================== 🏪 COUNTER BILLING (walk-in customers at the shop) ====================
+// Full-screen, big buttons: tap items (most-sold first) → 💰 Pay → Cash (Maata tells the change to give back) or UPI QR
+// → ✅ Done (prints if a printer is set) → ready for the next customer. ⏸ Hold a bill while serving the next person.
+const CTR = { held: [], q: '' };
+const ctrKey = (k) => 'maata_ctr_' + k + '_' + BZ.id;
+function imeiOk(v) { v = String(v); if (!/^\d{15}$/.test(v)) return false; let s = 0; for (let i = 0; i < 15; i++) { let d = +v[14 - i]; if (i % 2) { d *= 2; if (d > 9) d -= 9; } s += d; } return s % 10 === 0; }
+function ctrLoad() { try { CTR.held = JSON.parse(store.get(ctrKey('held')) || '[]'); } catch { CTR.held = []; } try { CTR.top = JSON.parse(store.get(ctrKey('top')) || '{}'); } catch { CTR.top = {}; } }
+function ctrSaveHeld() { store.set(ctrKey('held'), JSON.stringify(CTR.held.slice(-8))); }
+const ctrWeighed = (p) => /^(kg|g|gm|gram|grams|l|ltr|litre|liter|ml|m|mtr|metre)$/i.test(String(p.unit || '').trim());
+const ctrCount = () => BZ.cart.reduce((n, l) => n + (ctrWeighed(l) ? 1 : l.qty), 0);
+function openCounter() {
+  if (!bzCan('bill')) return toast('You do not have billing permission in this shop.');
+  ctrLoad(); document.getElementById('ctrPage')?.remove();
+  const pg = el('section', 'ctr'); pg.id = 'ctrPage'; pg.setAttribute('aria-label', 'Counter billing');
+  const hd = el('div', 'ctr-head');
+  const x = el('button', 'ctr-x', '←'); x.setAttribute('aria-label', 'Close counter'); x.onclick = () => { pg.remove(); if (BZ.tab === 'bill') bzTab('bill'); };
+  const tt = el('div', 'ctr-tt'); tt.append(el('b', null, '🏪 Counter billing'), el('small', null, BZ.info?.name || '')); tt.lastChild.id = 'ctrToday';
+  const prn = el('button', 'ctr-ib' + (prReady(prCfg()) ? ' on' : ''), '🖨️'); prn.setAttribute('aria-label', 'Printer'); prn.onclick = () => prSetup();
+  const day = el('button', 'ctr-ib', '📊'); day.setAttribute('aria-label', 'Today at the counter'); day.onclick = ctrToday;
+  hd.append(x, tt, prn, day);
+  const held = el('div', 'ctr-held'); held.id = 'ctrHeld';
+  const top = el('div', 'ctr-search');
+  const q = el('input'); q.type = 'search'; q.id = 'ctrQ'; q.placeholder = '🔍 Item name or barcode'; q.autocomplete = 'off'; q.setAttribute('aria-label', 'Search item or scan barcode');
+  q.oninput = () => { CTR.q = q.value; ctrGrid(); };
+  q.onkeydown = (e) => { if (e.key !== 'Enter') return; e.preventDefault(); const v = q.value.trim(); if (!v) return; const p = BZ.prods.find((y) => y.barcode && y.barcode === v) || ctrList()[0]; if (p) ctrTap(p); else toast('❓ No item "' + v + '"'); q.value = ''; CTR.q = ''; ctrGrid(); };
+  const scan = el('button', 'ctr-ib', '📷'); scan.setAttribute('aria-label', 'Scan barcode'); scan.onclick = () => bzScan((code) => { const p = BZ.prods.find((y) => y.barcode === code); if (p) ctrTap(p); else toast('No product with barcode ' + code); });
+  const mic = el('button', 'ctr-ib', '🎤'); mic.setAttribute('aria-label', 'Speak the items'); mic.onclick = async () => { await bzVoice(); const w = setInterval(() => { if ($('#moreSheet').hidden) { clearInterval(w); ctrDraw(); } }, 400); };
+  top.append(q, scan, mic);
+  const grid = el('div', 'ctr-grid'); grid.id = 'ctrGrid';
+  const cart = el('div', 'ctr-cart'); cart.id = 'ctrCart';
+  const bar = el('div', 'ctr-bar'); bar.id = 'ctrBar';
+  pg.append(hd, held, top, grid, cart, bar); document.body.append(pg);
+  ctrDraw(); ctrTodayLine();
+  if (matchMedia('(min-width:761px)').matches) q.focus();
+}
+function ctrList() {
+  const t = (CTR.q || '').trim().toLowerCase();
+  const l = BZ.prods.filter((p) => p.available !== false && p.price != null && (!t || p.name.toLowerCase().includes(t) || (p.barcode && p.barcode.includes(t)) || (p.sku || '').toLowerCase().includes(t)));
+  return l.sort((a, b) => (CTR.top[b.id] || 0) - (CTR.top[a.id] || 0) || a.name.localeCompare(b.name)).slice(0, t ? 40 : 60);
+}
+function ctrDraw() { ctrHeldDraw(); ctrGrid(); ctrCartDraw(); }
+function ctrGrid() {
+  const g = $('#ctrGrid'); if (!g) return; g.innerHTML = '';
+  const amt = el('button', 'ctr-tile amt'); amt.append(el('b', null, '₹ Amount'), el('small', null, 'Loose item / any price')); amt.onclick = ctrAmount; g.append(amt);
+  for (const p of ctrList()) {
+    const inC = BZ.cart.find((l) => l.productId === p.id);
+    const b = el('button', 'ctr-tile' + (inC ? ' in' : '') + (p.stock != null && p.stock <= 0 ? ' out' : ''));
+    b.append(el('b', null, p.name), el('small', null, bzRs(p.price * 100) + ' / ' + p.unit + (p.stock != null ? ' · ' + p.stock + ' left' : '')));
+    if (inC) b.append(el('i', 'ctr-badge', String(inC.qty)));
+    let lp = 0; b.onpointerdown = () => { lp = setTimeout(() => { lp = -1; ctrQty(p); }, 550); };
+    b.onpointerup = b.onpointerleave = () => { if (lp > 0) clearTimeout(lp); };
+    b.onclick = () => { if (lp === -1) { lp = 0; return; } ctrTap(p); };
+    b.oncontextmenu = (e) => { e.preventDefault(); };
+    g.append(b);
+  }
+  if (!BZ.prods.length) g.append(el('p', 'bz-note', 'No products yet. Use “₹ Amount”, or add products in 📦 Stock (with price and barcode) for one-tap billing.'));
+}
+function ctrTap(p) { if (ctrWeighed(p)) return ctrQty(p); bzAdd(p, 1); ctrDraw(); }
+function ctrPad(title, sub, unit, onOk, start) { // big number keypad
+  sheet(title, (L) => {
+    if (sub) L.append(el('p', 'info-note', sub));
+    let v = start || '';
+    const show = el('div', 'ctr-pad-v'); const draw = () => { show.textContent = (v || '0') + (unit ? ' ' + unit : ''); }; draw();
+    const pad = el('div', 'ctr-pad');
+    for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫']) { const b = el('button', null, k); b.onclick = () => { if (k === '⌫') v = v.slice(0, -1); else if (k === '.') { if (!v.includes('.')) v = (v || '0') + '.'; } else if (v.length < 9) v = v === '0' ? k : v + k; draw(); }; pad.append(b); }
+    const ok = el('button', 'sheet-btn primary', '✅ OK'); ok.onclick = () => { const n = Number(v); if (!(n > 0)) return toast('Type a number'); closeSheet('moreSheet'); onOk(n); };
+    L.append(show, pad, ok);
+  });
+}
+function ctrQty(p) {
+  const w = ctrWeighed(p), inC = BZ.cart.find((l) => l.productId === p.id);
+  ctrPad(p.name, bzRs(p.price * 100) + ' per ' + p.unit + (w ? ' · type the weight, e.g. 0.5 or 1.25' : ''), p.unit, (n) => {
+    if (inC) { inC.qty = Math.round(n * 1000) / 1000; if (!BZ.idem) BZ.idem = bzNewIdem(); } else bzAdd(p, Math.round(n * 1000) / 1000);
+    ctrDraw();
+  }, inC ? String(inC.qty) : '');
+}
+function ctrAmount() {
+  ctrPad('₹ Amount', 'For loose items or anything not in your list. Type the price.', '₹', (n) => {
+    const nm = 'Item ' + (BZ.cart.filter((l) => !l.productId).length + 1);
+    BZ.cart.push({ productId: null, name: nm, unit: 'pcs', price: n, taxRate: 0, qty: 1, stock: null }); if (!BZ.idem) BZ.idem = bzNewIdem(); ctrDraw();
+  });
+}
+function ctrCartDraw() {
+  const c = $('#ctrCart'), bar = $('#ctrBar'); if (!c || !bar) return; c.innerHTML = ''; bar.innerHTML = '';
+  if (!BZ.cart.length) { c.append(el('p', 'ctr-empty', '👆 Tap items · long-press for quantity · scan barcode')); }
+  for (const l of BZ.cart.slice().reverse()) {
+    const r = el('div', 'ctr-line');
+    const m = el('button', 'ctr-q', '−'); m.setAttribute('aria-label', 'Less ' + l.name); m.onclick = () => { l.qty = Math.round((l.qty - (ctrWeighed(l) ? l.qty : 1)) * 1000) / 1000; if (l.qty <= 0) BZ.cart = BZ.cart.filter((y) => y !== l); ctrDraw(); };
+    const qv = el('button', 'ctr-qv', String(l.qty) + (ctrWeighed(l) ? ' ' + l.unit : '')); qv.onclick = () => { const p = BZ.prods.find((y) => y.id === l.productId); if (p) ctrQty(p); else ctrPad(l.name, 'Quantity', '', (n) => { l.qty = n; ctrDraw(); }, String(l.qty)); };
+    const pl = el('button', 'ctr-q', '+'); pl.setAttribute('aria-label', 'More ' + l.name); pl.onclick = () => { l.qty = Math.round((l.qty + 1) * 1000) / 1000; ctrDraw(); };
+    r.append(el('span', 'ctr-ln', l.name), m, qv, pl, el('b', null, bzRs(Math.round(Number(l.price) * 100) * l.qty)));
+    if (l.stock != null && l.qty > l.stock && !BZ.info.settings.allowNegative) r.append(el('small', 'bz-warn full', 'Only ' + l.stock + ' in stock'));
+    c.append(r);
+  }
+  const t = bzPreview();
+  const hold = el('button', 'ctr-hold', '⏸ Hold'); hold.disabled = !BZ.cart.length; hold.title = 'Keep this bill aside and serve the next customer'; hold.onclick = ctrHold;
+  const clr = el('button', 'ctr-hold', '🗑️'); clr.setAttribute('aria-label', 'Clear bill'); clr.disabled = !BZ.cart.length; clr.onclick = () => { if (confirm('Clear this bill?')) { ctrReset(); ctrDraw(); } };
+  const pay = el('button', 'ctr-pay', BZ.cart.length ? '💰 Pay ' + bzRs(t.grand) : 'Add items'); pay.id = 'ctrPayBtn'; pay.disabled = !BZ.cart.length; pay.onclick = ctrPaySheet;
+  const n = el('small', 'ctr-n', BZ.cart.length ? BZ.cart.length + ' item' + (BZ.cart.length > 1 ? 's' : '') : '');
+  bar.append(clr, hold, n, pay);
+}
+function ctrReset() { BZ.cart = []; BZ.disc = ''; BZ.cust = { name: '', phone: '' }; BZ.idem = null; BZ.method = 'cash'; }
+function ctrHold() {
+  if (!BZ.cart.length) return;
+  const t = bzPreview(); CTR.held.push({ id: Date.now(), at: Date.now(), cart: BZ.cart, disc: BZ.disc, cust: BZ.cust, idem: BZ.idem, grand: t.grand, n: CTR.held.length + 1 });
+  ctrSaveHeld(); ctrReset(); ctrDraw(); toast('⏸ Bill kept aside. Serve the next customer.');
+}
+function ctrHeldDraw() {
+  const h = $('#ctrHeld'); if (!h) return; h.innerHTML = ''; h.hidden = !CTR.held.length;
+  for (const b of CTR.held) {
+    const c = el('button', 'ctr-chip'); c.append('⏸ ' + (b.cust?.name || 'Customer ' + b.n) + ' · ' + bzRs0(b.grand));
+    c.onclick = () => { if (BZ.cart.length) { const t = bzPreview(); CTR.held.push({ id: Date.now(), at: Date.now(), cart: BZ.cart, disc: BZ.disc, cust: BZ.cust, idem: BZ.idem, grand: t.grand, n: CTR.held.length + 1 }); }
+      CTR.held = CTR.held.filter((y) => y.id !== b.id); BZ.cart = b.cart; BZ.disc = b.disc || ''; BZ.cust = b.cust || { name: '', phone: '' }; BZ.idem = b.idem || bzNewIdem(); ctrSaveHeld(); ctrDraw(); toast('▶️ Bill back'); };
+    h.append(c);
+  }
+}
+function ctrPaySheet() {
+  if (!BZ.cart.length) return;
+  sheet('💰 Payment', (L) => {
+    let t = bzPreview(), given = '';
+    const tot = el('div', 'ctr-total'); const totB = el('b'); tot.append(el('small', null, 'Total to pay'), totB);
+    const dl = el('label', 'bz-inl'); dl.append(el('span', null, 'Discount ₹')); const di = el('input'); di.type = 'number'; di.inputMode = 'decimal'; di.value = BZ.disc; di.oninput = () => { BZ.disc = di.value; t = bzPreview(); redraw(); }; dl.append(di);
+    const how = el('div', 'ctr-how');
+    const cashB = el('button', 'ctr-m on', '💵 Cash'), upiB = el('button', 'ctr-m', '📱 UPI');
+    how.append(cashB, upiB);
+    const cashBox = el('div', 'ctr-cash');
+    cashBox.append(el('small', null, 'Customer gave'));
+    const notes = el('div', 'ctr-notes'); const gv = el('input'); gv.type = 'number'; gv.inputMode = 'decimal'; gv.placeholder = 'Amount received ₹'; gv.id = 'ctrGiven'; gv.oninput = () => { given = gv.value; redraw(); };
+    const back = el('div', 'ctr-back'); back.id = 'ctrBack';
+    cashBox.append(notes, gv, back);
+    const cust = el('details', 'bz-cust'); cust.append(el('summary', null, '👤 Send bill to customer on Maata (optional)'));
+    const cp = el('input'); cp.type = 'tel'; cp.placeholder = 'Customer mobile number'; cp.value = BZ.cust.phone || ''; cp.oninput = () => (BZ.cust.phone = cp.value);
+    const cn = el('input'); cn.placeholder = 'Name'; cn.value = BZ.cust.name || ''; cn.oninput = () => (BZ.cust.name = cn.value);
+    cust.append(cn, cp);
+    const done = el('button', 'sheet-btn primary ctr-done'); done.id = 'ctrDone';
+    let method = 'cash';
+    function redraw() {
+      totB.textContent = bzRs(t.grand);
+      notes.innerHTML = ''; const g = Math.ceil(t.grand / 100);
+      const opts = [['Exact', g]]; for (const n of [50, 100, 200, 500, 2000]) if (n > g && opts.length < 5) opts.push(['₹' + n, n]);
+      if (opts.length < 5) { const r = Math.ceil(g / 500) * 500; if (r > g && !opts.some((o) => o[1] === r)) opts.push(['₹' + r, r]); }
+      for (const [lab, val] of opts) { const b = el('button', String(val) === String(given) ? 'on' : null, lab); b.onclick = () => { given = String(val); gv.value = given; redraw(); }; notes.append(b); }
+      const gp = Math.round(Number(given) * 100);
+      back.innerHTML = '';
+      if (given && gp >= t.grand) back.append(el('span', null, 'Give back'), el('b', null, bzRs(gp - t.grand)));
+      else if (given) back.append(el('span', 'bad', 'Short by ' + bzRs(t.grand - gp)));
+      done.textContent = method === 'upi' ? '📱 Show UPI QR' : '✅ Done' + (prReady(prCfg()) ? ' · 🖨️ Print' : '') ;
+      cashBox.hidden = method !== 'cash';
+    }
+    cashB.onclick = () => { method = 'cash'; cashB.classList.add('on'); upiB.classList.remove('on'); redraw(); };
+    upiB.onclick = () => { if (!BZ.info.settings.upi) return bzUpiSetup(() => ctrPaySheet()); method = 'upi'; upiB.classList.add('on'); cashB.classList.remove('on'); redraw(); };
+    done.onclick = async () => {
+      const gp = Math.round(Number(given) * 100);
+      if (method === 'cash' && given && gp < t.grand) return toast('Customer gave less than the total.');
+      done.disabled = true; done.textContent = 'Saving…';
+      try {
+        BZ.method = method;
+        const inv = await bzApi('/invoices', { method: 'POST', body: JSON.stringify({ idem: BZ.idem, via: 'counter', cashGiven: method === 'cash' && given ? Number(given) : undefined, items: BZ.cart.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.price, taxRate: l.taxRate })), discount: BZ.disc || 0, method, customer: BZ.cust }) });
+        for (const l of BZ.cart) if (l.productId) CTR.top[l.productId] = (CTR.top[l.productId] || 0) + 1; store.set(ctrKey('top'), JSON.stringify(CTR.top));
+        const phone = BZ.cust.phone; ctrReset(); closeSheet('moreSheet');
+        bzLoadProducts().then(() => { if ($('#ctrPage')) ctrDraw(); });
+        CTR.last = inv; ctrDraw(); ctrTodayLine();
+        if (inv.payment.method === 'upi' && inv.payment.status !== 'paid') return bzUpiQr(inv, phone);
+        if (phone) bzApi('/invoices/' + inv.id + '/send', { method: 'POST', body: JSON.stringify({ phone }) }).catch(() => {});
+        if (prReady(prCfg()) && prApp()) prPrintBill(inv, true);
+        ctrDoneNote(inv);
+      } catch (e) { toast(e.message); done.disabled = false; redraw(); }
+    };
+    L.append(tot, how, cashBox, dl, cust, done); redraw();
+    setTimeout(() => gv.focus(), 300);
+  });
+}
+function ctrDoneNote(inv) {
+  document.querySelectorAll('.ctr-ok').forEach((x) => x.remove());
+  const n = el('div', 'ctr-ok'); const ch = inv.payment.change;
+  n.append(el('b', null, '✅ ' + inv.number + ' · ' + bzRs(inv.grand)), el('span', null, ch ? '💵 Give back ' + bzRs(ch) : inv.payment.status === 'paid' ? 'Paid by ' + inv.payment.method.toUpperCase() : ''));
+  const v = el('button', 'bz-link', 'View / share'); v.onclick = () => { n.remove(); bzShowBill(inv); }; n.append(v);
+  $('#ctrPage')?.append(n); setTimeout(() => n.remove(), 9000);
+}
+async function ctrTodayLine() {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  try {
+    const l = (await bzApi('/invoices?from=' + t0.getTime())).filter((i) => i.status !== 'void');
+    let cash = 0, upi = 0, due = 0; for (const i of l) { if (i.payment.status !== 'paid') due += i.grand; else if (i.payment.method === 'upi') upi += i.grand; else cash += i.grand; }
+    CTR.today = { n: l.length, cash, upi, due, list: l };
+    const s = $('#ctrToday'); if (s) s.textContent = 'Today ' + l.length + ' bill' + (l.length === 1 ? '' : 's') + ' · 💵 ' + bzRs0(cash) + ' · 📱 ' + bzRs0(upi);
+  } catch {}
+}
+async function ctrToday() {
+  await ctrTodayLine(); const d = CTR.today || { n: 0, cash: 0, upi: 0, due: 0 };
+  sheet('📊 Today at the counter', (L) => {
+    const row = (a, b, cls) => { const r = el('div', 'set-row' + (cls ? ' ' + cls : '')); r.append(el('b', null, a), el('span', null, b)); L.append(r); };
+    row('🧾 Bills', String(d.n)); row('💵 Cash', bzRs(d.cash)); row('📱 UPI', bzRs(d.upi)); if (d.due) row('⏳ Not paid yet', bzRs(d.due)); row('Total', bzRs(d.cash + d.upi + d.due));
+    L.append(el('p', 'info-note', '💵 Closing the shop? Count the cash drawer: it should have ' + bzRs(d.cash) + ' more than the cash you kept at the start of the day.' + (BZ.info.role !== 'owner' && !bzCan('reports') ? ' (Only your own bills are counted.)' : '')));
+    if (CTR.last) { const b = el('button', 'sheet-btn', '🧾 Last bill ' + CTR.last.number); b.onclick = () => { closeSheet('moreSheet'); bzShowBill(CTR.last); }; L.append(b); }
   });
 }
 async function bzVoice() {
@@ -5639,6 +5967,7 @@ async function prReceipt(i, cfg) {
   y += 4; row('TOTAL', prMoney(i.grand), { sz: Math.round(F * 1.4), b: true }); y += 2;
   const paid = i.payment && i.payment.status === 'paid';
   text(paid ? 'Paid by ' + String(i.payment.method || 'cash').toUpperCase() : 'To pay' + (i.payment && i.payment.method === 'upi' ? ' by UPI' : ''), { sz: F - 2, al: 'center' });
+  if (paid && i.payment.given) text('Cash ' + bzRs(i.payment.given) + '  ·  Change ' + bzRs(i.payment.change || 0), { sz: F - 2, al: 'center' });
   if (!paid && cfg.qr && s.upi && i.status !== 'void' && i.key) {
     try {
       const r = await fetch('/bill/' + i.id + '/upi.svg?k=' + i.key); if (!r.ok) throw 0;
@@ -6006,6 +6335,7 @@ function bzShowBill(i, phone) {
     if (i.status === 'void') box.append(el('p', 'bz-void', 'Cancelled: ' + i.voidReason));
     for (const l of i.items) { const r = el('div', 'bz-tr'); r.append(el('span', null, l.name + ' × ' + l.qty), el('span', null, bzRs(l.total))); box.append(r); }
     const r2 = el('div', 'bz-tr bz-grand'); r2.append(el('span', null, 'Total'), el('b', null, bzRs(i.grand))); box.append(r2);
+    if (i.payment.given) box.append(el('small', 'bz-note', '💵 Cash given ' + bzRs(i.payment.given) + ' · change given back ' + bzRs(i.payment.change || 0)));
     box.append(el('small', 'bz-note', (i.payment.status === 'paid' ? '✅ Paid by ' + i.payment.method.toUpperCase() : i.payment.method === 'upi' ? '⏳ Waiting for UPI payment' : '📒 To pay') + ' · by ' + i.byName));
     L.append(box);
     if (i.status !== 'void' && i.payment.status !== 'paid' && i.shop.upi) L.append(bzQrBox(i));
@@ -9381,6 +9711,36 @@ async function openTwoStep() {
   });
 }
 let pinTicket = null;
+// ----- ✉️ new account: confirm the email with a 6-digit code -----
+var OTP = { ticket: null, body: null };
+function showOtpStep(r) {
+  OTP.ticket = r.ticket;
+  for (const id of ['#nameField', '#emailField']) { const x = $(id); if (x) x.hidden = true; }
+  $('#phone').closest('label').hidden = true; $('#password').closest('label').hidden = true;
+  let f = $('#otpField');
+  if (!f) {
+    f = el('div', 'field otp-field'); f.id = 'otpField';
+    const lb = el('span', null, '✉️ Email confirmation code'); const i = el('input'); i.id = 'signupOtp'; i.inputMode = 'numeric'; i.maxLength = 6; i.autocomplete = 'one-time-code'; i.placeholder = '••••••';
+    i.style.cssText = 'font-size:24px;letter-spacing:8px;text-align:center';
+    i.addEventListener('input', () => { i.value = i.value.replace(/\D/g, '').slice(0, 6); if (i.value.length === 6) $('#authForm').requestSubmit(); });
+    const note = el('p', 'info-note'); note.id = 'otpNote';
+    const row = el('div'); row.style.cssText = 'display:flex;gap:14px;justify-content:space-between;margin-top:6px';
+    const again = el('button', 'linkbtn', '🔁 Send code again'); again.type = 'button'; again.id = 'otpAgain';
+    again.onclick = async () => { again.disabled = true; $('#authError').textContent = ''; try { const x = await api('/api/register', { method: 'POST', body: JSON.stringify(OTP.body) }); if (x.needOtp) { showOtpStep(x); toast('✉️ New code sent'); } } catch (er) { $('#authError').textContent = er.message; } finally { setTimeout(() => (again.disabled = false), 30000); } };
+    const chg = el('button', 'linkbtn', '✏️ Change details'); chg.type = 'button'; chg.onclick = otpBack;
+    row.append(again, chg); f.append(lb, i, note, row);
+    $('#authSubmit').before(f);
+  }
+  f.hidden = false; $('#authError').textContent = '';
+  $('#otpNote').textContent = 'We sent a code to ' + (r.sentTo || 'your email') + '. Open your email (check Spam too) and type the code here.';
+  $('#authSubmit').textContent = 'Confirm & create account'; $('#signupOtp').value = ''; setTimeout(() => $('#signupOtp').focus(), 50);
+}
+function otpBack() {
+  OTP.ticket = null; const f = $('#otpField'); if (f) f.hidden = true;
+  $('#phone').closest('label').hidden = false; $('#password').closest('label').hidden = false;
+  setMode('register');
+}
+function otpDone() { OTP.ticket = null; OTP.body = null; const f = $('#otpField'); if (f) f.hidden = true; }
 function showPinStep(r) {
   pinTicket = r.ticket;
   $('#nameField').hidden = true; $('#phone').closest('label').hidden = true; $('#password').closest('label').hidden = true;
@@ -10306,7 +10666,9 @@ function openContactInfo(uid) {
   top.append(back, el('span', 'grow'), more);
   const hero = el('div', 'ci-hero');
   const av = avatar(u); av.classList.add('ci-av');
-  if (u.photo) { av.style.cursor = 'zoom-in'; av.onclick = () => { const o = el('div', 'ci-photo'); const im = el('img'); im.src = userPhotoUrl(u); im.alt = nameOf(u); im.draggable = false; o.append(im); if (!(window.MaataAndroid && window.MaataAndroid.secureScreen)) o.append(el('small', 'ci-noshot', '🔒 Profile photo')); else o.append(el('small', 'ci-noshot', '🔒 Screenshots are blocked for profile photos')); o.onclick = () => o.remove(); document.body.append(o); }; }
+  if (u.photo) { av.style.cursor = 'zoom-in'; av.onclick = () => { const o = el('div', 'ci-photo'); const im = el('img'); im.src = userPhotoUrl(u); im.alt = nameOf(u); im.draggable = false; o.append(im); if (window.MaataAndroid && window.MaataAndroid.secureScreen) o.append(el('small', 'ci-noshot', '🔒 Screenshots are blocked for profile photos'));
+    else if (window.MaataAndroid) { const n = el('small', 'ci-noshot', '⚠️ Old Maata app: screenshots are NOT blocked. Tap here to update Maata.'); n.style.pointerEvents = 'auto'; n.style.opacity = '1'; n.onclick = (e) => { e.stopPropagation(); o.remove(); if (typeof startAppUpdate === 'function') startAppUpdate(); }; o.append(n); }
+    else o.append(el('small', 'ci-noshot', '🔒 Profile photo (screenshots are blocked only in the Maata app)')); o.onclick = () => o.remove(); document.body.append(o); }; }
   const saved = nameOf(u), real = u.name && u.name !== saved ? '~' + u.name : '';
   hero.append(av, el('h2', null, saved), el('div', 'ci-phone', '+91 ' + u.phone.replace(/(\d{5})(\d{5})/, '$1 $2')));
   if (real) hero.append(el('div', 'ci-sub', real));
@@ -13233,8 +13595,8 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 180;
-const APP_NOTES = ["🔒 Like WhatsApp: screenshots and screen recording are blocked while someone’s profile or profile photo is open (needs the new Maata app). Long-press save is blocked too.", "⏺️ Call recording: in a call tap ⋯ → Record call. Both voices are saved on your phone (Downloads → Maata) and you can play or share it. The other person sees that the call is being recorded.", "🌐 Live call translation and automatic chat translation were removed. Calls and chats work normally in your own words.", "📹 Video calls: clear voice like WhatsApp — the voice now always gets priority, video is sharp but lowers itself when the network is weak (new Auto quality). Live translation starts by itself only when you two chose different languages (tap 🌐 otherwise).", "🗣️ Call translation is more accurate (Maata AI remembers the last sentences of the call, speaks everyday Telugu/Hindi) and no longer goes silent: short words are heard, a lost sentence is tried again, and you are told if it could not be understood.", "🗣️ Call translation: you now hear ONE voice — only the translation in your language (their original voice is silent while they speak another language). The other person no longer hears your phone reading the translation, and sees only their own words.", "🗣️ Call translation: now the LISTENER decides — when your language is Telugu and the other person speaks English (or any language), Maata AI translates it for you automatically. New 🎤 Test live translation button in Settings → Language & Translation.", "🎙️ Translated voice: choose Female or Male in Settings → Language & Translation. Male now really speaks with a man voice (Maata AI voice).", "🗣️ Live call translation fixed: Maata AI now hears the voice itself and finds the language spoken (English, Telugu, Hindi… or mixed), then you hear it in YOUR language — also in the Maata Android app. Tap 🌐 in a call to translate even when both chose the same language.", "🙂 Face unlock is now automatic: set it up once, then just look at the phone — Maata AI scans and opens by itself (no head turning each time). It asks to close your eyes only when it is not fully sure.", "🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
+const APP_VERSION = 183;
+const APP_NOTES = ["🏪 Maata Business → Counter billing for walk-in customers: big item buttons (most sold first), one-tap barcode, weight items by keypad, ₹ Amount for loose items, 💵 cash “give back” calculator, ⏸ hold a bill while serving the next person, and 📊 today’s cash & UPI total.", "🛡️ Maata Secure: save both IMEI numbers of dual-SIM phones (IMEI 1 and IMEI 2). Both go on the police / CEIR report.", "📵 Maata now opens without internet, like WhatsApp: your chats, contacts and photos you already saw are shown from the phone. Messages you type offline wait with 🕓 and are sent by themselves when the internet is back.", "🔒 Like WhatsApp: screenshots and screen recording are blocked while someone’s profile or profile photo is open (needs the new Maata app). Long-press save is blocked too.", "⏺️ Call recording: in a call tap ⋯ → Record call. Both voices are saved on your phone (Downloads → Maata) and you can play or share it. The other person sees that the call is being recorded.", "🌐 Live call translation and automatic chat translation were removed. Calls and chats work normally in your own words.", "📹 Video calls: clear voice like WhatsApp — the voice now always gets priority, video is sharp but lowers itself when the network is weak (new Auto quality). Live translation starts by itself only when you two chose different languages (tap 🌐 otherwise).", "🗣️ Call translation is more accurate (Maata AI remembers the last sentences of the call, speaks everyday Telugu/Hindi) and no longer goes silent: short words are heard, a lost sentence is tried again, and you are told if it could not be understood.", "🗣️ Call translation: you now hear ONE voice — only the translation in your language (their original voice is silent while they speak another language). The other person no longer hears your phone reading the translation, and sees only their own words.", "🗣️ Call translation: now the LISTENER decides — when your language is Telugu and the other person speaks English (or any language), Maata AI translates it for you automatically. New 🎤 Test live translation button in Settings → Language & Translation.", "🎙️ Translated voice: choose Female or Male in Settings → Language & Translation. Male now really speaks with a man voice (Maata AI voice).", "🗣️ Live call translation fixed: Maata AI now hears the voice itself and finds the language spoken (English, Telugu, Hindi… or mixed), then you hear it in YOUR language — also in the Maata Android app. Tap 🌐 in a call to translate even when both chose the same language.", "🙂 Face unlock is now automatic: set it up once, then just look at the phone — Maata AI scans and opens by itself (no head turning each time). It asks to close your eyes only when it is not fully sure.", "🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
   try { SERVER_VER = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json()); } catch { SERVER_VER = null; }

@@ -382,9 +382,10 @@ app.get('/sw.js', (req, res) => {
   res.send(SW_SOURCE);
 });
 const SW_SOURCE = `
-const CACHE = 'maata-shell-v3';
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icons/icon-192.png', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
-self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+const CACHE = 'maata-shell-v4';
+const API = 'maata-api-v1';
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/socket.io/socket.io.js', '/icons/icon-192.png', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== MEDIA && k !== API).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 // Pages: always try the network first (so updates show at once), fall back to the saved copy when offline
 // Chat photos, videos, voice notes and files are kept on the phone. The server deletes them after some days,
 // so the phone's copy is what people see later (like WhatsApp).
@@ -431,12 +432,49 @@ self.addEventListener('message', (e) => {
   if (d.type === 'media-stats') e.waitUntil(caches.open(MEDIA).then(async (c) => { const ks = await c.keys(); let bytes = 0, videos = 0, vbytes = 0; for (const k of ks) { const r = await c.match(k); const n = Number(r.headers.get('Content-Length') || 0); bytes += n; if (/^video\\//.test(r.headers.get('Content-Type') || '')) { videos++; vbytes += n; } } e.source.postMessage({ type: 'media-stats', files: ks.length, bytes, videos, vbytes }); }));
   if (d.type === 'media-clear') e.waitUntil(caches.open(MEDIA).then(async (c) => { let n = 0; for (const k of await c.keys()) { const r = await c.match(k); if (d.videosOnly && !/^video\\//.test(r.headers.get('Content-Type') || '')) continue; await c.delete(k); n++; } e.source.postMessage({ type: 'media-cleared', n }); }));
 });
+// Offline like WhatsApp: the app page, its scripts and the last chats/contacts are kept on the phone.
+// Online → always the fresh copy from the server (and the saved copy is updated); offline → the saved copy.
+const withTimeout = (p, ms) => new Promise((ok, no) => { const t = setTimeout(() => no(new Error('timeout')), ms); p.then((x) => { clearTimeout(t); ok(x); }, (er) => { clearTimeout(t); no(er); }); });
+const NO_API_CACHE = /^\\/api\\/(version|logout|login|register|chat\\/file\\/|app-apk|tr\\/|tts|ai\\/|admin)/;
+async function pageFetch(r) {
+  const c = await caches.open(CACHE);
+  try {
+    const res = await withTimeout(fetch(r), 6000);
+    if (res.ok && (res.headers.get('content-type') || '').includes('text/html')) c.put('/', res.clone()).catch(() => {});
+    if (res.ok || res.status < 500) return res;
+    return (await c.match('/')) || res; // server down (5xx) → the saved app
+  } catch { return (await c.match('/')) || new Response('<h3 style="font-family:sans-serif;text-align:center;margin-top:40vh">📵 No internet. Open Maata again when you are online.</h3>', { headers: { 'Content-Type': 'text/html' } }); }
+}
+async function apiFetch(r) {
+  const key = r.url, c = await caches.open(API);
+  try {
+    const res = await withTimeout(fetch(r), 8000);
+    if (res.ok && (res.headers.get('content-type') || '').includes('json')) { const n = Number(res.headers.get('content-length') || 0); if (!n || n < 3 * 1048576) c.put(key, res.clone()).catch(() => {}); }
+    else if (res.status === 401) caches.delete(API).catch(() => {});
+    return res;
+  } catch {
+    const hit = await c.match(key);
+    if (hit) { const h = new Headers(hit.headers); h.set('X-Maata-Offline', '1'); return new Response(await hit.blob(), { status: 200, headers: h }); }
+    return new Response(JSON.stringify({ error: '📵 No internet. Showing saved data.', offline: true }), { status: 503, headers: { 'Content-Type': 'application/json', 'X-Maata-Offline': '1' } });
+  }
+}
+async function assetFetch(r) {
+  const c = await caches.open(CACHE), hit = await c.match(r, { ignoreSearch: true });
+  const net = fetch(r).then((res) => { if (res.ok) c.put(r, res.clone()).catch(() => {}); return res; });
+  if (hit) { net.catch(() => {}); return hit; }
+  return net;
+}
 self.addEventListener('fetch', (e) => {
-  const r = e.request;
-  if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
-  if (r.url.includes('/api/chat/file/')) return;
-  if (r.mode === 'navigate') { e.respondWith(fetch(r).then((res) => { const cp = res.clone(); caches.open(CACHE).then((c) => c.put('/', cp)); return res; }).catch(() => caches.match('/'))); return; }
-  if (r.url.includes('/icons/')) e.respondWith(caches.match(r).then((m) => m || fetch(r)));
+  const r = e.request; if (r.method !== 'GET') return;
+  const u = new URL(r.url);
+  if (u.origin !== location.origin) { // fonts and libraries from other sites: keep a copy for offline
+    if (/fonts\\.(googleapis|gstatic)\\.com|cdn\\.jsdelivr\\.net|cdnjs\\.cloudflare\\.com|unpkg\\.com/.test(u.host)) e.respondWith(caches.open(CACHE).then(async (c) => { const hit = await c.match(r); const net = fetch(r).then((res) => { if (res.ok || res.type === 'opaque') c.put(r, res.clone()).catch(() => {}); return res; }); if (hit) { net.catch(() => {}); return hit; } return net; }));
+    return;
+  }
+  if (u.pathname.startsWith('/api/chat/file/')) return;
+  if (r.mode === 'navigate') { if (u.pathname === '/' || u.pathname === '/index.html') e.respondWith(pageFetch(r)); return; }
+  if (u.pathname.startsWith('/api/')) { if (!NO_API_CACHE.test(u.pathname) && !r.headers.get('range')) e.respondWith(apiFetch(r)); return; }
+  if (u.pathname === '/socket.io/socket.io.js' || u.pathname.startsWith('/icons/') || /\\.(png|svg|webp|ico|js|css|woff2?)$/.test(u.pathname)) { if (!u.pathname.startsWith('/socket.io/') || u.pathname.endsWith('.js')) e.respondWith(assetFetch(r)); }
 });
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data.json(); } catch { d = { title: 'Maata', body: e.data ? e.data.text() : '' }; }
@@ -621,10 +659,13 @@ async function sendMail(to, subject, html, text) {
 }
 const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); return /^[^\s@]{1,64}@[^\s@]+\.[a-z]{2,}$/.test(v) && v.length <= 120 ? v : null; };
 const maskEmail = (e) => { const [a, d] = String(e).split('@'); return a.slice(0, 2) + '•'.repeat(Math.max(2, a.length - 2)) + '@' + d; };
+// Same mailbox written differently (Gmail ignores dots and +tags: ra.vi+1@gmail.com = ravi@gmail.com) → one account only
+const emailKey = (e) => { const v = String(e || '').trim().toLowerCase(); const at = v.lastIndexOf('@'); if (at < 1) return v; let a = v.slice(0, at), d = v.slice(at + 1); if (d === 'googlemail.com') d = 'gmail.com'; if (d === 'gmail.com') a = a.split('+')[0].replace(/\./g, ''); else a = a.split('+')[0]; return a + '@' + d; };
+const emailTaken = (e, except) => { const k = emailKey(e); return db.users.some((x) => x !== except && x.email && emailKey(x.email) === k); };
 const resetCodes = new Map(); // userId -> { hash, until, tries, sentAt }
 app.post('/api/password/forgot', rateLimit, async (req, res) => {
   const id = String(req.body?.id || '').trim();
-  const u = id.includes('@') ? db.users.find((x) => x.email === cleanEmail(id)) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
+  const u = id.includes('@') ? (db.users.find((x) => x.email === cleanEmail(id)) || db.users.find((x) => x.email && emailKey(x.email) === emailKey(id))) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
   if (!u) return res.status(404).json({ error: 'No Maata account found with this mobile number or email.' });
   if (!u.email) return res.status(400).json({ error: 'This account has no email address. Please contact Maata support to reset your password.' });
   if (!MAIL_ON) return res.status(503).json({ error: 'Password reset by email is not switched on yet. Please contact Maata support.' });
@@ -642,7 +683,7 @@ app.post('/api/password/forgot', rateLimit, async (req, res) => {
 });
 app.post('/api/password/reset', rateLimit, async (req, res) => {
   const id = String(req.body?.id || '').trim(), code = String(req.body?.code || '').replace(/\D/g, ''), pw = String(req.body?.password || '');
-  const u = id.includes('@') ? db.users.find((x) => x.email === cleanEmail(id)) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
+  const u = id.includes('@') ? (db.users.find((x) => x.email === cleanEmail(id)) || db.users.find((x) => x.email && emailKey(x.email) === emailKey(id))) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
   const r = u && resetCodes.get(u.id);
   if (!r || r.until < now()) return res.status(400).json({ error: 'The code expired. Ask for a new code.' });
   if (r.tries >= 5) { resetCodes.delete(u.id); return res.status(429).json({ error: 'Too many wrong codes. Ask for a new code.' }); }
@@ -659,7 +700,7 @@ app.put('/api/me/email', auth, async (req, res) => {
   if (!(await bcrypt.compare(String(req.body?.password || ''), req.user.passHash || ''))) return res.status(400).json({ error: 'Wrong password.' });
   const e = String(req.body?.email || '').trim() ? cleanEmail(req.body.email) : '';
   if (e === null) return res.status(400).json({ error: 'Enter a valid email address.' });
-  if (e && db.users.some((x) => x !== req.user && x.email === e)) return res.status(409).json({ error: 'This email is already used by another Maata account.' });
+  if (e && emailTaken(e, req.user)) return res.status(409).json({ error: 'This email is already used by another Maata account.' });
   if (e) req.user.email = e; else delete req.user.email;
   save(); res.json({ ...publicUser(req.user), email: req.user.email || '' });
 });
@@ -671,7 +712,28 @@ app.post('/api/me/password', auth, rateLimit, async (req, res) => {
   res.json({ token: sign(req.user), user: publicUser(req.user) });
 });
 
+// New account: 1) check name, number, email (one account per mobile number and per email), 2) send a 6-digit code to the
+// email, 3) the account is made only after the right code is typed (the email is confirmed).
+const signupCodes = new Map(); // ticket -> { hash, until, tries, sentAt, data }
+const signingUp = new Set();  // numbers / emails being created right now (two taps at once must not make two accounts)
+setInterval(() => { for (const [k, v] of signupCodes) if (v.until < now()) signupCodes.delete(k); }, 10 * 60000).unref?.();
+function signupCheck(phone, email) {
+  if (findByMobile(phone) || signingUp.has('p' + phone)) return 'This mobile number is already registered. Log in instead (or use “Forgot password”).';
+  if (emailTaken(email) || signingUp.has('e' + emailKey(email))) return 'This email is already used by another Maata account. Log in, or use a different email.';
+  return '';
+}
 app.post('/api/register', rateLimit, async (req, res) => {
+  // step 2: the code from the email
+  if (req.body?.ticket) {
+    const tk = String(req.body.ticket), r = signupCodes.get(tk), code = String(req.body?.code || '').replace(/\D/g, '');
+    if (!r || r.until < now()) { signupCodes.delete(tk); return res.status(400).json({ error: 'The code expired. Tap “Send code again”.', expired: true }); }
+    if (r.tries >= 5) { signupCodes.delete(tk); return res.status(429).json({ error: 'Too many wrong codes. Tap “Send code again”.', expired: true }); }
+    if (crypto.createHash('sha256').update(code + tk).digest('hex') !== r.hash) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
+    const d = r.data, dup = signupCheck(d.phone, d.email);
+    if (dup) { signupCodes.delete(tk); return res.status(409).json({ error: dup }); }
+    signupCodes.delete(tk);
+    return makeAccount(req, res, { ...d, emailVerified: true });
+  }
   const name = String(req.body?.name || '').trim().slice(0, 40);
   const phone = cleanMobile(req.body?.phone);
   const password = String(req.body?.password || '');
@@ -679,12 +741,29 @@ app.post('/api/register', rateLimit, async (req, res) => {
   if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number (without +91 or 0).' });
   const email = cleanEmail(req.body?.email);
   if (!email) return res.status(400).json({ error: 'Enter a valid email address. It is used if you forget your password.' });
-  if (db.users.some((x) => x.email === email)) return res.status(409).json({ error: 'This email is already used by another Maata account.' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-  if (findByMobile(phone)) return res.status(409).json({ error: 'This number is already registered. Log in instead.' });
-  const u = { id: newId(), name, phone, email, passHash: await bcrypt.hash(password, 10), createdAt: now(), status: 'active', tokenVersion: 0 };
+  const dup = signupCheck(phone, email); if (dup) return res.status(409).json({ error: dup });
+  const data = { name, phone, email, passHash: await bcrypt.hash(password, 10), ref: req.body?.ref ? String(req.body.ref).slice(0, 20) : '' };
+  if (!MAIL_ON) { console.warn('[signup] email is off (BREVO_API_KEY / MAIL_FROM missing) → account made without email code'); return makeAccount(req, res, data); }
+  for (const [k, v] of signupCodes) if (v.data.email === email || v.data.phone === phone) { if (now() - v.sentAt < 45000) return res.status(429).json({ error: 'A code was just sent to ' + maskEmail(v.data.email) + '. Wait a minute before asking again.' }); signupCodes.delete(k); }
+  const ticket = crypto.randomBytes(18).toString('base64url'), code = String(crypto.randomInt(100000, 1000000));
+  signupCodes.set(ticket, { hash: crypto.createHash('sha256').update(code + ticket).digest('hex'), until: now() + 15 * 60000, tries: 0, sentAt: now(), data });
+  try {
+    await sendMail(email, 'Your Maata code: ' + code,
+      `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:16px"><h2 style="color:#0F4C5C;margin:0 0 8px">🦜 Maata</h2><p>Hi ${name.replace(/[<>&]/g, '')},</p><p>Welcome to Maata! Type this code in the app to confirm your email and create your account:</p><p style="font-size:34px;font-weight:700;letter-spacing:8px;color:#0F4C5C;margin:18px 0">${code}</p><p style="color:#667085;font-size:13px">The code works for 15 minutes. If you did not try to join Maata, ignore this email.</p></div>`,
+      'Your Maata code is ' + code + '. Type it in the app to confirm your email. It works for 15 minutes.');
+  } catch (e) { console.error('[mail signup]', e.message); signupCodes.delete(ticket); return res.status(502).json({ error: 'Could not send the code to this email right now. Check the email address and try again.' }); }
+  res.json({ needOtp: true, ticket, sentTo: maskEmail(email) });
+});
+async function makeAccount(req, res, d) {
+  const { name, phone, email } = d;
+  const dup = signupCheck(phone, email); if (dup) return res.status(409).json({ error: dup });
+  signingUp.add('p' + phone); signingUp.add('e' + emailKey(email));
+  try {
+  const u = { id: newId(), name, phone, email, passHash: d.passHash, createdAt: now(), status: 'active', tokenVersion: 0 };
+  if (d.emailVerified) u.emailVerified = now();
   // joined from a friend's invite link: remember who invited, and save each other as contacts
-  const inviter = req.body?.ref ? db.users.find((x) => x.inviteCode && x.inviteCode === String(req.body.ref).trim().toUpperCase() && x.status !== 'blocked') : null;
+  const inviter = d.ref ? db.users.find((x) => x.inviteCode && x.inviteCode === String(d.ref).trim().toUpperCase() && x.status !== 'blocked') : null;
   if (inviter) {
     u.referredBy = inviter.id;
     contactsOf(u).push({ id: inviter.id, name: inviter.name, addedAt: now() });
@@ -695,7 +774,8 @@ app.post('/api/register', rateLimit, async (req, res) => {
   save();
   if (inviter) { io.to('user:' + inviter.id).emit('invite:joined', { name: u.name }); try { pushTo(inviter, { type: 'msg', title: '🎉 ' + u.name + ' joined Maata', body: 'Your friend joined from your invite. Say hi!', tag: 'joined-' + u.id }); } catch {} }
   res.json({ token: sign(u), user: publicUser(u) });
-});
+  } finally { signingUp.delete('p' + phone); signingUp.delete('e' + emailKey(email)); }
+}
 
 app.post('/api/login', rateLimit, async (req, res) => {
   const phone = cleanMobile(req.body?.phone);
@@ -931,7 +1011,7 @@ function secRisk(u) {
 function secView(u, devId) {
   const s = secOf(u);
   return {
-    on: !!s.on, lostMsg: s.lostMsg || '', lostCall: s.lostCall || '', imei: s.imei || '',
+    on: !!s.on, lostMsg: s.lostMsg || '', lostCall: s.lostCall || '', imei: s.imei || '', imei2: s.imei2 || '',
     trusted: s.trusted.map((id) => { const t = userById(id); return t ? { id, name: t.name } : null; }).filter(Boolean),
     phones: s.phones.map((p) => ({ id: p.id, name: p.name, addedAt: p.addedAt, lastSeen: p.lastSeen || null, loc: p.loc || null, battery: p.battery ?? null, charging: !!p.charging, lost: !!p.lost, lostAt: p.lostAt || null, alarm: !!p.alarm, online: secOnline(u, p.id), me: p.id === devId, trail: (p.hist || []).slice(-12) })),
     events: s.events.slice(-60).reverse(), risk: secRisk(u),
@@ -975,7 +1055,8 @@ app.post('/api/secure/settings', auth, async (req, res) => {
   }
   if (b.lostMsg !== undefined) s.lostMsg = clip(String(b.lostMsg).trim(), 160);
   if (b.lostCall !== undefined) s.lostCall = String(b.lostCall).replace(/[^\d+ ]/g, '').slice(0, 16);
-  if (b.imei !== undefined) s.imei = String(b.imei).replace(/[^\d, ]/g, '').slice(0, 40);
+  if (b.imei !== undefined) s.imei = String(b.imei).replace(/\D/g, '').slice(0, 17);
+  if (b.imei2 !== undefined) s.imei2 = String(b.imei2).replace(/\D/g, '').slice(0, 17);
   if (Array.isArray(b.trusted)) s.trusted = [...new Set(b.trusted.map(String))].filter((id) => canAddTo(u, id)).slice(0, 5);
   save(); res.json(secView(u, String(b.dev || '')));
 });
@@ -1079,7 +1160,7 @@ app.get('/api/secure/report', auth, (req, res) => {
   const trail = (p.hist || []).slice(-8).reverse();
   const lines = [
     'LOST / STOLEN MOBILE PHONE – DETAILS', '',
-    'Owner name: ' + u.name, 'Owner mobile number: ' + u.phone, 'Phone: ' + p.name, 'IMEI: ' + (s.imei || '[dial *#06# on a phone with the same box, or see the phone box / bill]'),
+    'Owner name: ' + u.name, 'Owner mobile number: ' + u.phone, 'Phone: ' + p.name, (s.imei2 ? 'IMEI 1: ' + s.imei + '\nIMEI 2: ' + s.imei2 : 'IMEI: ' + (s.imei || '[dial *#06# on the phone or see the phone box / bill — dual-SIM phones have IMEI 1 and IMEI 2]')),
     'Lost / noticed missing at: ' + (p.lostAt ? secTime(p.lostAt) : '[DATE AND TIME]'), '',
     'Last known location: ' + (p.loc ? p.loc.lat + ', ' + p.loc.lng + ' (' + secTime(p.loc.at) + ', accuracy about ' + (p.loc.acc || '?') + ' m)\n' + secMapLink(p.loc) : 'Not available'),
     'Battery at last report: ' + (p.battery != null ? p.battery + '%' : 'not known'),
@@ -1756,7 +1837,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 180;
+const MAATA_VERSION = 183;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3303,9 +3384,10 @@ app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
     createdAt: now(), by: c.actor.id, byName: c.actor.name, customer: { name: clip(b.customer?.name, 60), phone: phone || '' }, taxMode: s.taxMode,
     items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, hsn: l.hsn, disc: l.disc, taxable: l.taxable, tax: l.tax, total: l.total })),
     subtotal: pr.subtotal, discount: pr.discount, taxable: pr.taxable, tax: pr.tax, roundOff: grand - pr.total, grand,
-    payment: { method, status: method === 'upi' ? 'unpaid' : 'paid', paidAt: method === 'upi' ? null : now() }, status: 'final', history: [{ at: now(), by: c.actor.id, what: 'created' }], // UPI: paid when the shop sees the money
+    payment: { method, status: method === 'upi' ? 'unpaid' : 'paid', paidAt: method === 'upi' ? null : now() }, status: 'final', via: b.via === 'counter' ? 'counter' : undefined, history: [{ at: now(), by: c.actor.id, what: 'created' }], // UPI: paid when the shop sees the money
     shop: { name: c.biz.name, address: c.biz.address || '', phone: c.owner.phone, gstin: s.gstin || '', upi: s.upi || '', footer: s.footer || '' },
   };
+  { const gv = Math.round(Number(b.cashGiven) * 100); if (method === 'cash' && gv >= grand && gv < 1e9) { inv.payment.given = gv; inv.payment.change = gv - grand; } } // counter: cash received and change given back
   db.invoices.push(inv);
   for (const l of inv.items) if (l.productId) { const p = db.products.find((x) => x.id === l.productId); if (p) stockMove(c, p, -l.qty, 'sale', inv.id); }
   bizLog(c, 'invoice', inv.id, inv.number + ' ' + rupees(grand)); save();
