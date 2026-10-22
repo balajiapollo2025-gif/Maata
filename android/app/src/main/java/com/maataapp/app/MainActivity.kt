@@ -216,9 +216,16 @@ class MainActivity : Activity() {
                 if ((u.scheme == "https" || u.scheme == "http") && u.host in OUR_HOSTS) return false
                 openOutside(u); return true // WhatsApp invites, phone numbers, maps, websites
             }
-            override fun onPageFinished(view: WebView, url: String) { pageReady = true }
+            override fun onPageFinished(view: WebView, url: String) {
+                pageReady = true
+                if (url.startsWith("http")) view.settings.cacheMode = WebSettings.LOAD_DEFAULT
+            }
             override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
-                if (req.isForMainFrame) view.loadData(OFFLINE_PAGE, "text/html", "utf-8")
+                if (!req.isForMainFrame) return
+                // No internet: open the copy of Maata saved on the phone (like WhatsApp), only if there is none show "No internet"
+                if (!triedSaved) { triedSaved = true; view.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK; view.loadUrl(req.url.toString()); return }
+                view.loadDataWithBaseURL(null, OFFLINE_PAGE, "text/html", "utf-8", null)
+                view.postDelayed({ triedSaved = false }, 3000)
             }
         }
         web.webChromeClient = object : WebChromeClient() {
@@ -686,7 +693,9 @@ class MainActivity : Activity() {
         }
     }
 
+    private var triedSaved = false
     private val OFFLINE_PAGE = """<html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0A3A47;color:#fff;font-family:sans-serif;text-align:center">
         <div style="font-size:64px">🦜</div><h2>No internet</h2><p style="opacity:.8">Check your connection and try again.</p>
-        <button onclick="location.href='${BuildConfig.APP_URL}'" style="margin-top:12px;padding:14px 28px;border:0;border-radius:999px;background:#2E8B57;color:#fff;font-size:17px">Try again</button></body></html>"""
+        <button onclick="location.href='${BuildConfig.APP_URL}'" style="margin-top:12px;padding:14px 28px;border:0;border-radius:999px;background:#2E8B57;color:#fff;font-size:17px">Try again</button>
+        <script>addEventListener('online',function(){location.href='${BuildConfig.APP_URL}'});setInterval(function(){if(navigator.onLine)location.href='${BuildConfig.APP_URL}'},8000)</script></body></html>"""
 }
