@@ -515,6 +515,8 @@ class MainActivity : Activity() {
             catch (e: Exception) { try { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } catch (_: Exception) { } }
         } }
         @JavascriptInterface fun trackOpenAutostart() { runOnUiThread { TeamTrackService.openAutostart(this@MainActivity) } }
+        // 🔗 a link tapped in a chat (e.g. a shop bill): open it in the phone's browser
+        @JavascriptInterface fun openBrowser(url: String) { runOnUiThread { val u = Uri.parse(url); if (u.scheme == "https" || u.scheme == "http") openOutside(u) } }
         @JavascriptInterface fun openLocationSettings() { runOnUiThread { try { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (e: Exception) { } } }
         // 🖨️ Bluetooth receipt printer
         @JavascriptInterface fun btStatus(): String = BtPrinter.status(this@MainActivity)
