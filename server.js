@@ -1837,7 +1837,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 183;
+const MAATA_VERSION = 184;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3334,7 +3334,7 @@ app.get('/api/biz/:bizId/products/:pid/moves', auth, (req, res) => {
   res.json(db.stockMoves.filter((m) => m.bizId === c.bizId && m.productId === req.params.pid).slice(-60).reverse().map((m) => ({ ...m, actorName: (userById(m.actor) || {}).name || '' })));
 });
 // ---- billing ----
-const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null, shop: i.shop || {} });
+const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, note: i.note || '', voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null, shop: i.shop || {} });
 function priceBill(lines, discountPaise, mode) { // allocate the discount by value, then tax per line
   const base = lines.map((l) => Math.round(l.unitPaise * l.qty)), sumBase = base.reduce((a, b) => a + b, 0);
   const disc = Math.max(0, Math.min(sumBase, Math.round(discountPaise || 0)));
@@ -3387,6 +3387,7 @@ app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
     payment: { method, status: method === 'upi' ? 'unpaid' : 'paid', paidAt: method === 'upi' ? null : now() }, status: 'final', via: b.via === 'counter' ? 'counter' : undefined, history: [{ at: now(), by: c.actor.id, what: 'created' }], // UPI: paid when the shop sees the money
     shop: { name: c.biz.name, address: c.biz.address || '', phone: c.owner.phone, gstin: s.gstin || '', upi: s.upi || '', footer: s.footer || '' },
   };
+  { const nt = clip(String(b.note || '').trim(), 200); if (nt) inv.note = nt; } // remarks (e.g. "deliver tomorrow", "exchange within 7 days")
   { const gv = Math.round(Number(b.cashGiven) * 100); if (method === 'cash' && gv >= grand && gv < 1e9) { inv.payment.given = gv; inv.payment.change = gv - grand; } } // counter: cash received and change given back
   db.invoices.push(inv);
   for (const l of inv.items) if (l.productId) { const p = db.products.find((x) => x.id === l.productId); if (p) stockMove(c, p, -l.qty, 'sale', inv.id); }
@@ -3427,7 +3428,7 @@ app.post('/api/biz/:bizId/invoices/:id/send', auth, (req, res) => {
   const to = findByMobile(phone); if (!to) return res.status(404).json({ error: 'This number is not on Maata yet. Share the bill link instead.' });
   const ok = canMessage(c.owner, to.id); if (ok.error) return res.status(400).json({ error: 'Could not send the bill to this person.' });
   const base = (process.env.PUBLIC_URL || 'https://maataapp.com').replace(/\/$/, '');
-  const text = '🧾 Bill ' + i.number + ' from ' + i.shop.name + '\n' + i.items.slice(0, 15).map((l) => '• ' + l.name + ' × ' + l.qty + ' = ' + rupees(l.total)).join('\n') + (i.items.length > 15 ? '\n…' : '') + '\nTotal: ' + rupees(i.grand) + ' (' + (i.payment.status === 'paid' ? 'paid by ' + i.payment.method.toUpperCase() : 'to pay') + ')\nFull bill: ' + base + '/bill/' + i.id + '?k=' + i.key;
+  const text = '🧾 Bill ' + i.number + ' from ' + i.shop.name + '\n' + i.items.slice(0, 15).map((l) => '• ' + l.name + ' × ' + l.qty + ' = ' + rupees(l.total)).join('\n') + (i.items.length > 15 ? '\n…' : '') + '\nTotal: ' + rupees(i.grand) + ' (' + (i.payment.status === 'paid' ? 'paid by ' + i.payment.method.toUpperCase() : 'to pay') + ')' + (i.note ? '\n📝 ' + i.note : '') + '\nFull bill: ' + base + '/bill/' + i.id + '?k=' + i.key;
   deliverMessage(c.owner, ok.target, { type: 'text', text: clip(text, 3000) });
   i.sentTo = phone; if (!i.customer.phone) i.customer.phone = phone; i.history.push({ at: now(), by: c.actor.id, what: 'sent to ' + phone });
   save(); res.json(invOut(i));
@@ -3469,7 +3470,7 @@ ${i.discount ? '<div class="row"><span>Discount</span><span>– ' + rupees(i.dis
 ${Object.entries(taxRows).map(([r, t]) => '<div class="row"><span>GST ' + r + '% ' + (i.taxMode === 'incl' ? '(included)' : '') + '</span><span>' + rupees(t) + '</span></div>').join('')}
 ${i.roundOff ? '<div class="row"><span>Round off</span><span>' + (i.roundOff > 0 ? '+' : '–') + ' ' + rupees(Math.abs(i.roundOff)) + '</span></div>' : ''}
 <div class="row tot"><span>Total</span><span>${rupees(i.grand)}</span></div>
-<div class="row"><span>Payment</span><span>${e(i.payment.method.toUpperCase())} · ${i.payment.status === 'paid' ? 'Paid' : 'To pay'}</span></div>
+<div class="row"><span>Payment</span><span>${e(i.payment.method.toUpperCase())} · ${i.payment.status === 'paid' ? 'Paid' : 'To pay'}</span></div>${i.note ? `<div class="row"><span>Remarks</span><span>${e(i.note)}</span></div>` : ''}
 ${qr ? '<div class="qr"><b>Scan &amp; pay ' + rupees(i.grand) + '</b>' + qr + '<small>Any UPI app · GPay · PhonePe · Paytm · BHIM<br>UPI ID: ' + e(i.shop.upi) + '</small></div>' : ''}
 ${upi ? '<a class="pay" href="' + e(upi) + '">Pay ' + rupees(i.grand) + ' by UPI app</a>' : ''}<hr>
 <div class="c">${e(i.shop.footer)}<br><small>Made with Maata Business</small></div></div>
