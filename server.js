@@ -1854,7 +1854,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 196;
+const MAATA_VERSION = 197;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5678,6 +5678,16 @@ io.on('connection', (socket) => {
     for (const [sender, ids] of Object.entries(bySender)) io.to(room(sender)).emit('msg:status', { ids, status: 'delivered' });
   }
 
+  // ✍️ "typing…" / "recording audio…" (like WhatsApp). Only sent, never saved. Checked like a message (blocks, groups).
+  let typLast = 0;
+  socket.on('typing', (p) => {
+    const to = String(p?.to || ''), on = !!p?.on, kind = p?.kind === 'voice' ? 'voice' : 'text';
+    if (on && now() - typLast < 1500) return; typLast = now();
+    const ok = canMessage(socket.user, to); if (ok.error) return;
+    const gid = gidOf(to);
+    if (gid) { const g = groupById(gid); if (!g) return; for (const m of g.members) if (m.id !== me) io.to(room(m.id)).emit('typing', { chat: 'g:' + gid, from: me, name: socket.user.name, on, kind }); return; }
+    io.to(room(to)).emit('typing', { chat: me, from: me, on, kind });
+  });
   socket.on('msg:send', (p, ack) => {
     const reply = (x) => typeof ack === 'function' && ack(x);
     const ok = canMessage(socket.user, String(p?.to || ''));
