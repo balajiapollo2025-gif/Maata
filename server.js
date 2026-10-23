@@ -571,6 +571,7 @@ const FEATURE_LIST = [
   ['Account & app', 'backup', '☁️ Chat backup (Google Drive)'],
   ['Account & app', 'themes', '🎨 Theme & colours'],
   ['Account & app', 'appLock', '🔒 App lock'],
+  ['Account & app', 'secure', '🛡️ Maata Secure (anti-theft: lost-phone mode, alarm, phone location, IMEI, theft report)'],
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
   ['Updates & social', 'maps', '🗺️ Maata Maps (navigation)'],
   ['Account & app', 'invite', '🎁 Invite a friend'],
@@ -585,7 +586,7 @@ const featOn = (k) => featureFlags()[k] !== false;
 const OFF_MSG = 'This feature is turned off by Maata right now.';
 app.get('/api/features', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json(featureFlags()); });
 // the server enforces it too (older app versions cannot use a switched-off feature)
-const FEAT_PATHS = [['/api/reels', 'reels'], ['/api/reels-creators', 'reels'], ['/api/insights', 'reels'], ['/api/ai', 'ai'], ['/api/translate', 'translate'], ['/api/qr', 'qrLogin'], ['/api/backup', 'backup'],
+const FEAT_PATHS = [['/api/secure', 'secure'], ['/api/reels', 'reels'], ['/api/reels-creators', 'reels'], ['/api/insights', 'reels'], ['/api/ai', 'ai'], ['/api/translate', 'translate'], ['/api/qr', 'qrLogin'], ['/api/backup', 'backup'],
   ['/api/support', 'support'], ['/api/maps', 'maps'], ['/api/channels', 'channels'], ['/api/communities', 'communities'], ['/api/business', 'business'], ['/api/catalogue', 'business'], ['/api/ads', 'business']];
 for (const [path, k] of FEAT_PATHS) app.use(path, (req, res, next) => (featOn(k) ? next() : res.status(403).json({ error: OFF_MSG, featureOff: k })));
 app.use('/api/status', (req, res, next) => (req.method === 'GET' || featOn('status') ? next() : res.status(403).json({ error: OFF_MSG, featureOff: 'status' })));
@@ -1837,7 +1838,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 190;
+const MAATA_VERSION = 192;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
