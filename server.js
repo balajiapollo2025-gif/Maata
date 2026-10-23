@@ -1368,15 +1368,16 @@ app.post('/api/contacts', auth, rateLimit, (req, res) => {
 const matchUse = new Map();
 app.post('/api/contacts/match', auth, (req, res) => {
   const day = dayKey(now());
-  const use = matchUse.get(req.user.id);
-  const used = use && use.day === day ? use.n : 0;
-  const input = Array.isArray(req.body?.contacts) ? req.body.contacts.slice(0, 500) : [];
+  let use = matchUse.get(req.user.id); if (!use || use.day !== day) { use = { day, seen: new Set() }; matchUse.set(req.user.id, use); }
+  const input = Array.isArray(req.body?.contacts) ? req.body.contacts.slice(0, 1000) : [];
   const pairs = [];
   for (const c of input) for (const ph of (Array.isArray(c?.phones) ? c.phones.slice(0, 5) : [])) {
     const n = last10(ph); if (n.length === 10) pairs.push({ n, name: String(c?.name || '').trim().slice(0, 40) });
   }
-  if (used + pairs.length > 2000) return res.status(429).json({ error: 'Daily contact sync limit reached. Try again tomorrow.' });
-  matchUse.set(req.user.id, { day, n: used + pairs.length });
+  // limit = different numbers checked per day (checking the same phone book again is free), so a big phone book always finishes
+  const fresh = new Set(pairs.map((x) => x.n).filter((n) => !use.seen.has(n)));
+  if (use.seen.size + fresh.size > 20000) return res.status(429).json({ error: 'Daily contact sync limit reached. Try again tomorrow.' });
+  for (const n of fresh) use.seen.add(n);
   const byPhone = new Map(db.users.filter((u) => u.status !== 'blocked' && u.id !== req.user.id).map((u) => [last10(u.phone), u]));
   const list = contactsOf(req.user);
   const added = [];
@@ -1838,7 +1839,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 192;
+const MAATA_VERSION = 193;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
