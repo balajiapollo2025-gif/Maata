@@ -683,9 +683,11 @@ async function loadReports() {
     <div class="muted" style="font-size:13px;margin-bottom:10px">Reported by ${esc(r.reporterName)} · ${dt(r.ts)}${r.resolvedAt ? ' · resolved by ' + esc(r.resolvedBy) + ' ' + dt(r.resolvedAt) + (r.note ? ': ' + esc(r.note) : '') : ''}</div>
     <div class="actions" style="margin:0">
       <button class="btn ghost" data-open="${esc(r.target)}">View customer</button>
+      ${r.ratingId ? `<button class="btn danger" data-hiderev="${esc(r.ratingId)}">🙈 Hide this review</button>` : ''}
       ${r.status === 'open' ? `<button class="btn ok" data-resolve="${esc(r.id)}">Mark resolved</button>` : ''}
     </div></div>`).join('') : '<div class="card empty">No complaints here. 🎉</div>';
   $$('[data-open]').forEach((b) => b.onclick = () => openCustomer(b.dataset.open));
+  $$('[data-hiderev]').forEach((b) => b.onclick = async () => { if (!confirm('Hide this shop review from everyone?')) return; try { await api('/admin/api/ratings/' + b.dataset.hiderev + '/hide', { method: 'POST', body: JSON.stringify({ hide: true }) }); toast('Review hidden.'); b.remove(); } catch (e) { toast(e.message); } });
   $$('[data-resolve]').forEach((b) => b.onclick = async () => {
     const note = prompt('What action was taken? (optional)'); if (note === null) return;
     try { await api(`/admin/api/reports/${b.dataset.resolve}/resolve`, { method: 'POST', body: JSON.stringify({ note }) }); toast('Complaint resolved.'); loadReports(); } catch (e) { toast(e.message); }

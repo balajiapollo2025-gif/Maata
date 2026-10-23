@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1854,7 +1854,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 194;
+const MAATA_VERSION = 195;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3779,18 +3779,87 @@ app.get('/api/orders/:id/ship-photo', auth, (req, res) => {
   res.set('Content-Type', m[1]); res.set('Cache-Control', 'private, max-age=300'); res.send(Buffer.from(m[2], 'base64'));
 });
 // ---- customer side ----
-const shopCard = (u, me) => { const s = storeOf(u.business); const dist = me && s.lat != null ? Math.round(geoDist(me, [s.lng, s.lat]) / 100) / 10 : null;
-  return { bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', ship: !!s.ship, shipFee: s.shipFee, shipToPay: !!s.shipToPay, shipEta: s.shipEta, shipNote: s.shipNote, taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
+const shopCard = (u, me) => { const s = storeOf(u.business), rt = ratingSum(u.id); const dist = me && s.lat != null ? Math.round(geoDist(me, [s.lng, s.lat]) / 100) / 10 : null;
+  return { rating: rt.n ? { avg: rt.avg, n: rt.n } : null, bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', ship: !!s.ship, shipFee: s.shipFee, shipToPay: !!s.shipToPay, shipEta: s.shipEta, shipNote: s.shipNote, taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
+// ⭐ Shop ratings: only real customers can rate (a delivered order, or a bill from that shop to their number).
+// One rating per customer per shop (they can change it). Everyone sees the average, the stars and the words.
+const RT_GOOD = ['Good quality', 'Fair price', 'Fast service', 'Friendly', 'Fresh items', 'Clean shop', 'Quick delivery', 'Good packing'];
+const RT_BAD = ['Late delivery', 'Costly', 'Poor quality', 'Rude behaviour', 'Wrong items', 'Old / expired items'];
+const rtCache = new Map();
+function ratingSum(bizId) {
+  let c = rtCache.get(bizId); if (c) return c;
+  const l = db.ratings.filter((x) => x.bizId === bizId && !x.hidden), dist = [0, 0, 0, 0, 0]; let sum = 0;
+  for (const x of l) { dist[x.stars - 1]++; sum += x.stars; }
+  const tags = {}; for (const x of l) for (const g of x.tags || []) tags[g] = (tags[g] || 0) + 1;
+  c = { n: l.length, avg: l.length ? Math.round((sum / l.length) * 10) / 10 : 0, dist, tags: Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 6) };
+  rtCache.set(bizId, c); return c;
+}
+const rtShort = (n) => { const w = String(n || 'Customer').trim().split(/\s+/); return w[0] + (w[1] ? ' ' + [...w[1]][0] + '.' : ''); };
+const rtOut = (x, full) => ({ id: x.id, stars: x.stars, text: x.text || '', tags: x.tags || [], at: x.at, edited: !!x.editedAt, name: full ? (userById(x.userId) || {}).name || 'Customer' : rtShort((userById(x.userId) || {}).name), photo: !!(userById(x.userId) || {}).photo, userId: full ? x.userId : undefined, reply: x.reply || null, hidden: full ? !!x.hidden : undefined });
+function rtCanRate(user, bizId) {
+  if (!user || user.id === bizId) return false;
+  const owner = userById(bizId); if (owner && (owner.business?.members || []).some((m) => m.userId === user.id && m.status !== 'removed')) return false; // staff cannot rate their own shop
+  if (db.orders.some((o) => o.customerId === user.id && o.bizId === bizId && o.status === 'DELIVERED')) return true;
+  const ph = last10(user.phone); return db.invoices.some((i) => i.bizId === bizId && i.status !== 'void' && last10(i.customer?.phone) === ph);
+}
+function rtPublic(req, bizId, skip = 0) {
+  const all = db.ratings.filter((x) => x.bizId === bizId && !x.hidden).sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0) || b.at - a.at);
+  const mine = db.ratings.find((x) => x.bizId === bizId && x.userId === req.user.id);
+  return { summary: ratingSum(bizId), reviews: all.slice(skip, skip + 20).map((x) => rtOut(x)), more: all.length > skip + 20, mine: mine ? rtOut(mine) : null, canRate: rtCanRate(req.user, bizId), good: RT_GOOD, bad: RT_BAD };
+}
+app.get('/api/shop/:bizId/ratings', auth, (req, res) => { const u = userById(req.params.bizId); if (!u || !u.business) return res.status(404).json({ error: 'Shop not found.' }); res.json(rtPublic(req, u.id, Math.max(0, Number(req.query.skip) || 0))); });
+const rtHits = new Map();
+app.post('/api/shop/:bizId/ratings', auth, (req, res) => {
+  const owner = userById(req.params.bizId); if (!owner || !owner.business) return res.status(404).json({ error: 'Shop not found.' });
+  if (!rtCanRate(req.user, owner.id)) return res.status(403).json({ error: 'You can rate a shop after you buy from it (a delivered Maata order or a bill sent to your number).' });
+  const h = (rtHits.get(req.user.id) || []).filter((x) => now() - x < 3600000); if (h.length >= 20) return res.status(429).json({ error: 'Please try again later.' }); h.push(now()); rtHits.set(req.user.id, h);
+  const stars = Math.round(Number(req.body?.stars)); if (!(stars >= 1 && stars <= 5)) return res.status(400).json({ error: 'Choose 1 to 5 stars.' });
+  const tags = [...new Set((Array.isArray(req.body?.tags) ? req.body.tags : []).filter((g) => RT_GOOD.includes(g) || RT_BAD.includes(g)))].slice(0, 6);
+  const text = clip(String(req.body?.text || '').trim(), 400);
+  let x = db.ratings.find((y) => y.bizId === owner.id && y.userId === req.user.id);
+  const isNew = !x;
+  if (x) Object.assign(x, { stars, tags, text, editedAt: now() }); else { x = { id: newId(), bizId: owner.id, userId: req.user.id, stars, tags, text, at: now() }; db.ratings.push(x); }
+  rtCache.delete(owner.id); save();
+  const msg = '⭐'.repeat(stars) + ' from ' + rtShort(req.user.name) + (text ? ': “' + text.slice(0, 80) + '”' : '');
+  io.to('user:' + owner.id).emit('rating:new', { stars, text: msg });
+  try { pushTo(owner, { type: 'msg', title: (isNew ? '⭐ New rating for ' : '⭐ Rating changed for ') + owner.business.name, body: msg, tag: 'rating-' + x.id }); } catch {}
+  res.json(rtPublic(req, owner.id));
+});
+app.delete('/api/shop/:bizId/ratings/mine', auth, (req, res) => { db.ratings = db.ratings.filter((y) => !(y.bizId === req.params.bizId && y.userId === req.user.id)); rtCache.delete(req.params.bizId); save(); res.json(rtPublic(req, req.params.bizId)); });
+app.post('/api/shop/:bizId/ratings/:id/report', auth, (req, res) => {
+  const x = db.ratings.find((y) => y.id === req.params.id && y.bizId === req.params.bizId); if (!x) return res.status(404).json({ error: 'Not found.' });
+  db.reports.push({ id: newId(), reporter: req.user.id, target: x.userId, reason: 'Shop review (' + x.stars + '★ for ' + ((userById(x.bizId) || {}).business || {}).name + '): ' + (clip(req.body?.reason, 200) || 'wrong / abusive') + (x.text ? ' — "' + x.text.slice(0, 100) + '"' : ''), ts: now(), status: 'open', ratingId: x.id });
+  save(); io.to('admins').emit('report:new', {}); res.json({ ok: true });
+});
+// shop owner / manager: all ratings with full names, and a public reply
+app.get('/api/biz/:bizId/ratings', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json({ summary: ratingSum(c.bizId), reviews: db.ratings.filter((x) => x.bizId === c.bizId).sort((a, b) => b.at - a.at).slice(0, 300).map((x) => rtOut(x, true)) }); });
+app.post('/api/biz/:bizId/ratings/:id/reply', auth, (req, res) => {
+  const c = bizCtx(req, res); if (!c) return; if (!['owner', 'manager'].includes(c.role)) return res.status(403).json({ error: 'Only the owner or a manager can reply.' });
+  const x = db.ratings.find((y) => y.id === req.params.id && y.bizId === c.bizId); if (!x) return res.status(404).json({ error: 'Rating not found.' });
+  const text = clip(String(req.body?.text || '').trim(), 300); x.reply = text ? { text, at: now(), by: c.actor.name } : null; save();
+  if (text) { const cu = userById(x.userId); if (cu) try { pushTo(cu, { type: 'msg', title: '💬 ' + c.biz.name + ' replied to your rating', body: text.slice(0, 120), tag: 'rating-' + x.id }); } catch {} }
+  res.json(rtOut(x, true));
+});
+// shops I bought from but did not rate yet (last 30 days) — shown as "Rate your recent shops"
+app.get('/api/my/rate-pending', auth, (req, res) => {
+  const since = now() - 30 * 86400000, seen = new Set(), out = [];
+  const add = (bizId, at) => { if (seen.has(bizId)) return; seen.add(bizId); if (db.ratings.some((x) => x.bizId === bizId && x.userId === req.user.id)) return; const o = userById(bizId); if (o && o.business && bizId !== req.user.id) out.push({ bizId, name: o.business.name, at }); };
+  for (const o of db.orders.slice().reverse()) if (o.customerId === req.user.id && o.status === 'DELIVERED' && (o.deliveredAt || o.createdAt) > since) add(o.bizId, o.deliveredAt || o.createdAt);
+  const ph = last10(req.user.phone); for (const i of db.invoices.slice(-20000).reverse()) if (i.createdAt > since && i.status !== 'void' && last10(i.customer?.phone) === ph) add(i.bizId, i.createdAt);
+  res.json(out.slice(0, 10));
+});
 app.get('/api/shops', auth, (req, res) => {
   const la = Number(req.query.lat), lo = Number(req.query.lng), me = isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null, q = String(req.query.q || '').toLowerCase();
   const list = db.users.filter((u) => u.business && u.status !== 'blocked' && storeOf(u.business).on && !blockedOf(u).includes(req.user.id) && (!q || u.business.name.toLowerCase().includes(q) || (u.business.category || '').toLowerCase().includes(q))).map((u) => shopCard(u, me));
-  list.sort((a, b) => (a.distKm ?? 9999) - (b.distKm ?? 9999)); res.json(list.slice(0, 60));
+  if (req.query.sort === 'rating') list.sort((a, b) => ((b.rating?.avg || 0) * Math.min(1, (b.rating?.n || 0) / 3)) - ((a.rating?.avg || 0) * Math.min(1, (a.rating?.n || 0) / 3)) || (a.distKm ?? 9999) - (b.distKm ?? 9999));
+  else list.sort((a, b) => (a.distKm ?? 9999) - (b.distKm ?? 9999));
+  res.json(list.slice(0, 60));
 });
 app.get('/api/shop/:bizId', auth, (req, res) => {
   const u = userById(req.params.bizId); if (!u || !u.business || u.status === 'blocked' || blockedOf(u).includes(req.user.id)) return res.status(404).json({ error: 'Shop not found.' });
   const s = storeOf(u.business); if (!s.on) return res.status(404).json({ error: 'This shop is not taking online orders right now.' });
   const la = Number(req.query.lat), lo = Number(req.query.lng);
-  res.json({ ...shopCard(u, isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null), items: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).sort((a, b) => (a.category || 'zz').localeCompare(b.category || 'zz') || a.name.localeCompare(b.name))
+  res.json({ ...shopCard(u, isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null), ratings: rtPublic(req, u.id), items: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).sort((a, b) => (a.category || 'zz').localeCompare(b.category || 'zz') || a.name.localeCompare(b.name))
     .map((p) => ({ id: p.id, name: p.name, price: p.price, unit: p.unit || 'pcs', category: p.category || '', barcode: p.barcode || '', description: p.description || '', taxRate: p.taxRate || 0, hasPhoto: !!p.photo, photoV: p.photoV || 0, inStock: p.stock == null || p.stock > 0, left: p.stock != null && p.stock <= 5 ? Math.max(0, p.stock) : null })) });
 });
 const ordHits = new Map();
@@ -4257,7 +4326,7 @@ app.delete('/api/channels/posts/:pid', auth, (req, res) => {
 });
 app.post('/api/channels/:id/report', auth, (req, res) => {
   const c = chById(req.params.id); if (!c) return res.status(404).json({ error: 'Channel not found.' });
-  db.reports.push({ id: newId(), by: req.user.id, reported: c.ownerId, reason: 'Channel "' + c.name + '": ' + (clip(req.body?.reason, 300) || 'reported'), ts: now(), status: 'open' });
+  db.reports.push({ id: newId(), reporter: req.user.id, target: c.ownerId, reason: 'Channel "' + c.name + '": ' + (clip(req.body?.reason, 300) || 'reported'), ts: now(), status: 'open' });
   save(); io.to('admins').emit('feed', { kind: 'report', text: 'Channel reported: ' + c.name, ts: now() }); res.json({ ok: true });
 });
 
@@ -4439,7 +4508,7 @@ app.post('/api/reels/:id/report', auth, (req, res) => {
   const r = reelById(req.params.id); if (!r) return res.status(404).json({ error: 'Reel not found.' });
   r.reports = r.reports || []; if (!r.reports.some((x) => x.by === req.user.id)) r.reports.push({ by: req.user.id, reason: clip(req.body?.reason, 200), ts: now() });
   if (r.reports.length >= 3 && !r.reviewed) r.hidden = true; // hidden from For You until an admin checks it
-  db.reports.push({ id: newId(), by: req.user.id, reported: r.by, reason: 'Reel: ' + (clip(req.body?.reason, 200) || 'reported') + (r.caption ? ' — "' + r.caption.slice(0, 60) + '"' : ''), ts: now(), status: 'open' });
+  db.reports.push({ id: newId(), reporter: req.user.id, target: r.by, reason: 'Reel: ' + (clip(req.body?.reason, 200) || 'reported') + (r.caption ? ' — "' + r.caption.slice(0, 60) + '"' : ''), ts: now(), status: 'open' });
   save(); io.to('admins').emit('feed', { kind: 'report', text: 'Reel reported', ts: now() }); res.json({ ok: true });
 });
 
@@ -4964,6 +5033,10 @@ app.get('/admin/api/reports', adminAuth, (req, res) => {
     targetPhone: userById(r.target)?.phone || '', targetStatus: userById(r.target)?.status || 'deleted',
   })));
 });
+app.post('/admin/api/ratings/:id/hide', adminAuth, (req, res) => {
+  const x = db.ratings.find((y) => y.id === req.params.id); if (!x) return res.status(404).json({ error: 'Review not found.' });
+  x.hidden = req.body?.hide !== false; rtCache.delete(x.bizId); audit(req.admin, x.hidden ? 'hide-review' : 'show-review', nameOf(x.userId), x.text || x.stars + '★'); save(); res.json({ ok: true, hidden: x.hidden });
+});
 app.post('/admin/api/reports/:id/resolve', adminAuth, (req, res) => {
   const r = db.reports.find((x) => x.id === req.params.id);
   if (!r) return res.status(404).json({ error: 'Report not found.' });
@@ -5455,7 +5528,7 @@ app.get('/api/bm/biz/:bizId', auth, (req, res) => { const o = bmBiz(req.params.b
 app.post('/api/bm/report/:bizId', auth, (req, res) => {
   const o = bmBiz(req.params.bizId); if (!o) return res.status(404).json({ error: 'Business not found.' });
   bmSetPref(req.user.id, o.id, { level: 'none', blocked: true }); const api = bmApi(o.business); api.reports = (api.reports || 0) + 1;
-  db.reports.push({ id: newId(), by: req.user.id, reported: o.id, reason: 'Business messages: ' + (clip(req.body?.reason, 300) || 'spam'), ts: now(), status: 'open' });
+  db.reports.push({ id: newId(), reporter: req.user.id, target: o.id, reason: 'Business messages: ' + (clip(req.body?.reason, 300) || 'spam'), ts: now(), status: 'open' });
   bmEvent(o, 'customer.opted_out', { phone: req.user.phone, source: 'report' }); save(); res.json({ ok: true });
 });
 // ---- organisation dashboard (Maata Business → Business messaging API) ----
