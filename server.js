@@ -199,7 +199,7 @@ const fmtLocal = (ts) => (ts ? new Date(ts + TZ * 60000).toISOString().replace('
 // ---------- HTTP ----------
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '100kb' }));
+{ const j = express.json({ limit: '100kb' }); app.use((req, res, next) => (req.path === '/api/secure/intruder' ? next() : j(req, res, next))); } // intruder photos parse their own (bigger) body
 // HTML files can sit in a "public" folder or right next to server.js (easier to upload from a phone)
 const PAGES = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
 // 📉 Less internet data (hosting bandwidth): API answers bigger than 1.4 KB go out gzip-compressed (about 4× smaller)
@@ -1046,6 +1046,21 @@ function secLimit(req, res, max) {
   return true;
 }
 app.get('/api/secure', auth, (req, res) => res.json(secView(req.user, String(req.query.dev || ''))));
+// 🕵️ intruder photos: a wrong face / PIN / voice on one of my phones → the photo is also kept on my account,
+// so I can see it from another phone even if that phone is stolen
+app.post('/api/secure/intruder', auth, express.json({ limit: '400kb' }), (req, res) => {
+  const u = req.user, s = secOf(u), b = req.body || {};
+  const img = String(b.img || ''); if (img && (!/^data:image\/(jpeg|webp|png);base64,/.test(img) || img.length > 300000)) return res.status(400).json({ error: 'Bad photo.' });
+  s.intruders = (s.intruders || []).slice(-11);
+  const x = { id: newId(), at: now(), kind: ['pin', 'voice', 'face'].includes(b.kind) ? b.kind : 'pin', phone: clip(String(b.phone || ''), 40), img };
+  s.intruders.push(x); secEvent(u, 'intruder', 'Someone tried to open Maata on ' + (x.phone || 'your phone') + (img ? ' (photo taken)' : '') + '.'); save();
+  try { pushTo(u, { type: 'msg', title: '🕵️ Someone tried to open Maata', body: (x.phone || 'Your phone') + ': ' + ({ pin: 'wrong PIN 3 times', voice: 'wrong voice password 3 times', face: 'a different face' })[x.kind] + '. Open Maata Secure to see the photo.', tag: 'intruder', url: '/?secure=1' }); } catch {}
+  res.json({ ok: true, id: x.id });
+});
+app.get('/api/secure/intruders', auth, (req, res) => res.json((secOf(req.user).intruders || []).slice().reverse()));
+app.delete('/api/secure/intruders/:id', auth, (req, res) => {
+  const s = secOf(req.user); s.intruders = req.params.id === 'all' ? [] : (s.intruders || []).filter((x) => x.id !== req.params.id); save(); res.json({ ok: true });
+});
 app.post('/api/secure/settings', auth, async (req, res) => {
   const u = req.user, s = secOf(u), b = req.body || {};
   if (b.on !== undefined) {
@@ -1839,7 +1854,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 193;
+const MAATA_VERSION = 194;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
