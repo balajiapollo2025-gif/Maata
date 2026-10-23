@@ -1854,7 +1854,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 195;
+const MAATA_VERSION = 196;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3780,7 +3780,7 @@ app.get('/api/orders/:id/ship-photo', auth, (req, res) => {
 });
 // ---- customer side ----
 const shopCard = (u, me) => { const s = storeOf(u.business), rt = ratingSum(u.id); const dist = me && s.lat != null ? Math.round(geoDist(me, [s.lng, s.lat]) / 100) / 10 : null;
-  return { rating: rt.n ? { avg: rt.avg, n: rt.n } : null, bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', ship: !!s.ship, shipFee: s.shipFee, shipToPay: !!s.shipToPay, shipEta: s.shipEta, shipNote: s.shipNote, taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
+  return { rating: rt.n ? { avg: rt.avg, n: rt.n } : null, bizId: u.id, name: u.business.name, category: u.business.category, address: u.business.address || '', hours: u.business.hours || '', photo: !!u.photo, eta: s.eta, fee: s.fee, freeAbove: s.freeAbove, minOrder: s.minOrder, delivery: s.delivery, pickup: s.pickup, area: s.area, radiusKm: s.radiusKm, distKm: dist, deliversHere: !!(s.delivery && dist != null && dist <= (s.radiusKm || 0)), noLoc: s.lat == null, payCod: s.payCod, payUpi: s.payUpi, upi: s.payUpi ? bizSettings(u.business).upi : '', ship: !!s.ship, shipFee: s.shipFee, shipToPay: !!s.shipToPay, shipEta: s.shipEta, shipNote: s.shipNote, taxMode: bizSettings(u.business).taxMode, products: bizProducts(u.id).filter((p) => p.available !== false && p.price != null).length }; };
 // ⭐ Shop ratings: only real customers can rate (a delivered order, or a bill from that shop to their number).
 // One rating per customer per shop (they can change it). Everyone sees the average, the stars and the words.
 const RT_GOOD = ['Good quality', 'Fair price', 'Fast service', 'Friendly', 'Fresh items', 'Clean shop', 'Quick delivery', 'Good packing'];
@@ -3851,6 +3851,17 @@ app.get('/api/my/rate-pending', auth, (req, res) => {
 app.get('/api/shops', auth, (req, res) => {
   const la = Number(req.query.lat), lo = Number(req.query.lng), me = isFinite(la) && isFinite(lo) && (la || lo) ? [lo, la] : null, q = String(req.query.q || '').toLowerCase();
   const list = db.users.filter((u) => u.business && u.status !== 'blocked' && storeOf(u.business).on && !blockedOf(u).includes(req.user.id) && (!q || u.business.name.toLowerCase().includes(q) || (u.business.category || '').toLowerCase().includes(q))).map((u) => shopCard(u, me));
+  // 📍 distance filter (2 / 5 / 10 km …); shops that have not set their location are kept at the end
+  const km = Number(req.query.km);
+  let fl = me && km > 0 ? list.filter((x) => x.distKm == null || x.distKm <= km) : list;
+  if (req.query.v === '2') {
+    const near = fl.filter((x) => x.distKm != null), noLoc = fl.filter((x) => x.distKm == null);
+    if (req.query.sort === 'rating') near.sort((a, b) => ((b.rating?.avg || 0) * Math.min(1, (b.rating?.n || 0) / 3)) - ((a.rating?.avg || 0) * Math.min(1, (a.rating?.n || 0) / 3)) || a.distKm - b.distKm);
+    else near.sort((a, b) => (b.deliversHere ? 1 : 0) - (a.deliversHere ? 1 : 0) || a.distKm - b.distKm);
+    if (req.query.sort === 'rating') noLoc.sort((a, b) => (b.rating?.avg || 0) - (a.rating?.avg || 0));
+    const all = [...near, ...noLoc], skip = Math.max(0, Number(req.query.skip) || 0);
+    return res.json({ shops: all.slice(skip, skip + 30), more: all.length > skip + 30, total: all.length, outside: me && km > 0 ? list.length - fl.length : 0 });
+  }
   if (req.query.sort === 'rating') list.sort((a, b) => ((b.rating?.avg || 0) * Math.min(1, (b.rating?.n || 0) / 3)) - ((a.rating?.avg || 0) * Math.min(1, (a.rating?.n || 0) / 3)) || (a.distKm ?? 9999) - (b.distKm ?? 9999));
   else list.sort((a, b) => (a.distKm ?? 9999) - (b.distKm ?? 9999));
   res.json(list.slice(0, 60));
