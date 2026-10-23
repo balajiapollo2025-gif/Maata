@@ -1837,7 +1837,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 189;
+const MAATA_VERSION = 190;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3301,6 +3301,13 @@ app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image
 app.delete('/api/biz/:bizId/products/:id/photo', auth, (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
   if (p.photo) deleteChatFile(p.photo); delete p.photo; delete p.photoMime; delete p.photoSize; p.photoV = now(); save(); res.json(bizProdOut(p));
+});
+// 🗑️ delete a product (old bills keep its name and price; only the product list forgets it)
+app.delete('/api/biz/:bizId/products/:id', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found. It may be deleted already.' });
+  db.products = db.products.filter((x) => x !== p); if (p.photo) { try { deleteChatFile(p.photo); } catch {} }
+  bizLog(c, 'product-delete', p.id, p.name); save(); res.json({ ok: true, name: p.name });
 });
 app.post('/api/biz/:bizId/products', auth, (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return;
