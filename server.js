@@ -1855,7 +1855,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 198;
+const MAATA_VERSION = 199;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5209,7 +5209,7 @@ function lsAiOk(req, res) { const h = (lsAiHits.get(req.user.id) || []).filter((
 const lsJson = (g) => { try { return JSON.parse(String(g.text || '').replace(/^```(json)?|```$/g, '')); } catch { return null; } };
 app.post('/api/ls/ai/profile', auth, async (req, res) => {
   if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 800); if (text.length < 5) return res.status(400).json({ error: 'Say or type what work you do.' });
-  const g = await gemini('You help local workers in Andhra Pradesh, India register on a service app. From their words (Telugu, English or mixed) return ONLY JSON: {"cats":["keys"],"exp":years,"about":"2 short sentences in simple English","services":[{"name":"short service","from":rupees,"to":rupees}],"visit":rupees}. Category keys allowed: ' + LS_CATS.map((c) => c.k + ' (' + c.en + ')').join(', ') + '. Prices: typical Chittoor small-town rupees. Max 6 services.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 500, temperature: 0.2 });
+  const g = await gemini('You help local workers in Andhra Pradesh, India register on a service app. From their words (any Indian language — Telugu, Hindi, Tamil, Kannada, Malayalam, Marathi, Bengali, Gujarati, Punjabi, Odia, Urdu — English or mixed) return ONLY JSON: {"cats":["keys"],"exp":years,"about":"2 short sentences in simple English","services":[{"name":"short service","from":rupees,"to":rupees}],"visit":rupees}. Category keys allowed: ' + LS_CATS.map((c) => c.k + ' (' + c.en + ')').join(', ') + '. Prices: typical Chittoor small-town rupees. Max 6 services.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 500, temperature: 0.2 });
   const d = lsJson(g); if (!d) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Try again with a few more words.' });
   res.json({ cats: (d.cats || []).filter((k) => lsCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Number(d.exp) || 0)), about: clip(d.about, 400), services: (d.services || []).slice(0, 6).map((s) => ({ name: clip(s.name, 60), from: Math.round(Number(s.from) || 0), to: Math.round(Number(s.to) || 0) })), visit: Math.round(Number(d.visit) || 0) });
 });
