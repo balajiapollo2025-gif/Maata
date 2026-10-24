@@ -159,6 +159,8 @@ textarea.input{min-height:110px;resize:vertical}
   .kpis{grid-template-columns:repeat(2,1fr)}
   .kpi .v{font-size:22px}
 }
+#lsTabs{display:flex;gap:6px;margin:4px 0 14px;flex-wrap:wrap}#lsTabs button{padding:7px 14px;border-radius:999px;border:1px solid #d7dde3;background:#fff;font-weight:600;cursor:pointer}#lsTabs button.on{background:#0F4C5C;color:#fff;border-color:#0F4C5C}
+.ls-pv{display:flex;gap:12px;flex-wrap:wrap}.ls-pv img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #ddd;cursor:zoom-in}.ls-row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}.ls-k{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}.ls-k div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}.ls-k b{font-size:24px;display:block}
 #hdTabs{display:flex;gap:6px;margin:4px 0 14px}#hdTabs button{padding:7px 14px;border-radius:999px;border:1px solid #d7dde3;background:#fff;font-weight:600;cursor:pointer}#hdTabs button.on{background:#0F4C5C;color:#fff;border-color:#0F4C5C}
 .ft-group{padding:6px 0;margin-bottom:14px}
 .ft-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(128,128,128,.2)}
@@ -195,6 +197,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="channels"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg>Channels</button>
     <button data-view="bm"><svg class="ico" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 10h1M14 10h1M9 14h1M14 14h1M10 21v-3h4v3"/></svg>Business API <span class="count" id="bmCount" hidden></span></button>
     <button data-view="files"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>📁 Files</button>
+    <button data-view="ls"><svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>🛠️ Local Services <span class="count" id="lsCount" hidden></span></button>
     <button data-view="helpdesk"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>Help desk <span class="count" id="hdCount" hidden></span></button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
@@ -330,6 +333,11 @@ textarea.input{min-height:110px;resize:vertical}
       <div id="rlGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
     </section>
 
+    <section data-page="ls" hidden>
+      <div class="top"><h2>🛠️ Local Services</h2></div>
+      <div class="tabs" id="lsTabs"><button class="on" data-t="over">Overview</button><button data-t="pending">⏳ Approvals</button><button data-t="providers">🧑‍🔧 Providers</button><button data-t="bookings">📅 Bookings</button><button data-t="trust">🛡️ Trust &amp; Safety</button><button data-t="appeal">📨 Appeals</button></div>
+      <div id="lsBox"></div>
+    </section>
     <section data-page="helpdesk" hidden>
       <div class="top"><h2>Help desk — customer complaints about the app</h2></div>
       <div class="tabs" id="hdTabs"><button class="on" data-f="active">Open</button><button data-f="resolved">Resolved</button><button data-f="all">All</button></div>
@@ -459,14 +467,15 @@ function boot() {
   socket.on('connect_error', (e) => { if (e.message === 'unauthorized') logout(); });
   socket.on('live', setLive);
   socket.on('feed', addFeed);
+  socket.on('feed', (f) => { if (f && f.type === 'ls') lsBadge(); });
   socket.on('report:new', () => { toast('New customer complaint received.'); loadRepCount(); if (view === 'reports') loadReports(); });
   go(location.hash.slice(1) || 'dash');
-  loadRepCount();
+  loadRepCount(); lsBadge();
   setInterval(() => { if (view === 'dash' && !document.hidden) loadDash(); }, 60000);
 }
 
 // ---------- navigation ----------
-const loaders = { files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -738,6 +747,52 @@ fetch('/api/version').then((r) => r.json()).then((v) => { $('#admVer').textConte
 $('#dashFeatures').onclick = () => { const b = document.querySelector('[data-view="features"]'); if (b) b.click(); };
 $('#ftAllOn').onclick = async () => { const list = await api('/admin/api/features'); const flags = {}; list.forEach((f) => (flags[f.key] = true)); await api('/admin/api/features', { method: 'POST', body: JSON.stringify({ flags }) }); toast('All features are on.'); loadFeaturesAdmin(); };
 
+// ---------- 🛠️ local services ----------
+let lsT = 'over';
+document.querySelectorAll('#lsTabs button').forEach((b) => b.onclick = () => { document.querySelectorAll('#lsTabs button').forEach((x) => x.classList.toggle('on', x === b)); lsT = b.dataset.t; loadLs(); });
+const lsImg = (fid) => fid ? `<img src="/admin/api/ls/file/${esc(fid)}?token=${encodeURIComponent(token)}" alt="" onclick="window.open(this.src)">` : '';
+const lsSt = { approved: 't-green', pending: 't-amber', rejected: 't-red', suspended: 't-red', draft: '' };
+async function lsBadge() { try { const l = await api('/admin/api/ls/providers?status=pending'); const a = await api('/admin/api/ls/providers?status=appeal'); const n = l.length + a.length; $('#lsCount').textContent = n; $('#lsCount').hidden = !n; } catch {} }
+async function loadLs() {
+  const box = $('#lsBox'); box.innerHTML = '<div class="card empty">Loading…</div>'; lsBadge();
+  if (lsT === 'over') {
+    const c = await api('/admin/api/ls/config'), s = c.stats;
+    box.innerHTML = `<div class="ls-k"><div><b>${s.providers}</b>Live providers</div><div><b>${s.pending}</b>Waiting approval</div><div><b>${s.active}</b>Active bookings</div><div><b>${s.done}</b>Completed</div><div><b>${s.bookings}</b>All bookings</div></div>
+      <div class="card" style="margin-bottom:12px"><b>🏙️ Cities</b><div class="muted">Providers in a city that is OFF are hidden from customers.</div><div class="ls-row2">${c.cities.map((x) => `<button class="btn ${x.on === false ? 'ghost' : ''}" data-city="${esc(x.name)}" data-on="${x.on === false ? 1 : 0}">${x.on === false ? '⚪' : '🟢'} ${esc(x.name)}</button>`).join('')}<input class="input" id="lsNewCity" placeholder="Add a city / town" style="max-width:200px"><button class="btn ghost" id="lsAddCity">➕ Add</button></div></div>
+      <div class="card"><b>🧰 Categories</b><div class="muted">Turn a service OFF to hide it from customers.</div>${Object.entries(c.groups).map(([g, n]) => `<div style="margin-top:10px"><b>${esc(n)}</b><div class="ls-row2">${c.cats.filter((x) => x.g === g).map((x) => `<button class="btn ${x.on ? '' : 'ghost'}" data-cat="${x.k}" data-on="${x.on ? 0 : 1}">${x.on ? '✅' : '⛔'} ${x.e} ${esc(x.en)} · ${x.providers}</button>`).join('')}</div></div>`).join('')}</div>`;
+    $$('[data-cat]').forEach((b) => b.onclick = async () => { await api('/admin/api/ls/config', { method: 'PUT', body: JSON.stringify({ cat: b.dataset.cat, on: b.dataset.on === '1' }) }); loadLs(); });
+    $$('[data-city]').forEach((b) => b.onclick = async () => { await api('/admin/api/ls/config', { method: 'PUT', body: JSON.stringify({ city: b.dataset.city, on: b.dataset.on === '1' }) }); loadLs(); });
+    $('#lsAddCity').onclick = async () => { const n = $('#lsNewCity').value.trim(); if (!n) return; await api('/admin/api/ls/config', { method: 'PUT', body: JSON.stringify({ city: n, on: true }) }); loadLs(); };
+    return;
+  }
+  if (['pending', 'providers', 'appeal'].includes(lsT)) {
+    const l = await api('/admin/api/ls/providers' + (lsT === 'pending' ? '?status=pending' : lsT === 'appeal' ? '?status=appeal' : ''));
+    box.innerHTML = l.length ? l.map((p) => `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:16px">${esc(p.name)}</b><span class="tag ${lsSt[p.status] || ''}">${esc(p.status)}</span>${p.idOk ? '<span class="tag t-green">🪪 ID verified</span>' : ''}<span class="muted">${esc(p.phone)} · ${esc(p.catNames.join(', '))} · ${p.exp || 0} yrs · ${esc(p.city || '')} · ${p.area ? p.area.km + ' km' : ''}</span></div>
+      <div class="muted" style="margin:4px 0">${esc(p.about || '')}</div>
+      <div class="muted">Visit ₹${p.visit || 0} · ${(p.prices || []).map((x) => esc(x.name) + ' ₹' + x.from + (x.to ? '–' + x.to : '')).join(' · ')} ${p.upi ? '· UPI ' + esc(p.upi) : ''}</div>
+      <div class="muted">ID: ${esc(p.idDoc ? (p.idDoc.kind + ' ••••' + (p.idDoc.last4 || '')) : 'none')} · Jobs ${p.stats.done} · ⭐ ${p.rating.n ? p.rating.avg + ' (' + p.rating.n + ')' : '–'} · accepted ${p.stats.accepted}/${p.stats.offered} · cancels ${p.stats.cancels} · submitted ${dt(p.submittedAt)}</div>
+      <div class="ls-pv" style="margin-top:8px">${lsImg(p.face && p.face.fid)}${lsImg(p.idDoc && p.idDoc.fid)}${(p.work || []).map((w) => lsImg(w.fid)).join('')}</div>
+      ${p.reason ? `<div class="muted" style="margin-top:6px">Reason shown to provider: ${esc(p.reason)}</div>` : ''}
+      ${p.appeal ? `<blockquote style="margin:8px 0">📨 Appeal (${esc(p.appeal.status)}, ${dt(p.appeal.at)}): ${esc(p.appeal.text)}</blockquote>` : ''}
+      <div class="ls-row2">${p.status !== 'approved' ? `<button class="btn ok" data-lsa="approve" data-id="${p.id}" data-idok="1">✅ Approve + ID verified</button><button class="btn ghost" data-lsa="approve" data-id="${p.id}">✅ Approve (ID not checked)</button>` : `<button class="btn ghost" data-lsa="idok" data-id="${p.id}" data-ok="${p.idOk ? 0 : 1}">${p.idOk ? 'Remove ID badge' : '🪪 Mark ID verified'}</button>`}
+      ${p.status === 'pending' ? `<button class="btn danger" data-lsa="reject" data-id="${p.id}">❌ Reject…</button>` : ''}${p.status === 'approved' ? `<button class="btn danger" data-lsa="suspend" data-id="${p.id}">⏸️ Suspend…</button>` : ''}</div></div>`).join('') : '<div class="card empty">Nothing here. 🎉</div>';
+    $$('[data-lsa]').forEach((b) => b.onclick = async () => { const act = b.dataset.lsa; let reason = ''; if (act === 'reject' || act === 'suspend') { reason = prompt('Reason (the provider will see it):', ''); if (!reason) return; }
+      try { await api('/admin/api/ls/providers/' + b.dataset.id + '/' + act, { method: 'POST', body: JSON.stringify({ reason, idOk: b.dataset.idok === '1', ok: b.dataset.ok === '1' }) }); toast('Done'); loadLs(); } catch (e) { toast(e.message); } });
+    return;
+  }
+  if (lsT === 'bookings') {
+    const l = await api('/admin/api/ls/bookings');
+    box.innerHTML = l.length ? `<div class="card"><table class="tbl" style="width:100%"><tr><th>No.</th><th>Service</th><th>Customer</th><th>Provider</th><th>Status</th><th>Bill</th><th>When</th></tr>${l.map((b) => `<tr><td>${esc(b.no)}${b.emergency ? ' 🚨' : ''}${b.sos.length ? ' 🆘' : ''}${b.reopenOf ? ' 🛡️' : ''}</td><td>${b.catE} ${esc(b.catName)}<div class="muted">${esc(b.problem.slice(0, 60))}</div></td><td>${esc(b.custName)}<div class="muted">${esc(b.custPhone)}</div></td><td>${esc(b.provider ? b.provider.name : '—')}<div class="muted">${esc(b.provPhone)}</div></td><td>${esc(b.status)}${b.cancel ? '<div class="muted">by ' + esc(b.cancel.by) + ': ' + esc(b.cancel.reason || '') + '</div>' : ''}${b.quote && b.quote.warn ? '<div class="muted">⚠️ high price</div>' : ''}</td><td>${b.bill ? '₹' + b.bill.total + ' ' + esc(b.bill.paidBy || '') : ''}</td><td>${dt(b.createdAt)}</td></tr>`).join('')}</table></div>` : '<div class="card empty">No bookings yet.</div>';
+    return;
+  }
+  if (lsT === 'trust') {
+    const l = await api('/admin/api/ls/trust');
+    box.innerHTML = '<div class="muted" style="margin-bottom:10px">Alerts come from simple rules. They are NOT proof — check, talk to the person, then decide. Providers can appeal.</div>' + (l.length ? l.map((f) => `<div class="card" style="margin-bottom:10px"><span class="tag ${f.level === 'high' ? 't-red' : f.level === 'medium' ? 't-amber' : ''}">${esc(f.level)}</span> <b>${esc(f.name || '')}</b> <span class="muted">(${esc(f.kind)})</span><div style="margin:6px 0">${esc(f.what)}</div>${f.kind === 'provider' ? `<div class="ls-row2"><button class="btn ghost" data-ex="${f.id}">🤖 AI summary</button>${f.status === 'approved' ? `<button class="btn danger" data-lsa2="suspend" data-id="${f.id}">⏸️ Suspend…</button>` : ''}</div><div class="muted" id="ex-${f.id}"></div>` : ''}</div>`).join('') : '<div class="card empty">No alerts. 🎉</div>');
+    $$('[data-ex]').forEach((b) => b.onclick = async () => { b.disabled = true; try { const r = await api('/admin/api/ls/trust/explain', { method: 'POST', body: JSON.stringify({ id: b.dataset.ex }) }); document.getElementById('ex-' + b.dataset.ex).innerText = r.text; } catch (e) { toast(e.message); } b.disabled = false; });
+    $$('[data-lsa2]').forEach((b) => b.onclick = async () => { const reason = prompt('Reason (the provider will see it):', ''); if (!reason) return; try { await api('/admin/api/ls/providers/' + b.dataset.id + '/suspend', { method: 'POST', body: JSON.stringify({ reason }) }); toast('Suspended'); loadLs(); } catch (e) { toast(e.message); } });
+  }
+}
 // ---------- help desk ----------
 let hdFilter = 'active';
 async function loadHelpdesk() {

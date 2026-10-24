@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -199,7 +199,7 @@ const fmtLocal = (ts) => (ts ? new Date(ts + TZ * 60000).toISOString().replace('
 // ---------- HTTP ----------
 const app = express();
 app.set('trust proxy', 1);
-{ const j = express.json({ limit: '100kb' }); app.use((req, res, next) => (req.path === '/api/secure/intruder' ? next() : j(req, res, next))); } // intruder photos parse their own (bigger) body
+{ const j = express.json({ limit: '100kb' }); app.use((req, res, next) => (req.path === '/api/secure/intruder' || req.path === '/api/ls/ai/diagnose' ? next() : j(req, res, next))); } // intruder photos parse their own (bigger) body
 // HTML files can sit in a "public" folder or right next to server.js (easier to upload from a phone)
 const PAGES = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
 // 📉 Less internet data (hosting bandwidth): API answers bigger than 1.4 KB go out gzip-compressed (about 4× smaller)
@@ -571,6 +571,7 @@ const FEATURE_LIST = [
   ['Account & app', 'backup', '☁️ Chat backup (Google Drive)'],
   ['Account & app', 'themes', '🎨 Theme & colours'],
   ['Account & app', 'appLock', '🔒 App lock'],
+  ['Business', 'localServices', '🛠️ Local Services (electrician, plumber, AC, tutor, beauty… — booking, tracking, providers)'],
   ['Account & app', 'secure', '🛡️ Maata Secure (anti-theft: lost-phone mode, alarm, phone location, IMEI, theft report)'],
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
   ['Updates & social', 'maps', '🗺️ Maata Maps (navigation)'],
@@ -586,7 +587,7 @@ const featOn = (k) => featureFlags()[k] !== false;
 const OFF_MSG = 'This feature is turned off by Maata right now.';
 app.get('/api/features', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json(featureFlags()); });
 // the server enforces it too (older app versions cannot use a switched-off feature)
-const FEAT_PATHS = [['/api/secure', 'secure'], ['/api/reels', 'reels'], ['/api/reels-creators', 'reels'], ['/api/insights', 'reels'], ['/api/ai', 'ai'], ['/api/translate', 'translate'], ['/api/qr', 'qrLogin'], ['/api/backup', 'backup'],
+const FEAT_PATHS = [['/api/secure', 'secure'], ['/api/ls', 'localServices'], ['/api/reels', 'reels'], ['/api/reels-creators', 'reels'], ['/api/insights', 'reels'], ['/api/ai', 'ai'], ['/api/translate', 'translate'], ['/api/qr', 'qrLogin'], ['/api/backup', 'backup'],
   ['/api/support', 'support'], ['/api/maps', 'maps'], ['/api/channels', 'channels'], ['/api/communities', 'communities'], ['/api/business', 'business'], ['/api/catalogue', 'business'], ['/api/ads', 'business']];
 for (const [path, k] of FEAT_PATHS) app.use(path, (req, res, next) => (featOn(k) ? next() : res.status(403).json({ error: OFF_MSG, featureOff: k })));
 app.use('/api/status', (req, res, next) => (req.method === 'GET' || featOn('status') ? next() : res.status(403).json({ error: OFF_MSG, featureOff: 'status' })));
@@ -1854,7 +1855,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 197;
+const MAATA_VERSION = 198;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5038,6 +5039,479 @@ app.get('/admin/api/messages', adminAuth, (req, res) => {
   res.json({ total, readRate: total ? Math.round((read / total) * 100) : 0, conversations: pairs.size, activeSenders: top.length, perDay, top: top.slice(0, 20) });
 });
 
+// ==================== 🛠️ MAATA LOCAL SERVICES (electrician, plumber, AC, tutor, beauty …) ====================
+// Customers find a verified provider near them, book (or describe the problem by voice / photo — Maata AI understands it),
+// track the provider live, approve the price, pay the provider directly (cash / UPI) and rate. Providers register in Maata,
+// the Maata team approves them, they go 🟢 Online and accept jobs. Money never passes through Maata.
+const LS_GROUPS = { home: '🏠 Home repairs', appliance: '❄️ Appliance repair', vehicle: '🏍️ Vehicle services', personal: '💇 Personal care', education: '📚 Education', events: '📸 Events', other: '🧹 Cleaning & more' };
+// k, group, emoji, English, Telugu, usual price ₹ (lo–hi, Chittoor), visit charge ₹, reminder after N days (0 = none), price unit
+const LS_CATS = [
+  ['electrician', 'home', '💡', 'Electrician', 'ఎలక్ట్రీషియన్', 150, 400, 100, 0], ['plumber', 'home', '🚿', 'Plumber', 'ప్లంబర్', 150, 500, 100, 0],
+  ['carpenter', 'home', '🪚', 'Carpenter', 'కార్పెంటర్', 200, 800, 100, 0], ['painter', 'home', '🎨', 'Painter', 'పెయింటర్', 2000, 15000, 0, 0, 'per room / job'],
+  ['ac', 'appliance', '❄️', 'AC repair & service', 'AC రిపేర్', 400, 1500, 200, 180], ['fridge', 'appliance', '🧊', 'Fridge repair', 'ఫ్రిడ్జ్ రిపేర్', 300, 1200, 200, 0],
+  ['washing', 'appliance', '🌀', 'Washing machine', 'వాషింగ్ మెషిన్', 300, 1200, 200, 0], ['tv', 'appliance', '📺', 'TV repair', 'TV రిపేర్', 300, 1500, 200, 0],
+  ['ro', 'appliance', '💧', 'RO water purifier', 'RO వాటర్ ప్యూరిఫైయర్', 300, 900, 150, 120],
+  ['bike', 'vehicle', '🏍️', 'Bike mechanic', 'బైక్ మెకానిక్', 300, 1200, 0, 90], ['car', 'vehicle', '🚗', 'Car mechanic', 'కార్ మెకానిక్', 800, 4000, 0, 180],
+  ['puncture', 'vehicle', '🛞', 'Puncture', 'పంక్చర్', 100, 300, 0, 0], ['towing', 'vehicle', '🚛', 'Towing', 'టోయింగ్', 800, 3000, 0, 0],
+  ['salon', 'personal', '💈', 'Salon / haircut', 'సెలూన్', 100, 500, 0, 0], ['beauty', 'personal', '💇‍♀️', 'Beauty parlour', 'బ్యూటీ పార్లర్', 300, 2000, 0, 0],
+  ['makeup', 'personal', '💄', 'Bridal makeup', 'మేకప్', 1500, 8000, 0, 0],
+  ['tutor', 'education', '📚', 'Home tutor', 'హోమ్ ట్యూటర్', 2000, 6000, 0, 0, 'per month'], ['online_tutor', 'education', '💻', 'Online tutor', 'ఆన్‌లైన్ ట్యూటర్', 1500, 5000, 0, 0, 'per month'],
+  ['music', 'education', '🎵', 'Music classes', 'మ్యూజిక్ క్లాసులు', 1500, 4000, 0, 0, 'per month'],
+  ['photographer', 'events', '📸', 'Photographer', 'ఫోటోగ్రాఫర్', 3000, 25000, 0, 0, 'per event'], ['videographer', 'events', '🎥', 'Videographer', 'వీడియోగ్రాఫర్', 5000, 40000, 0, 0, 'per event'],
+  ['decoration', 'events', '🎊', 'Decoration', 'డెకరేషన్', 2000, 20000, 0, 0, 'per event'],
+  ['cleaning', 'other', '🧹', 'Home cleaning', 'ఇంటి క్లీనింగ్', 1000, 4000, 0, 90], ['pest', 'other', '🐜', 'Pest control', 'పెస్ట్ కంట్రోల్', 800, 3000, 0, 90],
+  ['shifting', 'other', '🚚', 'Packers & shifting', 'ఇల్లు మార్చడం', 3000, 15000, 0, 0],
+].map(([k, g, e, en, te, lo, hi, visit, remind, unit]) => ({ k, g, e, en, te, lo, hi, visit, remind, unit: unit || '' }));
+const LS_ST = ['REQUESTED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
+function lsMeta() { let m = db.meta.find((x) => x.id === 'ls'); if (!m) { m = { id: 'ls', createdAt: now(), seq: 1000, cities: [{ name: 'Chittoor', on: true }], off: {} }; db.meta.push(m); } m.cities = m.cities || []; m.off = m.off || {}; return m; }
+const lsCat = (k) => LS_CATS.find((c) => c.k === k) || null;
+const lsCatsOn = () => { const m = lsMeta(); return LS_CATS.filter((c) => !m.off[c.k]); };
+const lsCityOn = (name) => { const c = lsMeta().cities.find((x) => x.name.toLowerCase() === String(name || '').toLowerCase()); return !c || c.on !== false; };
+const lsProv = (id) => db.providers.find((p) => p.id === id) || null;
+const lsBk = (id) => db.lsBookings.find((b) => b.id === id) || null;
+const lsKey = (pid) => 'ls:' + pid; // ratings are stored with the shop ratings, under this key
+const lsDistKm = (a, b) => (a && b && a.lat != null && b.lat != null ? Math.round(geoDist([a.lng, a.lat], [b.lng, b.lat]) / 100) / 10 : null);
+const lsFile = (f) => (f ? { fid: f.fid } : null);
+const lsDay = (t) => new Date(t + 5.5 * 3600000).toISOString().slice(0, 10); // India date
+function lsOnline(p) { return !!(p.online && p.status === 'approved' && online.has(p.id)); }
+function lsStats(p) { const s = p.stats || (p.stats = { offered: 0, accepted: 0, done: 0, cancels: 0, respSum: 0, respN: 0, quoteHigh: 0, reopens: 0 }); return s; }
+function lsBayes(pid) { const r = ratingSum(lsKey(pid)); return { avg: r.avg, n: r.n, score: r.n ? (r.avg * r.n + 4 * 3) / (r.n + 3) : 4 }; }
+function lsCard(p, here) {
+  const u = userById(p.id) || {}, st = lsStats(p), r = ratingSum(lsKey(p.id)), d = lsDistKm(here, p.area);
+  const acc = st.offered ? st.accepted / st.offered : null, resp = st.respN ? Math.round(st.respSum / st.respN / 60000) : null;
+  const badge = p.status === 'approved' ? (st.done >= 20 && r.avg >= 4.5 ? 'trusted' : p.idDoc && p.idOk ? 'id' : 'phone') : 'phone';
+  return { id: p.id, name: p.name || u.name, photo: p.face ? p.face.fid : null, cats: p.cats, catNames: p.cats.map((k) => (lsCat(k) || {}).en).filter(Boolean), exp: p.exp || 0, distKm: d, areaKm: p.area?.km || 0,
+    covers: d == null ? null : d <= (p.area?.km || 0), visit: p.visit || 0, from: Math.min(...(p.prices || []).map((x) => x.from || 0).filter((x) => x > 0), 99999) % 99999 || null,
+    rating: r.n ? { avg: r.avg, n: r.n } : null, jobs: st.done, online: lsOnline(p), resp, acceptRate: acc == null ? null : Math.round(acc * 100), badge, gender: p.gender || '', warranty: p.warranty ?? 7, city: p.city || '', hours: p.hours || null };
+}
+function lsScore(c) { // 🎯 Smart matching: near + well rated + quick to accept + available now + fair visit charge
+  const b = lsBayes(c.id).score;
+  return b * 20 + (c.acceptRate == null ? 12 : c.acceptRate * 0.15) - (c.distKm == null ? 10 : Math.min(c.distKm, 30) * 2) - (c.resp == null ? 3 : Math.min(c.resp, 30) * 0.3) + (c.online ? 12 : 0) + (c.covers ? 6 : 0) - (c.visit || 0) / 100;
+}
+function lsEstimate(cat, here) { // 💰 usual price: real finished jobs nearby (if enough), else the category's normal range
+  const c = lsCat(cat); if (!c) return null;
+  const since = now() - 180 * 86400000, l = db.lsBookings.filter((b) => b.cat === cat && b.status === 'COMPLETED' && b.bill && b.bill.work > 0 && b.doneAt > since && (!here || lsDistKm(here, b.address) == null || lsDistKm(here, b.address) < 30)).map((b) => b.bill.work).sort((a, z) => a - z);
+  if (l.length >= 5) { const q = (f) => l[Math.min(l.length - 1, Math.floor(f * l.length))]; return { lo: Math.round(q(0.25) / 10) * 10, hi: Math.round(q(0.75) / 10) * 10, n: l.length, from: 'jobs', unit: c.unit }; }
+  return { lo: c.lo, hi: c.hi, n: 0, from: 'normal', unit: c.unit };
+}
+function lsSlots(p, days = 3) { // free 1-hour slots in the provider's hours for the next days
+  const h = p.hours || { days: [1, 2, 3, 4, 5, 6], from: 9, to: 20 }, out = [], t0 = now();
+  const busy = new Set(db.lsBookings.filter((b) => b.provId === p.id && ['ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS', 'REQUESTED'].includes(b.status) && b.when?.type === 'slot').map((b) => b.when.day + '|' + b.when.slot));
+  for (let d = 0; d < days; d++) {
+    const t = t0 + d * 86400000, day = lsDay(t), dow = new Date(t + 5.5 * 3600000).getUTCDay(); if (!h.days.includes(dow)) continue;
+    const nowH = d === 0 ? new Date(t0 + 5.5 * 3600000).getUTCHours() + 1 : 0, sl = [];
+    for (let x = Math.max(h.from, nowH); x < h.to; x++) if (!busy.has(day + '|' + x)) sl.push(x);
+    if (sl.length) out.push({ day, slots: sl });
+  }
+  return out;
+}
+const lsSlotTxt = (w) => (!w ? '' : w.type === 'now' ? 'As soon as possible' : w.day + ' · ' + ((w.slot % 12) || 12) + ':00 ' + (w.slot < 12 ? 'AM' : 'PM') + '–' + (((w.slot + 1) % 12) || 12) + ':00 ' + (w.slot + 1 < 12 ? 'AM' : 'PM'));
+function lsOut(b, forPro) {
+  const p = lsProv(b.provId), pu = userById(b.provId), cu = userById(b.custId);
+  return { id: b.id, no: b.no, cat: b.cat, catName: (lsCat(b.cat) || {}).en || b.cat, catE: (lsCat(b.cat) || {}).e || '🛠️', status: b.status, history: b.history, problem: b.problem, ai: b.ai || null, photos: (b.photos || []).map(lsFile),
+    address: b.address, when: b.when, whenTxt: lsSlotTxt(b.when), pay: b.pay, visit: b.visit, emergency: !!b.emergency, createdAt: b.createdAt, acceptBy: b.status === 'REQUESTED' ? b.acceptBy : null,
+    provider: p ? { id: p.id, name: p.name || pu?.name, photo: p.face ? p.face.fid : null, upi: p.upi ? true : false, rating: ratingSum(lsKey(p.id)).n ? { avg: ratingSum(lsKey(p.id)).avg, n: ratingSum(lsKey(p.id)).n } : null } : null,
+    customer: forPro ? { id: b.custId, name: cu?.name || 'Customer' } : undefined,
+    otp: !forPro && ['ACCEPTED', 'ON_THE_WAY'].includes(b.status) ? b.otp : undefined,
+    quote: b.quote || null, bill: b.bill || null, before: (b.before || []).map(lsFile), after: (b.after || []).map(lsFile), aiCheck: b.aiCheck || null,
+    track: b.status === 'ON_THE_WAY' && b.track ? { lat: b.track.lat, lng: b.track.lng, at: b.track.at, trail: (b.trail || []).slice(-40), eta: b.address?.lat != null ? Math.max(1, Math.round(lsDistKm(b.track, b.address) / 20 * 60)) : null } : null,
+    dest: b.address && b.address.lat != null ? { lat: b.address.lat, lng: b.address.lng } : null,
+    cancel: b.cancel || null, reopenOf: b.reopenOf || null, reopened: b.reopened || null, rated: !!db.ratings.find((x) => x.bizId === lsKey(b.provId) && x.userId === b.custId),
+    canReopen: !forPro && b.status === 'COMPLETED' && !b.reopened && now() - (b.doneAt || 0) < 7 * 86400000, shareKey: !forPro ? b.key : undefined, offered: forPro ? undefined : (b.offeredTo || []).length };
+}
+const LS_SAY = {
+  new_job: { en: (b) => `New Maata service booking. ${(lsCat(b.cat) || {}).en}${b.emergency ? ', emergency' : ''}. Please accept it.`, te: (b) => `కొత్త సర్వీస్ బుకింగ్ వచ్చింది. ${(lsCat(b.cat) || {}).te}${b.emergency ? ', అత్యవసరం' : ''}. దయచేసి యాక్సెప్ట్ చేయండి.`, hi: (b) => `नई सर्विस बुकिंग आई है. कृपया स्वीकार करें.` },
+};
+function lsTell(b, who, title, body, extra = {}) { // live update + phone notification
+  const ids = who === 'both' ? [b.custId, b.provId] : who === 'cust' ? [b.custId] : [b.provId];
+  for (const id of ids) { if (!id) continue; io.to('user:' + id).emit('ls:update', { id: b.id, booking: lsOut(b, id === b.provId) }); if (title) { const u = userById(id); if (u) pushTo(u, { type: 'msg', title, body, tag: 'ls-' + b.id, url: '/?ls=' + b.id }).catch(() => {}); } }
+  if (extra.alertPro) for (const pid of extra.alertPro) { const u = userById(pid); if (!u) continue; const lang = LS_SAY.new_job[u.lang] ? u.lang : 'en', say = LS_SAY.new_job[lang](b), sayEn = LS_SAY.new_job.en(b), t2 = (b.emergency ? '🚨 Emergency job · ' : '🔔 New job · ') + (lsCat(b.cat) || {}).en, body2 = (b.problem || '').slice(0, 80) + ' · ' + lsSlotTxt(b.when);
+    io.to('user:' + pid).emit('voice:alert', { kind: 'ls_job', say: u.voiceAlerts === false ? '' : say, sayEn, lang, title: t2, body: body2, url: '/?ls=' + b.id });
+    io.to('user:' + pid).emit('ls:job', { id: b.id, booking: lsOut(b, true) });
+    pushTo(u, { type: 'order_alert', title: t2, body: body2, tag: 'lsjob-' + b.id, url: '/?ls=' + b.id, say: u.voiceAlerts === false ? '' : say, sayEn, lang }, { urgency: 'high' }).catch(() => {}); }
+}
+function lsHist(b, s, by, note) { b.history.push({ s, at: now(), by, ...(note ? { note: clip(note, 200) } : {}) }); }
+// ---- files (provider photos, ID, work photos, booking photos) ----
+async function lsSaveImg(req, res, maxMb = 6) {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) { res.status(400).json({ error: 'Choose a photo.' }); return null; }
+  const mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0]; if (!/^image\/(jpeg|png|webp)$/.test(mime)) { res.status(400).json({ error: 'Send a JPG, PNG or WebP photo.' }); return null; }
+  if (req.body.length > maxMb * 1048576) { res.status(413).json({ error: 'Photo is too big.' }); return null; }
+  const fid = newId(); try { await saveChatFile(fid, req.body, mime); } catch { res.status(500).json({ error: 'Could not save the photo.' }); return null; }
+  db.lsFiles.push({ id: fid, by: req.user ? req.user.id : 'admin', mime, size: req.body.length, createdAt: now() }); return { fid };
+}
+function lsCanSee(f, viewer) { // who may open a file
+  if (!f || !viewer) return false; if (f.by === viewer.id) return true;
+  for (const p of db.providers) { if (p.face?.fid === f.id || (p.work || []).some((w) => w.fid === f.id)) return true; if (p.idDoc?.fid === f.id) return p.id === viewer.id; }
+  return db.lsBookings.some((b) => (b.custId === viewer.id || b.provId === viewer.id || (b.offeredTo || []).includes(viewer.id)) && [...(b.photos || []), ...(b.before || []), ...(b.after || [])].some((x) => x.fid === f.id));
+}
+function lsStream(f, res) { res.setHeader('Content-Type', f.mime); res.setHeader('Cache-Control', 'private, max-age=86400'); const st = chatFileStream(f.id, 0, f.size - 1); st.on('error', () => res.destroy()); st.pipe(res); }
+app.get('/api/ls/file/:fid', (req, res) => { let v = null; try { v = findUserByToken(String(req.query.t || '')); } catch {} const f = db.lsFiles.find((x) => x.id === req.params.fid); if (!lsCanSee(f, v)) return res.status(404).end(); lsStream(f, res); });
+app.get('/admin/api/ls/file/:fid', adminAuth, (req, res) => { const f = db.lsFiles.find((x) => x.id === req.params.fid); if (!f) return res.status(404).end(); lsStream(f, res); });
+const lsImgRaw = express.raw({ type: ['image/*'], limit: '7mb' });
+// ---- config ----
+app.get('/api/ls/config', auth, (req, res) => {
+  const m = lsMeta(), p = lsProv(req.user.id);
+  res.json({ groups: LS_GROUPS, cats: lsCatsOn().map((c) => ({ ...c, providers: db.providers.filter((x) => x.status === 'approved' && x.cats.includes(c.k) && lsCityOn(x.city)).length })), cities: m.cities.filter((c) => c.on !== false).map((c) => c.name),
+    provider: p ? { status: p.status, reason: p.reason || '', online: !!p.online, appeal: p.appeal || null } : null, ai: !!GEMINI_KEY });
+});
+// ---- provider registration ----
+function lsProOut(p) { return { ...p, idDoc: p.idDoc ? { kind: p.idDoc.kind, last4: p.idDoc.last4, fid: p.idDoc.fid } : null, stats: lsStats(p), rating: ratingSum(lsKey(p.id)) }; }
+app.get('/api/ls/me/provider', auth, (req, res) => { const p = lsProv(req.user.id); res.json(p ? lsProOut(p) : null); });
+app.put('/api/ls/me/provider', auth, (req, res) => {
+  const b = req.body || {}; let p = lsProv(req.user.id);
+  if (!p) { p = { id: req.user.id, name: req.user.name, cats: [], prices: [], work: [], status: 'draft', online: false, createdAt: now(), warranty: 7 }; db.providers.push(p); }
+  if (p.status === 'suspended') return res.status(403).json({ error: 'Your provider account is on hold. Send an appeal from this page.' });
+  if (b.name !== undefined) p.name = clip(b.name, 60) || req.user.name;
+  if (Array.isArray(b.cats)) p.cats = [...new Set(b.cats.filter((k) => lsCat(k)))].slice(0, 4);
+  if (b.exp !== undefined) p.exp = Math.max(0, Math.min(60, Math.round(Number(b.exp) || 0)));
+  if (b.about !== undefined) p.about = clip(b.about, 500);
+  if (b.area) { const la = Number(b.area.lat), lo = Number(b.area.lng); p.area = { text: clip(b.area.text, 200), lat: Math.abs(la) <= 90 && la ? +la.toFixed(6) : p.area?.lat ?? null, lng: Math.abs(lo) <= 180 && lo ? +lo.toFixed(6) : p.area?.lng ?? null, km: Math.max(1, Math.min(50, Math.round(Number(b.area.km) || 8))) }; }
+  if (b.city !== undefined) p.city = clip(b.city, 40);
+  if (Array.isArray(b.prices)) p.prices = b.prices.slice(0, 12).map((x) => ({ name: clip(x.name, 60), from: Math.max(0, Math.round(Number(x.from) || 0)), to: Math.max(0, Math.round(Number(x.to) || 0)) })).filter((x) => x.name);
+  if (b.visit !== undefined) p.visit = Math.max(0, Math.min(5000, Math.round(Number(b.visit) || 0)));
+  if (b.hours) { const d = (Array.isArray(b.hours.days) ? b.hours.days : []).map(Number).filter((x) => x >= 0 && x <= 6); const f = Math.max(0, Math.min(23, Math.round(Number(b.hours.from) || 9))), t = Math.max(f + 1, Math.min(24, Math.round(Number(b.hours.to) || 20))); p.hours = { days: d.length ? [...new Set(d)].sort() : [1, 2, 3, 4, 5, 6], from: f, to: t }; }
+  if (b.gender !== undefined) p.gender = ['m', 'f'].includes(b.gender) ? b.gender : '';
+  if (b.upi !== undefined) { const u = clip(b.upi, 60).toLowerCase(); if (u && !/^[\w.\-]{2,}@[a-z]{2,}$/.test(u)) return res.status(400).json({ error: 'Check the UPI ID (like name@okaxis).' }); p.upi = u; }
+  if (b.warranty !== undefined) p.warranty = [0, 3, 7, 15, 30].includes(Number(b.warranty)) ? Number(b.warranty) : 7;
+  p.updatedAt = now(); save(); res.json(lsProOut(p));
+});
+app.post('/api/ls/me/provider/photo', auth, lsImgRaw, async (req, res) => {
+  let p = lsProv(req.user.id); if (!p) { p = { id: req.user.id, name: req.user.name, cats: [], prices: [], work: [], status: 'draft', online: false, createdAt: now(), warranty: 7 }; db.providers.push(p); }
+  const kind = String(req.query.kind || 'face'); const f = await lsSaveImg(req, res); if (!f) return;
+  if (kind === 'face') p.face = f; else if (kind === 'id') { p.idDoc = { ...(p.idDoc || {}), fid: f.fid }; p.idOk = false; } else { p.work = (p.work || []).slice(-7); p.work.push(f); }
+  save(); res.json(lsProOut(p));
+});
+app.delete('/api/ls/me/provider/work/:fid', auth, (req, res) => { const p = lsProv(req.user.id); if (!p) return res.status(404).json({ error: 'Not found.' }); p.work = (p.work || []).filter((w) => w.fid !== req.params.fid); save(); res.json(lsProOut(p)); });
+app.post('/api/ls/me/provider/submit', auth, (req, res) => {
+  const p = lsProv(req.user.id); if (!p) return res.status(400).json({ error: 'Fill your details first.' });
+  const b = req.body || {}, miss = [];
+  if (!p.cats.length) miss.push('what work you do'); if (!p.area || p.area.lat == null) miss.push('your area (tap “Use my location”)'); if (!p.face) miss.push('your face photo');
+  if (!(p.prices || []).length && !p.visit) miss.push('your prices'); if (!p.idDoc?.fid) miss.push('your ID photo');
+  if (miss.length) return res.status(400).json({ error: 'Please add: ' + miss.join(', ') + '.' });
+  const last4 = String(b.last4 || '').replace(/\D/g, ''); if (last4.length !== 4) return res.status(400).json({ error: 'Type the last 4 digits of your ID number.' });
+  p.idDoc = { ...p.idDoc, kind: ['aadhaar', 'voter', 'dl', 'pan', 'other'].includes(b.kind) ? b.kind : 'other', last4 };
+  if (p.status !== 'approved') { p.status = 'pending'; p.submittedAt = now(); p.reason = ''; }
+  save(); feed('ls', '🛠️ New service provider waiting: ' + (p.name || req.user.name) + ' (' + p.cats.map((k) => lsCat(k).en).join(', ') + ')');
+  res.json(lsProOut(p));
+});
+app.post('/api/ls/me/provider/online', auth, (req, res) => {
+  const p = lsProv(req.user.id); if (!p || p.status !== 'approved') return res.status(403).json({ error: 'You can go online after the Maata team approves you.' });
+  p.online = !!req.body?.on; p.onlineAt = now(); save(); res.json({ online: p.online });
+});
+app.post('/api/ls/me/provider/appeal', auth, (req, res) => {
+  const p = lsProv(req.user.id); if (!p || !['suspended', 'rejected'].includes(p.status)) return res.status(400).json({ error: 'Nothing to appeal.' });
+  const t = clip(req.body?.text, 600); if (t.length < 10) return res.status(400).json({ error: 'Write a few words about why.' });
+  p.appeal = { text: t, at: now(), status: 'open' }; save(); feed('ls', '🛠️ Appeal from provider ' + p.name); res.json(lsProOut(p));
+});
+// ✨ AI: provider says in their own words what they do → categories, services and prices filled in
+const lsAiHits = new Map();
+function lsAiOk(req, res) { const h = (lsAiHits.get(req.user.id) || []).filter((t) => now() - t < 3600000); if (h.length >= 40) { res.status(429).json({ error: 'Too many AI requests. Try again later.' }); return false; } h.push(now()); lsAiHits.set(req.user.id, h); if (!GEMINI_KEY) { res.status(503).json({ error: 'Maata AI is not switched on.' }); return false; } return true; }
+const lsJson = (g) => { try { return JSON.parse(String(g.text || '').replace(/^```(json)?|```$/g, '')); } catch { return null; } };
+app.post('/api/ls/ai/profile', auth, async (req, res) => {
+  if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 800); if (text.length < 5) return res.status(400).json({ error: 'Say or type what work you do.' });
+  const g = await gemini('You help local workers in Andhra Pradesh, India register on a service app. From their words (Telugu, English or mixed) return ONLY JSON: {"cats":["keys"],"exp":years,"about":"2 short sentences in simple English","services":[{"name":"short service","from":rupees,"to":rupees}],"visit":rupees}. Category keys allowed: ' + LS_CATS.map((c) => c.k + ' (' + c.en + ')').join(', ') + '. Prices: typical Chittoor small-town rupees. Max 6 services.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 500, temperature: 0.2 });
+  const d = lsJson(g); if (!d) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Try again with a few more words.' });
+  res.json({ cats: (d.cats || []).filter((k) => lsCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Number(d.exp) || 0)), about: clip(d.about, 400), services: (d.services || []).slice(0, 6).map((s) => ({ name: clip(s.name, 60), from: Math.round(Number(s.from) || 0), to: Math.round(Number(s.to) || 0) })), visit: Math.round(Number(d.visit) || 0) });
+});
+// 🔍 AI: customer describes the problem (words and / or a photo) → service, likely issue, urgency, usual price, what to tell the provider
+app.post('/api/ls/ai/diagnose', auth, express.json({ limit: '3mb' }), async (req, res) => {
+  if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 600), img = String(req.body?.img || '');
+  if (text.length < 3 && !img) return res.status(400).json({ error: 'Say or type the problem, or add a photo.' });
+  const parts = []; const im = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(img); if (im && im[2].length < 2.8e6) parts.push({ inlineData: { mimeType: im[1], data: im[2] } });
+  parts.push({ text: 'Customer says: ' + (text || '(only a photo)') });
+  const lang = ({ te: 'Telugu', hi: 'Hindi' })[req.user.lang] || 'English';
+  const g = await gemini('You are Maata AI, a helpful home-service expert in Chittoor, Andhra Pradesh, India. From the customer words (any language) and the photo, return ONLY JSON: {"cat":"one key","issue":"likely problem, short, in ' + lang + '","urgency":"low|normal|high|emergency","questions":["max 2 short questions in ' + lang + '"],"tools":["parts/tools the worker should bring, English"],"providerNote":"one line for the worker in simple English","problem":"clean one-line problem text in ' + lang + '","when":"now|today|tomorrow|unknown"}. Keys: ' + LS_CATS.map((c) => c.k + '=' + c.en).join(', ') + '. Never claim certainty; say "likely". If it sounds dangerous (gas leak, sparks, fire, flooding) urgency=emergency.', [{ role: 'user', parts }], { json: true, maxTokens: 500, temperature: 0.2 });
+  const d = lsJson(g); if (!d || !lsCat(d.cat)) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Choose the service yourself.' });
+  const here = req.body?.lat ? { lat: Number(req.body.lat), lng: Number(req.body.lng) } : null;
+  res.json({ cat: d.cat, catName: lsCat(d.cat).en, catE: lsCat(d.cat).e, issue: clip(d.issue, 160), urgency: ['low', 'normal', 'high', 'emergency'].includes(d.urgency) ? d.urgency : 'normal', questions: (d.questions || []).slice(0, 2).map((x) => clip(x, 120)), tools: (d.tools || []).slice(0, 5).map((x) => clip(x, 40)), providerNote: clip(d.providerNote, 200), problem: clip(d.problem || text, 300), when: d.when, price: lsEstimate(d.cat, here) });
+});
+// ---- customers: search, profile ----
+app.get('/api/ls/search', auth, (req, res) => {
+  const la = Number(req.query.lat), lo = Number(req.query.lng), here = isFinite(la) && isFinite(lo) && (la || lo) ? { lat: la, lng: lo } : null;
+  const cat = String(req.query.cat || ''), q = String(req.query.q || '').toLowerCase().trim(), km = Number(req.query.km) || 0, sort = String(req.query.sort || 'best');
+  let l = db.providers.filter((p) => p.status === 'approved' && p.id !== req.user.id && lsCityOn(p.city) && (!cat || p.cats.includes(cat)) && !blockedOf(userById(p.id) || {}).includes(req.user.id)
+    && (!q || (p.name || '').toLowerCase().includes(q) || p.cats.some((k) => (lsCat(k).en + ' ' + lsCat(k).te).toLowerCase().includes(q)) || (p.prices || []).some((x) => x.name.toLowerCase().includes(q)))).map((p) => lsCard(p, here));
+  if (here && km) l = l.filter((c) => c.distKm == null || c.distKm <= km);
+  if (req.query.now === '1') l = l.filter((c) => c.online); if (req.query.women === '1') l = l.filter((c) => c.gender === 'f');
+  for (const c of l) c.score = Math.round(lsScore(c) * 10) / 10;
+  l.sort(sort === 'near' ? (a, b) => (a.distKm ?? 999) - (b.distKm ?? 999) : sort === 'rating' ? (a, b) => lsBayes(b.id).score - lsBayes(a.id).score : sort === 'price' ? (a, b) => (a.visit || 0) - (b.visit || 0) || (a.from || 0) - (b.from || 0) : (a, b) => b.score - a.score);
+  res.json({ providers: l.slice(0, 60), total: l.length, estimate: cat ? lsEstimate(cat, here) : null });
+});
+app.get('/api/ls/providers/:id', auth, (req, res) => {
+  const p = lsProv(req.params.id); if (!p || (p.status !== 'approved' && p.id !== req.user.id)) return res.status(404).json({ error: 'Provider not found.' });
+  const la = Number(req.query.lat), lo = Number(req.query.lng), here = isFinite(la) && isFinite(lo) && (la || lo) ? { lat: la, lng: lo } : null;
+  const key = lsKey(p.id), all = db.ratings.filter((x) => x.bizId === key && !x.hidden).sort((a, b) => (b.text ? 1 : 0) - (a.text ? 1 : 0) || b.at - a.at);
+  res.json({ ...lsCard(p, here), about: p.about || '', prices: p.prices || [], work: (p.work || []).map(lsFile), hours: p.hours || null, slots: lsSlots(p), upi: !!p.upi,
+    ratings: { summary: ratingSum(key), reviews: all.slice(0, 20).map((x) => rtOut(x)), mine: (() => { const m = db.ratings.find((x) => x.bizId === key && x.userId === req.user.id); return m ? rtOut(m) : null; })(), canRate: lsCanRate(req.user, p.id), good: RT_GOOD, bad: RT_BAD } });
+});
+function lsCanRate(u, pid) { return !!u && u.id !== pid && db.lsBookings.some((b) => b.custId === u.id && b.provId === pid && b.status === 'COMPLETED'); }
+app.post('/api/ls/providers/:id/rate', auth, (req, res) => {
+  const p = lsProv(req.params.id); if (!p) return res.status(404).json({ error: 'Provider not found.' });
+  if (!lsCanRate(req.user, p.id)) return res.status(403).json({ error: 'You can rate after a completed booking with this provider.' });
+  const stars = Math.round(Number(req.body?.stars)); if (!(stars >= 1 && stars <= 5)) return res.status(400).json({ error: 'Choose 1 to 5 stars.' });
+  const tags = [...new Set((Array.isArray(req.body?.tags) ? req.body.tags : []).filter((g) => RT_GOOD.includes(g) || RT_BAD.includes(g)))].slice(0, 6), text = clip(String(req.body?.text || '').trim(), 400), key = lsKey(p.id);
+  let x = db.ratings.find((y) => y.bizId === key && y.userId === req.user.id); const isNew = !x;
+  if (x) Object.assign(x, { stars, tags, text, editedAt: now() }); else { x = { id: newId(), bizId: key, userId: req.user.id, stars, tags, text, at: now() }; db.ratings.push(x); }
+  rtCache.delete(key); save();
+  const u = userById(p.id); if (u) pushTo(u, { type: 'msg', title: (isNew ? '⭐ New rating · ' : '⭐ Rating changed · ') + '⭐'.repeat(stars), body: rtShort(req.user.name) + (text ? ': “' + text.slice(0, 80) + '”' : ''), tag: 'lsrate-' + x.id }).catch(() => {});
+  res.json({ summary: ratingSum(key), mine: rtOut(x), reviews: db.ratings.filter((y) => y.bizId === key && !y.hidden).sort((a, b) => b.at - a.at).slice(0, 20).map((y) => rtOut(y)), canRate: true, good: RT_GOOD, bad: RT_BAD });
+});
+app.post('/api/ls/ratings/:id/reply', auth, (req, res) => {
+  const x = db.ratings.find((y) => y.id === req.params.id && y.bizId === lsKey(req.user.id)); if (!x) return res.status(404).json({ error: 'Rating not found.' });
+  const t = clip(String(req.body?.text || '').trim(), 300); x.reply = t ? { text: t, at: now(), by: req.user.name } : null; save();
+  if (t) { const cu = userById(x.userId); if (cu) pushTo(cu, { type: 'msg', title: '💬 ' + req.user.name + ' replied to your rating', body: t.slice(0, 120), tag: 'lsrate-' + x.id }).catch(() => {}); }
+  res.json(rtOut(x, true));
+});
+app.post('/api/ls/ratings/:id/report', auth, (req, res) => {
+  const x = db.ratings.find((y) => y.id === req.params.id && String(y.bizId).startsWith('ls:')); if (!x) return res.status(404).json({ error: 'Not found.' });
+  db.reports.push({ id: newId(), reporter: req.user.id, target: x.userId, reason: 'Service review (' + x.stars + '★ for ' + ((lsProv(x.bizId.slice(3)) || {}).name || 'provider') + '): ' + (clip(req.body?.reason, 200) || 'wrong / abusive') + (x.text ? ' — "' + x.text.slice(0, 100) + '"' : ''), ts: now(), status: 'open', ratingId: x.id });
+  save(); io.to('admins').emit('report:new', {}); res.json({ ok: true });
+});
+// ---- bookings ----
+app.post('/api/ls/upload', auth, lsImgRaw, async (req, res) => { const f = await lsSaveImg(req, res); if (f) { save(); res.json(f); } });
+const lsBookHits = new Map();
+function lsOffer(b, pids, ms) { b.offeredTo = [...new Set([...(b.offeredTo || []), ...pids])]; b.acceptBy = now() + ms; b.offerNow = pids; for (const pid of pids) { const p = lsProv(pid); if (p) lsStats(p).offered++; } }
+function lsPickNext(b, n) { // next best providers for this job (auto-reassign / emergency)
+  const here = b.address && b.address.lat != null ? b.address : null;
+  return db.providers.filter((p) => p.status === 'approved' && p.cats.includes(b.cat) && p.id !== b.custId && !(b.offeredTo || []).includes(p.id) && lsCityOn(p.city) && !blockedOf(userById(p.id) || {}).includes(b.custId))
+    .map((p) => lsCard(p, here)).filter((c) => (b.emergency ? c.online : true) && (c.distKm == null || c.distKm <= Math.max(10, c.areaKm || 0))).sort((a, z) => lsScore(z) - lsScore(a)).slice(0, n).map((c) => c.id);
+}
+app.post('/api/ls/bookings', auth, (req, res) => {
+  const b0 = req.body || {}, cat = lsCat(b0.cat); if (!cat || !lsCatsOn().includes(cat)) return res.status(400).json({ error: 'Choose a service.' });
+  const h = (lsBookHits.get(req.user.id) || []).filter((t) => now() - t < 3600000); if (h.length >= 12) return res.status(429).json({ error: 'Too many bookings in an hour. Please wait.' }); h.push(now()); lsBookHits.set(req.user.id, h);
+  const idem = clip(b0.idem, 64); if (idem) { const d = db.lsBookings.find((x) => x.custId === req.user.id && x.idem === idem); if (d) return res.json(lsOut(d)); }
+  const problem = clip(b0.problem, 600); if (problem.length < 3) return res.status(400).json({ error: 'Write the problem in a few words.' });
+  const la = Number(b0.address?.lat), lo = Number(b0.address?.lng), hasLoc = Math.abs(la) <= 90 && Math.abs(lo) <= 180 && (la || lo);
+  const atext = clip(b0.address?.text, 300); if (atext.length < 5 && !hasLoc) return res.status(400).json({ error: 'Add your address or tap “Use my location”.' });
+  const emergency = !!b0.emergency;
+  let p = null; if (!emergency && b0.provId) { p = lsProv(String(b0.provId)); if (!p || p.status !== 'approved' || !p.cats.includes(cat.k)) return res.status(400).json({ error: 'This provider is not available for this service.' }); if (p.id === req.user.id) return res.status(400).json({ error: 'You cannot book yourself.' }); if (blockedOf(userById(p.id) || {}).includes(req.user.id)) return res.status(400).json({ error: 'This provider is not available.' }); }
+  const when = emergency || b0.when?.type !== 'slot' ? { type: 'now' } : { type: 'slot', day: /^\d{4}-\d{2}-\d{2}$/.test(String(b0.when.day)) ? b0.when.day : lsDay(now()), slot: Math.max(0, Math.min(23, Math.round(Number(b0.when.slot)))) };
+  const mine = db.lsFiles.filter((f) => f.by === req.user.id).map((f) => f.id), photos = (Array.isArray(b0.photos) ? b0.photos : []).filter((fid) => mine.includes(fid)).slice(0, 4).map((fid) => ({ fid }));
+  const m = lsMeta(); m.seq = (m.seq || 1000) + 1;
+  const b = { id: newId(), no: 'LS-' + m.seq, key: crypto.randomBytes(10).toString('hex'), idem: idem || null, custId: req.user.id, provId: p ? p.id : null, cat: cat.k, problem, photos, emergency, voice: !!b0.voice,
+    ai: b0.ai && typeof b0.ai === 'object' ? { issue: clip(b0.ai.issue, 160), urgency: clip(b0.ai.urgency, 12), tools: (b0.ai.tools || []).slice(0, 5).map((x) => clip(x, 40)), providerNote: clip(b0.ai.providerNote, 200) } : null,
+    address: { text: atext, landmark: clip(b0.address?.landmark, 100), lat: hasLoc ? +la.toFixed(6) : null, lng: hasLoc ? +lo.toFixed(6) : null }, when, pay: b0.pay === 'upi' ? 'upi' : 'cash',
+    visit: p ? p.visit || 0 : cat.visit, estimate: lsEstimate(cat.k, hasLoc ? { lat: la, lng: lo } : null), otp: String(crypto.randomInt(1000, 10000)), status: 'REQUESTED', history: [], createdAt: now(), autoNext: b0.autoNext !== false };
+  lsHist(b, 'REQUESTED', req.user.id);
+  if (emergency) { const pids = lsPickNext(b, 5); if (!pids.length) return res.status(404).json({ error: 'No ' + cat.en + ' is online near you right now. Try booking a time slot instead.' }); lsOffer(b, pids, 3 * 60000); }
+  else if (p) lsOffer(b, [p.id], (when.type === 'now' ? 2 : 10) * 60000);
+  else { const pids = lsPickNext(b, 1); if (!pids.length) return res.status(404).json({ error: 'No ' + cat.en + ' near you yet. Please try another service.' }); b.provId = pids[0]; b.visit = lsProv(pids[0]).visit || 0; lsOffer(b, pids, (when.type === 'now' ? 2 : 10) * 60000); }
+  if (!emergency) b.provId = b.provId || p?.id;
+  db.lsBookings.push(b); save();
+  lsTell(b, 'cust', null, null, { alertPro: b.offerNow });
+  res.json(lsOut(b));
+});
+app.get('/api/ls/bookings/mine', auth, (req, res) => res.json(db.lsBookings.filter((b) => b.custId === req.user.id).slice(-80).reverse().map((b) => lsOut(b))));
+app.get('/api/ls/bookings/:id', auth, (req, res) => {
+  const b = lsBk(req.params.id); if (!b) return res.status(404).json({ error: 'Booking not found.' });
+  if (b.custId === req.user.id) return res.json(lsOut(b));
+  if (b.provId === req.user.id || (b.status === 'REQUESTED' && (b.offerNow || []).includes(req.user.id))) return res.json(lsOut(b, true));
+  res.status(403).json({ error: 'Not your booking.' });
+});
+function lsCust(req, res) { const b = lsBk(req.params.id); if (!b || b.custId !== req.user.id) { res.status(404).json({ error: 'Booking not found.' }); return null; } return b; }
+app.post('/api/ls/bookings/:id/cancel', auth, (req, res) => {
+  const b = lsCust(req, res); if (!b) return; if (!['REQUESTED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED'].includes(b.status)) return res.status(400).json({ error: 'This booking cannot be cancelled now.' });
+  const late = ['ON_THE_WAY', 'ARRIVED'].includes(b.status);
+  b.cancel = { by: 'customer', at: now(), reason: clip(req.body?.reason, 200), stage: b.status, late }; b.status = 'CANCELLED'; lsHist(b, 'CANCELLED', req.user.id, b.cancel.reason); save();
+  if (b.provId) lsTell(b, 'pro', '❌ Booking ' + b.no + ' cancelled', 'The customer cancelled.' + (late ? ' You may ask the visit charge directly.' : ''));
+  res.json(lsOut(b));
+});
+app.post('/api/ls/bookings/:id/reschedule', auth, (req, res) => {
+  const b = lsCust(req, res); if (!b) return; if (!['REQUESTED', 'ACCEPTED'].includes(b.status)) return res.status(400).json({ error: 'You can change the time before the provider starts coming.' });
+  const w = req.body?.when || {}; if (!/^\d{4}-\d{2}-\d{2}$/.test(String(w.day))) return res.status(400).json({ error: 'Choose a day and time.' });
+  b.when = { type: 'slot', day: w.day, slot: Math.max(0, Math.min(23, Math.round(Number(w.slot)))) }; lsHist(b, 'RESCHEDULED', req.user.id, lsSlotTxt(b.when)); save();
+  if (b.provId) lsTell(b, 'pro', '📅 Booking ' + b.no + ' time changed', 'New time: ' + lsSlotTxt(b.when) + '. Cancel it if you cannot come.');
+  res.json(lsOut(b));
+});
+app.post('/api/ls/bookings/:id/quote', auth, (req, res) => {
+  const b = lsCust(req, res); if (!b) return; if (!b.quote || b.quote.state !== 'sent') return res.status(400).json({ error: 'No price to approve.' });
+  const ok = !!req.body?.ok; b.quote.state = ok ? 'approved' : 'declined'; b.quote.answeredAt = now();
+  if (ok) { b.status = 'IN_PROGRESS'; lsHist(b, 'IN_PROGRESS', req.user.id, 'price approved ₹' + b.quote.total); } else lsHist(b, 'QUOTE_DECLINED', req.user.id, clip(req.body?.note, 160));
+  save(); lsTell(b, 'pro', ok ? '✅ Price approved · ' + b.no : '❌ Price not approved · ' + b.no, ok ? 'Start the work.' : 'The customer did not approve ₹' + b.quote.total + '. Talk to them, or finish with only the visit charge.');
+  res.json(lsOut(b));
+});
+app.post('/api/ls/bookings/:id/reopen', auth, (req, res) => { // 🛡️ warranty: the same problem came back within 7 days → free re-visit request to the same provider
+  const b = lsCust(req, res); if (!b) return; if (b.status !== 'COMPLETED' || b.reopened || now() - (b.doneAt || 0) > 7 * 86400000) return res.status(400).json({ error: 'You can ask for a free re-visit within 7 days of the work.' });
+  const m = lsMeta(); m.seq++;
+  const nb = { ...b, id: newId(), no: 'LS-' + m.seq, key: crypto.randomBytes(10).toString('hex'), idem: null, problem: '🛡️ Warranty re-visit: ' + (clip(req.body?.note, 300) || b.problem), photos: [], visit: 0, otp: String(crypto.randomInt(1000, 10000)), status: 'REQUESTED', history: [], createdAt: now(), quote: null, bill: null, before: [], after: [], aiCheck: null, track: null, trail: [], cancel: null, reopenOf: b.no, reopened: null, when: { type: 'now' }, offeredTo: [], emergency: false, autoNext: false };
+  lsHist(nb, 'REQUESTED', req.user.id, 'warranty re-visit of ' + b.no); b.reopened = nb.no; const p = lsProv(b.provId); if (p) lsStats(p).reopens++;
+  lsOffer(nb, [b.provId], 60 * 60000); db.lsBookings.push(nb); save(); lsTell(nb, 'cust', null, null, { alertPro: [b.provId] }); res.json(lsOut(nb));
+});
+app.post('/api/ls/bookings/:id/sos', auth, (req, res) => { // 🆘 for customer or provider during a job
+  const b = lsBk(req.params.id); if (!b || (b.custId !== req.user.id && b.provId !== req.user.id)) return res.status(404).json({ error: 'Booking not found.' });
+  const la = Number(req.body?.lat), lo = Number(req.body?.lng), loc = isFinite(la) && la ? 'https://maps.google.com/?q=' + la + ',' + lo : '';
+  b.sos = (b.sos || []).concat([{ by: req.user.id, at: now(), lat: la || null, lng: lo || null }]); save();
+  feed('sos', '🆘 SOS in service booking ' + b.no + ' by ' + req.user.name + (loc ? ' · ' + loc : ''));
+  const s = secOf(req.user); let told = 0;
+  for (const tid of s.trusted || []) { const t = userById(tid); if (!t) continue; const ok = canMessage(req.user, tid); if (ok.error) continue; deliverMessage(req.user, ok.target, { type: 'text', text: '🆘 ' + req.user.name + ' pressed SOS during a Maata service visit (' + b.no + ', ' + ((lsCat(b.cat) || {}).en || '') + ').' + (loc ? '\n📍 ' + loc : '') + '\nPlease call now.' }); pushTo(t, { type: 'msg', title: '🆘 SOS from ' + req.user.name, body: 'During a Maata service visit. Open Maata now.', tag: 'sos-' + b.id }).catch(() => {}); told++; }
+  res.json({ ok: true, told });
+});
+app.get('/api/ls/bookings/:id/upi.svg', auth, async (req, res) => {
+  const b = lsBk(req.params.id); if (!b || (b.custId !== req.user.id && b.provId !== req.user.id)) return res.status(404).end();
+  const p = lsProv(b.provId); if (!p || !p.upi || !b.bill) return res.status(404).json({ error: 'The provider has not added a UPI ID. Pay cash.' });
+  const link = upiLink(p.upi, p.name, b.bill.total * 100, b.no); res.json({ svg: await QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }), link, upi: p.upi, amount: b.bill.total, name: p.name });
+});
+// public "share with family" page (no phone numbers)
+app.get('/ls/t/:id', (req, res) => {
+  const b = lsBk(req.params.id); if (!b || req.query.k !== b.key) return res.status(404).send('Link not found.');
+  const p = lsProv(b.provId), e = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]), o = lsOut(b);
+  const map = o.track ? `<p><a href="https://www.openstreetmap.org/?mlat=${o.track.lat}&mlon=${o.track.lng}#map=16/${o.track.lat}/${o.track.lng}">📍 See where the provider is now</a></p>` : '';
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="20"><title>Maata service ${e(b.no)}</title><style>body{font-family:system-ui,sans-serif;max-width:480px;margin:24px auto;padding:0 16px;color:#101828}h2{color:#0F7A6E}.c{border:1px solid #e4e7ec;border-radius:14px;padding:14px;margin:10px 0}.s{font-size:22px;font-weight:800}</style></head><body><h2>🛠️ Maata Local Services</h2><div class="c"><div>Booking <b>${e(b.no)}</b> · ${e(o.catE + ' ' + o.catName)}</div><div class="s">${e(({ REQUESTED: 'Waiting for the provider', ACCEPTED: 'Accepted', ON_THE_WAY: 'On the way' + (o.track && o.track.eta ? ' · about ' + o.track.eta + ' min' : ''), ARRIVED: 'Provider arrived', IN_PROGRESS: 'Work in progress', COMPLETED: 'Completed ✅', CANCELLED: 'Cancelled' })[b.status] || b.status)}</div><div>Provider: <b>${e(p ? p.name : '—')}</b> ${p && p.idOk ? '🪪 ID verified' : ''}</div>${map}</div><p style="color:#667085;font-size:13px">This page refreshes by itself. Shared from Maata.</p></body></html>`);
+});
+// reminders (AC service, RO filter, pest control, bike service…)
+app.get('/api/ls/reminders', auth, (req, res) => res.json((req.user.lsRem || []).slice().sort((a, b) => a.dueAt - b.dueAt).map((r) => ({ ...r, catName: (lsCat(r.cat) || {}).en, catE: (lsCat(r.cat) || {}).e, provName: (lsProv(r.provId) || {}).name || '' }))));
+app.delete('/api/ls/reminders/:id', auth, (req, res) => { req.user.lsRem = (req.user.lsRem || []).filter((r) => r.id !== req.params.id); save(); res.json({ ok: true }); });
+setInterval(() => { const t = now(); let ch = false; for (const u of db.users) for (const r of u.lsRem || []) if (!r.told && r.dueAt <= t) { r.told = t; ch = true; const c = lsCat(r.cat); pushTo(u, { type: 'msg', title: '🔔 ' + (c ? c.e + ' ' + c.en : 'Service') + ' time', body: 'Your last service was ' + Math.round((t - r.lastAt) / 86400000) + ' days ago. Book again on Maata in one tap.', tag: 'lsrem-' + r.id, url: '/?lsrem=1' }).catch(() => {}); } if (ch) save(); }, 3600000);
+// ---- providers: jobs ----
+function lsPro(req, res) { const p = lsProv(req.user.id); if (!p || p.status !== 'approved') { res.status(403).json({ error: 'Only approved service providers can do this.' }); return null; } return p; }
+function lsJob(req, res, p) { const b = lsBk(req.params.id); if (!b || b.provId !== p.id) { res.status(404).json({ error: 'Job not found.' }); return null; } return b; }
+app.get('/api/ls/pro/jobs', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const today = lsDay(now()), month = today.slice(0, 7);
+  const mine = db.lsBookings.filter((b) => b.provId === p.id || (b.status === 'REQUESTED' && (b.offerNow || []).includes(p.id)));
+  const incoming = mine.filter((b) => b.status === 'REQUESTED' && (b.offerNow || []).includes(p.id) && b.acceptBy > now());
+  const active = mine.filter((b) => ['ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS'].includes(b.status) && b.provId === p.id);
+  const done = mine.filter((b) => b.status === 'COMPLETED' && b.provId === p.id);
+  const sum = (l) => l.reduce((a, b) => a + (b.bill?.total || 0), 0), dT = done.filter((b) => lsDay(b.doneAt) === today), dM = done.filter((b) => lsDay(b.doneAt).slice(0, 7) === month);
+  const st = lsStats(p);
+  res.json({ online: !!p.online, incoming: incoming.map((b) => lsOut(b, true)), active: active.sort((a, b) => (a.when.type === 'now' ? 0 : 1) - (b.when.type === 'now' ? 0 : 1) || String(a.when.day || '').localeCompare(String(b.when.day || '')) || (a.when.slot || 0) - (b.when.slot || 0)).map((b) => lsOut(b, true)),
+    done: done.slice(-30).reverse().map((b) => lsOut(b, true)), earn: { today: sum(dT), todayJobs: dT.length, month: sum(dM), monthJobs: dM.length }, rating: ratingSum(lsKey(p.id)), acceptRate: st.offered ? Math.round(st.accepted / st.offered * 100) : null, jobs: st.done });
+});
+app.post('/api/ls/pro/jobs/:id/accept', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsBk(req.params.id); if (!b || !(b.offeredTo || []).includes(p.id)) return res.status(404).json({ error: 'Job not found.' });
+  if (b.status !== 'REQUESTED' || b.acceptBy < now() || !(b.offerNow || []).includes(p.id)) return res.status(409).json({ error: b.status === 'REQUESTED' ? 'Too late — this job went to another provider.' : 'Another provider took this job.' });
+  b.provId = p.id; b.visit = b.reopenOf ? 0 : p.visit || 0; b.status = 'ACCEPTED'; b.acceptedAt = now(); b.offerNow = [p.id]; lsHist(b, 'ACCEPTED', p.id);
+  const st = lsStats(p); st.accepted++; st.respSum += now() - (b.acceptBy - (b.emergency ? 3 : b.when.type === 'now' ? 2 : b.reopenOf ? 60 : 10) * 60000); st.respN++;
+  save(); lsTell(b, 'cust', '✅ ' + p.name + ' accepted · ' + b.no, ((lsCat(b.cat) || {}).en || '') + ' · ' + lsSlotTxt(b.when) + '. Your code: ' + b.otp); lsTell(b, 'pro');
+  res.json(lsOut(b, true));
+});
+app.post('/api/ls/pro/jobs/:id/decline', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsBk(req.params.id); if (!b || !(b.offerNow || []).includes(p.id) || b.status !== 'REQUESTED') return res.status(404).json({ error: 'Job not found.' });
+  b.offerNow = (b.offerNow || []).filter((x) => x !== p.id); lsHist(b, 'DECLINED', p.id);
+  if (!b.offerNow.length) lsExpire(b, 'declined'); save(); res.json({ ok: true });
+});
+function lsExpire(b, why) { // nobody accepted in time → next best provider (up to 3), else tell the customer
+  if (b.status !== 'REQUESTED') return;
+  if (!b.emergency && b.autoNext && (b.offeredTo || []).length < 3) { const pids = lsPickNext(b, 1); if (pids.length) { b.provId = pids[0]; b.visit = lsProv(pids[0]).visit || 0; lsOffer(b, pids, (b.when.type === 'now' ? 2 : 10) * 60000); lsHist(b, 'REASSIGNED', 'maata', why); lsTell(b, 'cust', '🔄 ' + b.no + ': trying another provider', 'The first provider did not answer. Maata is asking ' + (lsProv(pids[0]) || {}).name + '.', { alertPro: pids }); return; } }
+  b.status = 'EXPIRED'; lsHist(b, 'EXPIRED', 'maata', why); lsTell(b, 'cust', '⏳ No provider could take ' + b.no, 'Please choose another provider or another time.');
+}
+setInterval(() => { const t = now(); let ch = false; for (const b of db.lsBookings) if (b.status === 'REQUESTED' && b.acceptBy && b.acceptBy < t) { lsExpire(b, 'no answer'); ch = true; } if (ch) save(); }, 15000);
+app.post('/api/ls/pro/jobs/:id/cancel', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; if (!['ACCEPTED', 'ON_THE_WAY'].includes(b.status)) return res.status(400).json({ error: 'Cannot cancel now.' });
+  const reason = clip(req.body?.reason, 200); if (reason.length < 3) return res.status(400).json({ error: 'Tell the customer why.' });
+  b.cancel = { by: 'provider', at: now(), reason, stage: b.status }; b.status = 'CANCELLED'; lsStats(p).cancels++; lsHist(b, 'CANCELLED', p.id, reason); save();
+  lsTell(b, 'cust', '❌ ' + p.name + ' cancelled ' + b.no, reason + ' — please book another provider.'); res.json(lsOut(b, true));
+});
+app.post('/api/ls/pro/jobs/:id/status', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; const to = String(req.body?.to || '');
+  const ok = { ON_THE_WAY: ['ACCEPTED'], ARRIVED: ['ON_THE_WAY', 'ACCEPTED'], IN_PROGRESS: ['ARRIVED'] }[to]; if (!ok || !ok.includes(b.status)) return res.status(400).json({ error: 'Not possible now.' });
+  if (to === 'ARRIVED' && String(req.body?.otp || '') !== b.otp) { b.otpTries = (b.otpTries || 0) + 1; save(); return res.status(400).json({ error: b.otpTries >= 5 ? 'Wrong code many times. Ask the customer to open the booking and read the 4-digit code.' : 'Wrong code. Ask the customer for the 4-digit code on their Maata booking.' }); }
+  b.status = to; lsHist(b, to, p.id); if (to === 'ARRIVED') { b.arrivedAt = now(); b.track = null; } if (to === 'IN_PROGRESS' && !b.quote) b.quote = { state: 'none' };
+  save(); lsTell(b, 'cust', { ON_THE_WAY: '🛵 ' + p.name + ' is on the way', ARRIVED: '📍 ' + p.name + ' arrived', IN_PROGRESS: '🛠️ Work started' }[to] + ' · ' + b.no, to === 'ON_THE_WAY' ? 'Track live in Maata.' : '');
+  res.json(lsOut(b, true));
+});
+app.post('/api/ls/pro/jobs/:id/loc', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; if (b.status !== 'ON_THE_WAY') return res.json({ stop: true });
+  const la = Number(req.body?.lat), lo = Number(req.body?.lng); if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180) || (!la && !lo)) return res.status(400).json({ error: 'Bad location.' });
+  b.track = { lat: +la.toFixed(6), lng: +lo.toFixed(6), acc: Math.round(Number(req.body?.acc) || 0), at: now() }; b.trail = (b.trail || []).concat([[b.track.lat, b.track.lng]]).slice(-200);
+  io.to('user:' + b.custId).emit('ls:track', { id: b.id, track: lsOut(b).track });
+  res.json({ ok: true, eta: lsOut(b).track?.eta || null });
+});
+app.post('/api/ls/pro/jobs/:id/quote', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; if (!['ARRIVED', 'IN_PROGRESS'].includes(b.status)) return res.status(400).json({ error: 'Send the price after you check the work.' });
+  const items = (Array.isArray(req.body?.items) ? req.body.items : []).slice(0, 15).map((x) => ({ name: clip(x.name, 60), amt: Math.max(0, Math.round(Number(x.amt) || 0)) })).filter((x) => x.name && x.amt > 0);
+  if (!items.length) return res.status(400).json({ error: 'Add at least one item with a price.' });
+  const total = items.reduce((a, x) => a + x.amt, 0), est = b.estimate || lsEstimate(b.cat, b.address);
+  let warn = ''; if (est && est.hi && total > est.hi * 1.5 && total - est.hi > 200 && !lsCat(b.cat).unit) { warn = 'This is higher than the usual ₹' + est.lo + '–' + est.hi + ' for ' + lsCat(b.cat).en + ' here. Ask what each item is for before you approve.'; lsStats(p).quoteHigh++; }
+  b.quote = { items, total, note: clip(req.body?.note, 200), at: now(), state: 'sent', warn }; lsHist(b, 'QUOTED', p.id, '₹' + total); save();
+  lsTell(b, 'cust', '💬 Price from ' + p.name + ': ₹' + total, 'Open the booking to approve before the work starts.'); res.json(lsOut(b, true));
+});
+app.post('/api/ls/pro/jobs/:id/photo', auth, lsImgRaw, async (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; if (!['ARRIVED', 'IN_PROGRESS', 'COMPLETED'].includes(b.status)) return res.status(400).json({ error: 'Add photos at the customer’s place.' });
+  const f = await lsSaveImg(req, res); if (!f) return; const k = req.query.kind === 'after' ? 'after' : 'before'; b[k] = (b[k] || []).slice(-3); b[k].push(f); save(); lsTell(b, 'cust'); res.json(lsOut(b, true));
+});
+app.post('/api/ls/pro/jobs/:id/complete', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; if (!['IN_PROGRESS', 'ARRIVED'].includes(b.status)) return res.status(400).json({ error: 'Start the work first.' });
+  if (b.quote && b.quote.state === 'sent') return res.status(400).json({ error: 'The customer has not approved your price yet.' });
+  const work = b.quote && b.quote.state === 'approved' ? b.quote.total : 0, paidBy = ['cash', 'upi'].includes(req.body?.paidBy) ? req.body.paidBy : null;
+  b.bill = { visit: b.visit || 0, work, items: b.quote && b.quote.state === 'approved' ? b.quote.items : [], total: (b.visit || 0) + work, paidBy, paidAt: paidBy ? now() : null };
+  b.status = 'COMPLETED'; b.doneAt = now(); lsStats(p).done++; lsHist(b, 'COMPLETED', p.id, '₹' + b.bill.total + (paidBy ? ' · ' + paidBy : ''));
+  const c = lsCat(b.cat), cu = userById(b.custId); if (c && c.remind && cu) { cu.lsRem = (cu.lsRem || []).filter((r) => r.cat !== c.k).concat([{ id: newId(), cat: c.k, provId: p.id, lastAt: now(), dueAt: now() + c.remind * 86400000, from: b.no }]).slice(-20); }
+  save(); lsTell(b, 'cust', '✅ Work done · ' + b.no, 'Bill ₹' + b.bill.total + '. Please rate ' + p.name + '.');
+  if ((b.before || []).length && (b.after || []).length && GEMINI_KEY) lsAiCheck(b).catch(() => {});
+  res.json(lsOut(b, true));
+});
+app.post('/api/ls/pro/jobs/:id/paid', auth, (req, res) => { const p = lsPro(req, res); if (!p) return; const b = lsJob(req, res, p); if (!b) return; if (!b.bill) return res.status(400).json({ error: 'Finish the job first.' }); b.bill.paidBy = req.body?.paidBy === 'upi' ? 'upi' : 'cash'; b.bill.paidAt = now(); save(); lsTell(b, 'both'); res.json(lsOut(b, true)); });
+async function lsAiCheck(b) { // 📸 before / after photos: a gentle hint only — the customer decides
+  const load = async (f) => { const x = db.lsFiles.find((y) => y.id === f.fid); if (!x) return null; const ch = []; await new Promise((ok, bad) => { const st = chatFileStream(x.id, 0, x.size - 1); st.on('data', (d) => ch.push(d)); st.on('end', ok); st.on('error', bad); }); return { inlineData: { mimeType: x.mime, data: Buffer.concat(ch).toString('base64') } }; };
+  const parts = []; const bf = await load(b.before[b.before.length - 1]), af = await load(b.after[b.after.length - 1]); if (!bf || !af) return;
+  parts.push({ text: 'BEFORE photo:' }, bf, { text: 'AFTER photo:' }, af, { text: 'Job: ' + lsCat(b.cat).en + '. Problem: ' + b.problem });
+  const g = await gemini('You check home-service work photos for an Indian app. Compare BEFORE and AFTER. Return ONLY JSON {"result":"looks_done|unclear|not_same_place","note":"one short neutral sentence in simple English"}. Be careful and kind: this is only a hint, never accuse.', [{ role: 'user', parts }], { json: true, maxTokens: 200, temperature: 0.1 });
+  const d = lsJson(g); if (!d) return; b.aiCheck = { result: ['looks_done', 'unclear', 'not_same_place'].includes(d.result) ? d.result : 'unclear', note: clip(d.note, 200), at: now() }; save(); lsTell(b, 'cust');
+}
+// 🧑‍🔧 provider AI: speak the bill → items; today's route in the best order
+app.post('/api/ls/pro/ai/quote', auth, async (req, res) => {
+  const p = lsPro(req, res); if (!p || !lsAiOk(req, res)) return; const text = clip(req.body?.text, 500); if (text.length < 3) return res.status(400).json({ error: 'Say the items and prices.' });
+  const g = await gemini('Turn a repair worker\'s spoken bill (Telugu/English mixed, Indian rupees) into ONLY JSON {"items":[{"name":"short English item name","amt":rupees}]}. Numbers like "rendu vandala" = 200. Max 10 items.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 300, temperature: 0.1 });
+  const d = lsJson(g); if (!d || !Array.isArray(d.items)) return res.status(502).json({ error: AI_ERR[g.error] || 'Could not understand. Type the items.' });
+  res.json({ items: d.items.slice(0, 10).map((x) => ({ name: clip(x.name, 60), amt: Math.max(0, Math.round(Number(x.amt) || 0)) })).filter((x) => x.name && x.amt) });
+});
+app.get('/api/ls/pro/route', auth, (req, res) => {
+  const p = lsPro(req, res); if (!p) return; const today = lsDay(now());
+  let cur = isFinite(Number(req.query.lat)) && Number(req.query.lat) ? { lat: Number(req.query.lat), lng: Number(req.query.lng) } : p.area;
+  const l = db.lsBookings.filter((b) => b.provId === p.id && ['ACCEPTED', 'ON_THE_WAY'].includes(b.status) && (b.when.type === 'now' || b.when.day === today) && b.address?.lat != null), out = [];
+  while (l.length) { l.sort((a, b) => lsDistKm(cur, a.address) - lsDistKm(cur, b.address)); const n = l.shift(); out.push({ ...lsOut(n, true), legKm: lsDistKm(cur, n.address) }); cur = n.address; }
+  res.json(out);
+});
+// ---- admin ----
+app.get('/admin/api/ls/providers', adminAuth, (req, res) => {
+  const st = String(req.query.status || ''); res.json(db.providers.filter((p) => !st || p.status === st || (st === 'appeal' && p.appeal && p.appeal.status === 'open')).sort((a, b) => (b.submittedAt || b.createdAt) - (a.submittedAt || a.createdAt)).slice(0, 300)
+    .map((p) => { const u = userById(p.id) || {}; return { ...lsProOut(p), phone: u.phone || '', userName: u.name || '', catNames: p.cats.map((k) => (lsCat(k) || {}).en), jobs: db.lsBookings.filter((b) => b.provId === p.id).length }; }));
+});
+app.post('/admin/api/ls/providers/:id/:act', adminAuth, (req, res) => {
+  const p = lsProv(req.params.id); if (!p) return res.status(404).json({ error: 'Provider not found.' }); const act = req.params.act, reason = clip(req.body?.reason, 300), u = userById(p.id);
+  if (act === 'approve') { p.status = 'approved'; p.approvedAt = now(); p.idOk = !!req.body?.idOk; p.reason = ''; if (p.appeal) p.appeal.status = 'accepted'; }
+  else if (act === 'reject' || act === 'suspend') { if (reason.length < 3) return res.status(400).json({ error: 'Write the reason (the provider sees it).' }); p.status = act === 'reject' ? 'rejected' : 'suspended'; p.reason = reason; p.online = false; if (p.appeal && p.appeal.status === 'open') p.appeal.status = 'refused'; }
+  else if (act === 'idok') p.idOk = !!req.body?.ok;
+  else return res.status(400).json({ error: 'Unknown action.' });
+  audit(req.admin, 'ls-' + act, p.name, reason); save();
+  if (u && act !== 'idok') pushTo(u, { type: 'msg', title: act === 'approve' ? '🎉 You are live on Maata Local Services' : act === 'reject' ? '❌ Provider request not approved' : '⏸️ Your provider account is on hold', body: act === 'approve' ? 'Turn 🟢 Online to get jobs.' : reason, tag: 'lsprov' }).catch(() => {});
+  if (u) io.to('user:' + u.id).emit('ls:me', {}); res.json(lsProOut(p));
+});
+app.get('/admin/api/ls/bookings', adminAuth, (req, res) => {
+  const st = String(req.query.status || ''); res.json(db.lsBookings.filter((b) => !st || b.status === st || (st === 'sos' && (b.sos || []).length) || (st === 'reopen' && b.reopenOf)).slice(-300).reverse()
+    .map((b) => ({ ...lsOut(b, true), custName: (userById(b.custId) || {}).name || '', custPhone: (userById(b.custId) || {}).phone || '', provPhone: (userById(b.provId) || {}).phone || '', sos: b.sos || [] })));
+});
+function lsFlags() { // 🛡️ Trust & Safety: rules raise alerts; a person decides (and providers can appeal)
+  const out = [], day = 86400000, t = now();
+  for (const p of db.providers.filter((x) => x.status === 'approved' || x.status === 'suspended')) {
+    const s = lsStats(p), r = ratingSum(lsKey(p.id)), add = (level, what) => out.push({ kind: 'provider', id: p.id, name: p.name, level, what, status: p.status });
+    if (s.accepted >= 5 && s.cancels / s.accepted > 0.3) add('high', 'Cancels many jobs after accepting (' + s.cancels + ' of ' + s.accepted + ')');
+    if (r.n >= 3 && r.avg < 3) add('high', 'Low rating ' + r.avg + '★ from ' + r.n + ' customers');
+    if (s.quoteHigh >= 3) add('medium', 'Price often much higher than usual (' + s.quoteHigh + ' times)');
+    if (s.offered >= 10 && s.accepted / s.offered < 0.4) add('low', 'Accepts only ' + Math.round(s.accepted / s.offered * 100) + '% of jobs');
+    if (s.reopens >= 3) add('medium', s.reopens + ' customers said the problem came back');
+    const burst = db.ratings.filter((x) => x.bizId === lsKey(p.id) && t - x.at < day).length; if (burst >= 5) add('medium', burst + ' ratings in 24 hours — check they are real');
+  }
+  const byCust = new Map(); for (const b of db.lsBookings) if (b.cancel && b.cancel.by === 'customer' && b.cancel.late && t - b.cancel.at < 30 * day) byCust.set(b.custId, (byCust.get(b.custId) || 0) + 1);
+  for (const [cid, n] of byCust) if (n >= 3) out.push({ kind: 'customer', id: cid, name: (userById(cid) || {}).name, level: 'medium', what: 'Cancelled ' + n + ' times after the provider started coming (30 days)' });
+  for (const b of db.lsBookings) if ((b.sos || []).some((s) => t - s.at < 7 * day)) out.push({ kind: 'booking', id: b.id, name: b.no, level: 'high', what: '🆘 SOS pressed' });
+  const rank = { high: 0, medium: 1, low: 2 }; return out.sort((a, b) => rank[a.level] - rank[b.level]);
+}
+app.get('/admin/api/ls/trust', adminAuth, (req, res) => res.json(lsFlags()));
+app.post('/admin/api/ls/trust/explain', adminAuth, async (req, res) => {
+  const p = lsProv(String(req.body?.id || '')); if (!p) return res.status(404).json({ error: 'Provider not found.' });
+  const s = lsStats(p), r = ratingSum(lsKey(p.id)), bad = db.ratings.filter((x) => x.bizId === lsKey(p.id) && x.stars <= 2).slice(-8).map((x) => x.stars + '★ ' + (x.text || '').slice(0, 120));
+  const g = await gemini('You help a small Indian app team review a service provider fairly. Summarise the facts in 3 short bullet points in simple English and suggest ONE fair next step (talk to provider / warn / suspend / no action). Never decide guilt; facts only.', [{ role: 'user', parts: [{ text: JSON.stringify({ name: p.name, stats: s, rating: r, lowReviews: bad, cancelsLate: db.lsBookings.filter((b) => b.provId === p.id && b.cancel?.by === 'provider').map((b) => b.cancel.reason).slice(-6) }) }] }], { maxTokens: 300, temperature: 0.2 });
+  res.json({ text: g.text || AI_ERR[g.error] || 'AI is not available.' });
+});
+app.get('/admin/api/ls/config', adminAuth, (req, res) => { const m = lsMeta(); res.json({ cats: LS_CATS.map((c) => ({ ...c, on: !m.off[c.k], providers: db.providers.filter((p) => p.status === 'approved' && p.cats.includes(c.k)).length })), groups: LS_GROUPS, cities: m.cities, stats: { providers: db.providers.filter((p) => p.status === 'approved').length, pending: db.providers.filter((p) => p.status === 'pending').length, bookings: db.lsBookings.length, done: db.lsBookings.filter((b) => b.status === 'COMPLETED').length, active: db.lsBookings.filter((b) => ['REQUESTED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS'].includes(b.status)).length } }); });
+app.put('/admin/api/ls/config', adminAuth, (req, res) => {
+  const m = lsMeta(), b = req.body || {};
+  if (b.cat && lsCat(b.cat)) { if (b.on) delete m.off[b.cat]; else m.off[b.cat] = true; }
+  if (b.city) { const n = clip(b.city, 40); const c = m.cities.find((x) => x.name.toLowerCase() === n.toLowerCase()); if (b.remove) m.cities = m.cities.filter((x) => x !== c); else if (c) c.on = b.on !== false; else if (n) m.cities.push({ name: n, on: b.on !== false }); }
+  audit(req.admin, 'ls-config', b.cat || b.city || '', JSON.stringify(b).slice(0, 120)); save(); res.json({ ok: true });
+});
 app.get('/admin/api/reports', adminAuth, (req, res) => {
   res.json(db.reports.slice().reverse().map((r) => ({
     ...r, reporterName: nameOf(r.reporter), targetName: nameOf(r.target),
