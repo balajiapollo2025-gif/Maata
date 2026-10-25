@@ -21,6 +21,15 @@ android {
         buildConfigField("String", "APP_URL", "\"https://maataapp.com\"")
     }
 
+    // Two versions from the same code:
+    //  web  = the APK on maataapp.com/download (updates itself from the website, full team location)
+    //  play = the Google Play version (Play updates it; no self-update, no "Allow all the time" location)
+    flavorDimensions += "store"
+    productFlavors {
+        create("web") { dimension = "store"; buildConfigField("String", "STORE", "\"web\"") }
+        create("play") { dimension = "store"; buildConfigField("String", "STORE", "\"play\"") }
+    }
+
     signingConfigs {
         if (keystorePath != null && file(keystorePath).exists()) {
             create("release") {
