@@ -7,10 +7,16 @@ on:
   push:
     paths:
       - "android/**"
-      - ".github/workflows/android.yml"
+      - ".github/workflows/main.yml"
 
 permissions:
   contents: write   # lets the build put the new APK on maataapp.com/download by itself
+
+# Two uploads close together (for example .kt files, then AndroidManifest.xml) start two builds.
+# Only the newest one is needed: it has all the files. The older one is stopped, so they never clash.
+concurrency:
+  group: maata-android-build
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -31,25 +37,14 @@ jobs:
       - name: Use the signing key (from GitHub Secrets)
         env:
           KS: ${{ secrets.MAATA_KEYSTORE_BASE64 }}
-          KS_PW: ${{ secrets.MAATA_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.MAATA_KEY_ALIAS }}
         run: |
-          if [ -z "$KS" ]; then
-            echo "::warning::No MAATA_KEYSTORE_BASE64 secret yet - only the test APK (debug) will be made."
-            exit 0
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/maata.keystore"
+            echo "MAATA_KEYSTORE=$RUNNER_TEMP/maata.keystore" >> "$GITHUB_ENV"
+            echo "Signing key found: the Play Store file will be signed."
+          else
+            echo "::warning::No MAATA_KEYSTORE_BASE64 secret yet - only the test APK (debug) will be usable."
           fi
-          # remove spaces / line breaks that can sneak in while copy-pasting
-          printf '%s' "$KS" | tr -d ' \r\n\t' > "$RUNNER_TEMP/ks.b64"
-          if ! base64 -d "$RUNNER_TEMP/ks.b64" > "$RUNNER_TEMP/maata.keystore" 2>/dev/null; then
-            echo "::warning::MAATA_KEYSTORE_BASE64 is not complete (part of the long text is missing). Paste it again in Settings > Secrets. Making only the test APK this time."
-            exit 0
-          fi
-          if ! keytool -list -keystore "$RUNNER_TEMP/maata.keystore" -storepass "$KS_PW" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
-            echo "::warning::The signing key could not be opened: check MAATA_KEYSTORE_PASSWORD and MAATA_KEY_ALIAS (alias must be: maata). Making only the test APK this time."
-            exit 0
-          fi
-          echo "MAATA_KEYSTORE=$RUNNER_TEMP/maata.keystore" >> "$GITHUB_ENV"
-          echo "Signing key OK: the app will be signed with the permanent Maata key."
 
       - name: Build the app
         working-directory: android
@@ -57,14 +52,14 @@ jobs:
           MAATA_KEYSTORE_PASSWORD: ${{ secrets.MAATA_KEYSTORE_PASSWORD }}
           MAATA_KEY_ALIAS: ${{ secrets.MAATA_KEY_ALIAS }}
           MAATA_KEY_PASSWORD: ${{ secrets.MAATA_KEY_PASSWORD }}
-        run: gradle --no-daemon --stacktrace assembleDebug bundleRelease assembleRelease
+        run: gradle --no-daemon --stacktrace assembleWebDebug assembleWebRelease bundlePlayRelease
 
       - name: Collect files
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/app-debug.apk "out/Maata-test-${{ github.run_number }}.apk"
-          [ -f android/app/build/outputs/bundle/release/app-release.aab ] && cp android/app/build/outputs/bundle/release/app-release.aab "out/Maata-PlayStore-${{ github.run_number }}.aab" || true
-          [ -f android/app/build/outputs/apk/release/app-release.apk ] && cp android/app/build/outputs/apk/release/app-release.apk "out/Maata-release-${{ github.run_number }}.apk" || true
+          cp android/app/build/outputs/apk/web/debug/app-web-debug.apk "out/Maata-test-${{ github.run_number }}.apk"
+          [ -f android/app/build/outputs/bundle/playRelease/app-play-release.aab ] && cp android/app/build/outputs/bundle/playRelease/app-play-release.aab "out/Maata-PlayStore-${{ github.run_number }}.aab" || true
+          [ -f android/app/build/outputs/apk/web/release/app-web-release.apk ] && cp android/app/build/outputs/apk/web/release/app-web-release.apk "out/Maata-release-${{ github.run_number }}.apk" || true
           ls -la out
 
       - uses: actions/upload-artifact@v4
@@ -84,11 +79,17 @@ jobs:
             echo "::warning::No signed APK (add the 4 MAATA_KEY... secrets). Not publishing to the website."
             exit 0
           fi
-          cp "$APK" maata.apk
-          printf '{"version":%s,"name":"1.0.%s","date":"%s"}\n' "${{ github.run_number }}" "${{ github.run_number }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > app-version.json
           git config user.name "Maata build"
           git config user.email "build@maataapp.com"
-          git add maata.apk app-version.json
-          git commit -m "Maata app v1.0.${{ github.run_number }} (automatic)" || exit 0
-          git pull --rebase origin main
-          git push origin HEAD:main
+          # start from the newest main every time (another upload may have come in meanwhile), up to 3 tries
+          for i in 1 2 3; do
+            git fetch origin main
+            git checkout -B publish origin/main
+            cp "$APK" maata.apk
+            printf '{"version":%s,"name":"1.0.%s","date":"%s"}\n' "${{ github.run_number }}" "${{ github.run_number }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > app-version.json
+            git add maata.apk app-version.json
+            git commit -m "Maata app v1.0.${{ github.run_number }} (automatic)" || exit 0
+            git push origin publish:main && exit 0
+            sleep 5
+          done
+          exit 1
