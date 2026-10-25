@@ -498,6 +498,15 @@ class MainActivity : Activity() {
         /** 🔊 spoken order alert while Maata is open (same voice as when it is closed) */
         @JavascriptInterface fun speakAlert(text: String, lang: String, fallbackEn: String) { Thread { OrderVoice.speakBlocking(this@MainActivity, text, lang, fallbackEn, force = true) }.start() }
         @JavascriptInterface fun voiceAlertsOn(): Boolean = OrderVoice.enabled(this@MainActivity)
+        /** order alerts while Maata is closed: {"notif":true,"battery":true,"autostart":false,"maker":"Xiaomi","ringer":true} */
+        @JavascriptInterface fun orderAlertStatus(): String = try {
+            val st = TeamTrackService.bgStatus(this@MainActivity)
+            val rg = try { (getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager).ringerMode == AudioManager.RINGER_MODE_NORMAL } catch (_: Exception) { true }
+            st.put("orders", Notifier.ordersAllowed(this@MainActivity)).put("ringer", rg).toString()
+        } catch (e: Exception) { "{}" }
+        @JavascriptInterface fun testOrderAlert(say: String, lang: String, sayEn: String) {
+            OrderAlertService.start(this@MainActivity, mapOf("title" to "🛒 Test order", "body" to "This is how a new order rings", "tag" to "order-test", "url" to "/", "say" to say, "sayEn" to sayEn, "lang" to lang))
+        }
         @JavascriptInterface fun setVoiceAlerts(on: Boolean) { OrderVoice.setEnabled(this@MainActivity, on) }
         @JavascriptInterface fun trackBgStatus(): String = TeamTrackService.bgStatus(this@MainActivity).toString()
         /** "Allow all the time" location (Android 10+: Android shows its own settings page for this). */

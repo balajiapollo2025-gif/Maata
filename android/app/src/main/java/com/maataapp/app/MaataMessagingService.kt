@@ -21,8 +21,12 @@ class MaataMessagingService : FirebaseMessagingService() {
             "secure_stop" -> SecureAlarm.stop(this)
             // 🛒 / 🛵 new order or new delivery: notification + spoken alert (the open app speaks by itself, so only when Maata is not on screen)
             "order_alert" -> {
-                Notifier.showOrder(this, d["title"] ?: "Maata", d["body"] ?: "", d["tag"] ?: "order", d["url"] ?: "/")
-                if (!MainActivity.foreground) OrderVoice.speakBlocking(this, d["say"] ?: "", d["lang"] ?: "en", d["sayEn"] ?: "")
+                if (MainActivity.foreground) Notifier.showOrder(this, d["title"] ?: "Maata", d["body"] ?: "", d["tag"] ?: "order", d["url"] ?: "/", silent = true) // the open app rings and speaks by itself
+                // Maata closed / in the background: a short foreground service rings the bell and speaks, so Android does not cut it off
+                else if (!OrderAlertService.start(this, d)) {
+                    Notifier.showOrder(this, d["title"] ?: "Maata", d["body"] ?: "", d["tag"] ?: "order", d["url"] ?: "/")
+                    OrderVoice.speakBlocking(this, d["say"] ?: "", d["lang"] ?: "en", d["sayEn"] ?: "")
+                }
             }
             // 📍 live location: the server has not heard from this phone for a few minutes (Android paused Maata) — send the place now
             "track_wake" -> TeamTrackService.wakeNow(this)

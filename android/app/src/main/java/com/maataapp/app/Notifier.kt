@@ -19,7 +19,8 @@ import androidx.core.content.ContextCompat
 object Notifier {
     const val CH_CALLS = "maata_calls_v1"
     const val CH_MSGS = "maata_messages_v1"
-    const val CH_ORDERS = "maata_orders_v1"
+    const val CH_ORDERS = "maata_orders_v2" // v2: the order bell is played by OrderAlertService
+    const val CH_ORDER_FG = "maata_order_voice"
     const val CALL_NOTIF_ID = 4242
     private const val PREFS = "maata"
 
@@ -40,12 +41,15 @@ object Notifier {
             description = "New messages, missed calls and updates"
             enableVibration(true)
         }
-        val orders = NotificationChannel(CH_ORDERS, "Orders & deliveries", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "New shop orders and new deliveries (with a spoken alert)"
+        val orders = NotificationChannel(CH_ORDERS, "Orders, deliveries & service jobs", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "New shop orders, deliveries and Local Services jobs: rings the Maata order bell, then says the order out loud"
             enableVibration(true); vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 700)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         nm.createNotificationChannel(orders)
+        nm.createNotificationChannel(NotificationChannel(CH_ORDER_FG, "Reading orders aloud", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Shows for a few seconds while Maata says a new order out loud"; setSound(null, null); enableVibration(false) })
+        try { nm.deleteNotificationChannel("maata_orders_v1") } catch (_: Exception) { }
         nm.createNotificationChannel(calls)
         nm.createNotificationChannel(msgs)
     }
@@ -126,15 +130,26 @@ object Notifier {
     }
 
     // ---------- messages, missed calls ----------
-    fun showOrder(ctx: Context, title: String, body: String, tag: String, url: String) {
+    fun showOrder(ctx: Context, title: String, body: String, tag: String, url: String, silent: Boolean = false) {
         if (!canPost(ctx)) return
         val n = NotificationCompat.Builder(ctx, CH_ORDERS)
             .setSmallIcon(R.drawable.ic_notification).setColor(0xFF0F8A5F.toInt())
             .setContentTitle(title).setContentText(body).setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_EVENT)
-            .setAutoCancel(true).setContentIntent(openAppIntent(ctx, url, tag.hashCode()))
+            .setAutoCancel(true).setSilent(silent).setContentIntent(openAppIntent(ctx, url, tag.hashCode()))
             .build()
         try { NotificationManagerCompat.from(ctx).notify(tag, 2, n) } catch (_: SecurityException) {}
+    }
+    fun orderSpeakingNotification(ctx: Context, title: String): Notification =
+        NotificationCompat.Builder(ctx, CH_ORDER_FG)
+            .setSmallIcon(R.drawable.ic_notification).setColor(0xFF0F8A5F.toInt())
+            .setContentTitle("🔊 " + title).setContentText("Maata is reading the order out loud")
+            .setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true).setOngoing(true)
+            .setContentIntent(openAppIntent(ctx, "/", 4343)).build()
+    /** Can Maata ring for orders? (notifications allowed and the orders channel not turned off) */
+    fun ordersAllowed(ctx: Context): Boolean {
+        if (!canPost(ctx)) return false
+        return try { val ch = ctx.getSystemService(NotificationManager::class.java).getNotificationChannel(CH_ORDERS); ch == null || ch.importance != NotificationManager.IMPORTANCE_NONE } catch (_: Exception) { true }
     }
     fun showMessage(ctx: Context, title: String, body: String, tag: String, url: String) {
         if (!canPost(ctx)) return
