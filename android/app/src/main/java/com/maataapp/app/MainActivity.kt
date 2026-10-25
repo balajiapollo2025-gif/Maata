@@ -83,6 +83,11 @@ class MainActivity : Activity() {
         }.start()
     }
     /** true when Android lets Maata update itself without asking (Android 12+ and Maata installed itself last time) */
+    /** Google Play: open Maata's page in the Play Store app (or the Play website) */
+    private fun openPlayListing() {
+        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (_: Exception) { try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))) } catch (_: Exception) { } }
+    }
     private fun canSilentUpdate(): Boolean = try { Build.VERSION.SDK_INT >= 31 && packageManager.getInstallSourceInfo(packageName).installingPackageName == packageName } catch (_: Exception) { false }
     private fun installDownloaded(): String {
         val f = updFile ?: return "NONE"
@@ -618,10 +623,13 @@ class MainActivity : Activity() {
         } catch (e: Exception) { false }
         /** In-app update: download the newest APK from maataapp.com and open Android's "Update" screen.
          *  Returns "OK", "PERMISSION" (the person must allow Maata to install apps first) or "ERROR". */
-        @JavascriptInterface fun autoUpdate(url: String): String = when { updFile?.exists() == true -> "READY"; updDownloading -> "BUSY"; else -> { downloadUpdate(url); "STARTED" } }
-        @JavascriptInterface fun installNow(): String = try { installDownloaded() } catch (e: Exception) { "ERROR" }
-        @JavascriptInterface fun silentUpdate(): Boolean = canSilentUpdate()
-        @JavascriptInterface fun installUpdate(url: String): String = try {
+        /** "play" = Google Play version (Play updates the app), "web" = maataapp.com version */
+        @JavascriptInterface fun store(): String = BuildConfig.STORE
+        @JavascriptInterface fun openPlayStore() { runOnUiThread { openPlayListing() } }
+        @JavascriptInterface fun autoUpdate(url: String): String = if (BuildConfig.STORE == "play") { runOnUiThread { openPlayListing() }; "PLAY" } else when { updFile?.exists() == true -> "READY"; updDownloading -> "BUSY"; else -> { downloadUpdate(url); "STARTED" } }
+        @JavascriptInterface fun installNow(): String = if (BuildConfig.STORE == "play") "PLAY" else try { installDownloaded() } catch (e: Exception) { "ERROR" }
+        @JavascriptInterface fun silentUpdate(): Boolean = BuildConfig.STORE != "play" && canSilentUpdate()
+        @JavascriptInterface fun installUpdate(url: String): String = if (BuildConfig.STORE == "play") { runOnUiThread { openPlayListing() }; "PLAY" } else try {
             if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
                 runOnUiThread { try { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) } catch (_: Exception) { } }
                 "PERMISSION"

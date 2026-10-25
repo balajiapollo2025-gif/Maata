@@ -133,7 +133,8 @@ class TeamTrackService : Service(), LocationListener {
         }
         /** What is still needed so sharing keeps going while Maata is closed. */
         fun bgStatus(ctx: Context): JSONObject {
-            val bgLoc = Build.VERSION.SDK_INT < 29 || ctx.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+            // Google Play version has no "Allow all the time" (sharing starts from the app while on duty), so nothing to ask for
+            val bgLoc = BuildConfig.STORE == "play" || Build.VERSION.SDK_INT < 29 || ctx.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
             val battery = try { ctx.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(ctx.packageName) } catch (_: Exception) { true }
             val notif = Build.VERSION.SDK_INT < 33 || ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
             val maker = Build.MANUFACTURER.lowercase()
