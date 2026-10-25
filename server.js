@@ -370,7 +370,7 @@ function notifyOffline(fromUser, m) {
 const pendingRings = new Map(); // userId -> { offer, ice: [], until, callId, from }
 app.get('/manifest.webmanifest', (req, res) => {
   res.type('application/manifest+json').json({
-    id: '/', name: 'Maata — free calls & messages', short_name: 'Maata', description: 'Free voice calls, video calls and chat with live translation.',
+    id: '/', name: 'Maata — free calls & messages', short_name: 'Maata', description: 'Free voice calls, video calls, chat and local services, made in India.',
     start_url: '/?source=app', scope: '/', display: 'standalone', orientation: 'portrait', background_color: '#0A3A47', theme_color: '#0F4C5C', lang: 'en-IN', categories: ['communication', 'social'],
     icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/icons/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
@@ -1869,7 +1869,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 203;
+const MAATA_VERSION = 204;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4166,7 +4166,7 @@ function commView(viewer, c) {
   return {
     id: c.id, name: c.name, description: c.description || '', ownerId: c.ownerId, isAdmin: commAdmin(c, viewer.id), memberCount: members.size, createdAt: c.createdAt,
     announce: c.announceId ? { id: 'g:' + c.announceId, joined: gMember(groupById(c.announceId), viewer.id) } : null,
-    groups: c.groups.map((gid) => { const g = groupById(gid); return g ? { id: 'g:' + g.id, name: g.name, memberCount: g.members.length, joined: gMember(g, viewer.id), description: g.description || '' } : null; }).filter(Boolean),
+    groups: c.groups.map((gid) => { const g = groupById(gid); return g ? { id: 'g:' + g.id, name: g.name, memberCount: g.members.length, joined: gMember(g, viewer.id), description: g.description || '', open: !!(g.settings && g.settings.commOpen), requested: (g.joinReqs || []).some((r) => r.id === viewer.id), isGroupAdmin: gAdmin(g, viewer.id), reqCount: gAdmin(g, viewer.id) ? (g.joinReqs || []).length : 0 } : null; }).filter(Boolean),
   };
 }
 app.get('/api/communities', auth, (req, res) => res.json(db.communities.filter((c) => commMember(c, req.user.id)).map((c) => commView(req.user, c))));
@@ -4221,17 +4221,52 @@ app.delete('/api/communities/:id/groups/:gid', auth, (req, res) => {
   const g = groupById(gid); if (g) { delete g.communityId; groupChanged(g); }
   save(); res.json(commView(req.user, c));
 });
-// Any community member can join any group inside it (no invite needed)
+// Community groups are private by default: a member ASKS to join and a group admin approves.
+// A group admin can open the group so anyone in the community joins straight away.
+function addToGroup(g, u, via, by) {
+  if (gMember(g, u.id)) return;
+  g.members.push({ id: u.id, role: 'member', joinedAt: now(), via }); joinGroupRoom(u.id, g.id);
+  sysMsg(g, by || u, via === 'request' ? (by ? by.name : 'Admin') + ' added ' + u.name + ' (join request)' : u.name + ' joined from the community'); groupChanged(g);
+}
 app.post('/api/communities/:id/groups/:gid/join', auth, (req, res) => {
   const c = commFor(req, res); if (!c) return;
   const g = groupById(req.params.gid.replace(/^g:/, ''));
-  if (!g || g.communityId !== c.id) return res.status(404).json({ error: 'Group not found.' });
-  if (!gMember(g, req.user.id)) {
-    if (g.members.length >= GROUP_MAX) return res.status(400).json({ error: 'This group is full.' });
-    g.members.push({ id: req.user.id, role: 'member', joinedAt: now(), via: 'community' }); joinGroupRoom(req.user.id, g.id);
-    sysMsg(g, req.user, req.user.name + ' joined from the community'); save(); groupChanged(g);
+  if (!g || g.communityId !== c.id || g.isAnnounce) return res.status(404).json({ error: 'Group not found.' });
+  if (gMember(g, req.user.id)) return res.json({ joined: true, group: groupView(req.user, g) });
+  if (g.members.length >= GROUP_MAX) return res.status(400).json({ error: 'This group is full.' });
+  if (commAdmin(c, req.user.id) || (g.settings && g.settings.commOpen)) { addToGroup(g, req.user, 'community'); save(); return res.json({ joined: true, group: groupView(req.user, g) }); }
+  g.joinReqs = (g.joinReqs || []).filter((r) => r.id !== req.user.id); g.joinReqs.push({ id: req.user.id, at: now() }); g.joinReqs = g.joinReqs.slice(-200); save();
+  for (const m of g.members) if (m.role === 'admin') { io.to('user:' + m.id).emit('group:joinreq', { groupId: 'g:' + g.id, communityId: c.id }); const au = userById(m.id); if (au) pushTo(au, { type: 'msg', title: '👥 Join request · ' + g.name, body: req.user.name + ' wants to join ' + g.name + ' (' + c.name + ')', tag: 'gjr-' + g.id, url: '/' }).catch(() => {}); }
+  res.json({ requested: true });
+});
+app.delete('/api/communities/:id/groups/:gid/join', auth, (req, res) => { // cancel my request
+  const c = commFor(req, res); if (!c) return; const g = groupById(req.params.gid.replace(/^g:/, ''));
+  if (g) { g.joinReqs = (g.joinReqs || []).filter((r) => r.id !== req.user.id); save(); } res.json({ ok: true });
+});
+function grpAdminFor(req, res) {
+  const g = groupById(String(req.params.gid).replace(/^g:/, ''));
+  if (!g || !gAdmin(g, req.user.id)) { res.status(403).json({ error: 'Only group admins can do this.' }); return null; }
+  return g;
+}
+app.get('/api/groups/:gid/requests', auth, (req, res) => {
+  const g = grpAdminFor(req, res); if (!g) return;
+  res.json({ open: !!(g.settings && g.settings.commOpen), requests: (g.joinReqs || []).map((r) => { const u = userById(r.id); return u ? { id: u.id, name: u.name, phone: u.phone, at: r.at } : null; }).filter(Boolean) });
+});
+app.post('/api/groups/:gid/requests/:uid', auth, (req, res) => {
+  const g = grpAdminFor(req, res); if (!g) return;
+  const r = (g.joinReqs || []).find((x) => x.id === req.params.uid); if (!r) return res.status(404).json({ error: 'Request not found.' });
+  g.joinReqs = g.joinReqs.filter((x) => x.id !== req.params.uid);
+  const u = userById(r.id);
+  if (req.body?.approve && u) {
+    if (g.members.length >= GROUP_MAX) { save(); return res.status(400).json({ error: 'This group is full.' }); }
+    addToGroup(g, u, 'request', req.user);
+    pushTo(u, { type: 'msg', title: '✅ ' + g.name, body: 'Your request to join was approved', tag: 'gjr-ok-' + g.id, url: '/' }).catch(() => {});
   }
-  res.json(groupView(req.user, g));
+  save(); res.json({ ok: true });
+});
+app.post('/api/groups/:gid/community-open', auth, (req, res) => {
+  const g = grpAdminFor(req, res); if (!g) return;
+  g.settings = g.settings || {}; g.settings.commOpen = !!req.body?.open; save(); res.json({ open: g.settings.commOpen });
 });
 app.delete('/api/communities/:id', auth, (req, res) => {
   const c = commById(req.params.id);
@@ -4967,15 +5002,17 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <li><b>Account:</b> your name, mobile number and a securely hashed password.</li>
 <li><b>Contacts:</b> numbers you save in Maata. If you choose to sync or import phone contacts, numbers are only checked against Maata users; the full list stays on your device.</li>
 <li><b>Messages and files:</b> chats, photos, videos, voice messages and documents you send are stored on our servers so they can be delivered and shown on your devices. Maata is not end-to-end encrypted. Disappearing and view-once messages are deleted as described in the app.</li>
-<li><b>Calls:</b> calls connect directly between devices or through our media server; we keep call history (who, when, how long), not call audio or video. If you use live call translation, speech is sent to Google Cloud to be transcribed and translated.</li>
+<li><b>Calls:</b> calls connect directly between devices or through our media server; we keep call history (who, when, how long), not call audio or video.</li>
 <li><b>Status, channels, communities, business profile, catalogue and ads</b> you create.</li>
-<li><b>Location:</b> only when you choose to share a location or take a GPS photo.</li>
+<li><b>Location:</b> only when you choose to use it: sharing a location in a chat, a GPS photo, Maata Maps, your delivery address, a Local Services booking, or live location while you are ON DUTY in a team / family group (a notification shows the whole time and you can stop it any time). Service providers and delivery persons share their location with the customer only during an active job.</li>
+<li><b>Shops and Local Services:</b> orders, bills, addresses and booking details you enter. Service providers give a face photo (shown to customers) and an ID photo (seen only by the Maata team for verification).</li>
+<li><b>App lock and Maata Secure:</b> your PIN and face unlock data stay on your phone (face unlock keeps only numbers that describe your face, never a photo). If you switch on intruder photos, the photo of someone who failed to unlock is kept on your Maata account so you can see it on your other devices.</li>
 <li><b>Maata AI:</b> questions you send to Maata AI, text you ask it to rewrite, and (if a business turns on AI auto-reply) customer messages to that business are sent to Google Gemini to create answers.</li>
 <li><b>Device data:</b> login times, approximate device type, and a notification token so we can alert you about messages and calls.</li></ul>
 <h2>How we use it</h2><p>To deliver messages and calls, keep accounts secure, prevent spam and abuse, review reports, and improve Maata. We do not sell your personal data. We do not show ads based on your chats.</p>
 <h2>Who we share it with</h2><p>Service providers that run Maata for us: Render (hosting), MongoDB Atlas (database), Cloudflare (domain and file storage), Google (notifications, translation, speech, Gemini AI), and LiveKit (group call media, if enabled). We may share data when required by Indian law.</p>
 <h2>Your choices</h2><ul><li>Block or report anyone; control who sees your status.</li><li>Delete messages, chats or your status at any time.</li><li><b>Delete your account:</b> in the app go to ⋮ → Settings → Delete my account, or visit <a href="/delete-account">maataapp.com/delete-account</a>. Your account, messages, statuses, products and files are deleted from our active systems.</li></ul>
-<h2>Children</h2><p>Maata is not intended for children under 13.</p>
+<h2>Children</h2><p>Maata is for people aged 18 and over. We do not knowingly allow children to use Maata; if we learn that a child has an account, we delete it.</p>
 <h2>Changes</h2><p>We will update this page when the policy changes.</p></body></html>`));
 app.get('/delete-account', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your Maata account</title><style>${PAGE_CSS}input,button{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid #D5DCE0;width:100%;box-sizing:border-box;margin:6px 0}button{background:#C8413A;color:#fff;border:0;font-weight:700;cursor:pointer}#msg{margin-top:10px;font-weight:600}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png" alt=""><h1>Delete your Maata account</h1></div>
