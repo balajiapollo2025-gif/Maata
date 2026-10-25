@@ -269,6 +269,20 @@ app.post('/api/logout', auth, (req, res) => {
   if (ft) req.user.fcmTokens = (req.user.fcmTokens || []).filter((x) => x.token !== ft);
   save(); res.json({ ok: true });
 });
+// 🔔 "Test with Maata closed": a sample order alert 10 seconds later, so the person can close Maata and hear it
+const TEST_SAY = { shop: { en: 'Test. New order from Maata. Please accept the order.', te: 'ఇది టెస్ట్. మాట లో కొత్త ఆర్డర్ వచ్చింది. దయచేసి ఆర్డర్ యాక్సెప్ట్ చేయండి.', hi: 'यह टेस्ट है. Maata पर नया ऑर्डर आया है. कृपया ऑर्डर स्वीकार करें.' },
+  job: { en: 'Test. New Maata service booking. Please accept it.', te: 'ఇది టెస్ట్. కొత్త సర్వీస్ బుకింగ్ వచ్చింది. దయచేసి యాక్సెప్ట్ చేయండి.', hi: 'यह टेस्ट है. नई सर्विस बुकिंग आई है. कृपया स्वीकार करें.' },
+  ride: { en: 'Test. New delivery for you from Maata.', te: 'ఇది టెస్ట్. మీకు కొత్త డెలివరీ వచ్చింది.', hi: 'यह टेस्ट है. आपके लिए नई डिलीवरी है.' } };
+const testOrderAt = new Map();
+app.post('/api/push/test-order', auth, (req, res) => {
+  const u = req.user, kind = TEST_SAY[req.body?.kind] ? req.body.kind : 'shop';
+  if (now() - (testOrderAt.get(u.id) || 0) < 20000) return res.status(429).json({ error: 'Wait a few seconds and try again.' });
+  testOrderAt.set(u.id, now());
+  const lang = TEST_SAY[kind][u.lang] ? u.lang : 'en', android = !!(FCM && (u.fcmTokens || []).length);
+  setTimeout(() => pushTo(u, { type: 'order_alert', title: kind === 'job' ? '🔔 Test job' : kind === 'ride' ? '🛵 Test delivery' : '🛒 Test order', body: 'This is how Maata rings when Maata is closed', tag: 'order-test', url: '/',
+    say: TEST_SAY[kind][lang], sayEn: TEST_SAY[kind].en, lang }, { urgency: 'high', ttl: 120 }).catch(() => {}), 10000);
+  res.json({ ok: true, android });
+});
 app.post('/api/push/test', auth, async (req, res) => res.json({ sent: await pushTo(req.user, { type: 'test', title: 'Maata 🦜', body: 'Notifications are working!', url: '/' }) }));
 
 // ---------- Native Android app: Firebase Cloud Messaging (full-screen incoming calls, like WhatsApp) ----------
@@ -1855,7 +1869,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 202;
+const MAATA_VERSION = 203;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
