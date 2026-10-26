@@ -586,7 +586,7 @@ const FEATURE_LIST = [
   ['Account & app', 'themes', '🎨 Theme & colours'],
   ['Account & app', 'appLock', '🔒 App lock'],
   ['Business', 'localServices', '🛠️ Local Services (electrician, plumber, AC, tutor, beauty… — booking, tracking, providers)'],
-  ['Business', 'jobs', '🧱 Maata Pani – local jobs (shop staff, masons, coolies, helpers, drivers…)'],
+  ['Business', 'jobs', '💼 Local Jobs & Daily Labour (shop staff, masons, coolies, helpers, drivers…)'],
   ['Account & app', 'secure', '🛡️ Maata Secure (anti-theft: lost-phone mode, alarm, phone location, IMEI, theft report)'],
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
   ['Updates & social', 'maps', '🗺️ Maata Maps (navigation)'],
@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 205;
+const MAATA_VERSION = 206;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5005,8 +5005,8 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <li><b>Messages and files:</b> chats, photos, videos, voice messages and documents you send are stored on our servers so they can be delivered and shown on your devices. Maata is not end-to-end encrypted. Disappearing and view-once messages are deleted as described in the app.</li>
 <li><b>Calls:</b> calls connect directly between devices or through our media server; we keep call history (who, when, how long), not call audio or video.</li>
 <li><b>Status, channels, communities, business profile, catalogue and ads</b> you create.</li>
-<li><b>Location:</b> only when you choose to use it: sharing a location in a chat, a GPS photo, Maata Maps, your delivery address, a Local Services booking, a Maata Pani job place or worker area, or live location while you are ON DUTY in a team / family group (a notification shows the whole time and you can stop it any time). Service providers and delivery persons share their location with the customer only during an active job.</li>
-<li><b>Maata Pani (local jobs):</b> if you post a job: the job details and the work place. If you make a worker profile: your name, the work you do, experience, the pay you want and your area (employers see only the distance, not your exact place). Your phone number is shown to an employer only after you apply to their job, and never if you choose “Hide my phone number”. Maata Pani is only for people 18 years and above.</li>
+<li><b>Location:</b> only when you choose to use it: sharing a location in a chat, a GPS photo, Maata Maps, your delivery address, a Local Services booking, a Local Jobs & Daily Labour work place or worker area, or live location while you are ON DUTY in a team / family group (a notification shows the whole time and you can stop it any time). Service providers and delivery persons share their location with the customer only during an active job.</li>
+<li><b>Local Jobs &amp; Daily Labour:</b> if you post a job: the job details and the work place. If you make a worker profile: your name, the work you do, experience, the pay you want and your area (employers see only the distance, not your exact place). Your phone number is shown to an employer only after you apply to their job, and never if you choose “Hide my phone number”. Local Jobs &amp; Daily Labour is only for people 18 years and above.</li>
 <li><b>Shops and Local Services:</b> orders, bills, addresses and booking details you enter. Service providers give a face photo (shown to customers) and an ID photo (seen only by the Maata team for verification).</li>
 <li><b>App lock and Maata Secure:</b> your PIN and face unlock data stay on your phone (face unlock keeps only numbers that describe your face, never a photo). If you switch on intruder photos, the photo of someone who failed to unlock is kept on your Maata account so you can see it on your other devices.</li>
 <li><b>Maata AI:</b> questions you send to Maata AI, text you ask it to rewrite, and (if a business turns on AI auto-reply) customer messages to that business are sent to Google Gemini to create answers.</li>
@@ -5652,7 +5652,7 @@ function finishCall(rec, status) {
 }
 
 
-// ==================== 🧱 MAATA PANI: LOCAL JOBS (shop staff, masons, coolies, helpers, drivers …) ====================
+// ==================== 💼 LOCAL JOBS & DAILY LABOUR (shop staff, masons, coolies, helpers, drivers …) ====================
 // Employers post a job (by voice), nearby workers get a voice alert, apply with one tap, the employer shortlists / hires.
 // Safety: 18+ only, no fees from workers (rules + Maata AI check), women can hide their number, report → Maata team.
 const JOB_CATS = [
@@ -5732,9 +5732,9 @@ function workerOut(w, viewer, here, job) {
 }
 function jobMeta() { let m = db.meta.find((x) => x.id === 'jobs'); if (!m) { m = { id: 'jobs', createdAt: now(), alerts: {} }; db.meta.push(m); } m.alerts = m.alerts || {}; return m; }
 const JOB_SAY = {
-  en: (j) => `New job near you on Maata. ${(jobCat(j.cat) || {}).en}. ${j.wage && j.wage.amt ? j.wage.amt + ' rupees ' + JOB_PER[j.wage.per] : ''}. Open Maata Pani to apply.`,
-  te: (j) => `మీ దగ్గర్లో కొత్త పని వచ్చింది. ${(jobCat(j.cat) || {}).te}. ${j.wage && j.wage.amt ? JOB_PER_TE[j.wage.per] + ' ' + j.wage.amt + ' రూపాయలు' : ''}. అప్లై చేయడానికి మాట పని తెరవండి.`,
-  hi: (j) => `आपके पास नया काम आया है. ${(jobCat(j.cat) || {}).en}. ${j.wage && j.wage.amt ? j.wage.amt + ' रुपये' : ''}. अप्लाई करने के लिए Maata Pani खोलें.`,
+  en: (j) => `New job near you on Maata. ${(jobCat(j.cat) || {}).en}. ${j.wage && j.wage.amt ? j.wage.amt + ' rupees ' + JOB_PER[j.wage.per] : ''}. Open Local Jobs in Maata to apply.`,
+  te: (j) => `మీ దగ్గర్లో కొత్త పని వచ్చింది. ${(jobCat(j.cat) || {}).te}. ${j.wage && j.wage.amt ? JOB_PER_TE[j.wage.per] + ' ' + j.wage.amt + ' రూపాయలు' : ''}. అప్లై చేయడానికి మాట లో లోకల్ జాబ్స్ తెరవండి.`,
+  hi: (j) => `आपके पास नया काम आया है. ${(jobCat(j.cat) || {}).en}. ${j.wage && j.wage.amt ? j.wage.amt + ' रुपये' : ''}. अप्लाई करने के लिए Maata में Local Jobs खोलें.`,
 };
 function jobAlertWorkers(j) { // 🔔 voice alert to matching, nearby workers (max 30; each worker max 8 job alerts a day)
   if (!j.place || j.status !== 'open') return 0; const m = jobMeta(), day = jobToday(); let n = 0;
@@ -5745,7 +5745,7 @@ function jobAlertWorkers(j) { // 🔔 voice alert to matching, nearby workers (m
     const u = userById(w.id); if (!u || blockedOf(u).includes(j.by)) continue;
     const k = w.id + '|' + day; if ((m.alerts[k] || 0) >= 8) continue; m.alerts[k] = (m.alerts[k] || 0) + 1;
     const lang = JOB_SAY[u.lang] ? u.lang : 'en', voice = jobAvail(w) && u.voiceAlerts !== false, c = jobCat(j.cat);
-    const title = '🧱 New job · ' + c.en + (d != null ? ' · ' + d + ' km' : ''), body = (j.title || c.en) + ' · ' + (j.wage && j.wage.amt ? '₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + (j.place.text ? ' · ' + j.place.text : '');
+    const title = '💼 New job · ' + c.en + (d != null ? ' · ' + d + ' km' : ''), body = (j.title || c.en) + ' · ' + (j.wage && j.wage.amt ? '₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + (j.place.text ? ' · ' + j.place.text : '');
     io.to('user:' + w.id).emit('jobs:new', { id: j.id });
     if (voice) io.to('user:' + w.id).emit('voice:alert', { kind: 'job_new', say: JOB_SAY[lang](j), sayEn: JOB_SAY.en(j), lang, title, body, url: '/?job=' + j.id });
     pushTo(u, voice ? { type: 'order_alert', title, body, tag: 'job-' + j.id, url: '/?job=' + j.id, say: JOB_SAY[lang](j), sayEn: JOB_SAY.en(j), lang } : { type: 'msg', title, body, tag: 'job-' + j.id, url: '/?job=' + j.id }, { urgency: voice ? 'high' : 'normal' }).catch(() => {});
@@ -5767,7 +5767,7 @@ async function jobAiCheck(j) { // 🤖 Maata AI reads every new job; a likely sc
   if (!GEMINI_KEY) return;
   const g = await gemini('You check job posts on a local jobs app in Andhra Pradesh, India, to protect poor daily-wage workers. Return ONLY JSON {"risk":"none|low|high","why":"short English reason"}. HIGH = asks the worker to pay any money (fee, deposit, training, uniform, ID card), abroad/visa jobs, loans, crypto/trading/MLM, "earn from home" tasks, adult work, child labour (under 18), or contact outside the app to pay. LOW = unclear but probably fine. NONE = normal local job.', [{ role: 'user', parts: [{ text: JSON.stringify({ title: j.title, desc: j.desc, wage: j.wage, cat: j.cat }) }] }], { json: true, maxTokens: 120, temperature: 0, fast: true }).catch(() => ({}));
   const d = lsJson(g || {}); if (!d) return; j.ai = { risk: d.risk, why: clip(d.why, 200), at: now() };
-  if (d.risk === 'high' && j.status === 'open') { j.status = 'held'; j.heldWhy = 'Maata AI found a possible problem: ' + clip(d.why, 160).replace(/\.?$/, '.') + ' The Maata team will check it soon.'; feed('jobs', '🧱 Job held by AI: ' + j.title + ' — ' + clip(d.why, 100)); jobTell(j.by, '⏸️ Your job is waiting for a check', j.title + ' · Maata team will check it soon', '/?job=' + j.id); }
+  if (d.risk === 'high' && j.status === 'open') { j.status = 'held'; j.heldWhy = 'Maata AI found a possible problem: ' + clip(d.why, 160).replace(/\.?$/, '.') + ' The Maata team will check it soon.'; feed('jobs', '💼 Job held by AI: ' + j.title + ' — ' + clip(d.why, 100)); jobTell(j.by, '⏸️ Your job is waiting for a check', j.title + ' · Maata team will check it soon', '/?job=' + j.id); }
   save();
 }
 // expire old jobs
@@ -5783,7 +5783,7 @@ app.get('/api/jobs/config', auth, (req, res) => {
 app.get('/api/jobs', auth, (req, res) => {
   const here = jobHere(req.query), cat = String(req.query.cat || ''), kind = String(req.query.kind || ''), km = Number(req.query.km) || 0, q = String(req.query.q || '').toLowerCase().trim(), sort = String(req.query.sort || 'best');
   const w = jobWorker(req.user.id), me2 = req.user;
-  let l = db.jobs.filter((j) => j.status === 'open' && j.by !== me2.id && (!cat || j.cat === cat) && (!kind || j.kind === kind) && !blockedOf(userById(j.by) || {}).includes(me2.id) && !blockedOf(me2).includes(j.by)
+  let l = db.jobs.filter((j) => j.status === 'open' && j.by !== me2.id && (!cat || j.cat === cat) && (!kind || (kind === 'labour' ? ['daily', 'contract'].includes(j.kind) : kind === 'job' ? ['monthly', 'parttime'].includes(j.kind) : j.kind === kind)) && !blockedOf(userById(j.by) || {}).includes(me2.id) && !blockedOf(me2).includes(j.by)
     && (!q || (j.title + ' ' + (j.titleTe || '') + ' ' + j.desc + ' ' + (jobCat(j.cat) || {}).en + ' ' + (jobCat(j.cat) || {}).te + ' ' + (j.place?.text || '')).toLowerCase().includes(q)));
   let out = l.map((j) => ({ ...jobOut(j, me2, here), match: jobMatch(j, w || { skills: [] }, here) }));
   if (here && km) out = out.filter((x) => x.distKm == null || x.distKm <= km);
@@ -5805,7 +5805,7 @@ app.get('/api/jobs/:id', auth, (req, res, next) => {
 });
 // ➕ post a job (employers)
 app.post('/api/jobs', auth, (req, res) => {
-  if (!req.body?.agree) return res.status(400).json({ error: 'Please accept the Maata Pani rules first.' });
+  if (!req.body?.agree) return res.status(400).json({ error: 'Please accept the Local Jobs rules first.' });
   const h = (jobPostHits.get(req.user.id) || []).filter((t) => now() - t < 86400000); if (h.length >= 6) return res.status(429).json({ error: 'You can post 6 jobs a day. Try again tomorrow.' });
   if (db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length >= 15) return res.status(400).json({ error: 'You have 15 open jobs. Close some jobs first.' });
   const f = jobClean(req.body || {}); if (!f.place) return res.status(400).json({ error: 'Add the work place (location).' });
@@ -5814,7 +5814,7 @@ app.post('/api/jobs', auth, (req, res) => {
   const j = { id: newId(), by: req.user.id, ...f, status: 'open', createdAt: now(), expiresAt: now() + (life + (f.days && f.kind === 'daily' ? Math.min(f.days, 30) : 0)) * 86400000, views: 0, reports: [] };
   if (!f.shopName && req.user.business && req.user.business.name) j.shopName = clip(req.user.business.name, 60);
   db.jobs.push(j); h.push(now()); jobPostHits.set(req.user.id, h); save();
-  feed('jobs', '🧱 New job: ' + j.title + ' (' + (jobCat(j.cat) || {}).en + ')');
+  feed('jobs', '💼 New job: ' + j.title + ' (' + (jobCat(j.cat) || {}).en + ')');
   jobAiCheck(j).catch(() => {}).finally(() => { if (j.status === 'open') { jobAlertWorkers(j); save(); } });
   res.json(jobOut(j, req.user));
 });
@@ -5863,7 +5863,7 @@ app.post('/api/jobs/:id/apps/:uid', auth, (req, res) => {
 app.get('/api/jobs/me/worker', auth, (req, res) => { const w = jobWorker(req.user.id); res.json(w ? { ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area || null } : null); });
 app.put('/api/jobs/me/worker', auth, (req, res) => {
   const b = req.body || {}; let w = jobWorker(req.user.id);
-  if (!w && !b.age18) return res.status(400).json({ error: 'Maata Pani is only for workers 18 years and above. Please confirm your age.' });
+  if (!w && !b.age18) return res.status(400).json({ error: 'Local Jobs & Daily Labour is only for workers 18 years and above. Please confirm your age.' });
   const skills = [...new Set((Array.isArray(b.skills) ? b.skills : []).filter((k) => jobCat(k)))].slice(0, 6); if (!skills.length) return res.status(400).json({ error: 'Choose at least one work you do.' });
   const ar = b.area && isFinite(Number(b.area.lat)) && (Number(b.area.lat) || Number(b.area.lng)) ? { lat: Number(b.area.lat), lng: Number(b.area.lng), km: Math.max(1, Math.min(50, Number(b.area.km) || 10)), text: clip(b.area.text, 100) } : w?.area || null;
   if (!ar) return res.status(400).json({ error: 'Add your area (location), so Maata can find jobs near you.' });
@@ -5887,7 +5887,7 @@ app.get('/api/jobs/workers', auth, (req, res) => {
 app.post('/api/jobs/:id/report', auth, (req, res) => {
   const j = jobById(req.params.id); if (!j) return res.status(404).json({ error: 'Job not found.' });
   j.reports = j.reports || []; if (!j.reports.includes(req.user.id)) j.reports.push(req.user.id);
-  db.reports.push({ id: newId(), reporter: req.user.id, target: j.by, reason: 'Maata Pani job "' + j.title + '": ' + (clip(req.body?.reason, 300) || 'reported'), ts: now(), status: 'open', jobId: j.id });
+  db.reports.push({ id: newId(), reporter: req.user.id, target: j.by, reason: 'Local job "' + j.title + '": ' + (clip(req.body?.reason, 300) || 'reported'), ts: now(), status: 'open', jobId: j.id });
   if (j.reports.length >= 3 && j.status === 'open') { j.status = 'held'; j.heldWhy = 'Some people reported this job. The Maata team will check it.'; }
   save(); feed('jobs', '🚩 Job reported: ' + j.title); res.json({ ok: true });
 });
@@ -5918,7 +5918,7 @@ app.post('/admin/api/jobs/:id', adminAuth, (req, res) => {
   const was = j.status; j.status = s; if (s === 'open') { j.heldWhy = ''; j.reports = []; j.expiresAt = Math.max(j.expiresAt || 0, now() + 7 * 86400000); } save();
   audit('admin', 'job-' + s, j.title);
   if (was === 'held' && s === 'open') { jobTell(j.by, '✅ Your job is live', j.title, '/?job=' + j.id); jobAlertWorkers(j); save(); }
-  if (s === 'removed') jobTell(j.by, '🚫 Your job was removed', j.title + ' · it broke the Maata Pani rules', '/?jobs=mine');
+  if (s === 'removed') jobTell(j.by, '🚫 Your job was removed', j.title + ' · it broke the Local Jobs rules', '/?jobs=mine');
   res.json({ ok: true });
 });
 // ==================== 📍 TEAM TRACKING (field staff: loans, collections, sales, service) ====================
