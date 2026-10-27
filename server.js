@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 209;
+const MAATA_VERSION = 210;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5879,12 +5879,42 @@ app.put('/api/jobs/me/worker', auth, (req, res) => {
     hideNumber: !!b.hideNumber, alerts: b.alerts !== false, updatedAt: now() });
   save(); res.json({ ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area });
 });
-app.post('/api/jobs/me/today', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); w.availDay = req.body?.on ? jobToday() : ''; save(); res.json({ availToday: jobAvail(w) }); });
+app.post('/api/jobs/me/today', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); w.availDay = req.body?.on ? jobToday() : ''; w.annAt = 0; w.ann = {}; save(); res.json({ availToday: jobAvail(w) }); });
+// 📢 While a worker is “Free for work today”: every 5 minutes Maata says the jobs near them out loud (also when Maata is closed).
+// Quiet at night (9 PM – 6 AM). Each job is said at most 3 times; nothing is said when there is no job to apply for.
+const JOB_ANN = {
+  en: (n, j, d) => `${n > 1 ? n + ' jobs are' : 'A job is'} waiting for you near you. ${(jobCat(j.cat) || {}).en}${j.wage && j.wage.amt ? ', ' + j.wage.amt + ' rupees ' + JOB_PER[j.wage.per] : ''}${d != null ? ', ' + d + ' kilometres away' : ''}. Open Local Jobs in Maata to apply.`,
+  te: (n, j, d) => `మీ దగ్గర ${n > 1 ? n + ' పనులు' : 'ఒక పని'} ఉంది. ${(jobCat(j.cat) || {}).te}${j.wage && j.wage.amt ? ', ' + JOB_PER_TE[j.wage.per] + ' ' + j.wage.amt + ' రూపాయలు' : ''}${d != null ? ', ' + d + ' కిలోమీటర్ల దూరం' : ''}. అప్లై చేయడానికి మాట లో లోకల్ జాబ్స్ తెరవండి.`,
+  hi: (n, j, d) => `आपके पास ${n > 1 ? n + ' काम' : 'एक काम'} है. ${(jobCat(j.cat) || {}).en}${j.wage && j.wage.amt ? ', ' + j.wage.amt + ' रुपये' : ''}${d != null ? ', ' + d + ' किलोमीटर दूर' : ''}. अप्लाई करने के लिए Maata में Local Jobs खोलें.`,
+};
+function jobAnnounce() {
+  const t = now(), h = new Date(t + 5.5 * 3600000).getUTCHours(); if (h < 6 || h >= 21) return;
+  let ch = false;
+  for (const w of db.workers) {
+    if (!jobAvail(w) || w.alerts === false || !w.area || t - (w.annAt || 0) < 5 * 60000) continue;
+    const u = userById(w.id); if (!u) continue;
+    if (db.jobApps.some((a) => a.workerId === w.id && a.status === 'hired' && t - (a.updatedAt || 0) < 12 * 3600000)) continue; // got work today
+    w.ann = w.ann || {};
+    const l = db.jobs.filter((j) => j.status === 'open' && j.by !== w.id && (w.skills || []).includes(j.cat) && j.place && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender)
+      && !db.jobApps.some((a) => a.jobId === j.id && a.workerId === w.id && a.status !== 'withdrawn') && !blockedOf(userById(j.by) || {}).includes(w.id) && (w.ann[j.id] || 0) < 3)
+      .map((j) => ({ j, d: lsDistKm(w.area, j.place) })).filter((x) => x.d != null && x.d <= Math.max(2, Math.min(50, w.area.km || 10)))
+      .sort((a, b) => jobMatch(b.j, w) - jobMatch(a.j, w) || a.d - b.d);
+    w.annAt = t; ch = true; if (!l.length) continue;
+    const { j, d } = l[0]; for (const x of l) w.ann[x.j.id] = (w.ann[x.j.id] || 0) + 1;
+    const lang = JOB_ANN[u.lang] ? u.lang : 'en', say = u.voiceAlerts === false ? '' : JOB_ANN[lang](l.length, j, d), sayEn = JOB_ANN.en(l.length, j, d);
+    const title = '🔔 ' + l.length + (l.length > 1 ? ' jobs' : ' job') + ' near you', body = (jobCat(j.cat) || {}).en + (j.wage && j.wage.amt ? ' · ₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + ' · ' + d + ' km';
+    io.to('user:' + w.id).emit('voice:alert', { kind: 'job_free', say, sayEn, lang, title, body, url: '/?job=' + j.id });
+    pushTo(u, { type: 'order_alert', title, body, tag: 'jobfree-' + w.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high', ttl: 240 }).catch(() => {});
+  }
+  if (ch) save();
+}
+setInterval(jobAnnounce, 60000);
 app.delete('/api/jobs/me/worker', auth, (req, res) => { db.workers = db.workers.filter((w) => w.id !== req.user.id); save(); res.json({ ok: true }); });
 // 👷 workers near me (employers) — available today first
 app.get('/api/jobs/workers', auth, (req, res) => {
-  const here = jobHere(req.query), cat = String(req.query.cat || ''), km = Number(req.query.km) || 15, today = req.query.today === '1';
-  let l = db.workers.filter((w) => w.id !== req.user.id && (!cat || (w.skills || []).includes(cat)) && (!today || jobAvail(w)) && !blockedOf(userById(w.id) || {}).includes(req.user.id)).map((w) => workerOut(w, req.user, here));
+  const here = jobHere(req.query), cat = String(req.query.cat || ''), km = Number(req.query.km) || 15;
+  // only workers who turned ON “Free for work today” are listed (turning it OFF hides the worker at once)
+  let l = db.workers.filter((w) => w.id !== req.user.id && jobAvail(w) && (!cat || (w.skills || []).includes(cat)) && !blockedOf(userById(w.id) || {}).includes(req.user.id)).map((w) => workerOut(w, req.user, here));
   if (here) l = l.filter((x) => x.distKm == null || x.distKm <= km);
   l.sort((a, b) => (b.availToday ? 1 : 0) - (a.availToday ? 1 : 0) || (a.distKm ?? 999) - (b.distKm ?? 999) || b.hired - a.hired);
   res.json({ workers: l.slice(0, 60), total: l.length });
