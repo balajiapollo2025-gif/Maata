@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 206;
+const MAATA_VERSION = 209;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2973,10 +2973,15 @@ async function maybeAutoReply(customer, owner, m) {
 const UI_LANGS = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', ta: 'Tamil', bn: 'Bengali', te: 'Telugu', kn: 'Kannada', ml: 'Malayalam', pa: 'Punjabi', ur: 'Urdu' };
 const i18nHits = new Map(), i18nBusy = new Map();
 function i18nDoc(lang) { let d = db.i18n.find((x) => x.id === lang); if (!d) { d = { id: lang, map: {} }; db.i18n.push(d); } return d; }
+// only Maata's own labels are translated (never people's words): every word must be in the app's own code
+let UI_SRC = '', UI_SRC_AT = 0;
+function uiSrc() { if (!UI_SRC || now() - UI_SRC_AT > 600000) { try { UI_SRC = (fs.readFileSync(path.join(PAGES, 'index.html'), 'utf8') + '\n' + fs.readFileSync(__filename, 'utf8')).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); UI_SRC_AT = now(); } catch { UI_SRC = UI_SRC || ''; } } return UI_SRC; }
+function uiWordOk(src, c) { let i = -1, n = 0; while ((i = src.indexOf(c, i + 1)) !== -1 && n++ < 400) { const a = src[i - 1] || ' ', b = src[i + c.length] || ' '; if (!/[A-Za-z]/.test(a) && !/[A-Za-z]/.test(b)) return true; } return false; }
+function uiIsLabel(t) { const src = uiSrc(); if (!src) return true; const ch = (t.match(/[A-Za-z][A-Za-z'’ ]*[A-Za-z]/g) || []).map((x) => x.trim()).filter((x) => x.length >= 2); return ch.some((x) => x.length >= 3) && ch.every((c) => uiWordOk(src, c)); }
 async function translateUi(lang, list) {
   // 1) Gemini (understands these are app buttons/menus), 2) Google Translate, 3) free service
   if (GEMINI_KEY) {
-    const r = await gemini('You translate the user interface of "Maata", a chat and calling app (like WhatsApp), from English to ' + UI_LANGS[lang] + '. Use the short, natural words that ' + UI_LANGS[lang] + ' apps use for buttons and menus. Keep emojis, numbers, symbols and the names "Maata", "Maata AI", "Google", "Gemini", "WhatsApp", "PIN", "GPS", "GIF" unchanged. Return JSON: {"t": [translations in the same order]}.',
+    const r = await gemini('You translate the user interface of "Maata", a chat and calling app (like WhatsApp), from English to ' + UI_LANGS[lang] + '. Use the short, natural words that ' + UI_LANGS[lang] + ' apps use for buttons and menus. Keep placeholders like {0} and {1} exactly as they are (they are numbers). Keep emojis, numbers, symbols and the names "Maata", "Maata AI", "Google", "Gemini", "WhatsApp", "PIN", "GPS", "GIF" unchanged. Return JSON: {"t": [translations in the same order]}.',
       [{ role: 'user', parts: [{ text: JSON.stringify(list) }] }], { json: true, temperature: 0.2, maxTokens: 8000 });
     if (!r.error) { try { const t = JSON.parse(r.text).t; if (Array.isArray(t) && t.length === list.length) return t.map(String); } catch { /* fall through */ } }
   }
@@ -2998,11 +3003,12 @@ app.post('/api/i18n', async (req, res) => {
   const lang = String(req.body?.lang || '');
   if (!UI_LANGS[lang]) return res.status(400).json({ error: 'Unknown language.' });
   const doc = i18nDoc(lang);
-  const want = [...new Set((Array.isArray(req.body?.strings) ? req.body.strings : []).map((x) => String(x).trim()).filter((x) => x && x.length <= 220))].slice(0, 300);
+  const all = [...new Set((Array.isArray(req.body?.strings) ? req.body.strings : []).map((x) => String(x).trim()).filter((x) => x && x.length <= 220))].slice(0, 300);
+  const skip = all.filter((x) => !(x in doc.map) && !uiIsLabel(x)), want = all.filter((x) => !skip.includes(x));
   const missing = want.filter((x) => !(x in doc.map));
-  if (missing.length && Object.keys(doc.map).length < 6000) {
+  if (missing.length && Object.keys(doc.map).length < 30000) {
     const key = req.ip, t = now(), l = (i18nHits.get(key) || []).filter((x) => t - x < 3600_000);
-    if (l.length < 60 && !i18nBusy.get(lang)) {
+    if (l.length < 400 && !i18nBusy.get(lang)) {
       l.push(t); i18nHits.set(key, l); i18nBusy.set(lang, true);
       try {
         const batch = missing.slice(0, 150), out = await translateUi(lang, batch);
@@ -3012,7 +3018,7 @@ app.post('/api/i18n', async (req, res) => {
     }
   }
   const map = {}; for (const s2 of want) if (s2 in doc.map) map[s2] = doc.map[s2];
-  res.json({ map, missing: want.filter((x) => !(x in doc.map)).length });
+  res.json({ map, skip, missing: want.filter((x) => !(x in doc.map)).length });
 });
 
 // ---------- Batch: edit, disappearing, view once, search, two-step, status privacy ----------
@@ -5775,7 +5781,7 @@ setInterval(() => { const t = now(); let ch = false; for (const j of db.jobs) if
 const jobPostHits = new Map();
 app.get('/api/jobs/config', auth, (req, res) => {
   const here = jobHere(req.query), open = db.jobs.filter((j) => j.status === 'open');
-  res.json({ cats: JOB_CATS.map((c) => ({ ...c, jobs: open.filter((j) => j.cat === c.k && (!here || (lsDistKm(here, j.place) ?? 0) <= 30)).length })), groups: JOB_GROUPS, per: JOB_PER, ai: !!GEMINI_KEY,
+  res.json({ cats: JOB_CATS.map((c) => ({ ...c, jobs: open.filter((j) => j.cat === c.k && j.by !== req.user.id && !blockedOf(userById(j.by) || {}).includes(req.user.id) && (!here || (lsDistKm(here, j.place) ?? 0) <= 30)).length })), groups: JOB_GROUPS, per: JOB_PER, ai: !!GEMINI_KEY,
     worker: (() => { const w = jobWorker(req.user.id); return w ? workerOut(w, req.user) : null; })(), myOpen: db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length,
     newApps: db.jobApps.filter((a) => a.ownerId === req.user.id && a.status === 'applied' && !a.seen).length, updates: db.jobApps.filter((a) => a.workerId === req.user.id && a.workerSeen === false).length });
 });
