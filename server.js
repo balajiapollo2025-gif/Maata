@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 214;
+const MAATA_VERSION = 215;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2972,6 +2972,12 @@ async function maybeAutoReply(customer, owner, m) {
 // ---------- App language: interface text translated once per language, then cached for everyone ----------
 const UI_LANGS = { hi: 'Hindi', mr: 'Marathi', gu: 'Gujarati', ta: 'Tamil', bn: 'Bengali', te: 'Telugu', kn: 'Kannada', ml: 'Malayalam', pa: 'Punjabi', ur: 'Urdu' };
 const i18nHits = new Map(), i18nBusy = new Map();
+// each language's own script — a translation that contains letters of ANOTHER Indian script (e.g. Tamil inside Telugu) is wrong and is never used
+const UI_SCRIPT = { hi: /[ऀ-ॿ]/, mr: /[ऀ-ॿ]/, bn: /[ঀ-৿]/, pa: /[਀-੿]/, gu: /[઀-૿]/, ta: /[஀-௿]/, te: /[ఀ-౿]/, kn: /[ಀ-೿]/, ml: /[ഀ-ൿ]/, ur: /[؀-ۿ]/ };
+const UI_ALL_SCRIPTS = /[؀-ۿऀ-෿]/g;
+function uiScriptOk(lang, t) { const re = UI_SCRIPT[lang]; if (!re) return true; const chars = String(t).match(UI_ALL_SCRIPTS) || []; return chars.every((c) => re.test(c)); }
+function i18nClean() { let n = 0; for (const d of db.i18n || []) for (const [k, v] of Object.entries(d.map || {})) if (!uiScriptOk(d.id, v)) { delete d.map[k]; n++; } if (n) { console.log('[i18n] removed ' + n + ' translations in the wrong script'); save(); } }
+setTimeout(i18nClean, 20000);
 function i18nDoc(lang) { let d = db.i18n.find((x) => x.id === lang); if (!d) { d = { id: lang, map: {} }; db.i18n.push(d); } return d; }
 // only Maata's own labels are translated (never people's words): every word must be in the app's own code
 let UI_SRC = '', UI_SRC_AT = 0;
@@ -2981,7 +2987,7 @@ function uiIsLabel(t) { const src = uiSrc(); if (!src) return true; const ch = (
 async function translateUi(lang, list) {
   // 1) Gemini (understands these are app buttons/menus), 2) Google Translate, 3) free service
   if (GEMINI_KEY) {
-    const r = await gemini('You translate the user interface of "Maata", a chat and calling app (like WhatsApp), from English to ' + UI_LANGS[lang] + '. Use the short, natural words that ' + UI_LANGS[lang] + ' apps use for buttons and menus. Keep placeholders like {0} and {1} exactly as they are (they are numbers). Keep emojis, numbers, symbols and the names "Maata", "Maata AI", "Google", "Gemini", "WhatsApp", "PIN", "GPS", "GIF" unchanged. Return JSON: {"t": [translations in the same order]}.',
+    const r = await gemini('You translate the user interface of "Maata", a chat and calling app (like WhatsApp), from English to ' + UI_LANGS[lang] + '. Write every translation ONLY in ' + UI_LANGS[lang] + ' script (never another Indian language or script). Use the short, natural words that ' + UI_LANGS[lang] + ' apps use for buttons and menus. Keep placeholders like {0} and {1} exactly as they are (they are numbers). Keep emojis, numbers, symbols and the names "Maata", "Maata AI", "Google", "Gemini", "WhatsApp", "PIN", "GPS", "GIF" unchanged. Return JSON: {"t": [translations in the same order]}.',
       [{ role: 'user', parts: [{ text: JSON.stringify(list) }] }], { json: true, temperature: 0.2, maxTokens: 8000 });
     if (!r.error) { try { const t = JSON.parse(r.text).t; if (Array.isArray(t) && t.length === list.length) return t.map(String); } catch { /* fall through */ } }
   }
@@ -3012,12 +3018,12 @@ app.post('/api/i18n', async (req, res) => {
       l.push(t); i18nHits.set(key, l); i18nBusy.set(lang, true);
       try {
         const batch = missing.slice(0, 150), out = await translateUi(lang, batch);
-        if (out) batch.forEach((s2, i) => { if (out[i] && String(out[i]).trim()) doc.map[s2] = String(out[i]).trim().slice(0, 400); });
+        if (out) batch.forEach((s2, i) => { const v = out[i] && String(out[i]).trim(); if (v && uiScriptOk(lang, v)) doc.map[s2] = v.slice(0, 400); });
         save();
       } catch (e) { console.error('[i18n]', e.message); } finally { i18nBusy.set(lang, false); }
     }
   }
-  const map = {}; for (const s2 of want) if (s2 in doc.map) map[s2] = doc.map[s2];
+  const map = {}; for (const s2 of want) if (s2 in doc.map && uiScriptOk(lang, doc.map[s2])) map[s2] = doc.map[s2];
   res.json({ map, skip, missing: want.filter((x) => !(x in doc.map)).length });
 });
 
