@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 210;
+const MAATA_VERSION = 212;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5722,7 +5722,7 @@ function jobOut(j, viewer, here) {
   return { id: j.id, cat: j.cat, catName: c.en, catTe: c.te, catE: c.e, title: j.title, titleTe: j.titleTe || '', desc: j.desc || '', workers: j.workers || 1, hired: apps.filter((a) => a.status === 'hired').length,
     wage: j.wage, wageTxt: j.wage && j.wage.amt ? '₹' + j.wage.amt.toLocaleString('en-IN') + ' ' + JOB_PER[j.wage.per] : 'Talk about pay', wageNote: jobWageNote(j),
     start: j.start, days: j.days || 0, timing: j.timing || '', food: !!j.food, stay: !!j.stay, transport: !!j.transport, gender: j.gender || 'any', kind: j.kind || 'daily',
-    place: j.place ? { text: j.place.text || '', lat: mine ? j.place.lat : Math.round(j.place.lat * 500) / 500, lng: mine ? j.place.lng : Math.round(j.place.lng * 500) / 500 } : null,
+    place: j.place ? (() => { const ex = mine || (app && app.status === 'hired'); return { text: j.place.text || '', exact: !!ex, lat: ex ? j.place.lat : Math.round(j.place.lat * 500) / 500, lng: ex ? j.place.lng : Math.round(j.place.lng * 500) / 500 }; })() : null,
     distKm: lsDistKm(here, j.place), status: j.status, createdAt: j.createdAt, expiresAt: j.expiresAt, mine: !!mine,
     owner: { id: j.by, name: j.shopName || owner.name || 'Employer', shop: !!j.shopName, phone: showPhone && !mine ? owner.phone : undefined, since: owner.createdAt || 0, posted: db.jobs.filter((x) => x.by === j.by && x.status !== 'removed').length, hiredTotal: db.jobApps.filter((a) => a.ownerId === j.by && a.status === 'hired').length },
     contact: j.contact || 'chat', applied: app ? { status: app.status, at: app.createdAt } : null, apps: mine ? apps.length : undefined, newApps: mine ? apps.filter((a) => a.status === 'applied' && !a.seen).length : undefined,
@@ -5734,7 +5734,7 @@ function workerOut(w, viewer, here, job) {
   const canPhone = viewer && (viewer.id === w.id || (!w.hideNumber && (app || db.jobApps.some((a) => a.workerId === w.id && a.ownerId === viewer.id && ['shortlisted', 'hired'].includes(a.status)))));
   return { id: w.id, name: w.name || u.name || 'Worker', photo: !!u.photo, photoV: u.photoV || 0, skills: w.skills || [], skillNames: (w.skills || []).map((k) => (jobCat(k) || {}).en).filter(Boolean), exp: w.exp || 0, rate: w.rate || 0, about: w.about || '',
     kinds: w.kinds || [], gender: w.gender || '', availToday: jobAvail(w), distKm: lsDistKm(here, w.area), areaText: (w.area && w.area.text) || '', hired, phone: canPhone ? u.phone : undefined, hideNumber: !!w.hideNumber, since: w.createdAt,
-    match: job ? jobMatch(job, w) : undefined };
+    match: job ? jobMatch(job, w) : undefined, ann: viewer && viewer.id === w.id ? w.annLast || null : undefined };
 }
 function jobMeta() { let m = db.meta.find((x) => x.id === 'jobs'); if (!m) { m = { id: 'jobs', createdAt: now(), alerts: {} }; db.meta.push(m); } m.alerts = m.alerts || {}; return m; }
 const JOB_SAY = {
@@ -5788,8 +5788,8 @@ app.get('/api/jobs/config', auth, (req, res) => {
 // 🔍 jobs near me (workers)
 app.get('/api/jobs', auth, (req, res) => {
   const here = jobHere(req.query), cat = String(req.query.cat || ''), kind = String(req.query.kind || ''), km = Number(req.query.km) || 0, q = String(req.query.q || '').toLowerCase().trim(), sort = String(req.query.sort || 'best');
-  const w = jobWorker(req.user.id), me2 = req.user;
-  let l = db.jobs.filter((j) => j.status === 'open' && j.by !== me2.id && (!cat || j.cat === cat) && (!kind || (kind === 'labour' ? ['daily', 'contract'].includes(j.kind) : kind === 'job' ? ['monthly', 'parttime'].includes(j.kind) : j.kind === kind)) && !blockedOf(userById(j.by) || {}).includes(me2.id) && !blockedOf(me2).includes(j.by)
+  const w = jobWorker(req.user.id), me2 = req.user, skip = new Set((w && w.skip) || []);
+  let l = db.jobs.filter((j) => j.status === 'open' && j.by !== me2.id && !skip.has(j.id) && (!cat || j.cat === cat) && (!kind || (kind === 'labour' ? ['daily', 'contract'].includes(j.kind) : kind === 'job' ? ['monthly', 'parttime'].includes(j.kind) : j.kind === kind)) && !blockedOf(userById(j.by) || {}).includes(me2.id) && !blockedOf(me2).includes(j.by)
     && (!q || (j.title + ' ' + (j.titleTe || '') + ' ' + j.desc + ' ' + (jobCat(j.cat) || {}).en + ' ' + (jobCat(j.cat) || {}).te + ' ' + (j.place?.text || '')).toLowerCase().includes(q)));
   let out = l.map((j) => ({ ...jobOut(j, me2, here), match: jobMatch(j, w || { skills: [] }, here) }));
   if (here && km) out = out.filter((x) => x.distKm == null || x.distKm <= km);
@@ -5840,29 +5840,56 @@ app.post('/api/jobs/:id/apply', auth, (req, res) => {
   let a = db.jobApps.find((x) => x.jobId === j.id && x.workerId === req.user.id);
   if (a && a.status !== 'withdrawn') return res.json(jobOut(j, req.user));
   if (!a) { a = { id: newId(), jobId: j.id, workerId: req.user.id, ownerId: j.by, createdAt: now() }; db.jobApps.push(a); }
-  Object.assign(a, { status: 'applied', note: clip(req.body?.note, 200), updatedAt: now(), seen: false, workerSeen: true }); save();
-  jobTell(j.by, '🙋 New applicant · ' + (j.title || 'your job'), (w.name || req.user.name) + ' · ' + (w.exp ? w.exp + ' yrs exp · ' : '') + (jobMatch(j, w) + '% match'), '/?job=' + j.id, 'jobapp-' + j.id);
+  const la = Number(req.body?.lat), lo = Number(req.body?.lng), loc = isFinite(la) && isFinite(lo) && (la || lo) ? { lat: la, lng: lo, at: now() } : null;
+  Object.assign(a, { status: 'applied', note: clip(req.body?.note, 200), loc: loc || (w.area ? { lat: w.area.lat, lng: w.area.lng, at: now(), approx: true } : null), updatedAt: now(), seen: false, workerSeen: true }); save();
+  jobComeAlert(j, w, a, req.user);
   res.json(jobOut(j, req.user));
 });
 app.delete('/api/jobs/:id/apply', auth, (req, res) => { const a = db.jobApps.find((x) => x.jobId === req.params.id && x.workerId === req.user.id); if (a) { a.status = 'withdrawn'; a.updatedAt = now(); save(); } const j = jobById(req.params.id); res.json(j ? jobOut(j, req.user) : { ok: true }); });
+// ✅ "I will come": the owner hears it at once (also when Maata is closed) with the worker's name, work, phone and where they are now
+const JOB_COME = {
+  en: (n, j, w, d) => `${n} wants to come for your ${(jobCat(j.cat) || {}).en} work. ${w.exp ? w.exp + ' years experience. ' : ''}${d != null ? n + ' is ' + d + ' kilometres away. ' : ''}Open Maata to call and confirm.`,
+  te: (n, j, w, d) => `${n} మీ ${(jobCat(j.cat) || {}).te} పనికి రావడానికి రెడీగా ఉన్నారు. ${w.exp ? w.exp + ' సంవత్సరాల అనుభవం. ' : ''}${d != null ? d + ' కిలోమీటర్ల దూరంలో ఉన్నారు. ' : ''}కాల్ చేసి కన్ఫర్మ్ చేయడానికి మాట తెరవండి.`,
+  hi: (n, j, w, d) => `${n} आपके ${(jobCat(j.cat) || {}).en} काम के लिए आना चाहते हैं. ${w.exp ? w.exp + ' साल का अनुभव. ' : ''}${d != null ? d + ' किलोमीटर दूर हैं. ' : ''}कॉल करके कन्फर्म करने के लिए Maata खोलें.`,
+};
+function jobComeAlert(j, w, a, wu) {
+  const o = userById(j.by); if (!o) return; const name = w.name || wu.name || 'A worker', d = a.loc ? lsDistKm(a.loc, j.place) : null;
+  const lang = JOB_COME[o.lang] ? o.lang : 'en', say = o.voiceAlerts === false ? '' : JOB_COME[lang](name, j, w, d), sayEn = JOB_COME.en(name, j, w, d);
+  const phone = !w.hideNumber ? wu.phone : '';
+  const title = '✅ ' + name + ' will come · ' + (j.title || (jobCat(j.cat) || {}).en), body = (w.skills || []).map((k) => (jobCat(k) || {}).en).filter(Boolean).slice(0, 2).join(', ') + (w.exp ? ' · ' + w.exp + ' yrs' : '') + (d != null ? ' · 📍 ' + d + ' km away' : '') + (phone ? ' · 📞 ' + phone : '');
+  io.to('user:' + o.id).emit('jobs:update', { url: '/?jobapps=' + j.id });
+  io.to('user:' + o.id).emit('voice:alert', { kind: 'job_come', say, sayEn, lang, title, body, url: '/?jobapps=' + j.id });
+  pushTo(o, { type: 'order_alert', title, body, tag: 'jobapp-' + j.id + '-' + w.id, url: '/?jobapps=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high' }).catch(() => {});
+}
+// ✖ "Not interested": the job is not shown or announced to this worker again
+app.post('/api/jobs/:id/skip', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w) return res.json({ ok: true }); w.skip = [...new Set([...(w.skip || []), req.params.id])].slice(-300); w.ann = w.ann || {}; w.ann[req.params.id] = 99; save(); res.json({ ok: true }); });
 // 👥 applicants (employer) — best match first
 app.get('/api/jobs/:id/apps', auth, (req, res) => {
   const j = jobById(req.params.id); if (!j || j.by !== req.user.id) return res.status(404).json({ error: 'Job not found.' });
-  const l = db.jobApps.filter((a) => a.jobId === j.id && a.status !== 'withdrawn').map((a) => { const w = jobWorker(a.workerId); return w ? { ...workerOut(w, req.user, j.place, j), app: { status: a.status, at: a.createdAt, note: a.note || '' } } : null; }).filter(Boolean)
+  const l = db.jobApps.filter((a) => a.jobId === j.id && a.status !== 'withdrawn').map((a) => { const w = jobWorker(a.workerId); return w ? { ...workerOut(w, req.user, j.place, j), app: { status: a.status, at: a.createdAt, note: a.note || '', loc: a.loc ? { lat: a.loc.lat, lng: a.loc.lng, at: a.loc.at, approx: !!a.loc.approx, distKm: lsDistKm(a.loc, j.place) } : null } } : null; }).filter(Boolean)
     .sort((a, b) => ({ hired: 0, shortlisted: 1, applied: 2, rejected: 3 })[a.app.status] - ({ hired: 0, shortlisted: 1, applied: 2, rejected: 3 })[b.app.status] || b.match - a.match);
   for (const a of db.jobApps) if (a.jobId === j.id) a.seen = true; save();
   res.json({ job: jobOut(j, req.user), apps: l });
 });
+const JOB_START_EN = { today: 'Start today', tomorrow: 'Start tomorrow', date: '', any: '' };
+const JOB_HIRED = {
+  en: (j) => `Congratulations. Your ${(jobCat(j.cat) || {}).en} work is confirmed. ${j.place && j.place.text ? 'Work place: ' + j.place.text + '. ' : ''}${j.start === 'today' ? 'Start today. ' : j.start === 'tomorrow' ? 'Start tomorrow. ' : ''}${j.timing ? 'Time: ' + j.timing + '. ' : ''}Open Maata and press Go to see the way.`,
+  te: (j) => `అభినందనలు. మీ ${(jobCat(j.cat) || {}).te} పని కన్ఫర్మ్ అయింది. ${j.place && j.place.text ? 'పని చోటు: ' + j.place.text + '. ' : ''}${j.start === 'today' ? 'ఈ రోజే మొదలు. ' : j.start === 'tomorrow' ? 'రేపు మొదలు. ' : ''}${j.timing ? 'టైమ్: ' + j.timing + '. ' : ''}దారి చూడటానికి మాట తెరిచి Go నొక్కండి.`,
+  hi: (j) => `बधाई हो. आपका ${(jobCat(j.cat) || {}).en} काम कन्फर्म हो गया. ${j.place && j.place.text ? 'काम की जगह: ' + j.place.text + '. ' : ''}${j.start === 'today' ? 'आज से शुरू. ' : j.start === 'tomorrow' ? 'कल से शुरू. ' : ''}रास्ता देखने के लिए Maata खोलें और Go दबाएँ.`,
+};
 app.post('/api/jobs/:id/apps/:uid', auth, (req, res) => {
   const j = jobById(req.params.id); if (!j || j.by !== req.user.id) return res.status(404).json({ error: 'Job not found.' });
   const a = db.jobApps.find((x) => x.jobId === j.id && x.workerId === req.params.uid && x.status !== 'withdrawn'); if (!a) return res.status(404).json({ error: 'Applicant not found.' });
   const s = String(req.body?.status || ''); if (!['shortlisted', 'hired', 'rejected', 'applied'].includes(s)) return res.status(400).json({ error: 'Bad status.' });
   a.status = s; a.ownerNote = clip(req.body?.note, 200); a.updatedAt = now(); a.workerSeen = false;
+  if (s === 'hired') { const ww = jobWorker(a.workerId); if (ww && ww.availDay) { ww.availDay = ''; ww.annAt = 0; } } // got work: “Free for work today” turns OFF, so the 5-minute announcements stop (the worker can turn it ON again)
   const hired = db.jobApps.filter((x) => x.jobId === j.id && x.status === 'hired').length; if (s === 'hired' && hired >= (j.workers || 1) && j.status === 'open') j.status = 'filled';
   save();
   const T = { shortlisted: ['⭐ You are shortlisted!', 'The employer will call or chat with you.'], hired: ['🎉 You got the job!', 'Talk to the employer about the start day and time.'], rejected: ['Job update', 'This job is filled. Maata will show you more jobs.'] };
   if (T[s]) { const u = userById(a.workerId), lang = u && u.lang === 'te' ? 'te' : 'en'; jobTell(a.workerId, T[s][0] + ' · ' + j.title, (j.shopName || req.user.name) + ' · ' + T[s][1], '/?job=' + j.id, 'jobst-' + j.id);
-    if (s === 'hired' && u) io.to('user:' + u.id).emit('voice:alert', { kind: 'job_hired', say: u.voiceAlerts === false ? '' : (lang === 'te' ? 'అభినందనలు. మీకు ' + (jobCat(j.cat) || {}).te + ' పని వచ్చింది.' : 'Congratulations. You got the ' + (jobCat(j.cat) || {}).en + ' job.'), sayEn: 'Congratulations. You got the job.', lang, title: T.hired[0], body: j.title, url: '/?job=' + j.id }); }
+    if (s === 'hired' && u) { const L = JOB_HIRED[u.lang] ? u.lang : 'en', say = u.voiceAlerts === false ? '' : JOB_HIRED[L](j), sayEn = JOB_HIRED.en(j), t2 = '🎉 Work confirmed · ' + j.title, b2 = (j.place && j.place.text ? '📍 ' + j.place.text + ' · ' : '') + (JOB_START_EN[j.start] || '') + (j.timing ? ' · ' + j.timing : '');
+      io.to('user:' + u.id).emit('voice:alert', { kind: 'job_hired', say, sayEn, lang: L, title: t2, body: b2, url: '/?job=' + j.id });
+      pushTo(u, { type: 'order_alert', title: t2, body: b2, tag: 'jobhired-' + j.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang: L }, { urgency: 'high' }).catch(() => {}); } }
   res.json({ ok: true, status: s, jobStatus: j.status });
 });
 // 🧑‍🔧 my worker profile
@@ -5883,32 +5910,49 @@ app.post('/api/jobs/me/today', auth, (req, res) => { const w = jobWorker(req.use
 // 📢 While a worker is “Free for work today”: every 5 minutes Maata says the jobs near them out loud (also when Maata is closed).
 // Quiet at night (9 PM – 6 AM). Each job is said at most 3 times; nothing is said when there is no job to apply for.
 const JOB_ANN = {
-  en: (n, j, d) => `${n > 1 ? n + ' jobs are' : 'A job is'} waiting for you near you. ${(jobCat(j.cat) || {}).en}${j.wage && j.wage.amt ? ', ' + j.wage.amt + ' rupees ' + JOB_PER[j.wage.per] : ''}${d != null ? ', ' + d + ' kilometres away' : ''}. Open Local Jobs in Maata to apply.`,
-  te: (n, j, d) => `మీ దగ్గర ${n > 1 ? n + ' పనులు' : 'ఒక పని'} ఉంది. ${(jobCat(j.cat) || {}).te}${j.wage && j.wage.amt ? ', ' + JOB_PER_TE[j.wage.per] + ' ' + j.wage.amt + ' రూపాయలు' : ''}${d != null ? ', ' + d + ' కిలోమీటర్ల దూరం' : ''}. అప్లై చేయడానికి మాట లో లోకల్ జాబ్స్ తెరవండి.`,
+  en: (n, j, d) => `${n > 1 ? n + ' jobs are' : 'A job is'} waiting for you near you. ${(jobCat(j.cat) || {}).en}${j.wage && j.wage.amt ? ', ' + j.wage.amt + ' rupees ' + JOB_PER[j.wage.per] : ''}${d != null ? ', ' + d + ' kilometres away' : ''}. Open Maata and press the green button: I will come.`,
+  te: (n, j, d) => `మీ దగ్గర ${n > 1 ? n + ' పనులు' : 'ఒక పని'} ఉంది. ${(jobCat(j.cat) || {}).te}${j.wage && j.wage.amt ? ', ' + JOB_PER_TE[j.wage.per] + ' ' + j.wage.amt + ' రూపాయలు' : ''}${d != null ? ', ' + d + ' కిలోమీటర్ల దూరం' : ''}. మాట తెరిచి, ఆకుపచ్చ బటన్ నేను వస్తాను నొక్కండి.`,
   hi: (n, j, d) => `आपके पास ${n > 1 ? n + ' काम' : 'एक काम'} है. ${(jobCat(j.cat) || {}).en}${j.wage && j.wage.amt ? ', ' + j.wage.amt + ' रुपये' : ''}${d != null ? ', ' + d + ' किलोमीटर दूर' : ''}. अप्लाई करने के लिए Maata में Local Jobs खोलें.`,
 };
+function jobAnnList(w, t) { // the jobs to tell this worker about: their own work first, then similar work (same group), nearest / best first
+  const grp = new Set((w.skills || []).map((k) => (jobCat(k) || {}).g)); w.ann = w.ann || {};
+  return db.jobs.filter((j) => j.status === 'open' && j.by !== w.id && j.place && ((w.skills || []).includes(j.cat) || grp.has((jobCat(j.cat) || {}).g)) && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender)
+      && (w.ann[j.id] || 0) < 99 && !db.jobApps.some((a) => a.jobId === j.id && a.workerId === w.id && a.status !== 'withdrawn') && !blockedOf(userById(j.by) || {}).includes(w.id))
+    .map((j) => ({ j, d: lsDistKm(w.area, j.place), own: (w.skills || []).includes(j.cat) })).filter((x) => x.d != null && x.d <= Math.max(2, Math.min(50, w.area.km || 10)))
+    .sort((a, b) => (b.own ? 1 : 0) - (a.own ? 1 : 0) || jobMatch(b.j, w) - jobMatch(a.j, w) || a.d - b.d);
+}
+const JOB_NONE = { en: 'No work near you right now. Maata checks every 5 minutes and will tell you.', te: 'ఇప్పుడు మీ దగ్గర పని లేదు. మాట ప్రతి 5 నిమిషాలకు చూసి మీకు చెబుతుంది.', hi: 'अभी आपके पास कोई काम नहीं है. Maata हर 5 मिनट में देखकर बताएगा.' };
+function jobAnnounceOne(w, t, force) {
+  const u = userById(w.id); if (!u) return null;
+  const l = jobAnnList(w, t), lang = JOB_ANN[u.lang] ? u.lang : 'en';
+  w.annAt = t; w.annLast = { at: t, n: l.length };
+  if (!l.length) { if (force) io.to('user:' + w.id).emit('voice:alert', { kind: 'job_free', say: JOB_NONE[lang], sayEn: JOB_NONE.en, lang, title: '🔎 No work near you right now', body: 'Maata checks every 5 minutes', url: '/?jobs=find' }); return 0; }
+  // say a different job each time (so all jobs near you are heard), best first
+  w.annIdx = ((w.annIdx || 0) + (force ? 0 : 1)) % l.length; const { j, d } = l[w.annIdx];
+  const say = u.voiceAlerts === false && !force ? '' : JOB_ANN[lang](l.length, j, d), sayEn = JOB_ANN.en(l.length, j, d);
+  const title = '🔔 ' + l.length + (l.length > 1 ? ' jobs' : ' job') + ' near you', body = (jobCat(j.cat) || {}).en + (j.wage && j.wage.amt ? ' · ₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + ' · ' + d + ' km' + (j.place.text ? ' · ' + j.place.text : '');
+  io.to('user:' + w.id).emit('voice:alert', { kind: 'job_free', say, sayEn, lang, title, body, url: '/?job=' + j.id });
+  if (!force) pushTo(u, { type: 'order_alert', title, body, tag: 'jobfree-' + w.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high', ttl: 240 }).catch(() => {});
+  return l.length;
+}
+function jobAnnHours(t) { const h = new Date(t + 5.5 * 3600000).getUTCHours(); return h >= 6 && h < 21; }
 function jobAnnounce() {
-  const t = now(), h = new Date(t + 5.5 * 3600000).getUTCHours(); if (h < 6 || h >= 21) return;
+  const t = now(); if (!jobAnnHours(t)) return;
   let ch = false;
   for (const w of db.workers) {
-    if (!jobAvail(w) || w.alerts === false || !w.area || t - (w.annAt || 0) < 5 * 60000) continue;
-    const u = userById(w.id); if (!u) continue;
-    if (db.jobApps.some((a) => a.workerId === w.id && a.status === 'hired' && t - (a.updatedAt || 0) < 12 * 3600000)) continue; // got work today
-    w.ann = w.ann || {};
-    const l = db.jobs.filter((j) => j.status === 'open' && j.by !== w.id && (w.skills || []).includes(j.cat) && j.place && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender)
-      && !db.jobApps.some((a) => a.jobId === j.id && a.workerId === w.id && a.status !== 'withdrawn') && !blockedOf(userById(j.by) || {}).includes(w.id) && (w.ann[j.id] || 0) < 3)
-      .map((j) => ({ j, d: lsDistKm(w.area, j.place) })).filter((x) => x.d != null && x.d <= Math.max(2, Math.min(50, w.area.km || 10)))
-      .sort((a, b) => jobMatch(b.j, w) - jobMatch(a.j, w) || a.d - b.d);
-    w.annAt = t; ch = true; if (!l.length) continue;
-    const { j, d } = l[0]; for (const x of l) w.ann[x.j.id] = (w.ann[x.j.id] || 0) + 1;
-    const lang = JOB_ANN[u.lang] ? u.lang : 'en', say = u.voiceAlerts === false ? '' : JOB_ANN[lang](l.length, j, d), sayEn = JOB_ANN.en(l.length, j, d);
-    const title = '🔔 ' + l.length + (l.length > 1 ? ' jobs' : ' job') + ' near you', body = (jobCat(j.cat) || {}).en + (j.wage && j.wage.amt ? ' · ₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + ' · ' + d + ' km';
-    io.to('user:' + w.id).emit('voice:alert', { kind: 'job_free', say, sayEn, lang, title, body, url: '/?job=' + j.id });
-    pushTo(u, { type: 'order_alert', title, body, tag: 'jobfree-' + w.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high', ttl: 240 }).catch(() => {});
+    if (!jobAvail(w) || w.alerts === false || !w.area || t - (w.annAt || 0) < 5 * 60000 - 20000) continue;
+    jobAnnounceOne(w, t, false); ch = true;
   }
   if (ch) save();
 }
-setInterval(jobAnnounce, 60000);
+setInterval(jobAnnounce, 30000);
+// 🔊 "Hear now": the worker hears the jobs near them at once (or "no work near you right now")
+app.post('/api/jobs/me/announce-now', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w || !w.area) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); const n = jobAnnounceOne(w, now(), true); save(); res.json({ n, ann: w.annLast }); });
+// ⏰ Render's free plan sleeps after 15 minutes without visitors — then the 5-minute announcements would stop.
+// While somebody is "Free for work today" (6 AM – 9 PM), the server visits itself every 4 minutes so it stays awake.
+const SELF_URL = (process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
+app.get('/healthz', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json({ ok: true, at: now() }); });
+setInterval(() => { if (!SELF_URL || !jobAnnHours(now()) || !db.workers.some((w) => jobAvail(w) && w.alerts !== false)) return; fetch(SELF_URL + '/healthz', { signal: AbortSignal.timeout(15000) }).catch(() => {}); }, 4 * 60000);
 app.delete('/api/jobs/me/worker', auth, (req, res) => { db.workers = db.workers.filter((w) => w.id !== req.user.id); save(); res.json({ ok: true }); });
 // 👷 workers near me (employers) — available today first
 app.get('/api/jobs/workers', auth, (req, res) => {
