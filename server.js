@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 215;
+const MAATA_VERSION = 216;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5759,7 +5759,7 @@ function jobAlertWorkers(j) { // 🔔 voice alert to matching, nearby workers (m
   for (const { w, d } of l) {
     const u = userById(w.id); if (!u || blockedOf(u).includes(j.by)) continue;
     const k = w.id + '|' + day; if ((m.alerts[k] || 0) >= 8) continue; m.alerts[k] = (m.alerts[k] || 0) + 1;
-    const lang = JOB_SAY[u.lang] ? u.lang : 'en', voice = jobAvail(w) && u.voiceAlerts !== false, c = jobCat(j.cat);
+    const lang = JOB_SAY[u.lang] ? u.lang : 'en', voice = jobAvail(w) && u.voiceAlerts !== false && jobAnnHours(now()), c = jobCat(j.cat); // after 6 PM: a silent notification; it is said at 6 AM
     const title = '💼 New job · ' + c.en + (d != null ? ' · ' + d + ' km' : ''), body = (j.title || c.en) + ' · ' + (j.wage && j.wage.amt ? '₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + (j.place.text ? ' · ' + j.place.text : '');
     io.to('user:' + w.id).emit('jobs:new', { id: j.id });
     if (voice) jobVoice(w.id, { kind: 'job_new', say: JOB_SAY[lang](j), sayEn: JOB_SAY.en(j), lang, title, body, url: '/?job=' + j.id }); else jobLog(w.id, { kind: 'job_new', title, body, url: '/?job=' + j.id });
@@ -5922,7 +5922,7 @@ const JOB_COME = {
 };
 function jobComeAlert(j, w, a, wu) {
   const o = userById(j.by); if (!o) return; const name = w.name || wu.name || 'A worker', d = a.loc ? lsDistKm(a.loc, j.place) : null;
-  const lang = JOB_COME[o.lang] ? o.lang : 'en', say = o.voiceAlerts === false ? '' : JOB_COME[lang](name, j, w, d), sayEn = JOB_COME.en(name, j, w, d);
+  const lang = JOB_COME[o.lang] ? o.lang : 'en', say = o.voiceAlerts === false || jobQuiet(now()) ? '' : JOB_COME[lang](name, j, w, d), sayEn = JOB_COME.en(name, j, w, d);
   const phone = !w.hideNumber ? wu.phone : '';
   const title = '✅ ' + name + ' will come · ' + (j.title || (jobCat(j.cat) || {}).en), body = (w.skills || []).map((k) => (jobCat(k) || {}).en).filter(Boolean).slice(0, 2).join(', ') + (w.exp ? ' · ' + w.exp + ' yrs' : '') + (d != null ? ' · 📍 ' + d + ' km away' : '') + (phone ? ' · 📞 ' + phone : '');
   io.to('user:' + o.id).emit('jobs:update', { url: '/?jobapps=' + j.id });
@@ -5955,7 +5955,7 @@ app.post('/api/jobs/:id/apps/:uid', auth, (req, res) => {
   save();
   const T = { shortlisted: ['⭐ You are shortlisted!', 'The employer will call or chat with you.'], hired: ['🎉 You got the job!', 'Talk to the employer about the start day and time.'], rejected: ['Job update', 'This job is filled. Maata will show you more jobs.'] };
   if (T[s]) { const u = userById(a.workerId), lang = u && u.lang === 'te' ? 'te' : 'en'; jobTell(a.workerId, T[s][0] + ' · ' + j.title, (j.shopName || req.user.name) + ' · ' + T[s][1], '/?job=' + j.id, 'jobst-' + j.id);
-    if (s === 'hired' && u) { const L = JOB_HIRED[u.lang] ? u.lang : 'en', say = u.voiceAlerts === false ? '' : JOB_HIRED[L](j), sayEn = JOB_HIRED.en(j), t2 = '🎉 Work confirmed · ' + j.title, b2 = (j.place && j.place.text ? '📍 ' + j.place.text + ' · ' : '') + (JOB_START_EN[j.start] || '') + (j.timing ? ' · ' + j.timing : '');
+    if (s === 'hired' && u) { const L = JOB_HIRED[u.lang] ? u.lang : 'en', say = u.voiceAlerts === false || jobQuiet(now()) ? '' : JOB_HIRED[L](j), sayEn = JOB_HIRED.en(j), t2 = '🎉 Work confirmed · ' + j.title, b2 = (j.place && j.place.text ? '📍 ' + j.place.text + ' · ' : '') + (JOB_START_EN[j.start] || '') + (j.timing ? ' · ' + j.timing : '');
       jobVoice(u.id, { kind: 'job_hired', say, sayEn, lang: L, title: t2, body: b2, url: '/?job=' + j.id });
       pushTo(u, { type: 'order_alert', title: t2, body: b2, tag: 'jobhired-' + j.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang: L }, { urgency: 'high' }).catch(() => {}); } }
   res.json({ ok: true, status: s, jobStatus: j.status });
@@ -5977,9 +5977,9 @@ app.put('/api/jobs/me/worker', auth, async (req, res) => {
     hideNumber: !!b.hideNumber, alerts: b.alerts !== false, updatedAt: now() });
   save(); res.json({ ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area });
 });
-app.post('/api/jobs/me/today', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); w.availDay = req.body?.on ? jobToday() : ''; w.annAt = 0; w.ann = {}; save(); res.json({ availToday: jobAvail(w) }); });
+app.post('/api/jobs/me/today', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); w.availDay = req.body?.on ? jobToday() : ''; if (req.body?.on) w.lastFreeDay = jobToday(); w.annAt = 0; w.ann = {}; save(); res.json({ availToday: jobAvail(w) }); });
 // 📢 While a worker is “Free for work today”: every 5 minutes Maata says the jobs near them out loud (also when Maata is closed).
-// Quiet at night (9 PM – 6 AM). Each job is said at most 3 times; nothing is said when there is no job to apply for.
+// Only 6 AM – 6 PM. Nothing is said when there is no job to apply for. The first announcement of the day starts with the work that came at night.
 const JOB_ANN = {
   en: (n, j, d) => `${n > 1 ? n + ' jobs are' : 'A job is'} waiting for you near you. ${(jobCat(j.cat) || {}).en}${j.wage && j.wage.amt ? ', ' + j.wage.amt + ' rupees ' + JOB_PER[j.wage.per] : ''}${d != null ? ', ' + d + ' kilometres away' : ''}. Open Maata and press the green button: I will come.`,
   te: (n, j, d) => `మీ దగ్గర ${n > 1 ? n + ' పనులు' : 'ఒక పని'} ఉంది. ${(jobCat(j.cat) || {}).te}${j.wage && j.wage.amt ? ', ' + JOB_PER_TE[j.wage.per] + ' ' + j.wage.amt + ' రూపాయలు' : ''}${d != null ? ', ' + d + ' కిలోమీటర్ల దూరం' : ''}. మాట తెరిచి, ఆకుపచ్చ బటన్ నేను వస్తాను నొక్కండి.`,
@@ -5995,18 +5995,44 @@ function jobAnnList(w, t) { // the jobs to tell this worker about: their own wor
 const JOB_NONE = { en: 'No work near you right now. Maata checks every 5 minutes and will tell you.', te: 'ఇప్పుడు మీ దగ్గర పని లేదు. మాట ప్రతి 5 నిమిషాలకు చూసి మీకు చెబుతుంది.', hi: 'अभी आपके पास कोई काम नहीं है. Maata हर 5 मिनट में देखकर बताएगा.' };
 function jobAnnounceOne(w, t, force) {
   const u = userById(w.id); if (!u) return null;
-  const l = jobAnnList(w, t), lang = JOB_ANN[u.lang] ? u.lang : 'en';
+  let l = jobAnnList(w, t); const lang = JOB_ANN[u.lang] ? u.lang : 'en';
+  const first = w.annNightDay !== jobToday(), night = first ? l.filter((x) => x.j.createdAt >= jobNightStart(t) && x.j.createdAt < jobDayStart(t) + 6 * 3600000) : [];
+  if (night.length) { l = [...night, ...l.filter((x) => !night.includes(x))]; w.annIdx = -1; } if (l.length) w.annNightDay = jobToday();
   w.annAt = t; w.annLast = { at: t, n: l.length };
   if (!l.length) { if (force) jobVoice(w.id, { kind: 'job_free', say: JOB_NONE[lang], sayEn: JOB_NONE.en, lang, title: '🔎 No work near you right now', body: 'Maata checks every 5 minutes', url: '/?jobs=find' }); return 0; }
   // say a different job each time (so all jobs near you are heard), best first
-  w.annIdx = ((w.annIdx || 0) + (force ? 0 : 1)) % l.length; const { j, d } = l[w.annIdx];
-  const say = u.voiceAlerts === false && !force ? '' : JOB_ANN[lang](l.length, j, d), sayEn = JOB_ANN.en(l.length, j, d);
+  w.annIdx = Math.max(0, ((w.annIdx ?? 0) + (force && w.annIdx >= 0 ? 0 : 1)) % l.length); const { j, d } = l[w.annIdx];
+  const pre = night.length ? (JOB_NIGHT[lang] || JOB_NIGHT.en)(night.length) : '', say = u.voiceAlerts === false && !force ? '' : pre + JOB_ANN[lang](l.length, j, d), sayEn = (night.length ? JOB_NIGHT.en(night.length) : '') + JOB_ANN.en(l.length, j, d);
   const title = '🔔 ' + l.length + (l.length > 1 ? ' jobs' : ' job') + ' near you', body = (jobCat(j.cat) || {}).en + (j.wage && j.wage.amt ? ' · ₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + ' · ' + d + ' km' + (j.place.text ? ' · ' + j.place.text : '');
   jobVoice(w.id, { kind: 'job_free', say, sayEn, lang, title, body, url: '/?job=' + j.id });
   if (!force) pushTo(u, { type: 'order_alert', title, body, tag: 'jobfree-' + w.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high', ttl: 240 }).catch(() => {});
   return l.length;
 }
-function jobAnnHours(t) { const h = new Date(t + 5.5 * 3600000).getUTCHours(); return h >= 6 && h < 21; }
+const jobHourIST = (t) => new Date(t + 5.5 * 3600000).getUTCHours();
+const JOB_NIGHT = { en: (n) => n + (n > 1 ? ' new jobs' : ' new job') + ' came near you since last evening. ', te: (n) => 'నిన్న సాయంత్రం నుండి మీ దగ్గర ' + n + ' కొత్త పనులు వచ్చాయి. ', hi: (n) => 'कल शाम से आपके पास ' + n + ' नए काम आए हैं. ' };
+// ☀️ 6 AM reminder: "Are you free for work today?" to workers who were free in the last 7 days (and how many jobs came at night)
+const JOB_MORNING = {
+  en: (n) => `Good morning. Are you free for work today? Open Maata and turn on Free for work today.${n ? ' ' + n + (n > 1 ? ' new jobs' : ' new job') + ' came near you at night.' : ''}`,
+  te: (n) => `శుభోదయం. ఈ రోజు పనికి ఫ్రీగా ఉన్నారా? మాట తెరిచి, ఈ రోజు పనికి ఫ్రీ ఆన్ చేయండి.${n ? ' రాత్రి మీ దగ్గర ' + n + ' కొత్త పనులు వచ్చాయి.' : ''}`,
+  hi: (n) => `सुप्रभात. क्या आप आज काम के लिए फ्री हैं? Maata खोलें और आज काम के लिए फ्री चालू करें.${n ? ' रात में आपके पास ' + n + ' नए काम आए.' : ''}`,
+};
+function jobMorning() {
+  const t = now(); if (jobHourIST(t) !== 6) return; const today = jobToday(), week = lsDay(t - 7 * 86400000); let ch = false;
+  for (const w of db.workers) {
+    if (w.alerts === false || !w.area || jobAvail(w) || w.remindDay === today || !w.lastFreeDay || w.lastFreeDay < week) continue;
+    const u = userById(w.id); if (!u) continue; w.remindDay = today; ch = true;
+    const n = jobAnnList(w, t).filter((x) => x.j.createdAt >= jobNightStart(t)).length, lang = JOB_MORNING[u.lang] ? u.lang : 'en';
+    const say = u.voiceAlerts === false ? '' : JOB_MORNING[lang](n), title = '☀️ Free for work today?', body = 'Turn on “Free for work today” to hear work near you' + (n ? ' · ' + n + ' new job' + (n > 1 ? 's' : '') + ' at night' : '');
+    jobVoice(w.id, { kind: 'job_morning', say, sayEn: JOB_MORNING.en(n), lang, title, body, url: '/?jobs=find' });
+    pushTo(u, { type: 'order_alert', title, body, tag: 'jobmorning-' + w.id, url: '/?jobs=find', say, sayEn: say ? JOB_MORNING.en(n) : '', lang }, { urgency: 'high', ttl: 3600 }).catch(() => {});
+  }
+  if (ch) save();
+}
+setInterval(jobMorning, 60000);
+function jobAnnHours(t) { const h = jobHourIST(t); return h >= 6 && h < 18; } // 5-minute announcements + "new job" voice: 6 AM – 6 PM
+const jobQuiet = (t) => { const h = jobHourIST(t); return h >= 21 || h < 6; }; // no voice at all at night (9 PM – 6 AM)
+const jobDayStart = (t) => Math.floor((t + 5.5 * 3600000) / 86400000) * 86400000 - 5.5 * 3600000; // today 00:00 India time
+const jobNightStart = (t) => jobDayStart(t) - 6 * 3600000; // yesterday 6 PM
 function jobAnnounce() {
   const t = now(); if (!jobAnnHours(t)) return;
   let ch = false;
@@ -6020,10 +6046,10 @@ setInterval(jobAnnounce, 30000);
 // 🔊 "Hear now": the worker hears the jobs near them at once (or "no work near you right now")
 app.post('/api/jobs/me/announce-now', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w || !w.area) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); const n = jobAnnounceOne(w, now(), true); save(); res.json({ n, ann: w.annLast }); });
 // ⏰ Render's free plan sleeps after 15 minutes without visitors — then the 5-minute announcements would stop.
-// While somebody is "Free for work today" (6 AM – 9 PM), the server visits itself every 4 minutes so it stays awake.
+// The server visits itself every 4 minutes so it stays awake (also for the 6 AM reminder) while workers want job alerts.
 const SELF_URL = (process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
 app.get('/healthz', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json({ ok: true, at: now() }); });
-setInterval(() => { if (!SELF_URL || !jobAnnHours(now()) || !db.workers.some((w) => jobAvail(w) && w.alerts !== false)) return; fetch(SELF_URL + '/healthz', { signal: AbortSignal.timeout(15000) }).catch(() => {}); }, 4 * 60000);
+setInterval(() => { if (!SELF_URL || !db.workers.some((w) => w.alerts !== false)) return; fetch(SELF_URL + '/healthz', { signal: AbortSignal.timeout(15000) }).catch(() => {}); }, 4 * 60000);
 app.delete('/api/jobs/me/worker', auth, (req, res) => { db.workers = db.workers.filter((w) => w.id !== req.user.id); save(); res.json({ ok: true }); });
 // 👷 workers near me (employers) — available today first
 app.get('/api/jobs/workers', auth, (req, res) => {
