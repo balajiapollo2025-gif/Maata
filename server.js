@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 212;
+const MAATA_VERSION = 214;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5681,6 +5681,8 @@ const JOB_CATS = [
 ].map(([k, g, e, en, te, lo, hi, per]) => ({ k, g, e, en, te, lo, hi, per }));
 const JOB_GROUPS = { build: '🧱 Construction · భవన నిర్మాణం', farm: '🌾 Farm & loading · వ్యవసాయం', shop: '🏪 Shops & hotels · షాపులు', home: '🏠 Home, driver & security · ఇంటి పని', other: '🧰 Other · ఇతర' };
 const jobCat = (k) => JOB_CATS.find((c) => c.k === k) || null;
+const JOB_EDU = { none: 'No schooling', '5th': 'Up to 5th class', '10th': '10th class', '12th': 'Inter / 12th', iti: 'ITI / Diploma', degree: 'Degree or more' };
+
 const JOB_PER = { day: 'per day', month: 'per month', job: 'for the full job', hour: 'per hour' };
 const JOB_PER_TE = { day: 'రోజుకు', month: 'నెలకు', job: 'మొత్తం పనికి', hour: 'గంటకు' };
 const JOB_OPEN = ['open'];
@@ -5724,7 +5726,7 @@ function jobOut(j, viewer, here) {
     start: j.start, days: j.days || 0, timing: j.timing || '', food: !!j.food, stay: !!j.stay, transport: !!j.transport, gender: j.gender || 'any', kind: j.kind || 'daily',
     place: j.place ? (() => { const ex = mine || (app && app.status === 'hired'); return { text: j.place.text || '', exact: !!ex, lat: ex ? j.place.lat : Math.round(j.place.lat * 500) / 500, lng: ex ? j.place.lng : Math.round(j.place.lng * 500) / 500 }; })() : null,
     distKm: lsDistKm(here, j.place), status: j.status, createdAt: j.createdAt, expiresAt: j.expiresAt, mine: !!mine,
-    owner: { id: j.by, name: j.shopName || owner.name || 'Employer', shop: !!j.shopName, phone: showPhone && !mine ? owner.phone : undefined, since: owner.createdAt || 0, posted: db.jobs.filter((x) => x.by === j.by && x.status !== 'removed').length, hiredTotal: db.jobApps.filter((a) => a.ownerId === j.by && a.status === 'hired').length },
+    owner: { id: j.by, name: j.shopName || (jobEmployer(j.by) || {}).name || owner.name || 'Employer', shop: !!(j.shopName || jobEmployer(j.by)), type: (jobEmployer(j.by) || {}).type || '', typeName: EMP_TYPES[(jobEmployer(j.by) || {}).type] || '', photo: ((jobEmployer(j.by) || {}).photo || {}).fid || null, phone: showPhone && !mine ? owner.phone : undefined, since: owner.createdAt || 0, posted: db.jobs.filter((x) => x.by === j.by && x.status !== 'removed').length, hiredTotal: db.jobApps.filter((a) => a.ownerId === j.by && a.status === 'hired').length },
     contact: j.contact || 'chat', applied: app ? { status: app.status, at: app.createdAt } : null, apps: mine ? apps.length : undefined, newApps: mine ? apps.filter((a) => a.status === 'applied' && !a.seen).length : undefined,
     held: j.status === 'held' ? (j.heldWhy || 'Maata team is checking this job.') : undefined, ai: j.ai ? { checked: true } : null };
 }
@@ -5734,6 +5736,7 @@ function workerOut(w, viewer, here, job) {
   const canPhone = viewer && (viewer.id === w.id || (!w.hideNumber && (app || db.jobApps.some((a) => a.workerId === w.id && a.ownerId === viewer.id && ['shortlisted', 'hired'].includes(a.status)))));
   return { id: w.id, name: w.name || u.name || 'Worker', photo: !!u.photo, photoV: u.photoV || 0, skills: w.skills || [], skillNames: (w.skills || []).map((k) => (jobCat(k) || {}).en).filter(Boolean), exp: w.exp || 0, rate: w.rate || 0, about: w.about || '',
     kinds: w.kinds || [], gender: w.gender || '', availToday: jobAvail(w), distKm: lsDistKm(here, w.area), areaText: (w.area && w.area.text) || '', hired, phone: canPhone ? u.phone : undefined, hideNumber: !!w.hideNumber, since: w.createdAt,
+    age: w.age || null, edu: w.edu || '', eduName: JOB_EDU[w.edu] || '', photoFid: w.photo ? w.photo.fid : null, photoOk: w.photoOk ?? null, photoWhy: viewer && viewer.id === w.id ? w.photoWhy || '' : undefined,
     match: job ? jobMatch(job, w) : undefined, ann: viewer && viewer.id === w.id ? w.annLast || null : undefined };
 }
 function jobMeta() { let m = db.meta.find((x) => x.id === 'jobs'); if (!m) { m = { id: 'jobs', createdAt: now(), alerts: {} }; db.meta.push(m); } m.alerts = m.alerts || {}; return m; }
@@ -5753,14 +5756,14 @@ function jobAlertWorkers(j) { // 🔔 voice alert to matching, nearby workers (m
     const lang = JOB_SAY[u.lang] ? u.lang : 'en', voice = jobAvail(w) && u.voiceAlerts !== false, c = jobCat(j.cat);
     const title = '💼 New job · ' + c.en + (d != null ? ' · ' + d + ' km' : ''), body = (j.title || c.en) + ' · ' + (j.wage && j.wage.amt ? '₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + (j.place.text ? ' · ' + j.place.text : '');
     io.to('user:' + w.id).emit('jobs:new', { id: j.id });
-    if (voice) io.to('user:' + w.id).emit('voice:alert', { kind: 'job_new', say: JOB_SAY[lang](j), sayEn: JOB_SAY.en(j), lang, title, body, url: '/?job=' + j.id });
+    if (voice) jobVoice(w.id, { kind: 'job_new', say: JOB_SAY[lang](j), sayEn: JOB_SAY.en(j), lang, title, body, url: '/?job=' + j.id }); else jobLog(w.id, { kind: 'job_new', title, body, url: '/?job=' + j.id });
     pushTo(u, voice ? { type: 'order_alert', title, body, tag: 'job-' + j.id, url: '/?job=' + j.id, say: JOB_SAY[lang](j), sayEn: JOB_SAY.en(j), lang } : { type: 'msg', title, body, tag: 'job-' + j.id, url: '/?job=' + j.id }, { urgency: voice ? 'high' : 'normal' }).catch(() => {});
     n++;
   }
   for (const key of Object.keys(m.alerts)) if (!key.endsWith(day)) delete m.alerts[key];
   j.alerted = n; return n;
 }
-function jobTell(uid, title, body, url, tag) { const u = userById(uid); if (!u) return; io.to('user:' + uid).emit('jobs:update', { url }); pushTo(u, { type: 'msg', title, body, tag: tag || 'jobs', url }).catch(() => {}); }
+function jobTell(uid, title, body, url, tag) { const u = userById(uid); if (!u) return; jobLog(uid, { kind: 'job_info', title, body, url }); io.to('user:' + uid).emit('jobs:update', { url }); pushTo(u, { type: 'msg', title, body, tag: tag || 'jobs', url }).catch(() => {}); }
 function jobClean(b) { // the fields an employer can set
   const c = jobCat(b.cat) ? b.cat : 'other', per = JOB_PER[b.wage?.per] ? b.wage.per : (jobCat(c) || {}).per || 'day';
   const pl = b.place && isFinite(Number(b.place.lat)) && isFinite(Number(b.place.lng)) && (Number(b.place.lat) || Number(b.place.lng)) ? { lat: Number(b.place.lat), lng: Number(b.place.lng), text: clip(b.place.text, 120) } : null;
@@ -5776,13 +5779,68 @@ async function jobAiCheck(j) { // 🤖 Maata AI reads every new job; a likely sc
   if (d.risk === 'high' && j.status === 'open') { j.status = 'held'; j.heldWhy = 'Maata AI found a possible problem: ' + clip(d.why, 160).replace(/\.?$/, '.') + ' The Maata team will check it soon.'; feed('jobs', '💼 Job held by AI: ' + j.title + ' — ' + clip(d.why, 100)); jobTell(j.by, '⏸️ Your job is waiting for a check', j.title + ' · Maata team will check it soon', '/?job=' + j.id); }
   save();
 }
+// 🔔 Alert history: every job alert (voice or not) is kept for 30 days, so people can see and hear again what came and when
+function jobLog(uid, a) {
+  if (!uid || !a) return; db.jobAlerts.push({ id: newId(), userId: uid, kind: a.kind || 'job', title: clip(a.title, 120), body: clip(a.body, 240), say: clip(a.say, 500), sayEn: clip(a.sayEn, 500), lang: a.lang || 'en', url: a.url || '', voice: !!a.say, at: now() });
+  if (db.jobAlerts.length > 30000) db.jobAlerts.splice(0, db.jobAlerts.length - 30000);
+}
+function jobVoice(uid, a) { io.to('user:' + uid).emit('voice:alert', a); jobLog(uid, a); }
+setInterval(() => { const old = now() - 30 * 86400000; const n0 = db.jobAlerts.length; db.jobAlerts = db.jobAlerts.filter((x) => x.at > old); if (db.jobAlerts.length !== n0) save(); }, 3600000);
+app.get('/api/jobs/alerts', auth, (req, res) => {
+  const l = []; for (let i = db.jobAlerts.length - 1; i >= 0 && l.length < 200; i--) { const x = db.jobAlerts[i]; if (x.userId === req.user.id) l.push({ id: x.id, kind: x.kind, title: x.title, body: x.body, say: x.say, sayEn: x.sayEn, lang: x.lang, url: x.url, voice: x.voice, at: x.at }); }
+  res.json(l);
+});
+app.delete('/api/jobs/alerts', auth, (req, res) => { db.jobAlerts = db.jobAlerts.filter((x) => x.userId !== req.user.id); save(); res.json({ ok: true }); });
+// 🏪 Employers: shop owners, labour contractors, house owners, farmers, companies
+const EMP_TYPES = { shop: '🏪 Shop / hotel owner', contractor: '👷 Labour contractor / Mestri', house: '🏠 House owner (building / home work)', farm: '🌾 Farmer', company: '🏢 Company / office' };
+const jobEmployer = (id) => db.employers.find((e) => e.id === id) || null;
+function employerOut(e, viewer) { const u = userById(e.id) || {}; return { id: e.id, type: e.type, typeName: EMP_TYPES[e.type] || '', name: e.name, owner: e.owner || u.name || '', address: e.address || '', place: e.place || null, about: e.about || '', photo: e.photo ? e.photo.fid : null, phone: viewer && viewer.id === e.id ? u.phone : undefined, gst: e.gst || '', since: e.createdAt, jobs: db.jobs.filter((j) => j.by === e.id && j.status !== 'removed').length, hired: db.jobApps.filter((a) => a.ownerId === e.id && a.status === 'hired').length }; }
+app.get('/api/jobs/me/employer', auth, (req, res) => { const e = jobEmployer(req.user.id); res.json(e ? employerOut(e, req.user) : null); });
+app.put('/api/jobs/me/employer', auth, (req, res) => {
+  const b = req.body || {}; let e = jobEmployer(req.user.id);
+  if (!EMP_TYPES[b.type]) return res.status(400).json({ error: 'Choose who you are (shop owner, contractor…).' });
+  const name = clip(b.name, 70); if (name.length < 2) return res.status(400).json({ error: b.type === 'contractor' ? 'Write your name or your team / company name.' : 'Write the shop / business name.' });
+  const pl = b.place && isFinite(Number(b.place.lat)) && (Number(b.place.lat) || Number(b.place.lng)) ? { lat: Number(b.place.lat), lng: Number(b.place.lng), text: clip(b.place.text, 120) } : e?.place || null;
+  if (!pl) return res.status(400).json({ error: 'Add your shop / work location (📍 Use my location).' });
+  if (!e) { e = { id: req.user.id, createdAt: now() }; db.employers.push(e); feed('jobs', '🏪 New employer: ' + name); }
+  let photo = e.photo; if (b.photo && b.photo.fid && db.lsFiles.some((f) => f.id === b.photo.fid && f.by === req.user.id)) photo = { fid: b.photo.fid };
+  Object.assign(e, { type: b.type, name, owner: clip(b.owner, 50) || req.user.name, address: clip(b.address, 200), place: pl, about: clip(b.about, 300), gst: clip(b.gst, 20).toUpperCase(), photo, updatedAt: now() });
+  save(); res.json(employerOut(e, req.user));
+});
+app.delete('/api/jobs/me/employer', auth, (req, res) => { db.employers = db.employers.filter((e) => e.id !== req.user.id); save(); res.json({ ok: true }); });
+// 📷 profile photos (worker face photo / shop photo) — 🤖 Maata AI checks that a worker photo is one clear face
+const jobImgRaw = express.raw({ type: ['image/*'], limit: '7mb' });
+async function jobFaceCheck(w, buf, mime) {
+  if (!GEMINI_KEY || !buf || !buf.length) return;
+  const g = await gemini('You check profile photos for a local jobs app in India. Return ONLY JSON {"ok":true|false,"why":"short English reason"}. ok=true only if the photo shows ONE real person, face clearly visible (not a cartoon, not a photo of a screen or ID card, not blank, not a group).', [{ role: 'user', parts: [{ inlineData: { mimeType: mime || 'image/jpeg', data: buf.toString('base64') } }, { text: 'Check this profile photo.' }] }], { json: true, maxTokens: 120, temperature: 0, fast: true }).catch(() => ({}));
+  const d = lsJson(g || {}); if (!d) return; w.photoOk = !!d.ok; w.photoWhy = clip(d.why, 160); save();
+  io.to('user:' + w.id).emit('jobs:update', { url: '/?jobs=me' });
+}
+async function jobFaceCheckFile(w, f) {
+  const chunks = []; await new Promise((ok, no) => { const st = chatFileStream(f.id, 0, f.size - 1); st.on('data', (c) => chunks.push(c)); st.on('end', ok); st.on('error', no); });
+  return jobFaceCheck(w, Buffer.concat(chunks), f.mime);
+}
+app.post('/api/jobs/me/photo', auth, jobImgRaw, async (req, res) => {
+  const who = req.query.who === 'employer' ? 'employer' : 'worker', x = who === 'employer' ? jobEmployer(req.user.id) : jobWorker(req.user.id);
+  const mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0], buf = req.body;
+  const f = await lsSaveImg(req, res, 6); if (!f) return;
+  if (x) { x.photo = f; if (who === 'worker') { x.photoOk = null; x.photoWhy = ''; jobFaceCheck(x, buf, mime).catch(() => {}); } }
+  save(); res.json({ fid: f.fid, saved: !!x });
+});
+app.get('/api/jobs/file/:fid', (req, res) => {
+  let v = null; try { v = findUserByToken(String(req.query.t || '')); } catch {} if (!v) return res.status(404).end();
+  const fid = req.params.fid, f = db.lsFiles.find((x) => x.id === fid); if (!f) return res.status(404).end();
+  if (f.by !== v.id && !db.workers.some((w) => w.photo && w.photo.fid === fid) && !db.employers.some((e) => e.photo && e.photo.fid === fid)) return res.status(404).end();
+  lsStream(f, res);
+});
 // expire old jobs
 setInterval(() => { const t = now(); let ch = false; for (const j of db.jobs) if (j.status === 'open' && j.expiresAt && j.expiresAt < t) { j.status = 'closed'; j.closedWhy = 'expired'; ch = true; } if (ch) save(); }, 10 * 60000);
 const jobPostHits = new Map();
 app.get('/api/jobs/config', auth, (req, res) => {
   const here = jobHere(req.query), open = db.jobs.filter((j) => j.status === 'open');
   res.json({ cats: JOB_CATS.map((c) => ({ ...c, jobs: open.filter((j) => j.cat === c.k && j.by !== req.user.id && !blockedOf(userById(j.by) || {}).includes(req.user.id) && (!here || (lsDistKm(here, j.place) ?? 0) <= 30)).length })), groups: JOB_GROUPS, per: JOB_PER, ai: !!GEMINI_KEY,
-    worker: (() => { const w = jobWorker(req.user.id); return w ? workerOut(w, req.user) : null; })(), myOpen: db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length,
+    worker: (() => { const w = jobWorker(req.user.id); return w ? workerOut(w, req.user) : null; })(), employer: (() => { const e = jobEmployer(req.user.id); return e ? employerOut(e, req.user) : null; })(), empTypes: EMP_TYPES, edu: JOB_EDU,
+    alertsNew: db.jobAlerts.filter((x) => x.userId === req.user.id && x.at > (req.user.jobAlertsSeen || 0)).length, myOpen: db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length,
     newApps: db.jobApps.filter((a) => a.ownerId === req.user.id && a.status === 'applied' && !a.seen).length, updates: db.jobApps.filter((a) => a.workerId === req.user.id && a.workerSeen === false).length });
 });
 // 🔍 jobs near me (workers)
@@ -5792,7 +5850,9 @@ app.get('/api/jobs', auth, (req, res) => {
   let l = db.jobs.filter((j) => j.status === 'open' && j.by !== me2.id && !skip.has(j.id) && (!cat || j.cat === cat) && (!kind || (kind === 'labour' ? ['daily', 'contract'].includes(j.kind) : kind === 'job' ? ['monthly', 'parttime'].includes(j.kind) : j.kind === kind)) && !blockedOf(userById(j.by) || {}).includes(me2.id) && !blockedOf(me2).includes(j.by)
     && (!q || (j.title + ' ' + (j.titleTe || '') + ' ' + j.desc + ' ' + (jobCat(j.cat) || {}).en + ' ' + (jobCat(j.cat) || {}).te + ' ' + (j.place?.text || '')).toLowerCase().includes(q)));
   let out = l.map((j) => ({ ...jobOut(j, me2, here), match: jobMatch(j, w || { skills: [] }, here) }));
-  if (here && km) out = out.filter((x) => x.distKm == null || x.distKm <= km);
+  // near = near where the phone is now OR near the worker's home area (a computer's location is often far / wrong)
+  if (w && w.area) for (const x of out) { const j = jobById(x.id), da = lsDistKm(w.area, j.place); if (da != null && (x.distKm == null || da < x.distKm)) x.distKm = da; }
+  if (km) out = out.filter((x) => x.distKm == null || x.distKm <= km);
   out.sort(sort === 'near' ? (a, b) => (a.distKm ?? 999) - (b.distKm ?? 999) : sort === 'pay' ? (a, b) => (b.wage.per === a.wage.per ? b.wage.amt - a.wage.amt : (b.wage.per === 'month' ? 1 : -1)) : sort === 'new' ? (a, b) => b.createdAt - a.createdAt : (a, b) => b.match - a.match || b.createdAt - a.createdAt);
   res.json({ jobs: out.slice(0, 80), total: out.length, wage: cat ? jobWage(cat, here) : null });
 });
@@ -5807,18 +5867,20 @@ app.get('/api/jobs/:id', auth, (req, res, next) => {
   const j = jobById(req.params.id); if (!j || j.status === 'removed' || (j.status === 'held' && j.by !== req.user.id)) return res.status(404).json({ error: 'This job is not available any more.' });
   if (j.by !== req.user.id) { j.views = (j.views || 0) + 1; }
   const here = jobHere(req.query), w = jobWorker(req.user.id);
-  res.json({ ...jobOut(j, req.user, here), match: j.by === req.user.id ? undefined : jobMatch(j, w || { skills: [] }, here), wageInfo: jobWage(j.cat, j.place), views: j.by === req.user.id ? j.views || 0 : undefined, alerted: j.by === req.user.id ? j.alerted || 0 : undefined });
+  const out = jobOut(j, req.user, here); if (w && w.area && j.by !== req.user.id) { const da = lsDistKm(w.area, j.place); if (da != null && (out.distKm == null || da < out.distKm)) out.distKm = da; }
+  res.json({ ...out, match: j.by === req.user.id ? undefined : jobMatch(j, w || { skills: [] }, here), wageInfo: jobWage(j.cat, j.place), views: j.by === req.user.id ? j.views || 0 : undefined, alerted: j.by === req.user.id ? j.alerted || 0 : undefined });
 });
 // ➕ post a job (employers)
 app.post('/api/jobs', auth, (req, res) => {
   if (!req.body?.agree) return res.status(400).json({ error: 'Please accept the Local Jobs rules first.' });
   const h = (jobPostHits.get(req.user.id) || []).filter((t) => now() - t < 86400000); if (h.length >= 6) return res.status(429).json({ error: 'You can post 6 jobs a day. Try again tomorrow.' });
   if (db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length >= 15) return res.status(400).json({ error: 'You have 15 open jobs. Close some jobs first.' });
-  const f = jobClean(req.body || {}); if (!f.place) return res.status(400).json({ error: 'Add the work place (location).' });
+  const f = jobClean(req.body || {}); if (!f.place) { const emp = jobEmployer(req.user.id); if (emp && emp.place) f.place = { ...emp.place }; } if (!f.place) return res.status(400).json({ error: 'Add the work place (location).' });
   const why = jobScamWhy([f.title, f.titleTe, f.desc].join(' ')); if (why) return res.status(400).json({ error: '🚫 ' + why, scam: true });
   const life = f.kind === 'monthly' ? 30 : f.kind === 'contract' ? 21 : 7;
   const j = { id: newId(), by: req.user.id, ...f, status: 'open', createdAt: now(), expiresAt: now() + (life + (f.days && f.kind === 'daily' ? Math.min(f.days, 30) : 0)) * 86400000, views: 0, reports: [] };
-  if (!f.shopName && req.user.business && req.user.business.name) j.shopName = clip(req.user.business.name, 60);
+  { const emp = jobEmployer(req.user.id); if (!f.shopName && emp) j.shopName = emp.name; }
+  if (!j.shopName && req.user.business && req.user.business.name) j.shopName = clip(req.user.business.name, 60);
   db.jobs.push(j); h.push(now()); jobPostHits.set(req.user.id, h); save();
   feed('jobs', '💼 New job: ' + j.title + ' (' + (jobCat(j.cat) || {}).en + ')');
   jobAiCheck(j).catch(() => {}).finally(() => { if (j.status === 'open') { jobAlertWorkers(j); save(); } });
@@ -5858,7 +5920,7 @@ function jobComeAlert(j, w, a, wu) {
   const phone = !w.hideNumber ? wu.phone : '';
   const title = '✅ ' + name + ' will come · ' + (j.title || (jobCat(j.cat) || {}).en), body = (w.skills || []).map((k) => (jobCat(k) || {}).en).filter(Boolean).slice(0, 2).join(', ') + (w.exp ? ' · ' + w.exp + ' yrs' : '') + (d != null ? ' · 📍 ' + d + ' km away' : '') + (phone ? ' · 📞 ' + phone : '');
   io.to('user:' + o.id).emit('jobs:update', { url: '/?jobapps=' + j.id });
-  io.to('user:' + o.id).emit('voice:alert', { kind: 'job_come', say, sayEn, lang, title, body, url: '/?jobapps=' + j.id });
+  jobVoice(o.id, { kind: 'job_come', say, sayEn, lang, title, body, url: '/?jobapps=' + j.id });
   pushTo(o, { type: 'order_alert', title, body, tag: 'jobapp-' + j.id + '-' + w.id, url: '/?jobapps=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high' }).catch(() => {});
 }
 // ✖ "Not interested": the job is not shown or announced to this worker again
@@ -5888,20 +5950,23 @@ app.post('/api/jobs/:id/apps/:uid', auth, (req, res) => {
   const T = { shortlisted: ['⭐ You are shortlisted!', 'The employer will call or chat with you.'], hired: ['🎉 You got the job!', 'Talk to the employer about the start day and time.'], rejected: ['Job update', 'This job is filled. Maata will show you more jobs.'] };
   if (T[s]) { const u = userById(a.workerId), lang = u && u.lang === 'te' ? 'te' : 'en'; jobTell(a.workerId, T[s][0] + ' · ' + j.title, (j.shopName || req.user.name) + ' · ' + T[s][1], '/?job=' + j.id, 'jobst-' + j.id);
     if (s === 'hired' && u) { const L = JOB_HIRED[u.lang] ? u.lang : 'en', say = u.voiceAlerts === false ? '' : JOB_HIRED[L](j), sayEn = JOB_HIRED.en(j), t2 = '🎉 Work confirmed · ' + j.title, b2 = (j.place && j.place.text ? '📍 ' + j.place.text + ' · ' : '') + (JOB_START_EN[j.start] || '') + (j.timing ? ' · ' + j.timing : '');
-      io.to('user:' + u.id).emit('voice:alert', { kind: 'job_hired', say, sayEn, lang: L, title: t2, body: b2, url: '/?job=' + j.id });
+      jobVoice(u.id, { kind: 'job_hired', say, sayEn, lang: L, title: t2, body: b2, url: '/?job=' + j.id });
       pushTo(u, { type: 'order_alert', title: t2, body: b2, tag: 'jobhired-' + j.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang: L }, { urgency: 'high' }).catch(() => {}); } }
   res.json({ ok: true, status: s, jobStatus: j.status });
 });
 // 🧑‍🔧 my worker profile
 app.get('/api/jobs/me/worker', auth, (req, res) => { const w = jobWorker(req.user.id); res.json(w ? { ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area || null } : null); });
-app.put('/api/jobs/me/worker', auth, (req, res) => {
+app.put('/api/jobs/me/worker', auth, async (req, res) => {
   const b = req.body || {}; let w = jobWorker(req.user.id);
-  if (!w && !b.age18) return res.status(400).json({ error: 'Local Jobs & Daily Labour is only for workers 18 years and above. Please confirm your age.' });
+  if (!w && !b.age18 && !(Number(b.age) >= 18)) return res.status(400).json({ error: 'Local Jobs & Daily Labour is only for workers 18 years and above. Please confirm your age.' });
   const skills = [...new Set((Array.isArray(b.skills) ? b.skills : []).filter((k) => jobCat(k)))].slice(0, 6); if (!skills.length) return res.status(400).json({ error: 'Choose at least one work you do.' });
   const ar = b.area && isFinite(Number(b.area.lat)) && (Number(b.area.lat) || Number(b.area.lng)) ? { lat: Number(b.area.lat), lng: Number(b.area.lng), km: Math.max(1, Math.min(50, Number(b.area.km) || 10)), text: clip(b.area.text, 100) } : w?.area || null;
   if (!ar) return res.status(400).json({ error: 'Add your area (location), so Maata can find jobs near you.' });
   if (!w) { w = { id: req.user.id, createdAt: now(), age18At: now() }; db.workers.push(w); }
-  Object.assign(w, { name: clip(b.name, 50) || req.user.name, skills, exp: Math.max(0, Math.min(60, Math.round(Number(b.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(b.rate) || 0))), about: clip(b.about, 300),
+  const age = Math.round(Number(b.age) || 0); if (age && (age < 18 || age > 80)) return res.status(400).json({ error: age < 18 ? 'Local Jobs is only for people 18 years and above.' : 'Please check your age.' });
+  if (!age && !w.age) return res.status(400).json({ error: 'Write your age.' });
+  if (b.photo && b.photo.fid && (!w.photo || w.photo.fid !== b.photo.fid)) { const ff = db.lsFiles.find((f) => f.id === b.photo.fid && f.by === req.user.id); if (ff) { w.photo = { fid: ff.id }; w.photoOk = null; w.photoWhy = ''; jobFaceCheckFile(w, ff).catch(() => {}); } }
+  Object.assign(w, { age: age || w.age, edu: JOB_EDU[b.edu] ? b.edu : w.edu || '', name: clip(b.name, 50) || req.user.name, skills, exp: Math.max(0, Math.min(60, Math.round(Number(b.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(b.rate) || 0))), about: clip(b.about, 300),
     kinds: (Array.isArray(b.kinds) ? b.kinds : []).filter((k) => ['daily', 'contract', 'monthly', 'parttime'].includes(k)), gender: ['m', 'f', ''].includes(b.gender) ? b.gender : w.gender || '', area: ar,
     hideNumber: !!b.hideNumber, alerts: b.alerts !== false, updatedAt: now() });
   save(); res.json({ ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area });
@@ -5926,12 +5991,12 @@ function jobAnnounceOne(w, t, force) {
   const u = userById(w.id); if (!u) return null;
   const l = jobAnnList(w, t), lang = JOB_ANN[u.lang] ? u.lang : 'en';
   w.annAt = t; w.annLast = { at: t, n: l.length };
-  if (!l.length) { if (force) io.to('user:' + w.id).emit('voice:alert', { kind: 'job_free', say: JOB_NONE[lang], sayEn: JOB_NONE.en, lang, title: '🔎 No work near you right now', body: 'Maata checks every 5 minutes', url: '/?jobs=find' }); return 0; }
+  if (!l.length) { if (force) jobVoice(w.id, { kind: 'job_free', say: JOB_NONE[lang], sayEn: JOB_NONE.en, lang, title: '🔎 No work near you right now', body: 'Maata checks every 5 minutes', url: '/?jobs=find' }); return 0; }
   // say a different job each time (so all jobs near you are heard), best first
   w.annIdx = ((w.annIdx || 0) + (force ? 0 : 1)) % l.length; const { j, d } = l[w.annIdx];
   const say = u.voiceAlerts === false && !force ? '' : JOB_ANN[lang](l.length, j, d), sayEn = JOB_ANN.en(l.length, j, d);
   const title = '🔔 ' + l.length + (l.length > 1 ? ' jobs' : ' job') + ' near you', body = (jobCat(j.cat) || {}).en + (j.wage && j.wage.amt ? ' · ₹' + j.wage.amt + ' ' + JOB_PER[j.wage.per] : '') + ' · ' + d + ' km' + (j.place.text ? ' · ' + j.place.text : '');
-  io.to('user:' + w.id).emit('voice:alert', { kind: 'job_free', say, sayEn, lang, title, body, url: '/?job=' + j.id });
+  jobVoice(w.id, { kind: 'job_free', say, sayEn, lang, title, body, url: '/?job=' + j.id });
   if (!force) pushTo(u, { type: 'order_alert', title, body, tag: 'jobfree-' + w.id, url: '/?job=' + j.id, say, sayEn: say ? sayEn : '', lang }, { urgency: 'high', ttl: 240 }).catch(() => {});
   return l.length;
 }
@@ -5982,10 +6047,18 @@ app.post('/api/jobs/ai/post', auth, async (req, res) => {
 // 🤖 AI: worker says what work they do → profile filled
 app.post('/api/jobs/ai/worker', auth, async (req, res) => {
   if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 600); if (text.length < 4) return res.status(400).json({ error: 'Say or type what work you do.' });
-  const g = await gemini('You help daily-wage and shop workers in Andhra Pradesh, India make a job profile. From their words (any Indian language or English) return ONLY JSON: {"skills":["keys, max 4"],"exp":years,"rate":expected rupees per day or 0,"about":"1–2 short sentences in simple English","kinds":["daily|contract|monthly|parttime"]}. Keys: ' + JOB_CATS.map((c) => c.k + '=' + c.en).join(', ') + '.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 300, temperature: 0.1 });
+  const g = await gemini('You help daily-wage and shop workers in Andhra Pradesh, India make a job profile. From their words (any Indian language or English) return ONLY JSON: {"name":"their name if said, else empty","age":years or 0,"edu":"none|5th|10th|12th|iti|degree or empty","skills":["keys, max 4"],"exp":years,"rate":expected rupees per day or 0,"about":"1–2 short sentences in simple English","kinds":["daily|contract|monthly|parttime"]}. Keys: ' + JOB_CATS.map((c) => c.k + '=' + c.en).join(', ') + '.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 300, temperature: 0.1 });
   const d = lsJson(g); if (!d) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Choose your work yourself.' });
-  res.json({ skills: (d.skills || []).filter((k) => jobCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Math.round(Number(d.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(d.rate) || 0))), about: clip(d.about, 300), kinds: (d.kinds || []).filter((k) => ['daily', 'contract', 'monthly', 'parttime'].includes(k)) });
+  res.json({ name: clip(d.name, 50), age: Math.max(0, Math.min(80, Math.round(Number(d.age) || 0))), edu: JOB_EDU[d.edu] ? d.edu : '', skills: (d.skills || []).filter((k) => jobCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Math.round(Number(d.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(d.rate) || 0))), about: clip(d.about, 300), kinds: (d.kinds || []).filter((k) => ['daily', 'contract', 'monthly', 'parttime'].includes(k)) });
 });
+// 🤖 AI: shop owner / contractor says who they are → registration filled
+app.post('/api/jobs/ai/employer', auth, async (req, res) => {
+  if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 600); if (text.length < 4) return res.status(400).json({ error: 'Say or type about your shop / work.' });
+  const g = await gemini('You help shop owners, labour contractors, house owners and farmers in Andhra Pradesh, India register to hire workers. From their words (any Indian language or English) return ONLY JSON: {"type":"shop|contractor|house|farm|company","name":"shop / business / team name in English letters (for a house owner: their name)","owner":"person name if said","address":"address / area if said","about":"one short English sentence about the business or work"}.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 300, temperature: 0.1 });
+  const d = lsJson(g); if (!d) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Fill it yourself.' });
+  res.json({ type: EMP_TYPES[d.type] ? d.type : '', name: clip(d.name, 70), owner: clip(d.owner, 50), address: clip(d.address, 200), about: clip(d.about, 300) });
+});
+app.post('/api/jobs/alerts/seen', auth, (req, res) => { req.user.jobAlertsSeen = now(); save(); res.json({ ok: true }); });
 // ---- admin ----
 app.get('/admin/api/jobs', adminAuth, (req, res) => {
   const st = String(req.query.status || ''); const l = db.jobs.filter((j) => !st || j.status === st).sort((a, b) => b.createdAt - a.createdAt).slice(0, 300);
