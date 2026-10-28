@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 218;
+const MAATA_VERSION = 219;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5687,6 +5687,20 @@ const JOB_CATS = [
 ].map(([k, g, e, en, te, lo, hi, per]) => ({ k, g, e, en, te, lo, hi, per }));
 const JOB_GROUPS = { build: '🧱 Construction · భవన నిర్మాణం', farm: '🌾 Farm & loading · వ్యవసాయం', shop: '🏪 Shops & hotels · షాపులు', home: '🏠 Home, driver & security · ఇంటి పని', other: '🧰 Other · ఇతర' };
 const jobCat = (k) => JOB_CATS.find((c) => c.k === k) || null;
+// a worker has up to two separate registrations: 👷 Daily Labour (per day / contract) and 🏪 Local Jobs (monthly salary / part time)
+const JOB_LABOUR_G = ['build', 'farm'];
+const jobPartOfCat = (k) => (JOB_LABOUR_G.includes((jobCat(k) || {}).g) ? 'labour' : (jobCat(k) || {}).g === 'other' ? 'both' : 'local');
+const jobPartOfKind = (kind) => (kind === 'monthly' || kind === 'parttime' ? 'local' : 'labour');
+function jobParts(w) { // older profiles (one registration) are split by the work they chose
+  if (!w) return {}; if (w.parts) return w.parts;
+  const p = {}; const sk = w.skills || [];
+  const lab = sk.filter((k) => jobPartOfCat(k) !== 'local'), loc = sk.filter((k) => jobPartOfCat(k) !== 'labour');
+  if (lab.length) p.labour = { skills: lab, exp: w.exp || 0, rate: w.rate || 0, kinds: (w.kinds || []).filter((k) => k === 'daily' || k === 'contract'), about: w.about || '', at: w.createdAt };
+  if (loc.length) p.local = { skills: loc, exp: w.exp || 0, salary: 0, kinds: (w.kinds || []).filter((k) => k === 'monthly' || k === 'parttime'), about: w.about || '', at: w.createdAt };
+  w.parts = p; return p;
+}
+const jobWants = (w, kind) => !!jobParts(w)[jobPartOfKind(kind)];
+function jobSyncParts(w) { const p = jobParts(w); w.skills = [...new Set([...(p.labour?.skills || []), ...(p.local?.skills || [])])]; w.exp = Math.max(p.labour?.exp || 0, p.local?.exp || 0); w.rate = p.labour?.rate || 0; w.salary = p.local?.salary || 0; w.kinds = [...new Set([...(p.labour?.kinds || []), ...(p.local?.kinds || [])])]; w.about = p.labour?.about || p.local?.about || ''; }
 const JOB_EDU = { none: 'No schooling', '5th': 'Up to 5th class', '10th': '10th class', '12th': 'Inter / 12th', iti: 'ITI / Diploma', degree: 'Degree or more' };
 
 const JOB_PER = { day: 'per day', month: 'per month', job: 'for the full job', hour: 'per hour' };
@@ -5718,6 +5732,8 @@ function jobMatch(j, w, here) { // 🎯 how well this worker fits this job (0–
   if ((w.skills || []).includes(j.cat)) s += 30; else if ((w.skills || []).some((k) => (jobCat(k) || {}).g === (jobCat(j.cat) || {}).g)) s += 12;
   const d = lsDistKm(here || w.area, j.place); if (d != null) s += d <= 2 ? 15 : d <= 5 ? 11 : d <= 10 ? 6 : d <= 20 ? 2 : -8;
   if (w.rate && j.wage && j.wage.per === 'day' && j.wage.amt) s += j.wage.amt >= w.rate ? 8 : j.wage.amt >= w.rate * 0.85 ? 3 : -6;
+  if (w.salary && j.wage && j.wage.per === 'month' && j.wage.amt) s += j.wage.amt >= w.salary ? 8 : j.wage.amt >= w.salary * 0.85 ? 3 : -6;
+  if (w.parts && !jobWants(w, j.kind)) s -= 25;
   if (j.gender && j.gender !== 'any' && w.gender && j.gender !== w.gender) s -= 30;
   if (jobAvail(w)) s += 5; s += Math.min(5, w.exp || 0);
   return Math.max(0, Math.min(100, Math.round(s)));
@@ -5743,6 +5759,7 @@ function workerOut(w, viewer, here, job) {
   return { id: w.id, name: w.name || u.name || 'Worker', photo: !!u.photo, photoV: u.photoV || 0, skills: w.skills || [], skillNames: (w.skills || []).map((k) => (jobCat(k) || {}).en).filter(Boolean), exp: w.exp || 0, rate: w.rate || 0, about: w.about || '',
     kinds: w.kinds || [], gender: w.gender || '', availToday: jobAvail(w), distKm: lsDistKm(here, w.area), areaText: (w.area && w.area.text) || '', hired, phone: canPhone ? u.phone : undefined, hideNumber: !!w.hideNumber, since: w.createdAt,
     age: w.age || null, edu: w.edu || '', eduName: JOB_EDU[w.edu] || '', photoFid: w.photo ? w.photo.fid : null, photoOk: w.photoOk ?? null, photoWhy: viewer && viewer.id === w.id ? w.photoWhy || '' : undefined,
+    salary: w.salary || 0, parts: (() => { const p = jobParts(w), o = {}; for (const k of ['labour', 'local']) if (p[k]) o[k] = { skills: p[k].skills, skillNames: p[k].skills.map((x) => (jobCat(x) || {}).en).filter(Boolean), exp: p[k].exp || 0, rate: p[k].rate || 0, salary: p[k].salary || 0, kinds: p[k].kinds || [], about: p[k].about || '' }; return o; })(),
     match: job ? jobMatch(job, w) : undefined, ann: viewer && viewer.id === w.id ? w.annLast || null : undefined };
 }
 function jobMeta() { let m = db.meta.find((x) => x.id === 'jobs'); if (!m) { m = { id: 'jobs', createdAt: now(), alerts: {} }; db.meta.push(m); } m.alerts = m.alerts || {}; return m; }
@@ -5753,7 +5770,7 @@ const JOB_SAY = {
 };
 function jobAlertWorkers(j) { // 🔔 voice alert to matching, nearby workers (max 30; each worker max 8 job alerts a day)
   if (!j.place || j.status !== 'open') return 0; const m = jobMeta(), day = jobToday(); let n = 0;
-  const l = db.workers.filter((w) => w.id !== j.by && w.alerts !== false && (w.skills || []).includes(j.cat) && w.area && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender))
+  const l = db.workers.filter((w) => w.id !== j.by && w.alerts !== false && jobWants(w, j.kind) && (w.skills || []).includes(j.cat) && w.area && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender))
     .map((w) => ({ w, d: lsDistKm(w.area, j.place) })).filter((x) => x.d != null && x.d <= Math.max(2, Math.min(50, x.w.area.km || 10)))
     .sort((a, b) => (jobAvail(b.w) ? 1 : 0) - (jobAvail(a.w) ? 1 : 0) || a.d - b.d).slice(0, 30);
   for (const { w, d } of l) {
@@ -5908,6 +5925,7 @@ app.delete('/api/jobs/:id', auth, (req, res) => { const j = jobById(req.params.i
 app.post('/api/jobs/:id/apply', auth, (req, res) => {
   const j = jobById(req.params.id); if (!j || j.status !== 'open') return res.status(404).json({ error: 'This job is closed.' }); if (j.by === req.user.id) return res.status(400).json({ error: 'This is your own job.' });
   const w = jobWorker(req.user.id); if (!w) return res.status(400).json({ error: 'Make your worker profile first (1 minute).', needProfile: true });
+  if (!jobWants(w, j.kind)) { const pt = jobPartOfKind(j.kind); return res.status(400).json({ error: pt === 'local' ? 'This is a Local Job (monthly / part time). Register for Local Jobs first — 1 minute.' : 'This is Daily Labour work. Register for Daily Labour first — 1 minute.', needPart: pt }); }
   if (blockedOf(userById(j.by) || {}).includes(req.user.id)) return res.status(403).json({ error: 'You cannot apply to this job.' });
   if (db.jobApps.filter((a) => a.workerId === req.user.id && now() - a.createdAt < 86400000).length >= 25) return res.status(429).json({ error: 'You applied to many jobs today. Try again tomorrow.' });
   let a = db.jobApps.find((x) => x.jobId === j.id && x.workerId === req.user.id);
@@ -5969,18 +5987,30 @@ app.post('/api/jobs/:id/apps/:uid', auth, (req, res) => {
 app.get('/api/jobs/me/worker', auth, (req, res) => { const w = jobWorker(req.user.id); res.json(w ? { ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area || null } : null); });
 app.put('/api/jobs/me/worker', auth, async (req, res) => {
   const b = req.body || {}; let w = jobWorker(req.user.id);
+  const part = b.part === 'local' ? 'local' : b.part === 'labour' ? 'labour' : '';
   if (!w && !b.age18 && !(Number(b.age) >= 18)) return res.status(400).json({ error: 'Local Jobs & Daily Labour is only for workers 18 years and above. Please confirm your age.' });
-  const skills = [...new Set((Array.isArray(b.skills) ? b.skills : []).filter((k) => jobCat(k)))].slice(0, 6); if (!skills.length) return res.status(400).json({ error: 'Choose at least one work you do.' });
+  const skills = [...new Set((Array.isArray(b.skills) ? b.skills : []).filter((k) => jobCat(k) && (!part || jobPartOfCat(k) === part || jobPartOfCat(k) === 'both')))].slice(0, 6); if (!skills.length) return res.status(400).json({ error: 'Choose at least one work you do.' });
   const ar = b.area && isFinite(Number(b.area.lat)) && (Number(b.area.lat) || Number(b.area.lng)) ? { lat: Number(b.area.lat), lng: Number(b.area.lng), km: Math.max(1, Math.min(50, Number(b.area.km) || 10)), text: clip(b.area.text, 100) } : w?.area || null;
   if (!ar) return res.status(400).json({ error: 'Add your area (location), so Maata can find jobs near you.' });
-  if (!w) { w = { id: req.user.id, createdAt: now(), age18At: now() }; db.workers.push(w); }
   const age = Math.round(Number(b.age) || 0); if (age && (age < 18 || age > 80)) return res.status(400).json({ error: age < 18 ? 'Local Jobs is only for people 18 years and above.' : 'Please check your age.' });
-  if (!age && !w.age) return res.status(400).json({ error: 'Write your age.' });
+  if (!age && !(w && w.age)) return res.status(400).json({ error: 'Write your age.' });
+  if (!w) { w = { id: req.user.id, createdAt: now(), age18At: now(), parts: {} }; db.workers.push(w); }
   if (b.photo && b.photo.fid && (!w.photo || w.photo.fid !== b.photo.fid)) { const ff = db.lsFiles.find((f) => f.id === b.photo.fid && f.by === req.user.id); if (ff) { w.photo = { fid: ff.id }; w.photoOk = null; w.photoWhy = ''; jobFaceCheckFile(w, ff).catch(() => {}); } }
-  Object.assign(w, { age: age || w.age, edu: JOB_EDU[b.edu] ? b.edu : w.edu || '', name: clip(b.name, 50) || req.user.name, skills, exp: Math.max(0, Math.min(60, Math.round(Number(b.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(b.rate) || 0))), about: clip(b.about, 300),
-    kinds: (Array.isArray(b.kinds) ? b.kinds : []).filter((k) => ['daily', 'contract', 'monthly', 'parttime'].includes(k)), gender: ['m', 'f', ''].includes(b.gender) ? b.gender : w.gender || '', area: ar,
-    hideNumber: !!b.hideNumber, alerts: b.alerts !== false, updatedAt: now() });
-  save(); res.json({ ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area });
+  Object.assign(w, { age: age || w.age, edu: JOB_EDU[b.edu] ? b.edu : w.edu || '', name: clip(b.name, 50) || w.name || req.user.name, gender: ['m', 'f', ''].includes(b.gender) ? b.gender : w.gender || '', area: ar,
+    hideNumber: b.hideNumber === undefined ? !!w.hideNumber : !!b.hideNumber, alerts: b.alerts === undefined ? w.alerts !== false : b.alerts !== false, updatedAt: now() });
+  const P = jobParts(w), exp = Math.max(0, Math.min(60, Math.round(Number(b.exp) || 0))), about = clip(b.about, 300);
+  if (part === 'labour' || part === 'local') {
+    const isNew = !P[part];
+    P[part] = { skills, exp, about, at: (P[part] && P[part].at) || now(), kinds: (Array.isArray(b.kinds) ? b.kinds : []).filter((k) => (part === 'labour' ? ['daily', 'contract'] : ['monthly', 'parttime']).includes(k)),
+      ...(part === 'labour' ? { rate: Math.max(0, Math.min(5000, Math.round(Number(b.rate) || 0))) } : { salary: Math.max(0, Math.min(500000, Math.round(Number(b.salary) || 0))), lastWork: clip(b.lastWork, 100) }) };
+    if (!P[part].kinds.length) P[part].kinds = part === 'labour' ? ['daily'] : ['monthly'];
+    if (isNew) feed('jobs', (part === 'labour' ? '👷 Daily Labour' : '🏪 Local Jobs') + ' registration: ' + w.name);
+  } else { // older app: one form for everything
+    const lab = skills.filter((k) => jobPartOfCat(k) !== 'local'), loc = skills.filter((k) => jobPartOfCat(k) !== 'labour'), kinds = Array.isArray(b.kinds) ? b.kinds : [];
+    if (lab.length) P.labour = { ...(P.labour || {}), skills: lab, exp, about, rate: Math.max(0, Math.min(5000, Math.round(Number(b.rate) || 0))), kinds: kinds.filter((k) => k === 'daily' || k === 'contract').length ? kinds.filter((k) => k === 'daily' || k === 'contract') : ['daily'] };
+    if (loc.length) P.local = { ...(P.local || {}), skills: loc, exp, about, salary: P.local?.salary || 0, kinds: kinds.filter((k) => k === 'monthly' || k === 'parttime').length ? kinds.filter((k) => k === 'monthly' || k === 'parttime') : ['monthly'] };
+  }
+  jobSyncParts(w); save(); res.json({ ...workerOut(w, req.user), alerts: w.alerts !== false, area: w.area });
 });
 app.post('/api/jobs/me/today', auth, (req, res) => { const w = jobWorker(req.user.id); if (!w) return res.status(400).json({ error: 'Make your worker profile first.', needProfile: true }); w.availDay = req.body?.on ? jobToday() : ''; if (req.body?.on) w.lastFreeDay = jobToday(); w.annAt = 0; w.ann = {}; save(); res.json({ availToday: jobAvail(w) }); });
 // 📢 While a worker is “Free for work today”: every 5 minutes Maata says the jobs near them out loud (also when Maata is closed).
@@ -5992,7 +6022,7 @@ const JOB_ANN = {
 };
 function jobAnnList(w, t) { // the jobs to tell this worker about: their own work first, then similar work (same group), nearest / best first
   const grp = new Set((w.skills || []).map((k) => (jobCat(k) || {}).g)); w.ann = w.ann || {};
-  return db.jobs.filter((j) => j.status === 'open' && j.by !== w.id && j.place && ((w.skills || []).includes(j.cat) || grp.has((jobCat(j.cat) || {}).g)) && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender)
+  return db.jobs.filter((j) => j.status === 'open' && j.by !== w.id && j.place && jobWants(w, j.kind) && ((w.skills || []).includes(j.cat) || grp.has((jobCat(j.cat) || {}).g)) && (!j.gender || j.gender === 'any' || !w.gender || w.gender === j.gender)
       && (w.ann[j.id] || 0) < 99 && !db.jobApps.some((a) => a.jobId === j.id && a.workerId === w.id && a.status !== 'withdrawn') && !blockedOf(userById(j.by) || {}).includes(w.id))
     .map((j) => ({ j, d: lsDistKm(w.area, j.place), own: (w.skills || []).includes(j.cat) })).filter((x) => x.d != null && x.d <= Math.max(2, Math.min(50, w.area.km || 10)))
     .sort((a, b) => (b.own ? 1 : 0) - (a.own ? 1 : 0) || jobMatch(b.j, w) - jobMatch(a.j, w) || a.d - b.d);
@@ -6055,7 +6085,7 @@ app.post('/api/jobs/me/announce-now', auth, (req, res) => { const w = jobWorker(
 const SELF_URL = (process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
 app.get('/healthz', (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.json({ ok: true, at: now() }); });
 setInterval(() => { if (!SELF_URL || !db.workers.some((w) => w.alerts !== false)) return; fetch(SELF_URL + '/healthz', { signal: AbortSignal.timeout(15000) }).catch(() => {}); }, 4 * 60000);
-app.delete('/api/jobs/me/worker', auth, (req, res) => { db.workers = db.workers.filter((w) => w.id !== req.user.id); save(); res.json({ ok: true }); });
+app.delete('/api/jobs/me/worker', auth, (req, res) => { const w = jobWorker(req.user.id), part = String(req.query.part || ''); if (w && (part === 'labour' || part === 'local')) { const P = jobParts(w); delete P[part]; if (P.labour || P.local) { jobSyncParts(w); save(); return res.json({ ok: true, left: true }); } } db.workers = db.workers.filter((x) => x.id !== req.user.id); save(); res.json({ ok: true }); });
 // 👷 workers near me (employers) — available today first
 app.get('/api/jobs/workers', auth, (req, res) => {
   const here = jobHere(req.query), cat = String(req.query.cat || ''), km = Number(req.query.km) || 15;
@@ -6084,9 +6114,9 @@ app.post('/api/jobs/ai/post', auth, async (req, res) => {
 // 🤖 AI: worker says what work they do → profile filled
 app.post('/api/jobs/ai/worker', auth, async (req, res) => {
   if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 600); if (text.length < 4) return res.status(400).json({ error: 'Say or type what work you do.' });
-  const g = await gemini('You help daily-wage and shop workers in Andhra Pradesh, India make a job profile. From their words (any Indian language or English) return ONLY JSON: {"name":"their name if said, else empty","age":years or 0,"edu":"none|5th|10th|12th|iti|degree or empty","skills":["keys, max 4"],"exp":years,"rate":expected rupees per day or 0,"about":"1–2 short sentences in simple English","kinds":["daily|contract|monthly|parttime"]}. Keys: ' + JOB_CATS.map((c) => c.k + '=' + c.en).join(', ') + '.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 300, temperature: 0.1 });
+  const g = await gemini('You help daily-wage and shop workers in Andhra Pradesh, India make a job profile. From their words (any Indian language or English) return ONLY JSON: {"name":"their name if said, else empty","age":years or 0,"edu":"none|5th|10th|12th|iti|degree or empty","skills":["keys, max 4"],"exp":years,"rate":expected rupees per day or 0,"salary":expected rupees per month or 0,"about":"1–2 short sentences in simple English","kinds":["daily|contract|monthly|parttime"]}. Keys: ' + JOB_CATS.map((c) => c.k + '=' + c.en).join(', ') + '.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 300, temperature: 0.1 });
   const d = lsJson(g); if (!d) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Choose your work yourself.' });
-  res.json({ name: clip(d.name, 50), age: Math.max(0, Math.min(80, Math.round(Number(d.age) || 0))), edu: JOB_EDU[d.edu] ? d.edu : '', skills: (d.skills || []).filter((k) => jobCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Math.round(Number(d.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(d.rate) || 0))), about: clip(d.about, 300), kinds: (d.kinds || []).filter((k) => ['daily', 'contract', 'monthly', 'parttime'].includes(k)) });
+  res.json({ salary: Math.max(0, Math.min(500000, Math.round(Number(d.salary) || 0))), name: clip(d.name, 50), age: Math.max(0, Math.min(80, Math.round(Number(d.age) || 0))), edu: JOB_EDU[d.edu] ? d.edu : '', skills: (d.skills || []).filter((k) => jobCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Math.round(Number(d.exp) || 0))), rate: Math.max(0, Math.min(5000, Math.round(Number(d.rate) || 0))), about: clip(d.about, 300), kinds: (d.kinds || []).filter((k) => ['daily', 'contract', 'monthly', 'parttime'].includes(k)) });
 });
 // 🤖 AI: shop owner / contractor says who they are → registration filled
 app.post('/api/jobs/ai/employer', auth, async (req, res) => {
