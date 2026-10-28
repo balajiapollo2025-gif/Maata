@@ -678,16 +678,19 @@ const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); retu
 
 // ---------- 📱 SMS OTP (new account: confirm the mobile number) ----------
 // Set ONE of these in Render → Environment (never in the code):
+//   Fast2SMS (OTP route, credits never expire on ₹100–3999 recharges):                      FAST2SMS_API_KEY
+//       (if Message Central keys are also set, Message Central is used only when Fast2SMS fails)
 //   Message Central VerifyNow (no DLT registration needed, they send and check the code):
 //       MC_CUSTOMER_ID + MC_AUTH_TOKEN  (both from console → Developer Guide → API Credentials)
 //       (or MC_CUSTOMER_ID + MC_PASSWORD — then Maata makes the token itself)
 //   MSG91 (needs your own DLT-approved OTP template):                                      MSG91_AUTH_KEY + MSG91_TEMPLATE_ID
 // Optional: SMS_DAILY_MAX (default 300) — the most OTP SMS sent in one day (protects your SMS balance from misuse).
 // With no SMS keys, sign-up works as before (email code).
-const SMS = { mcId: (process.env.MC_CUSTOMER_ID || '').trim(), mcPw: (process.env.MC_PASSWORD || '').trim(), mcTok: (process.env.MC_AUTH_TOKEN || '').trim(), m91Key: (process.env.MSG91_AUTH_KEY || '').trim(), m91Tpl: (process.env.MSG91_TEMPLATE_ID || '').trim(), dayMax: Number(process.env.SMS_DAILY_MAX) || 300 };
-const SMS_VIA = SMS.mcId && (SMS.mcTok || SMS.mcPw) ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
+const SMS = { f2Key: (process.env.FAST2SMS_API_KEY || '').trim(), mcId: (process.env.MC_CUSTOMER_ID || '').trim(), mcPw: (process.env.MC_PASSWORD || '').trim(), mcTok: (process.env.MC_AUTH_TOKEN || '').trim(), m91Key: (process.env.MSG91_AUTH_KEY || '').trim(), m91Tpl: (process.env.MSG91_TEMPLATE_ID || '').trim(), dayMax: Number(process.env.SMS_DAILY_MAX) || 300 };
+const MC_ON = !!(SMS.mcId && (SMS.mcTok || SMS.mcPw));
+const SMS_VIA = SMS.f2Key ? 'f2' : MC_ON ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
 const SMS_ON = !!SMS_VIA;
-console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add MC_CUSTOMER_ID + MC_AUTH_TOKEN (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
+console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'f2' ? 'Fast2SMS' + (MC_ON ? ' (backup: Message Central)' : '') : SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add FAST2SMS_API_KEY (or MC_CUSTOMER_ID + MC_AUTH_TOKEN) (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
 const maskPhone = (p) => '+91 ' + String(p).slice(0, 2) + '••••••' + String(p).slice(-2);
 const smsLog = { day: '', n: 0, byPhone: new Map(), byIp: new Map() };
 function smsGuard(phone, ip) { // returns an error text, or '' when an SMS may go out
@@ -709,7 +712,20 @@ async function mcToken(fresh) {
 }
 // send → { ref } (Message Central keeps the code) or { hash } (we keep the code)
 async function smsSendOtp(phone, salt) {
-  if (SMS_VIA === 'mc') {
+  if (SMS_VIA === 'f2') { // Fast2SMS OTP route: we make the code, they deliver "Your OTP: 123456"
+    try {
+      const code = String(crypto.randomInt(100000, 1000000));
+      const r = await fetch('https://www.fast2sms.com/dev/bulkV2', { method: 'POST', headers: { authorization: SMS.f2Key, 'content-type': 'application/json', 'cache-control': 'no-cache' }, body: JSON.stringify({ route: 'otp', variables_values: code, numbers: phone, flash: '0' }), signal: AbortSignal.timeout(15000) });
+      const j = await r.json().catch(() => ({}));
+      if (j.return === true) return { hash: crypto.createHash('sha256').update(code + salt).digest('hex'), len: 6 };
+      throw new Error('fast2sms ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
+    } catch (e) { if (!MC_ON) throw e; console.error('[sms send] Fast2SMS failed, trying Message Central:', e.message); return smsSendMc(phone); }
+  }
+  if (SMS_VIA === 'mc') return smsSendMc(phone);
+  return smsSendM91(phone, salt);
+}
+async function smsSendMc(phone) {
+  {
     for (let k = 0; k < 2; k++) {
       const r = await fetch('https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&flowType=SMS&mobileNumber=' + phone, { method: 'POST', headers: { authToken: await mcToken(k > 0) }, signal: AbortSignal.timeout(15000) });
       const j = await r.json().catch(() => ({}));
@@ -718,6 +734,8 @@ async function smsSendOtp(phone, salt) {
     }
     throw new Error('sms send: token refused');
   }
+}
+async function smsSendM91(phone, salt) {
   const code = String(crypto.randomInt(100000, 1000000));
   const r = await fetch('https://control.msg91.com/api/v5/otp?template_id=' + encodeURIComponent(SMS.m91Tpl) + '&mobile=91' + phone + '&otp=' + code, { method: 'POST', headers: { authkey: SMS.m91Key, 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(15000) });
   const j = await r.json().catch(() => ({})); if (j.type !== 'success') throw new Error('sms send ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
@@ -1944,7 +1962,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 227;
+const MAATA_VERSION = 228;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
