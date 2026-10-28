@@ -678,14 +678,16 @@ const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); retu
 
 // ---------- 📱 SMS OTP (new account: confirm the mobile number) ----------
 // Set ONE of these in Render → Environment (never in the code):
-//   Message Central VerifyNow (no DLT registration needed, they send and check the code):  MC_CUSTOMER_ID + MC_PASSWORD
+//   Message Central VerifyNow (no DLT registration needed, they send and check the code):
+//       MC_CUSTOMER_ID + MC_AUTH_TOKEN  (both from console → Developer Guide → API Credentials)
+//       (or MC_CUSTOMER_ID + MC_PASSWORD — then Maata makes the token itself)
 //   MSG91 (needs your own DLT-approved OTP template):                                      MSG91_AUTH_KEY + MSG91_TEMPLATE_ID
 // Optional: SMS_DAILY_MAX (default 300) — the most OTP SMS sent in one day (protects your SMS balance from misuse).
 // With no SMS keys, sign-up works as before (email code).
-const SMS = { mcId: (process.env.MC_CUSTOMER_ID || '').trim(), mcPw: (process.env.MC_PASSWORD || '').trim(), m91Key: (process.env.MSG91_AUTH_KEY || '').trim(), m91Tpl: (process.env.MSG91_TEMPLATE_ID || '').trim(), dayMax: Number(process.env.SMS_DAILY_MAX) || 300 };
-const SMS_VIA = SMS.mcId && SMS.mcPw ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
+const SMS = { mcId: (process.env.MC_CUSTOMER_ID || '').trim(), mcPw: (process.env.MC_PASSWORD || '').trim(), mcTok: (process.env.MC_AUTH_TOKEN || '').trim(), m91Key: (process.env.MSG91_AUTH_KEY || '').trim(), m91Tpl: (process.env.MSG91_TEMPLATE_ID || '').trim(), dayMax: Number(process.env.SMS_DAILY_MAX) || 300 };
+const SMS_VIA = SMS.mcId && (SMS.mcTok || SMS.mcPw) ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
 const SMS_ON = !!SMS_VIA;
-console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add MC_CUSTOMER_ID + MC_PASSWORD (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
+console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add MC_CUSTOMER_ID + MC_AUTH_TOKEN (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
 const maskPhone = (p) => '+91 ' + String(p).slice(0, 2) + '••••••' + String(p).slice(-2);
 const smsLog = { day: '', n: 0, byPhone: new Map(), byIp: new Map() };
 function smsGuard(phone, ip) { // returns an error text, or '' when an SMS may go out
@@ -699,6 +701,7 @@ function smsGuard(phone, ip) { // returns an error text, or '' when an SMS may g
 }
 const mcTok = { v: '', at: 0 };
 async function mcToken(fresh) {
+  if (SMS.mcTok && !(fresh && SMS.mcPw)) { if (fresh) console.error('[sms] Message Central refused MC_AUTH_TOKEN — copy a new Auth Token from console → Developer Guide → API Credentials into Render'); return SMS.mcTok; }
   if (!fresh && mcTok.v && now() - mcTok.at < 6 * 3600000) return mcTok.v;
   const r = await fetch('https://cpaas.messagecentral.com/auth/v1/authentication/token?customerId=' + encodeURIComponent(SMS.mcId) + '&key=' + encodeURIComponent(Buffer.from(SMS.mcPw).toString('base64')) + '&scope=NEW&country=91', { headers: { accept: '*/*' }, signal: AbortSignal.timeout(12000) });
   const j = await r.json().catch(() => ({})); if (!j.token) throw new Error('sms token ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
@@ -1941,7 +1944,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 226;
+const MAATA_VERSION = 227;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
