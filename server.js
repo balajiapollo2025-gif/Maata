@@ -585,7 +585,7 @@ const FEATURE_LIST = [
   ['Account & app', 'backup', '☁️ Chat backup (Google Drive)'],
   ['Account & app', 'themes', '🎨 Theme & colours'],
   ['Account & app', 'appLock', '🔒 App lock'],
-  ['Business', 'localServices', '🛠️ Local Services (electrician, plumber, AC, tutor, beauty… — booking, tracking, providers)'],
+  ['Business', 'localServices', '🛠️ Local Services (electrician, plumber, AC, mechanic, beauty… — booking, tracking, providers)'],
   ['Business', 'jobs', '💼 Local Jobs & Daily Labour (shop staff, masons, coolies, helpers, drivers…)'],
   ['Account & app', 'secure', '🛡️ Maata Secure (anti-theft: lost-phone mode, alarm, phone location, IMEI, theft report)'],
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 223;
+const MAATA_VERSION = 224;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5129,8 +5129,12 @@ const LS_CATS = [
 ].map(([k, g, e, en, te, lo, hi, visit, remind, unit]) => ({ k, g, e, en, te, lo, hi, visit, remind, unit: unit || '' }));
 const LS_ST = ['REQUESTED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
 function lsMeta() { let m = db.meta.find((x) => x.id === 'ls'); if (!m) { m = { id: 'ls', createdAt: now(), seq: 1000, cities: [{ name: 'Chittoor', on: true }], off: {} }; db.meta.push(m); } m.cities = m.cities || []; m.off = m.off || {}; return m; }
+// removed from Local Services (owner's choice): 📚 Education (home tutor, online tutor, music classes) and 💈 Salon / haircut.
+// Kept in the list only so old bookings still show their name; they are not shown, booked or registered any more.
+const LS_REMOVED = new Set(['salon', 'tutor', 'online_tutor', 'music']);
+const LS_LIVE = LS_CATS.filter((c) => !LS_REMOVED.has(c.k));
 const lsCat = (k) => LS_CATS.find((c) => c.k === k) || null;
-const lsCatsOn = () => { const m = lsMeta(); return LS_CATS.filter((c) => !m.off[c.k]); };
+const lsCatsOn = () => { const m = lsMeta(); return LS_LIVE.filter((c) => !m.off[c.k]); };
 const lsCityOn = (name) => { const c = lsMeta().cities.find((x) => x.name.toLowerCase() === String(name || '').toLowerCase()); return !c || c.on !== false; };
 const lsProv = (id) => db.providers.find((p) => p.id === id) || null;
 const lsBk = (id) => db.lsBookings.find((b) => b.id === id) || null;
@@ -5227,7 +5231,7 @@ app.put('/api/ls/me/provider', auth, (req, res) => {
   if (!p) { p = { id: req.user.id, name: req.user.name, cats: [], prices: [], work: [], status: 'draft', online: false, createdAt: now(), warranty: 7 }; db.providers.push(p); }
   if (p.status === 'suspended') return res.status(403).json({ error: 'Your provider account is on hold. Send an appeal from this page.' });
   if (b.name !== undefined) p.name = clip(b.name, 60) || req.user.name;
-  if (Array.isArray(b.cats)) p.cats = [...new Set(b.cats.filter((k) => lsCat(k)))].slice(0, 4);
+  if (Array.isArray(b.cats)) p.cats = [...new Set(b.cats.filter((k) => lsCat(k) && !LS_REMOVED.has(k)))].slice(0, 4);
   if (b.exp !== undefined) p.exp = Math.max(0, Math.min(60, Math.round(Number(b.exp) || 0)));
   if (b.about !== undefined) p.about = clip(b.about, 500);
   if (b.area) { const la = Number(b.area.lat), lo = Number(b.area.lng); p.area = { text: clip(b.area.text, 200), lat: Math.abs(la) <= 90 && la ? +la.toFixed(6) : p.area?.lat ?? null, lng: Math.abs(lo) <= 180 && lo ? +lo.toFixed(6) : p.area?.lng ?? null, km: Math.max(1, Math.min(50, Math.round(Number(b.area.km) || 8))) }; }
@@ -5274,7 +5278,7 @@ function lsAiOk(req, res) { const h = (lsAiHits.get(req.user.id) || []).filter((
 const lsJson = (g) => { try { return JSON.parse(String(g.text || '').replace(/^```(json)?|```$/g, '')); } catch { return null; } };
 app.post('/api/ls/ai/profile', auth, async (req, res) => {
   if (!lsAiOk(req, res)) return; const text = clip(req.body?.text, 800); if (text.length < 5) return res.status(400).json({ error: 'Say or type what work you do.' });
-  const g = await gemini('You help local workers in Andhra Pradesh, India register on a service app. From their words (any Indian language — Telugu, Hindi, Tamil, Kannada, Malayalam, Marathi, Bengali, Gujarati, Punjabi, Odia, Urdu — English or mixed) return ONLY JSON: {"cats":["keys"],"exp":years,"about":"2 short sentences in simple English","services":[{"name":"short service","from":rupees,"to":rupees}],"visit":rupees}. Category keys allowed: ' + LS_CATS.map((c) => c.k + ' (' + c.en + ')').join(', ') + '. Prices: typical Chittoor small-town rupees. Max 6 services.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 500, temperature: 0.2 });
+  const g = await gemini('You help local workers in Andhra Pradesh, India register on a service app. From their words (any Indian language — Telugu, Hindi, Tamil, Kannada, Malayalam, Marathi, Bengali, Gujarati, Punjabi, Odia, Urdu — English or mixed) return ONLY JSON: {"cats":["keys"],"exp":years,"about":"2 short sentences in simple English","services":[{"name":"short service","from":rupees,"to":rupees}],"visit":rupees}. Category keys allowed: ' + LS_LIVE.map((c) => c.k + ' (' + c.en + ')').join(', ') + '. Prices: typical Chittoor small-town rupees. Max 6 services.', [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 500, temperature: 0.2 });
   const d = lsJson(g); if (!d) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Try again with a few more words.' });
   res.json({ cats: (d.cats || []).filter((k) => lsCat(k)).slice(0, 4), exp: Math.max(0, Math.min(60, Number(d.exp) || 0)), about: clip(d.about, 400), services: (d.services || []).slice(0, 6).map((s) => ({ name: clip(s.name, 60), from: Math.round(Number(s.from) || 0), to: Math.round(Number(s.to) || 0) })), visit: Math.round(Number(d.visit) || 0) });
 });
@@ -5285,7 +5289,7 @@ app.post('/api/ls/ai/diagnose', auth, express.json({ limit: '3mb' }), async (req
   const parts = []; const im = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(img); if (im && im[2].length < 2.8e6) parts.push({ inlineData: { mimeType: im[1], data: im[2] } });
   parts.push({ text: 'Customer says: ' + (text || '(only a photo)') });
   const lang = ({ te: 'Telugu', hi: 'Hindi' })[req.user.lang] || 'English';
-  const g = await gemini('You are Maata AI, a helpful home-service expert in Chittoor, Andhra Pradesh, India. From the customer words (any language) and the photo, return ONLY JSON: {"cat":"one key","issue":"likely problem, short, in ' + lang + '","urgency":"low|normal|high|emergency","questions":["max 2 short questions in ' + lang + '"],"tools":["parts/tools the worker should bring, English"],"providerNote":"one line for the worker in simple English","problem":"clean one-line problem text in ' + lang + '","when":"now|today|tomorrow|unknown"}. Keys: ' + LS_CATS.map((c) => c.k + '=' + c.en).join(', ') + '. Never claim certainty; say "likely". If it sounds dangerous (gas leak, sparks, fire, flooding) urgency=emergency.', [{ role: 'user', parts }], { json: true, maxTokens: 500, temperature: 0.2 });
+  const g = await gemini('You are Maata AI, a helpful home-service expert in Chittoor, Andhra Pradesh, India. From the customer words (any language) and the photo, return ONLY JSON: {"cat":"one key","issue":"likely problem, short, in ' + lang + '","urgency":"low|normal|high|emergency","questions":["max 2 short questions in ' + lang + '"],"tools":["parts/tools the worker should bring, English"],"providerNote":"one line for the worker in simple English","problem":"clean one-line problem text in ' + lang + '","when":"now|today|tomorrow|unknown"}. Keys: ' + LS_LIVE.map((c) => c.k + '=' + c.en).join(', ') + '. Never claim certainty; say "likely". If it sounds dangerous (gas leak, sparks, fire, flooding) urgency=emergency.', [{ role: 'user', parts }], { json: true, maxTokens: 500, temperature: 0.2 });
   const d = lsJson(g); if (!d || !lsCat(d.cat)) return res.status(502).json({ error: AI_ERR[g.error] || 'Maata AI could not understand. Choose the service yourself.' });
   const here = req.body?.lat ? { lat: Number(req.body.lat), lng: Number(req.body.lng) } : null;
   res.json({ cat: d.cat, catName: lsCat(d.cat).en, catE: lsCat(d.cat).e, issue: clip(d.issue, 160), urgency: ['low', 'normal', 'high', 'emergency'].includes(d.urgency) ? d.urgency : 'normal', questions: (d.questions || []).slice(0, 2).map((x) => clip(x, 120)), tools: (d.tools || []).slice(0, 5).map((x) => clip(x, 40)), providerNote: clip(d.providerNote, 200), problem: clip(d.problem || text, 300), when: d.when, price: lsEstimate(d.cat, here) });
@@ -5570,7 +5574,7 @@ app.post('/admin/api/ls/trust/explain', adminAuth, async (req, res) => {
   const g = await gemini('You help a small Indian app team review a service provider fairly. Summarise the facts in 3 short bullet points in simple English and suggest ONE fair next step (talk to provider / warn / suspend / no action). Never decide guilt; facts only.', [{ role: 'user', parts: [{ text: JSON.stringify({ name: p.name, stats: s, rating: r, lowReviews: bad, cancelsLate: db.lsBookings.filter((b) => b.provId === p.id && b.cancel?.by === 'provider').map((b) => b.cancel.reason).slice(-6) }) }] }], { maxTokens: 300, temperature: 0.2 });
   res.json({ text: g.text || AI_ERR[g.error] || 'AI is not available.' });
 });
-app.get('/admin/api/ls/config', adminAuth, (req, res) => { const m = lsMeta(); res.json({ cats: LS_CATS.map((c) => ({ ...c, on: !m.off[c.k], providers: db.providers.filter((p) => p.status === 'approved' && p.cats.includes(c.k)).length })), groups: LS_GROUPS, cities: m.cities, stats: { providers: db.providers.filter((p) => p.status === 'approved').length, pending: db.providers.filter((p) => p.status === 'pending').length, bookings: db.lsBookings.length, done: db.lsBookings.filter((b) => b.status === 'COMPLETED').length, active: db.lsBookings.filter((b) => ['REQUESTED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS'].includes(b.status)).length } }); });
+app.get('/admin/api/ls/config', adminAuth, (req, res) => { const m = lsMeta(); res.json({ cats: LS_LIVE.map((c) => ({ ...c, on: !m.off[c.k], providers: db.providers.filter((p) => p.status === 'approved' && p.cats.includes(c.k)).length })), groups: LS_GROUPS, cities: m.cities, stats: { providers: db.providers.filter((p) => p.status === 'approved').length, pending: db.providers.filter((p) => p.status === 'pending').length, bookings: db.lsBookings.length, done: db.lsBookings.filter((b) => b.status === 'COMPLETED').length, active: db.lsBookings.filter((b) => ['REQUESTED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS'].includes(b.status)).length } }); });
 app.put('/admin/api/ls/config', adminAuth, (req, res) => {
   const m = lsMeta(), b = req.body || {};
   if (b.cat && lsCat(b.cat)) { if (b.on) delete m.off[b.cat]; else m.off[b.cat] = true; }
