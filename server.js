@@ -1870,7 +1870,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 216;
+const MAATA_VERSION = 218;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5846,7 +5846,12 @@ app.get('/api/jobs/config', auth, (req, res) => {
   const here = jobHere(req.query), open = db.jobs.filter((j) => j.status === 'open');
   res.json({ cats: JOB_CATS.map((c) => ({ ...c, jobs: open.filter((j) => j.cat === c.k && j.by !== req.user.id && !blockedOf(userById(j.by) || {}).includes(req.user.id) && (!here || (lsDistKm(here, j.place) ?? 0) <= 30)).length })), groups: JOB_GROUPS, per: JOB_PER, ai: !!GEMINI_KEY,
     worker: (() => { const w = jobWorker(req.user.id); return w ? workerOut(w, req.user) : null; })(), employer: (() => { const e = jobEmployer(req.user.id); return e ? employerOut(e, req.user) : null; })(), empTypes: EMP_TYPES, edu: JOB_EDU,
-    alertsNew: db.jobAlerts.filter((x) => x.userId === req.user.id && x.at > (req.user.jobAlertsSeen || 0)).length, myOpen: db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length,
+    alertsNew: db.jobAlerts.filter((x) => x.userId === req.user.id && x.at > (req.user.jobAlertsSeen || 0)).length,
+    ...(() => { // how many open jobs near this worker in each bottom-bar tab (not their own, not already answered)
+      const w = jobWorker(req.user.id), base = (w && w.area) || here; if (!base) return { nearLabour: 0, nearLocal: 0 }; const km = (w && w.area && w.area.km) || 25, skip = new Set((w && w.skip) || []);
+      const l = db.jobs.filter((j) => j.status === 'open' && j.by !== req.user.id && j.place && !skip.has(j.id) && !db.jobApps.some((a) => a.jobId === j.id && a.workerId === req.user.id && a.status !== 'withdrawn') && (lsDistKm(base, j.place) ?? 999) <= km);
+      return { nearLabour: l.filter((j) => ['daily', 'contract'].includes(j.kind)).length, nearLocal: l.filter((j) => ['monthly', 'parttime'].includes(j.kind)).length };
+    })(), myOpen: db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length,
     newApps: db.jobApps.filter((a) => a.ownerId === req.user.id && a.status === 'applied' && !a.seen).length, updates: db.jobApps.filter((a) => a.workerId === req.user.id && a.workerSeen === false).length });
 });
 // 🔍 jobs near me (workers)
