@@ -675,6 +675,64 @@ async function sendMail(to, subject, html, text) {
   await mailer.sendMail({ from: MAIL_FROM_RAW || ('Maata <' + SMTP.user + '>'), to, subject, html, text });
 }
 const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); return /^[^\s@]{1,64}@[^\s@]+\.[a-z]{2,}$/.test(v) && v.length <= 120 ? v : null; };
+
+// ---------- 📱 SMS OTP (new account: confirm the mobile number) ----------
+// Set ONE of these in Render → Environment (never in the code):
+//   Message Central VerifyNow (no DLT registration needed, they send and check the code):  MC_CUSTOMER_ID + MC_PASSWORD
+//   MSG91 (needs your own DLT-approved OTP template):                                      MSG91_AUTH_KEY + MSG91_TEMPLATE_ID
+// Optional: SMS_DAILY_MAX (default 300) — the most OTP SMS sent in one day (protects your SMS balance from misuse).
+// With no SMS keys, sign-up works as before (email code).
+const SMS = { mcId: (process.env.MC_CUSTOMER_ID || '').trim(), mcPw: (process.env.MC_PASSWORD || '').trim(), m91Key: (process.env.MSG91_AUTH_KEY || '').trim(), m91Tpl: (process.env.MSG91_TEMPLATE_ID || '').trim(), dayMax: Number(process.env.SMS_DAILY_MAX) || 300 };
+const SMS_VIA = SMS.mcId && SMS.mcPw ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
+const SMS_ON = !!SMS_VIA;
+console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add MC_CUSTOMER_ID + MC_PASSWORD (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
+const maskPhone = (p) => '+91 ' + String(p).slice(0, 2) + '••••••' + String(p).slice(-2);
+const smsLog = { day: '', n: 0, byPhone: new Map(), byIp: new Map() };
+function smsGuard(phone, ip) { // returns an error text, or '' when an SMS may go out
+  const d = istDay(); if (smsLog.day !== d) { smsLog.day = d; smsLog.n = 0; smsLog.byPhone.clear(); smsLog.byIp.clear(); }
+  if (smsLog.n >= SMS.dayMax) return 'Too many sign-ups today. Please try again tomorrow.';
+  const t = now(), ph = (smsLog.byPhone.get(phone) || []).filter((x) => t - x < 3600000), ipl = (smsLog.byIp.get(ip) || []).filter((x) => t - x < 3600000);
+  if (ph.length && t - ph[ph.length - 1] < 45000) return 'A code was just sent to ' + maskPhone(phone) + '. Wait a minute before asking again.';
+  if (ph.length >= 4) return 'Too many codes for this number. Try again after an hour.';
+  if (ipl.length >= 10) return 'Too many codes from this network. Try again after an hour.';
+  ph.push(t); ipl.push(t); smsLog.byPhone.set(phone, ph); smsLog.byIp.set(ip, ipl); smsLog.n++; return '';
+}
+const mcTok = { v: '', at: 0 };
+async function mcToken(fresh) {
+  if (!fresh && mcTok.v && now() - mcTok.at < 6 * 3600000) return mcTok.v;
+  const r = await fetch('https://cpaas.messagecentral.com/auth/v1/authentication/token?customerId=' + encodeURIComponent(SMS.mcId) + '&key=' + encodeURIComponent(Buffer.from(SMS.mcPw).toString('base64')) + '&scope=NEW&country=91', { headers: { accept: '*/*' }, signal: AbortSignal.timeout(12000) });
+  const j = await r.json().catch(() => ({})); if (!j.token) throw new Error('sms token ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
+  mcTok.v = j.token; mcTok.at = now(); return j.token;
+}
+// send → { ref } (Message Central keeps the code) or { hash } (we keep the code)
+async function smsSendOtp(phone, salt) {
+  if (SMS_VIA === 'mc') {
+    for (let k = 0; k < 2; k++) {
+      const r = await fetch('https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&flowType=SMS&mobileNumber=' + phone, { method: 'POST', headers: { authToken: await mcToken(k > 0) }, signal: AbortSignal.timeout(15000) });
+      const j = await r.json().catch(() => ({}));
+      if (j.data && j.data.verificationId) return { ref: String(j.data.verificationId), len: 4 };
+      if (r.status !== 401 && r.status !== 403) throw new Error('sms send ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
+    }
+    throw new Error('sms send: token refused');
+  }
+  const code = String(crypto.randomInt(100000, 1000000));
+  const r = await fetch('https://control.msg91.com/api/v5/otp?template_id=' + encodeURIComponent(SMS.m91Tpl) + '&mobile=91' + phone + '&otp=' + code, { method: 'POST', headers: { authkey: SMS.m91Key, 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(15000) });
+  const j = await r.json().catch(() => ({})); if (j.type !== 'success') throw new Error('sms send ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
+  return { hash: crypto.createHash('sha256').update(code + salt).digest('hex'), len: 6 };
+}
+async function smsCheckOtp(rec, code, salt) { // true / false (wrong) / throws (provider down)
+  if (rec.ref) {
+    for (let k = 0; k < 2; k++) {
+      const r = await fetch('https://cpaas.messagecentral.com/verification/v3/validateOtp?verificationId=' + encodeURIComponent(rec.ref) + '&code=' + encodeURIComponent(code), { headers: { authToken: await mcToken(k > 0) }, signal: AbortSignal.timeout(15000) });
+      const j = await r.json().catch(() => ({})), rc = Number((j.data && j.data.responseCode) || j.responseCode);
+      if (j.data && (j.data.verificationStatus === 'VERIFICATION_COMPLETED' || rc === 703)) return true;
+      if ([702, 700, 705, 505].includes(rc)) return false;
+      if (r.status !== 401 && r.status !== 403) throw new Error('sms check ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
+    }
+    throw new Error('sms check: token refused');
+  }
+  return crypto.createHash('sha256').update(code + salt).digest('hex') === rec.hash;
+}
 const maskEmail = (e) => { const [a, d] = String(e).split('@'); return a.slice(0, 2) + '•'.repeat(Math.max(2, a.length - 2)) + '@' + d; };
 // Same mailbox written differently (Gmail ignores dots and +tags: ra.vi+1@gmail.com = ravi@gmail.com) → one account only
 const emailKey = (e) => { const v = String(e || '').trim().toLowerCase(); const at = v.lastIndexOf('@'); if (at < 1) return v; let a = v.slice(0, at), d = v.slice(at + 1); if (d === 'googlemail.com') d = 'gmail.com'; if (d === 'gmail.com') a = a.split('+')[0].replace(/\./g, ''); else a = a.split('+')[0]; return a + '@' + d; };
@@ -745,11 +803,15 @@ app.post('/api/register', rateLimit, async (req, res) => {
     const tk = String(req.body.ticket), r = signupCodes.get(tk), code = String(req.body?.code || '').replace(/\D/g, '');
     if (!r || r.until < now()) { signupCodes.delete(tk); return res.status(400).json({ error: 'The code expired. Tap “Send code again”.', expired: true }); }
     if (r.tries >= 5) { signupCodes.delete(tk); return res.status(429).json({ error: 'Too many wrong codes. Tap “Send code again”.', expired: true }); }
-    if (crypto.createHash('sha256').update(code + tk).digest('hex') !== r.hash) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
+    if (r.sms) { // 📱 code sent by SMS to the mobile number
+      if (code.length < 4) return res.status(400).json({ error: 'Type the code from the SMS.' });
+      let ok; try { ok = await smsCheckOtp(r.sms, code, tk); } catch (e) { console.error('[sms check]', e.message); return res.status(502).json({ error: 'Could not check the code right now. Try again in a minute.' }); }
+      if (!ok) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
+    } else if (crypto.createHash('sha256').update(code + tk).digest('hex') !== r.hash) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
     const d = r.data, dup = signupCheck(d.phone, d.email);
     if (dup) { signupCodes.delete(tk); return res.status(409).json({ error: dup }); }
     signupCodes.delete(tk);
-    return makeAccount(req, res, { ...d, emailVerified: true });
+    return makeAccount(req, res, r.sms ? { ...d, phoneVerified: true } : { ...d, emailVerified: true });
   }
   const name = String(req.body?.name || '').trim().slice(0, 40);
   const phone = cleanMobile(req.body?.phone);
@@ -761,6 +823,14 @@ app.post('/api/register', rateLimit, async (req, res) => {
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   const dup = signupCheck(phone, email); if (dup) return res.status(409).json({ error: dup });
   const data = { name, phone, email, passHash: await bcrypt.hash(password, 10), ref: req.body?.ref ? String(req.body.ref).slice(0, 20) : '' };
+  if (SMS_ON) { // 📱 confirm the mobile number with an SMS code
+    const g = smsGuard(phone, req.ip || ''); if (g) return res.status(429).json({ error: g });
+    for (const [k, v] of signupCodes) if (v.data.phone === phone) signupCodes.delete(k);
+    const ticket = crypto.randomBytes(18).toString('base64url'); let sm;
+    try { sm = await smsSendOtp(phone, ticket); } catch (e) { console.error('[sms send]', e.message); return res.status(502).json({ error: 'Could not send the SMS code right now. Check the number and try again in a minute.' }); }
+    signupCodes.set(ticket, { sms: sm, until: now() + 10 * 60000, tries: 0, sentAt: now(), data });
+    return res.json({ needOtp: true, ticket, via: 'sms', len: sm.len, sentTo: maskPhone(phone) });
+  }
   if (!MAIL_ON) { console.warn('[signup] email is off (BREVO_API_KEY / MAIL_FROM missing) → account made without email code'); return makeAccount(req, res, data); }
   for (const [k, v] of signupCodes) if (v.data.email === email || v.data.phone === phone) { if (now() - v.sentAt < 45000) return res.status(429).json({ error: 'A code was just sent to ' + maskEmail(v.data.email) + '. Wait a minute before asking again.' }); signupCodes.delete(k); }
   const ticket = crypto.randomBytes(18).toString('base64url'), code = String(crypto.randomInt(100000, 1000000));
@@ -779,6 +849,7 @@ async function makeAccount(req, res, d) {
   try {
   const u = { id: newId(), name, phone, email, passHash: d.passHash, createdAt: now(), status: 'active', tokenVersion: 0 };
   if (d.emailVerified) u.emailVerified = now();
+  if (d.phoneVerified) u.phoneVerified = now();
   // joined from a friend's invite link: remember who invited, and save each other as contacts
   const inviter = d.ref ? db.users.find((x) => x.inviteCode && x.inviteCode === String(d.ref).trim().toUpperCase() && x.status !== 'blocked') : null;
   if (inviter) {
@@ -1870,7 +1941,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 225;
+const MAATA_VERSION = 226;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
