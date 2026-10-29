@@ -38,7 +38,9 @@ let bucket = null;
 let chatBucket = null;
 const MEDIA_DIR = path.join(DATA_DIR, 'media');
 const CHAT_DIR = path.join(DATA_DIR, 'chat');
-const snap = {}; // collection -> Map(id -> last saved JSON), so only changed records are written
+const snap = {}; // collection -> Map(id -> short fingerprint of the last saved record), so only changed records are written
+// fingerprint = md5 of the record's JSON (22 characters instead of the whole JSON → much less memory)
+const fp = typeof crypto.hash === 'function' ? (j) => crypto.hash('md5', j, 'base64') : (j) => crypto.createHash('md5').update(j).digest('base64');
 
 async function loadDb() {
   if (MONGODB_URI) {
@@ -50,7 +52,8 @@ async function loadDb() {
     for (const c of COLLS) {
       const docs = await mongo.collection(c).find({}).toArray();
       db[c] = docs.map(({ _id, ...rest }) => ({ id: _id, ...rest })).sort((a, b) => (a[SORT_BY[c]] || 0) - (b[SORT_BY[c]] || 0));
-      snap[c] = new Map(db[c].map((d) => [d.id, JSON.stringify(d)]));
+      snap[c] = new Map(db[c].map((d) => [d.id, fp(JSON.stringify(d))]));
+      saveSt[c] = { arr: db[c], len: db[c].length, lastFull: Date.now(), fullMs: 0 }; // just loaded = already saved
     }
     await mongo.collection('messages').createIndex({ from: 1, to: 1, ts: 1 }).catch(() => {});
     console.log(`Connected to MongoDB: ${db.users.length} customers, ${db.messages.length} messages loaded`);
@@ -65,47 +68,86 @@ async function loadDb() {
   if (fixed) save();
 }
 
-let saveTimer = null, saving = false, saveAgain = false;
+// ---------- Saving to MongoDB (v229: no long pauses, works with big data) ----------
+// • save() → a write happens within ~0.4 s, also while people keep sending (before, a busy app could delay saving).
+// • Small collections are compared fully. Big ones (messages, logins …) check only the newest records each time
+//   (new messages, ✓✓ ticks) and do a full check in small slices in the background, so the app never freezes.
+// • Deleting records (filter / splice) is noticed and written. On shutdown everything is written fully.
+let saveTimer = null, saving = null, saveAgain = false;
+const SAVE_BIG = 4000, SAVE_TAIL = 2000, SAVE_SLICE = 1500;
+const saveSt = {}; // collection -> { arr, len, lastFull, fullMs }
+const tick = () => new Promise((r) => setImmediate(r));
 function save() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(flush, 400);
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => { saveTimer = null; flush(); }, 400);
 }
-async function flush() {
+async function writeOps(c, ops) {
+  for (let k = 0; k < ops.length; k += 1000) await mongo.collection(c).bulkWrite(ops.slice(k, k + 1000), { ordered: false });
+}
+async function flushColl(c, full) {
+  const arr = db[c], n = arr.length, st = saveSt[c] || (saveStdef(c)), prev = snap[c] || (snap[c] = new Map());
+  const big = n > SAVE_BIG, t = now();
+  const needFull = full || !big || t - st.lastFull > Math.max(60000, st.fullMs * 40);
+  const ops = [];
+  if (!needFull) { // newest records only
+    if (st.arr !== arr || n < st.len) { // some records were removed (filter / splice): find which ones by id only (cheap)
+      const ids = new Set();
+      for (let k = 0; k < n; k++) { ids.add(arr[k].id); if (k % 20000 === 19999) { await tick(); if (db[c] !== arr) return false; } }
+      for (const id of prev.keys()) if (!ids.has(id)) { ops.push({ deleteOne: { filter: { _id: id } } }); prev.delete(id); }
+      st.arr = arr;
+    }
+    for (let k = Math.max(0, Math.min(st.len, n) - SAVE_TAIL); k < n; k++) {
+      const d = arr[k], h = fp(JSON.stringify(d));
+      if (prev.get(d.id) !== h) { const { id, ...rest } = d; ops.push({ replaceOne: { filter: { _id: id }, replacement: rest, upsert: true } }); prev.set(id, h); }
+    }
+    st.len = n;
+    if (ops.length) await writeOps(c, ops);
+    return true;
+  }
+  const t0 = Date.now(), next = new Map(), pend = [];
+  for (let k = 0; k < n; k++) {
+    const d = arr[k], h = fp(JSON.stringify(d));
+    next.set(d.id, h);
+    if (prev.get(d.id) !== h) { const { id, ...rest } = d; ops.push({ replaceOne: { filter: { _id: id }, replacement: rest, upsert: true } }); pend.push([id, h]); }
+    if (big && k % SAVE_SLICE === SAVE_SLICE - 1) { await tick(); if (db[c] !== arr) return false; } // the list was replaced meanwhile: start again
+  }
+  for (const id of prev.keys()) if (!next.has(id)) ops.push({ deleteOne: { filter: { _id: id } } });
+  if (ops.length) await writeOps(c, ops);
+  // records added while we were scanning stay in the tail check
+  for (let k = n; k < db[c].length && db[c] === arr; k++) { const d = arr[k]; if (prev.has(d.id)) next.set(d.id, prev.get(d.id)); }
+  snap[c] = next; st.arr = arr; st.len = n; st.lastFull = now(); st.fullMs = Date.now() - t0;
+  return true;
+}
+function saveStdef(c) { return (saveSt[c] = { arr: null, len: 0, lastFull: 0, fullMs: 0 }); }
+async function flush(full) {
   if (!mongo) {
     const tmp = DB_FILE + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(db));
     fs.renameSync(tmp, DB_FILE);
     return;
   }
-  if (saving) { saveAgain = true; return; }
-  saving = true;
-  try {
-    for (const c of COLLS) {
-      const prev = snap[c] || new Map();
-      const next = new Map();
-      const ops = [];
-      for (const d of db[c]) {
-        const j = JSON.stringify(d);
-        next.set(d.id, j);
-        if (prev.get(d.id) !== j) { const { id, ...rest } = d; ops.push({ replaceOne: { filter: { _id: id }, replacement: rest, upsert: true } }); }
-      }
-      for (const id of prev.keys()) if (!next.has(id)) ops.push({ deleteOne: { filter: { _id: id } } });
-      if (ops.length) await mongo.collection(c).bulkWrite(ops, { ordered: false });
-      snap[c] = next;
+  if (saving) { saveAgain = true; if (full) { await saving; return flush(true); } return; }
+  saving = (async () => {
+    let again = false;
+    try {
+      for (const c of COLLS) { if (!(await flushColl(c, full))) again = true; await tick(); }
+    } catch (e) {
+      console.error('[db] save failed, retrying in 5s:', e.message);
+      setTimeout(save, 5000);
     }
-  } catch (e) {
-    console.error('[db] save failed, retrying in 5s:', e.message);
-    setTimeout(save, 5000);
-  } finally {
-    saving = false;
-    if (saveAgain) { saveAgain = false; save(); }
-  }
+    return again;
+  })();
+  const again = await saving; saving = null;
+  if (again && full && (full = full + 1) < 5) return flush(full); // shutdown: keep going until everything is written
+  if (again || saveAgain) { saveAgain = false; save(); }
 }
-// Render stops the old server on every redeploy: write pending changes first
+// Render stops the old server on every redeploy: write everything first
+let stopping = false;
 for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, async () => {
-    clearTimeout(saveTimer);
-    try { await flush(); } catch {}
+    if (stopping) return; stopping = true;
+    clearTimeout(saveTimer); saveTimer = null;
+    try { await flush(true); } catch (e) { console.error('[db] final save failed:', e.message); }
     process.exit(0);
   });
 }
@@ -1398,7 +1440,21 @@ const blockedOf = (u) => (u.blocked = u.blocked || []);
 const hasContact = (u, id) => contactsOf(u).some((c) => c.id === id);
 const watchersOf = (id) => db.users.filter((u) => u.contacts && u.contacts.some((c) => c.id === id)).map((u) => u.id);
 function toWatchers(id, ev, data) { for (const w of watchersOf(id)) io.to('user:' + w).emit(ev, data); }
-function hasConversation(a, b) { return db.messages.some((m) => (m.from === a && m.to === b) || (m.from === b && m.to === a)); }
+// 📇 quick lookup of a chat's messages (before: every chat open went through ALL messages of everyone)
+const MI = { arr: null, len: 0, conv: new Map(), grp: new Map() };
+const convKey = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+function msgIdx() {
+  const arr = db.messages;
+  if (MI.arr !== arr || arr.length < MI.len) { MI.arr = arr; MI.len = 0; MI.conv = new Map(); MI.grp = new Map(); }
+  for (let k = MI.len; k < arr.length; k++) {
+    const m = arr[k], map = m.group ? MI.grp : MI.conv, key = m.group ? m.group : convKey(m.from, m.to);
+    let l = map.get(key); if (!l) map.set(key, (l = [])); l.push(m);
+  }
+  MI.len = arr.length; return MI;
+}
+const convMsgs = (a, b) => msgIdx().conv.get(convKey(a, b)) || [];
+const groupMsgs = (gid) => msgIdx().grp.get(gid) || [];
+function hasConversation(a, b) { return convMsgs(a, b).length > 0; }
 function contactView(meUser, u, extra = {}) {
   const c = contactsOf(meUser).find((x) => x.id === u.id);
   const inContacts = !!c;
@@ -1551,10 +1607,10 @@ app.get('/api/messages/:userId', auth, (req, res) => {
   if (gid) {
     if (!gMember(groupById(gid), me)) return res.status(404).json({ error: 'Group not found.' });
     const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
-    return res.json(db.messages.filter((m) => m.group === gid && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
+    return res.json(groupMsgs(gid).filter((m) => m.group === gid && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
   }
   const hidden = new Set(req.user.hiddenMsgs || []), since = (req.user.clearedChats || {})[other] || 0;
-  res.json(db.messages.filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
+  res.json(convMsgs(me, other).filter((m) => ((m.from === me && m.to === other) || (m.from === other && m.to === me)) && !hidden.has(m.id) && m.ts > since && !(m.expiresAt && m.expiresAt <= now())).slice(-300));
 });
 
 // ---------- Chat media is kept on the server for MEDIA_KEEP_DAYS (default 30), then only on phones ----------
@@ -1962,7 +2018,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 228;
+const MAATA_VERSION = 229;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3054,7 +3110,7 @@ async function maybeAutoReply(customer, owner, m) {
   const ownerHits = (arHits.get(owner.id) || []).filter((x) => t - x < 3600_000);
   if (hits.length >= 6 || ownerHits.length >= 40 || (hits.length && t - hits[hits.length - 1] < 20_000)) return;
   hits.push(t); ownerHits.push(t); arHits.set(key, hits); arHits.set(owner.id, ownerHits);
-  const recent = db.messages.filter((x) => !x.group && ((x.from === customer.id && x.to === owner.id) || (x.from === owner.id && x.to === customer.id)) && x.type === 'text').slice(-6);
+  const recent = convMsgs(customer.id, owner.id).filter((x) => !x.group && ((x.from === customer.id && x.to === owner.id) || (x.from === owner.id && x.to === customer.id)) && x.type === 'text').slice(-6);
   const r = await gemini('You are the automatic assistant replying on behalf of "' + owner.name + '" in the Maata chat app, because they are not available right now. Business details written by the owner:\n"""' + (ar.info || 'No details given.') + '"""\nAnswer the customer using ONLY these details. If the answer is not in the details (or about exact stock, discounts or bookings), say politely that ' + owner.name + ' will reply soon. Never invent prices or promises. ' + LANG_HINT + ' Maximum 3 sentences.',
     [{ role: 'user', parts: [{ text: recent.map((x) => (x.from === owner.id ? owner.name : 'Customer') + ': ' + x.text).join('\n') }] }], { temperature: 0.4, maxTokens: 250 });
   if (r.error || !canMessage(owner, customer.id).target) return;
@@ -6883,7 +6939,7 @@ io.on('connection', (socket) => {
     const m = myMsg(p?.id); if (!m || m.deleted) return;
     if (p.pin) {
       const other = m.from === me ? m.to : m.from;
-      const pins = db.messages.filter((x) => x.pinned && ((x.from === me && x.to === other) || (x.from === other && x.to === me)));
+      const pins = convMsgs(me, other).filter((x) => x.pinned && ((x.from === me && x.to === other) || (x.from === other && x.to === me)));
       if (pins.length >= 3) { const oldest = pins.sort((a, b) => a.pinnedAt - b.pinnedAt)[0]; oldest.pinned = false; emitUpdate(oldest); }
       Object.assign(m, { pinned: true, pinnedAt: now(), pinnedBy: me });
     } else { m.pinned = false; }
