@@ -2020,7 +2020,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 232;
+const MAATA_VERSION = 233;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5196,6 +5196,23 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <h2>Your choices</h2><ul><li>Block or report anyone; control who sees your status.</li><li>Delete messages, chats or your status at any time.</li><li><b>Delete your account:</b> in the app go to ⋮ → Settings → Delete my account, or visit <a href="/delete-account">maataapp.com/delete-account</a>. Your account, messages, statuses, products and files are deleted from our active systems.</li></ul>
 <h2>Children</h2><p>Maata is for people aged 18 and over. We do not knowingly allow children to use Maata; if we learn that a child has an account, we delete it.</p>
 <h2>Changes</h2><p>We will update this page when the policy changes.</p></body></html>`));
+// Google Play: how to delete SOME data without deleting the account
+app.get('/delete-data', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your data in Maata</title><style>${PAGE_CSS}li{margin:6px 0}</style></head><body>
+<h1>🦜 Maata – delete some of your data</h1>
+<p>You can delete parts of your data in the <b>Maata</b> app (by Maata, maataapp.com) at any time, without deleting your account. Deleted items are removed from our servers at once.</p>
+<ul>
+<li><b>A message:</b> long-press the message → 🗑️ Delete → <i>Delete for everyone</i> (or <i>Delete for me</i>).</li>
+<li><b>Whole chats:</b> in the Chats list long-press a chat (or tap Select) → Delete chats.</li>
+<li><b>Status updates:</b> open your status → 🗑️ Delete.</li>
+<li><b>Reels and channel posts:</b> open the reel or post → ⋮ → Delete.</li>
+<li><b>Maata AI chat history:</b> open Maata AI → Clear history.</li>
+<li><b>Find Work / Hire Workers:</b> Menu → Find Work (or Hire Workers) → Profile → Delete my registration. Jobs you gave: My jobs → open the job → Delete.</li>
+<li><b>Shop products and ads:</b> Business tools → Maata Business → Stock → open a product → 🗑️ Delete product; ads can be stopped or deleted in Business tools.</li>
+<li><b>Profile photo and about:</b> Settings → Profile → change or remove.</li>
+</ul>
+<p><b>Kept:</b> bills and orders you made with a shop and Local Services bookings stay in that shop's or provider's business records. Nothing else is kept after you delete it.</p>
+<p>To delete <b>everything</b>, delete your account: <a href="/delete-account">maataapp.com/delete-account</a>. Questions: Menu → Help &amp; Support in the app.</p>
+</body></html>`));
 app.get('/delete-account', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your Maata account</title><style>${PAGE_CSS}input,button{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid #D5DCE0;width:100%;box-sizing:border-box;margin:6px 0}button{background:#C8413A;color:#fff;border:0;font-weight:700;cursor:pointer}#msg{margin-top:10px;font-weight:600}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png" alt=""><h1>Delete your Maata account</h1></div>
 <p>This permanently deletes your Maata account, chats, files, statuses, business profile, catalogue and ads. It cannot be undone.</p><p><b>Deleted at once:</b> your profile and photo, mobile number, chats and files you sent or received, statuses, reels and comments, contacts saved in Maata, call history, Maata AI chats, business profile, catalogue and ads, Find Work / Hire Workers profiles, jobs and alerts, Local Services provider profile, your ratings, live-location (team) history, login history and support tickets.</p><p><b>Kept:</b> bills and orders you made with a shop, and Local Services bookings, stay in that shop's or provider's records because they are their business records. A short security record (your name, number and the time of deletion) is kept for up to 1 year to prevent fraud, then removed. Maata does not keep other copies.</p>
