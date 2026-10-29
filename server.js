@@ -57,6 +57,8 @@ async function loadDb() {
     }
     await mongo.collection('messages').createIndex({ from: 1, to: 1, ts: 1 }).catch(() => {});
     console.log(`Connected to MongoDB: ${db.users.length} customers, ${db.messages.length} messages loaded`);
+    // where the database runs (Atlas puts provider + region tags on each database server) — shown once in the Render logs
+    Promise.resolve().then(() => mongo.command({ hello: 1 })).then((h) => { const t = (h && h.tags) || {}; console.log('[db] MongoDB location: ' + (t.region ? (t.provider || '') + ' ' + t.region : 'unknown (not shown by this database)') + (h && h.me ? ' · server ' + String(h.me).split('.')[0] : '')); }).catch(() => {});
   } else {
     console.warn('[warn] MONGODB_URI is not set. Using data/db.json - data is lost when the server restarts.');
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -2018,7 +2020,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 229;
+const MAATA_VERSION = 230;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
