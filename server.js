@@ -2020,7 +2020,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 231;
+const MAATA_VERSION = 232;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4748,6 +4748,8 @@ function adminAuth(req, res, next) {
 function audit(admin, action, target, detail = '') {
   db.audit.push({ id: newId(), ts: now(), admin, action, target, detail }); save();
 }
+// records of deleted accounts are kept 1 year (fraud prevention, as the delete-account page says), then removed
+setInterval(() => { const cut = now() - 365 * 86400000, n = db.audit.length; db.audit = db.audit.filter((x) => !(['self-delete', 'delete'].includes(x.action) && x.ts < cut)); if (db.audit.length !== n) save(); }, 6 * 3600000).unref?.();
 
 app.post('/admin/api/login', rateLimit, async (req, res) => {
   if (!ADMIN_HASH) return res.status(503).json({ error: 'Admin password is not set. Add ADMIN_PASSWORD in your server environment settings.' });
@@ -5146,6 +5148,22 @@ function deleteAccountData(u, why) {
   for (const r of db.reels.filter((x) => x.by === u.id)) { deleteChatFile(r.file.id); if (r.thumb) deleteChatFile(r.thumb.id); }
   db.reels = db.reels.filter((x) => x.by !== u.id); db.reelComments = db.reelComments.filter((c) => c.by !== u.id);
   db.activity = db.activity.filter((a) => a.to !== u.id && a.from !== u.id); for (const x of db.users) if (x.following) x.following = x.following.filter((f) => f !== u.id);
+  // also: Find Work / Hire Workers, Local Services profile, ratings, team location history and call history (Google Play: delete associated data)
+  const myJobs = new Set(db.jobs.filter((j) => j.by === u.id).map((j) => j.id));
+  db.workers = db.workers.filter((x) => x.id !== u.id);
+  db.employers = db.employers.filter((x) => x.id !== u.id);
+  db.jobs = db.jobs.filter((j) => j.by !== u.id);
+  db.jobApps = db.jobApps.filter((a) => a.workerId !== u.id && a.ownerId !== u.id && !myJobs.has(a.jobId));
+  db.jobAlerts = db.jobAlerts.filter((a) => a.userId !== u.id);
+  db.providers = db.providers.filter((x) => x.id !== u.id);
+  db.ratings = db.ratings.filter((r) => r.userId !== u.id);
+  const myTeams = new Set(db.teams.filter((t) => t.ownerId === u.id).map((t) => t.id));
+  for (const t of db.teams) t.members = (t.members || []).filter((m) => m.userId !== u.id);
+  db.teams = db.teams.filter((t) => !myTeams.has(t.id) && (t.members || []).length);
+  db.teamTracks = db.teamTracks.filter((x) => x.userId !== u.id && !myTeams.has(x.teamId));
+  db.teamEvents = db.teamEvents.filter((x) => x.userId !== u.id && !myTeams.has(x.teamId));
+  db.calls = db.calls.filter((c) => c.from !== u.id && c.to !== u.id);
+  db.bmPrefs = db.bmPrefs.filter((x) => !String(x.id).startsWith(u.id + ':'));
   save();
   for (const w of removedWatchers) io.to('user:' + w).emit('user:removed', { id: u.id });
 }
@@ -5180,7 +5198,7 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <h2>Changes</h2><p>We will update this page when the policy changes.</p></body></html>`));
 app.get('/delete-account', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your Maata account</title><style>${PAGE_CSS}input,button{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid #D5DCE0;width:100%;box-sizing:border-box;margin:6px 0}button{background:#C8413A;color:#fff;border:0;font-weight:700;cursor:pointer}#msg{margin-top:10px;font-weight:600}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png" alt=""><h1>Delete your Maata account</h1></div>
-<p>This permanently deletes your Maata account, chats, files, statuses, business profile, catalogue and ads. It cannot be undone.</p>
+<p>This permanently deletes your Maata account, chats, files, statuses, business profile, catalogue and ads. It cannot be undone.</p><p><b>Deleted at once:</b> your profile and photo, mobile number, chats and files you sent or received, statuses, reels and comments, contacts saved in Maata, call history, Maata AI chats, business profile, catalogue and ads, Find Work / Hire Workers profiles, jobs and alerts, Local Services provider profile, your ratings, live-location (team) history, login history and support tickets.</p><p><b>Kept:</b> bills and orders you made with a shop, and Local Services bookings, stay in that shop's or provider's records because they are their business records. A short security record (your name, number and the time of deletion) is kept for up to 1 year to prevent fraud, then removed. Maata does not keep other copies.</p>
 <p>In the app: <b>⋮ → Settings → Delete my account</b>. Or enter your mobile number and password here:</p>
 <form id="f"><input id="ph" inputmode="tel" placeholder="Mobile number" required><input id="pw" type="password" placeholder="Password" required><button>Delete my account permanently</button></form><div id="msg" role="status"></div>
 <script>document.getElementById('f').onsubmit=async(e)=>{e.preventDefault();const m=document.getElementById('msg');if(!confirm('Delete your Maata account forever?'))return;
