@@ -391,6 +391,7 @@ app.post('/api/push/decline', (req, res) => {
 // Message notifications for people who are not online right now
 function previewOf(m) {
   if (m.type === 'text') return m.text.slice(0, 120);
+  if (m.type === 'call') return (m.call && m.call.kind === 'video' ? '🎥 Missed video call' : '📞 Missed voice call');
   return ({ image: '📷 Photo', video: '🎥 Video', audio: m.file && m.file.voice ? '🎤 Voice message' : '🎵 Audio', file: '📄 Document', contact: '👤 Contact', poll: '📊 Poll', event: '📅 Event', location: '📍 Location', gif: '🎞️ GIF', sticker: '💟 Sticker', product: '🛍️ Product', reel: '🎬 Reel' })[m.type] || 'New message';
 }
 function notifyOffline(fromUser, m) {
@@ -2034,7 +2035,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 234;
+const MAATA_VERSION = 235;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5855,6 +5856,15 @@ io.use((socket, next) => {
   } catch { next(new Error('unauthorized')); }
 });
 
+// 📞 like WhatsApp: a call that was not answered leaves a card in the chat — "Missed voice call · Tap to call back"
+function callNote(rec) {
+  try {
+    if (rec.answeredAt || rec.group || String(rec.to).startsWith('g:')) return;
+    const a = userById(rec.from), b = userById(rec.to); if (!a || !b) return;
+    if (blockedOf(b).includes(a.id)) return; // a blocked caller leaves nothing in the chat
+    deliverMessage(a, { id: b.id, name: b.name }, { type: 'call', call: { id: rec.id, kind: rec.kind === 'video' ? 'video' : 'voice', status: rec.status } });
+  } catch (e) { console.error('[call note]', e.message); }
+}
 function finishCall(rec, status) {
   if (!rec || rec.endedAt) return;
   rec.endedAt = now();
@@ -5863,6 +5873,7 @@ function finishCall(rec, status) {
   activeCalls.delete(rec.id);
   save(); pushLive();
   for (const id of [rec.from, rec.to]) { const u = userById(id); if (u) io.to('user:' + id).emit('call:log', callView(u, rec)); }
+  callNote(rec);
   feed('call', `${rec.kind === 'video' ? 'Video' : 'Voice'} call ${nameOf(rec.from)} → ${nameOf(rec.to)}: ${rec.status}${rec.duration ? ' (' + Math.floor(rec.duration / 60) + 'm ' + (rec.duration % 60) + 's)' : ''}`);
 }
 
