@@ -2048,7 +2048,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 240;
+const MAATA_VERSION = 241;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3564,7 +3564,7 @@ app.get('/api/biz/:bizId/products/:pid/moves', auth, (req, res) => {
   res.json(db.stockMoves.filter((m) => m.bizId === c.bizId && m.productId === req.params.pid).slice(-60).reverse().map((m) => ({ ...m, actorName: (userById(m.actor) || {}).name || '' })));
 });
 // ---- billing ----
-const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, note: i.note || '', voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null, shop: i.shop || {} });
+const invOut = (i) => ({ id: i.id, number: i.number, createdAt: i.createdAt, byName: i.byName, customer: i.customer, items: i.items, subtotal: i.subtotal, discount: i.discount, taxable: i.taxable, tax: i.tax, roundOff: i.roundOff, grand: i.grand, payment: i.payment, status: i.status, note: i.note || '', voidReason: i.voidReason || '', taxMode: i.taxMode, key: i.key, sentTo: i.sentTo || null, shop: i.shop || {}, ...(i.offline ? { offline: i.offline } : {}) });
 function priceBill(lines, discountPaise, mode) { // allocate the discount by value, then tax per line
   const base = lines.map((l) => Math.round(l.unitPaise * l.qty)), sumBase = base.reduce((a, b) => a + b, 0);
   const disc = Math.max(0, Math.min(sumBase, Math.round(discountPaise || 0)));
@@ -3579,6 +3579,23 @@ function priceBill(lines, discountPaise, mode) { // allocate the discount by val
   });
   return { lines: out, subtotal: sumBase, discount: disc, taxable: out.reduce((s, x) => s + x.taxable, 0), tax: out.reduce((s, x) => s + x.tax, 0), total: out.reduce((s, x) => s + x.total, 0) };
 }
+// 📵 v241 offline counter billing: each phone gets its own bill series (e.g. INV/2026-27/C1-0001), so bills made
+// without internet already have their final number (GST: a separate, gap-free series per counter is allowed).
+function offDevice(c, dev, make) {
+  dev = String(dev || '').replace(/[^\w-]/g, '').slice(0, 40); if (dev.length < 8) return null;
+  c.biz.offDevs = c.biz.offDevs || [];
+  let d = c.biz.offDevs.find((x) => x.dev === dev);
+  if (!d && make) { d = { dev, code: 'C' + (c.biz.offDevs.length + 1), by: c.actor.id, at: now() }; c.biz.offDevs.push(d); save(); }
+  return d;
+}
+const offSeries = (c, d, fy) => (c.biz.settings.prefix || 'INV') + '/' + fy + '/' + d.code + '-';
+app.get('/api/biz/:bizId/offline-kit', auth, (req, res) => {
+  const c = bizCtx(req, res, 'bill'); if (!c) return;
+  const d = offDevice(c, req.query.dev, true); if (!d) return res.status(400).json({ error: 'Update the Maata app.' });
+  const fy = finYear(), pre = offSeries(c, d, fy);
+  let last = 0; for (const i of db.invoices) if (i.bizId === c.bizId && i.number && i.number.startsWith(pre)) last = Math.max(last, parseInt(i.number.slice(pre.length), 10) || 0);
+  res.json({ code: d.code, fy, prefix: pre, last, maxDays: 7, maxBills: 300 });
+});
 app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
   const c = bizCtx(req, res, 'bill'); if (!c) return;
   const b = req.body || {}, s = c.biz.settings;
@@ -3587,31 +3604,42 @@ app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
   const raw = Array.isArray(b.items) ? b.items.slice(0, 200) : [];
   if (!raw.length) return res.status(400).json({ error: 'Add at least one item to the bill.' });
   const canPrice = c.perms.includes('stock') || c.role === 'owner' || c.role === 'manager';
+  // 📵 a bill made at the counter without internet, sent now that the internet is back
+  let off = null;
+  if (b.off && typeof b.off === 'object') {
+    const d = offDevice(c, b.off.dev, false); if (!d) return res.status(400).json({ error: 'This phone is not set up for offline bills. Open the counter once with internet.' });
+    const at = Math.min(now(), Math.max(now() - 8 * 86400000, Number(b.off.at) || now()));
+    const fy = finYear(at), pre = offSeries(c, d, fy), no = String(b.off.no || '');
+    if (!no.startsWith(pre) || !/^\d{1,6}$/.test(no.slice(pre.length))) return res.status(400).json({ error: 'Offline bill number ' + no + ' is not in this phone\'s series.' });
+    off = { at, no, code: d.code, taken: db.invoices.some((i) => i.bizId === c.bizId && i.number === no), short: [], priceDiff: [] };
+  }
   const lines = [], need = new Map();
   for (const it of raw) {
     const qty = Math.round(Number(it.qty) * 1000) / 1000; if (!(qty > 0 && qty < 1e6)) return res.status(400).json({ error: 'Check the quantity of every item.' });
-    let p = null; if (it.productId) { p = db.products.find((x) => x.id === it.productId && x.ownerId === c.bizId); if (!p) return res.status(400).json({ error: 'A product on this bill was removed. Refresh and try again.' }); }
+    let p = null; if (it.productId) { p = db.products.find((x) => x.id === it.productId && x.ownerId === c.bizId); if (!p && !off) return res.status(400).json({ error: 'A product on this bill was removed. Refresh and try again.' }); }
     const listPrice = p ? Math.round((p.price || 0) * 100) : null;
-    let unitPaise = listPrice; if (it.price != null && it.price !== '' && (canPrice || !p)) unitPaise = Math.round(Number(it.price) * 100);
+    let unitPaise = listPrice; if (it.price != null && it.price !== '' && (canPrice || !p || off)) unitPaise = Math.round(Number(it.price) * 100); // offline: keep the price printed on the customer's bill
+    if (off && p && unitPaise !== listPrice) off.priceDiff.push(p.name);
     if (!(unitPaise >= 0 && unitPaise < 1e10)) return res.status(400).json({ error: (p ? p.name : 'An item') + ' has no price. Add a price first.' });
     const name = p ? p.name : clip(it.name, 80); if (!name) return res.status(400).json({ error: 'Every item needs a name.' });
-    const taxRate = p ? p.taxRate || 0 : BIZ_TAX.includes(Number(it.taxRate)) ? Number(it.taxRate) : 0;
+    const taxRate = p && !off ? p.taxRate || 0 : BIZ_TAX.includes(Number(it.taxRate)) ? Number(it.taxRate) : p ? p.taxRate || 0 : 0;
     lines.push({ productId: p ? p.id : null, name, unit: p ? p.unit || 'pcs' : clip(it.unit, 10) || 'pcs', qty, unitPaise, taxRate, hsn: p ? p.sku || '' : '' });
     if (p && p.stock != null) need.set(p.id, (need.get(p.id) || 0) + qty);
   }
-  if (!s.allowNegative) { // never sell more than the stock we have
+  if (off) { for (const [pid, q] of need) { const p = db.products.find((x) => x.id === pid); if (p.stock < q) off.short.push(p.name); } } // already sold: never refuse, tell the owner
+  else if (!s.allowNegative) { // never sell more than the stock we have
     const short = []; for (const [pid, q] of need) { const p = db.products.find((x) => x.id === pid); if (p.stock < q) short.push(p.name + ' (in stock ' + p.stock + ')'); }
     if (short.length) return res.status(400).json({ error: 'Not enough stock: ' + short.join(', ') + '. Add stock first, or turn on "Allow selling below 0" in settings.' });
   }
   const pr = priceBill(lines, Math.round(Number(b.discount || 0) * 100), s.taxMode);
   const grand = s.roundOff ? Math.round(pr.total / 100) * 100 : pr.total;
-  const method = b.method === 'upi' ? 'upi' : 'cash';
+  const method = b.method === 'upi' && !off ? 'upi' : 'cash';
   if (method === 'upi' && !s.upi) return res.status(400).json({ error: 'Add your shop UPI ID first (More → Settings), so Maata can make the QR code.' });
-  c.biz.invSeq = c.biz.invSeq || {}; const fy = finYear(); c.biz.invSeq[fy] = (c.biz.invSeq[fy] || 0) + 1;
+  c.biz.invSeq = c.biz.invSeq || {}; const fy = finYear(); const useSeq = !off || off.taken; if (useSeq) c.biz.invSeq[fy] = (c.biz.invSeq[fy] || 0) + 1;
   const phone = cleanMobile(b.customer?.phone || '');
   const inv = {
-    id: newId(), bizId: c.bizId, idem: idem || null, key: crypto.randomBytes(12).toString('hex'), number: (s.prefix || 'INV') + '/' + fy + '/' + String(c.biz.invSeq[fy]).padStart(4, '0'),
-    createdAt: now(), by: c.actor.id, byName: c.actor.name, customer: { name: clip(b.customer?.name, 60), phone: phone || '' }, taxMode: s.taxMode,
+    id: newId(), bizId: c.bizId, idem: idem || null, key: crypto.randomBytes(12).toString('hex'), number: off && !off.taken ? off.no : (s.prefix || 'INV') + '/' + fy + '/' + String(c.biz.invSeq[fy]).padStart(4, '0'),
+    createdAt: off ? off.at : now(), by: c.actor.id, byName: c.actor.name, customer: { name: clip(b.customer?.name, 60), phone: phone || '' }, taxMode: s.taxMode,
     items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, hsn: l.hsn, disc: l.disc, taxable: l.taxable, tax: l.tax, total: l.total })),
     subtotal: pr.subtotal, discount: pr.discount, taxable: pr.taxable, tax: pr.tax, roundOff: grand - pr.total, grand,
     payment: { method, status: method === 'upi' ? 'unpaid' : 'paid', paidAt: method === 'upi' ? null : now() }, status: 'final', via: b.via === 'counter' ? 'counter' : undefined, history: [{ at: now(), by: c.actor.id, what: 'created' }], // UPI: paid when the shop sees the money
@@ -3619,8 +3647,10 @@ app.post('/api/biz/:bizId/invoices', auth, (req, res) => {
   };
   { const nt = clip(String(b.note || '').trim(), 200); if (nt) inv.note = nt; } // remarks (e.g. "deliver tomorrow", "exchange within 7 days")
   { const gv = Math.round(Number(b.cashGiven) * 100); if (method === 'cash' && gv >= grand && gv < 1e9) { inv.payment.given = gv; inv.payment.change = gv - grand; } } // counter: cash received and change given back
+  if (off) { inv.offline = { code: off.code, syncedAt: now(), ...(off.taken ? { printedNo: off.no } : {}), ...(off.short.length ? { short: off.short } : {}), ...(off.priceDiff.length ? { priceDiff: off.priceDiff } : {}) }; inv.payment.paidAt = off.at; }
   db.invoices.push(inv);
   for (const l of inv.items) if (l.productId) { const p = db.products.find((x) => x.id === l.productId); if (p) stockMove(c, p, -l.qty, 'sale', inv.id); }
+  if (off) bizLog(c, 'offline-bill', inv.id, inv.number + ' made offline on counter ' + off.code + (off.short.length ? ' · ⚠️ stock below 0: ' + off.short.join(', ') : '') + (off.priceDiff.length ? ' · old price used: ' + off.priceDiff.join(', ') : '') + (off.taken ? ' · number ' + off.no + ' was already used, new number given' : ''));
   bizLog(c, 'invoice', inv.id, inv.number + ' ' + rupees(grand)); save();
   res.json(invOut(inv));
 });
