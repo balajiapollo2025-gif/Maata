@@ -327,6 +327,19 @@ app.post('/api/push/test-order', auth, (req, res) => {
     say: TEST_SAY[kind][lang], sayEn: TEST_SAY[kind].en, lang }, { urgency: 'high', ttl: 120 }).catch(() => {}), 10000);
   res.json({ ok: true, android });
 });
+// 📞 "Test call with Maata closed": rings this person's own Android phone like a real incoming call (nobody is on the other side)
+const testCallAt = new Map();
+app.post('/api/push/test-call', auth, (req, res) => {
+  const u = req.user;
+  if (now() - (testCallAt.get(u.id) || 0) < 20000) return res.status(429).json({ error: 'Wait a few seconds and try again.' });
+  testCallAt.set(u.id, now());
+  const android = !!(FCM && (u.fcmTokens || []).length);
+  if (!android) return res.json({ ok: false, android, fcm: !!FCM });
+  const callId = 'test-' + crypto.randomBytes(6).toString('hex');
+  setTimeout(() => fcmTo(u, { type: 'call', callId, kind: 'voice', title: '📞 Maata test call is calling…', body: 'This is how a Maata call rings when Maata is closed', tag: 'call' }, 30).catch(() => {}), 10000);
+  setTimeout(() => fcmTo(u, { type: 'call_end', callId }, 30).catch(() => {}), 35000); // stop ringing if nobody answers
+  res.json({ ok: true, android, fcm: true });
+});
 app.post('/api/push/test', auth, async (req, res) => res.json({ sent: await pushTo(req.user, { type: 'test', title: 'Maata 🦜', body: 'Notifications are working!', url: '/' }) }));
 
 // ---------- Native Android app: Firebase Cloud Messaging (full-screen incoming calls, like WhatsApp) ----------
@@ -2035,7 +2048,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 239;
+const MAATA_VERSION = 240;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
