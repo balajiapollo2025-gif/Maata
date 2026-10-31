@@ -707,6 +707,18 @@ class MainActivity : Activity() {
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun secureAlarm(on: Boolean): Boolean = if (on) SecureAlarm.start(this@MainActivity) else { SecureAlarm.stop(this@MainActivity); true }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }
+        /** 📞 calls while Maata is closed: {"notif":true,"calls":true,"fsi":true,"battery":true,"autostart":false,"maker":"Xiaomi","ringer":true,"token":true} */
+        @JavascriptInterface fun callAlertStatus(): String = try {
+            val st = TeamTrackService.bgStatus(this@MainActivity)
+            val rg = try { (getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager).ringerMode == AudioManager.RINGER_MODE_NORMAL } catch (_: Exception) { true }
+            st.put("calls", Notifier.callsAllowed(this@MainActivity)).put("fsi", Notifier.fullScreenAllowed(this@MainActivity))
+              .put("ringer", rg).put("token", Notifier.token(this@MainActivity).isNotEmpty()).toString()
+        } catch (e: Exception) { "{}" }
+        /** Android 14+: the "Full screen notifications" switch for Maata */
+        @JavascriptInterface fun openFullScreenSettings() { runOnUiThread {
+            try { if (Build.VERSION.SDK_INT >= 34) startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName"))) else openAppSettings() }
+            catch (_: Exception) { try { openAppSettings() } catch (_: Exception) { } }
+        } }
         @JavascriptInterface fun openNotificationSettings() {
             runOnUiThread { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
         }
