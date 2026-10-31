@@ -146,6 +146,13 @@ object Notifier {
             .setContentTitle("🔊 " + title).setContentText("Maata is reading the order out loud")
             .setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true).setOngoing(true)
             .setContentIntent(openAppIntent(ctx, "/", 4343)).build()
+    /** Can Maata ring for calls? (notifications allowed and the Calls channel not turned off) */
+    fun callsAllowed(ctx: Context): Boolean {
+        if (!canPost(ctx)) return false
+        return try { val ch = ctx.getSystemService(NotificationManager::class.java).getNotificationChannel(CH_CALLS); ch == null || ch.importance != NotificationManager.IMPORTANCE_NONE } catch (_: Exception) { true }
+    }
+    /** Android 14+: may Maata show the call screen over the lock screen? */
+    fun fullScreenAllowed(ctx: Context): Boolean = Build.VERSION.SDK_INT < 34 || try { ctx.getSystemService(NotificationManager::class.java).canUseFullScreenIntent() } catch (_: Exception) { true }
     /** Can Maata ring for orders? (notifications allowed and the orders channel not turned off) */
     fun ordersAllowed(ctx: Context): Boolean {
         if (!canPost(ctx)) return false
