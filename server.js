@@ -1435,10 +1435,12 @@ app.post('/api/tts', auth, async (req, res) => {
 const trHits = new Map();
 const TR_NAMES = { te: 'Telugu (Telugu script)', en: 'English', hi: 'Hindi (Devanagari script)', ta: 'Tamil (Tamil script)', kn: 'Kannada (Kannada script)', ml: 'Malayalam (Malayalam script)', bn: 'Bengali (Bengali script)', mr: 'Marathi (Devanagari script)', gu: 'Gujarati (Gujarati script)', pa: 'Punjabi (Gurmukhi script)', ur: 'Urdu (Urdu script)', or: 'Odia (Odia script)' };
 const aiTrCache = new Map();
-async function aiTranslate(text, to) {
+async function aiTranslate(text, to, ctx) {
   const name = TR_NAMES[to]; if (!name) return null;
   const k = to + '|' + text; if (aiTrCache.has(k)) return aiTrCache.get(k);
-  const r = await gemini('You are a translator for a chat app in India. Translate the user message into ' + name + '. The message may be in any language, including Indian languages typed in English letters (for example Telugu like "eppudu vastharu" or Hindi like "kab aaoge"). Keep names, numbers, phone numbers and addresses exactly. Keep the tone. Return ONLY the translation, nothing else.',
+  // v246: the last few chat lines help Maata AI understand short replies ("malli pettu", "haa", "adhi ivvu")
+  const lines = Array.isArray(ctx) ? ctx.map((x) => String(x || '').slice(0, 200)).filter(Boolean).slice(-4) : [];
+  const r = await gemini('You are Maata Translate, the translator of an Indian chat app. Translate the message into ' + name + ' the way a native speaker would text it to a friend: natural, short, same tone and politeness (keep respect words like "anna", "amma", "garu", "ji" in a natural way). The message may be in any language or mixed, including Indian languages typed in English letters (Telugu like "eppudu vastharu", "malli pettu"; Hindi like "kab aaoge"; Tamil like "enna panra"). Keep names, numbers, prices, phone numbers, addresses, links and emojis exactly. Do not explain and do not add quotes. If it is already in ' + name + ', return it unchanged. Return ONLY the translation.' + (lines.length ? '\n\nEarlier lines of this chat (only to understand the meaning, do not translate them):\n' + lines.join('\n') : ''),
     [{ role: 'user', parts: [{ text }] }], { maxTokens: 800, temperature: 0.2 });
   if (r.error || !r.text) return null;
   const out = r.text.trim().replace(/^["“]|["”]$/g, '');
@@ -1453,6 +1455,10 @@ app.post('/api/translate', auth, async (req, res) => {
   const from = String(req.body?.from || '');
   const text = String(req.body?.text || '').trim().slice(0, 1500);
   if (!text) return res.status(400).json({ error: 'Nothing to translate.' });
+  const mode = String(req.body?.mode || ''), ctx = req.body?.ctx;
+  // v246: chat messages go to Maata AI first (it understands mixed and romanised Indian languages and keeps the tone);
+  // the plain translator is the backup when AI is not set up or busy
+  if ((mode === 'chat' || mode === 'send') && GEMINI_KEY) { const ai = await aiTranslate(text, to, ctx); if (ai) return res.json({ translated: ai, by: 'ai' }); }
   let out = LANGS.includes(to) ? await translate(text, from, to) : null;
   // The free/Google translators fail on Indian languages typed in English letters ("eppudu vastharu") or when their
   // daily limit is over — then Maata AI (Gemini) translates. It understands mixed and romanised Telugu, Hindi, Tamil…
@@ -2048,7 +2054,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 245;
+const MAATA_VERSION = 246;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -6971,6 +6977,8 @@ io.on('connection', (socket) => {
     if (type === 'text') {
       const text = str(p?.text, 4000); if (!text) return reply({ error: 'Message not sent.' });
       fields = { type, text };
+      // 🌐 v246 "send in their language": the words the sender typed, shown under the translation
+      if (p?.orig && typeof p.orig === 'object') { const ot = str(p.orig.text, 4000), ol = String(p.orig.lang || '').slice(0, 5), tl = String(p.orig.to || '').slice(0, 5); if (ot && ot !== text) fields.orig = { text: ot, lang: /^[a-z]{2}$/.test(ol) ? ol : '', to: /^[a-z]{2}$/.test(tl) ? tl : '' }; }
     } else if (type === 'reel') {
       const rl = db.reels.find((x) => x.id === String(p?.reel?.id || '') && !x.removed);
       if (!rl) return reply({ error: 'Reel not found.' });
@@ -7025,7 +7033,7 @@ io.on('connection', (socket) => {
     if (!m || m.from !== me || m.deleted || (m.type || 'text') !== 'text' || m.ai) return reply({ error: 'This message cannot be edited.' });
     if (now() - m.ts > 15 * 60000) return reply({ error: 'Messages can be edited for 15 minutes after sending.' });
     const text = String(p.text || '').trim().slice(0, 4000); if (!text) return reply({ error: 'Message cannot be empty.' });
-    if (text !== m.text) { m.text = text; m.editedAt = now(); save(); emitUpdate(m); }
+    if (text !== m.text) { m.text = text; m.editedAt = now(); delete m.orig; save(); emitUpdate(m); }
     reply({ message: m });
   });
   socket.on('msg:opened', (p) => {
