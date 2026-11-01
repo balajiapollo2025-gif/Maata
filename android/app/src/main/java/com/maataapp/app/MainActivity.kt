@@ -707,6 +707,19 @@ class MainActivity : Activity() {
         @JavascriptInterface fun stopPhoneRingtone() { stopPhoneRing() }
         @JavascriptInterface fun secureAlarm(on: Boolean): Boolean = if (on) SecureAlarm.start(this@MainActivity) else { SecureAlarm.stop(this@MainActivity); true }
         @JavascriptInterface fun setSpeaker(on: Boolean): Boolean { wantSpeaker = on; guardRoute(); return applyRoute(on) }
+        /** ✏️ v249 "Save to phone contacts": opens the phone's own Contacts "new contact" screen, filled in (no permission needed) */
+        @JavascriptInterface fun addPhoneContact(name: String, phone: String, company: String): Boolean = try {
+            val i = Intent(android.provider.ContactsContract.Intents.Insert.ACTION).apply {
+                type = android.provider.ContactsContract.RawContacts.CONTENT_TYPE
+                putExtra(android.provider.ContactsContract.Intents.Insert.NAME, name)
+                putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, phone)
+                putExtra(android.provider.ContactsContract.Intents.Insert.PHONE_TYPE, android.provider.ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
+                if (company.isNotBlank()) putExtra(android.provider.ContactsContract.Intents.Insert.COMPANY, company)
+                putExtra("finishActivityOnSaveCompleted", true)
+            }
+            runOnUiThread { try { startActivity(i) } catch (_: Exception) { } }
+            true
+        } catch (e: Exception) { false }
         /** 📞 calls while Maata is closed: {"notif":true,"calls":true,"fsi":true,"battery":true,"autostart":false,"maker":"Xiaomi","ringer":true,"token":true} */
         @JavascriptInterface fun callAlertStatus(): String = try {
             val st = TeamTrackService.bgStatus(this@MainActivity)
