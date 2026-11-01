@@ -1498,6 +1498,7 @@ function contactView(meUser, u, extra = {}) {
     ...publicUser(u),
     displayName: (c && c.name) || u.name,
     inContacts,
+    ...(c && (c.first || c.last || c.company) ? { cFirst: c.first || '', cLast: c.last || '', cCompany: c.company || '' } : {}),
     blocked: blockedOf(meUser).includes(u.id),
     online: inContacts && isOnline(u.id),
     biz: u.business ? { name: u.business.name, category: u.business.category } : null,
@@ -1567,14 +1568,19 @@ app.get('/api/users/:id', auth, (req, res) => {
 // Add one contact by mobile number
 app.post('/api/contacts', auth, rateLimit, (req, res) => {
   const want = last10(req.body?.phone);
-  const nick = String(req.body?.name || '').trim().slice(0, 40);
+  // v249: WhatsApp-style "Edit contact": first name, last name and business name (only you see them)
+  const cl = (k, n) => String(req.body?.[k] ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const first = cl('firstName', 40), lastN = cl('lastName', 40), company = cl('company', 60), full = req.body?.firstName !== undefined;
+  const nick = full ? (first + ' ' + lastN).trim().slice(0, 40) : String(req.body?.name || '').trim().slice(0, 40);
   if (want.length < 10) return res.status(400).json({ error: 'Enter a valid 10-digit mobile number.' });
+  if (full && !nick) return res.status(400).json({ error: 'Enter a first name.' });
   const u = db.users.find((x) => last10(x.phone) === want && x.status !== 'blocked');
   if (!u) return res.status(404).json({ error: 'This number is not on Maata yet. Invite them!', notOnMaata: true });
   if (u.id === req.user.id) return res.status(400).json({ error: 'That is your own number.' });
   const list = contactsOf(req.user);
   const existing = list.find((c) => c.id === u.id);
-  if (existing) { if (nick) existing.name = nick; } else list.push({ id: u.id, name: nick || '', addedAt: now() });
+  const extra = full ? { first, last: lastN, company } : {};
+  if (existing) { if (nick) existing.name = nick; Object.assign(existing, extra); } else list.push({ id: u.id, name: nick || '', addedAt: now(), ...extra });
   save();
   res.json(contactView(req.user, u, { lastMessage: null, unread: 0 }));
 });
@@ -2054,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 248;
+const MAATA_VERSION = 250;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3301,7 +3307,7 @@ const BIZ_CATS = ['Mobile & electronics', 'Grocery', 'Clothing', 'Food & restaur
 const clip = (v, n) => String(v ?? '').trim().slice(0, n);
 function bizView(u) {
   const b = u.business; if (!b) return null;
-  return { ...b, members: undefined, invSeq: undefined, ordSeq: undefined, settings: undefined, store: undefined, storeOn: !!(b.store && b.store.on), ownerId: u.id, ownerName: u.name, phone: u.phone, productCount: db.products.filter((p) => p.ownerId === u.id).length };
+  return { ...b, members: undefined, invSeq: undefined, ordSeq: undefined, settings: undefined, store: undefined, storeOn: !!(b.store && b.store.on), upi: (b.settings && b.settings.upi) || '', ownerId: u.id, ownerName: u.name, phone: u.phone, productCount: db.products.filter((p) => p.ownerId === u.id).length };
 }
 app.get('/api/business/:id', auth, (req, res) => {
   const u = userById(req.params.id);
