@@ -1780,10 +1780,25 @@ app.get('/api/backup/export', auth, (req, res) => {
 app.post('/api/backup/done', auth, (req, res) => { req.user.lastBackup = { at: now(), size: Math.max(0, Number(req.body?.size) || 0), messages: Math.max(0, Number(req.body?.messages) || 0), media: !!req.body?.media, where: clip(req.body?.where, 30) }; save(); res.json(req.user.lastBackup); });
 app.get('/api/backup/info', auth, (req, res) => res.json(req.user.lastBackup || null));
 
-app.get('/api/ice', auth, (req, res) => {
+// 📞 v260: TURN relay = calls keep their voice on Jio / Airtel mobile data (CGNAT) and when the network changes.
+// Cloudflare Realtime TURN (free 1,000 GB / month): set CF_TURN_KEY_ID + CF_TURN_TOKEN on Render. Or your own: TURN_URL (+ TURN_USERNAME, TURN_PASSWORD).
+let cfTurn = { at: 0, ice: null };
+async function cfTurnIce() {
+  if (!process.env.CF_TURN_KEY_ID || !process.env.CF_TURN_TOKEN) return null;
+  if (cfTurn.ice && now() - cfTurn.at < 12 * 3600e3) return cfTurn.ice;
+  try {
+    const r = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/' + encodeURIComponent(process.env.CF_TURN_KEY_ID) + '/credentials/generate-ice-servers', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.CF_TURN_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ ttl: 86400 }), signal: AbortSignal.timeout(5000) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error('http ' + r.status);
+    const list = (Array.isArray(d.iceServers) ? d.iceServers : d.iceServers ? [d.iceServers] : []).map((x) => ({ ...x, urls: [].concat(x.urls || []).filter((u) => !/:53(\?|$)/.test(u)) })).filter((x) => x.urls.length);
+    if (list.length) cfTurn = { at: now(), ice: list };
+  } catch (e) { console.error('[turn] cloudflare', e.message); }
+  return cfTurn.ice;
+}
+app.get('/api/ice', auth, async (req, res) => {
   const ice = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  const cf = await cfTurnIce(); if (cf) ice.push(...cf);
   if (process.env.TURN_URL) ice.push({ urls: process.env.TURN_URL.split(','), username: process.env.TURN_USERNAME || '', credential: process.env.TURN_PASSWORD || '' });
-  res.json(ice);
+  res.setHeader('Cache-Control', 'no-store'); res.json(ice);
 });
 
 app.get('/api/announcement', auth, (req, res) => {
@@ -2060,7 +2075,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 259;
+const MAATA_VERSION = 260;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -7475,6 +7490,9 @@ io.on('connection', (socket) => {
     io.to(room(p.to)).emit('call:rejected', clean(p));
     socket.to(room(me)).emit('call:taken-elsewhere', { callId: p.callId });
   });
+  // 🔁 v260: reconnect the voice of a running call (new network / weak signal) without hanging up
+  socket.on('call:reneg', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:reneg', { ...clean(p), ask: !!p.ask }); });
+  socket.on('call:reneg-ans', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:reneg-ans', clean(p)); });
   socket.on('call:busy', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'busy'); io.to(room(p.to)).emit('call:busy', clean(p)); });
   socket.on('call:ice', (p) => {
     if (!valid(p)) return;
