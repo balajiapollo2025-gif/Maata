@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 250;
+const MAATA_VERSION = 251;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3314,6 +3314,104 @@ app.get('/api/business/:id', auth, (req, res) => {
   if (!u || u.status === 'blocked' || blockedOf(u).includes(req.user.id) || !u.business) return res.status(404).json({ error: 'This is not a business account.' });
   res.json(bizView(u));
 });
+// ==================== 🤖 v251 Maata AI assistants ====================
+// 1) "Ask" a shop: answers from the shop's PUBLIC details only (catalogue, prices, hours, address, delivery) — never
+//    bills, buying prices or other customers. It can suggest a cart, or pass the question to the owner.
+const askHits = new Map();
+function askQuota(uid) { const d = dayKey(now()), q = askHits.get(uid); const n = q && q.day === d ? q.n : 0; if (n >= 40) return false; askHits.set(uid, { day: d, n: n + 1 }); return true; }
+const askCache = new Map();
+app.post('/api/business/:id/ask', auth, async (req, res) => {
+  const u = userById(req.params.id);
+  if (!u || u.status === 'blocked' || !u.business || blockedOf(u).includes(req.user.id)) return res.status(404).json({ error: 'This is not a business account.' });
+  const b = u.business, cfg = b.aiAsk || {};
+  if (cfg.on === false) return res.status(403).json({ error: 'This shop has switched off Maata AI answers. Message the shop instead.', off: true });
+  const q = String(req.body?.q || '').trim().slice(0, 400); if (!q) return res.status(400).json({ error: 'Type your question.' });
+  if (!GEMINI_KEY) return res.status(501).json({ error: 'Maata AI is not set up on this server yet.' });
+  if (!askQuota(req.user.id)) return res.status(429).json({ error: 'You asked a lot today. Message the shop directly, or try tomorrow.' });
+  const prods = db.products.filter((p) => p.ownerId === u.id && p.available !== false).slice(0, 220)
+    .map((p) => ({ id: p.id, name: p.name, price: p.price, unit: p.unit || 'pcs', inStock: p.stock == null || p.stock > 0, cat: p.category || '' }));
+  const st = b.store || {}, hist = (Array.isArray(req.body?.history) ? req.body.history : []).slice(-6).map((h) => ({ role: h.me ? 'user' : 'model', parts: [{ text: String(h.t || '').slice(0, 400) }] }));
+  const shop = { name: b.name, category: b.category, about: b.description || '', hours: b.hours || '', address: b.address || '', phone: u.phone, website: b.website || '', onlineOrders: !!st.on,
+    delivery: st.on ? { homeDelivery: !!st.delivery, pickup: st.pickup !== false, feeRupees: (st.fee || 0) / 100, freeAboveRupees: (st.freeAbove || 0) / 100, minOrderRupees: (st.minOrder || 0) / 100, eta: st.eta || '', area: st.area || '' } : null, ownerRules: String(cfg.rules || '').slice(0, 500) };
+  const ck = u.id + '|' + q.toLowerCase() + '|' + hist.length; if (!hist.length && askCache.has(ck) && now() - askCache.get(ck).at < 600000) return res.json(askCache.get(ck).out);
+  const sys = 'You are Maata AI, the helpful shop assistant of "' + b.name + '" inside the Maata app (India). Answer the customer using ONLY the shop data below. ' +
+    'Reply in the SAME language and script the customer used (Telugu, Hindi, Tamil, English, or Telugu/Hindi typed in English letters). Keep it short and friendly (1-3 sentences). ' +
+    'Prices are in rupees. Never invent items, prices, offers, discounts or timings. Follow the owner rules. ' +
+    'If the customer wants to buy items that are in the catalogue, fill "cart" with their product ids and quantities. ' +
+    'If the answer is not in the data (special requests, bargaining, complaints, items not listed), say you will ask the owner and set "askOwner": true. ' +
+    'Reply ONLY as JSON: {"answer": string, "cart": [{"id": string, "qty": number}], "askOwner": boolean}.\n\nSHOP DATA:\n' + JSON.stringify(shop) + '\nCATALOGUE:\n' + JSON.stringify(prods);
+  const r = await gemini(sys, [...hist, { role: 'user', parts: [{ text: q }] }], { json: true, maxTokens: 700, temperature: 0.3 });
+  if (r.error || !r.text) return res.status(502).json({ error: AI_ERR[r.error] || AI_ERR.busy });
+  let d; try { d = JSON.parse(r.text); } catch { d = { answer: r.text, cart: [], askOwner: false }; }
+  const cart = (Array.isArray(d.cart) ? d.cart : []).map((c) => ({ p: prods.find((x) => x.id === String(c.id)), qty: Math.max(1, Math.min(99, Number(c.qty) || 1)) })).filter((c) => c.p && c.p.inStock).slice(0, 20)
+    .map((c) => ({ id: c.p.id, name: c.p.name, price: c.p.price, unit: c.p.unit, qty: c.qty }));
+  const out = { answer: String(d.answer || '').slice(0, 1200) || 'Sorry, I could not answer that. Ask the shop owner.', cart, askOwner: !!d.askOwner, canOrder: !!st.on };
+  db.aiAsks.push({ id: newId(), bizId: u.id, by: req.user.id, byName: req.user.name, q, a: out.answer, unanswered: out.askOwner, cart: cart.length, at: now() });
+  if (db.aiAsks.length > 5000) db.aiAsks.splice(0, db.aiAsks.length - 5000);
+  save(); if (!hist.length) askCache.set(ck, { at: now(), out }); if (askCache.size > 500) askCache.delete(askCache.keys().next().value);
+  res.json(out);
+});
+// owner side: switch on/off, rules, what customers asked
+app.get('/api/biz/:bizId/ai-asks', auth, (req, res) => {
+  const c = bizCtx(req, res); if (!c) return; if (!(c.role === 'owner' || c.perms.includes('reports'))) return res.status(403).json({ error: 'Only the owner can see this.' });
+  const list = db.aiAsks.filter((x) => x.bizId === c.bizId).slice(-300).reverse();
+  res.json({ on: (c.biz.aiAsk || {}).on !== false, rules: (c.biz.aiAsk || {}).rules || '', list: list.map((x) => ({ q: x.q, a: x.a, unanswered: x.unanswered, cart: x.cart, byName: x.byName, at: x.at })),
+    week: list.filter((x) => now() - x.at < 7 * 86400000).length, unanswered: list.filter((x) => x.unanswered && now() - x.at < 7 * 86400000).length });
+});
+app.put('/api/biz/:bizId/ai-asks', auth, (req, res) => {
+  const c = bizCtx(req, res, 'settings'); if (!c) return;
+  c.biz.aiAsk = { on: req.body?.on !== false, rules: clip(req.body?.rules, 500) }; save(); res.json(c.biz.aiAsk);
+});
+app.post('/api/biz/:bizId/ai-asks/report', auth, async (req, res) => {
+  const c = bizCtx(req, res); if (!c) return; if (!(c.role === 'owner' || c.perms.includes('reports'))) return res.status(403).json({ error: 'Only the owner can see this.' });
+  if (!aiQuota(req.user, 2)) return res.status(429).json({ error: AI_ERR.quota });
+  const list = db.aiAsks.filter((x) => x.bizId === c.bizId && now() - x.at < 14 * 86400000).slice(-200);
+  if (list.length < 3) return res.json({ report: 'Not enough questions yet. When customers ask Maata AI about your shop, a report appears here.' });
+  const lang = TR_NAMES[req.user.lang] || 'English';
+  const r = await gemini('You help a small shop owner in India. Below are questions customers asked the shop\'s AI assistant in the last 14 days (with the AI answers; "unanswered" means the AI could not answer). Write a short, practical report in ' + lang + ' with 3-6 bullet points: what customers ask most, items they want that are missing or out of stock, questions the owner should answer in the shop details, and one idea to sell more. Use simple words.',
+    [{ role: 'user', parts: [{ text: JSON.stringify(list.map((x) => ({ q: x.q, a: x.a.slice(0, 160), unanswered: x.unanswered }))) }] }], { maxTokens: 700, temperature: 0.4 });
+  if (r.error || !r.text) return res.status(502).json({ error: AI_ERR[r.error] || AI_ERR.busy });
+  res.json({ report: r.text.trim() });
+});
+// 2) ✨ Chat summary: only when the person taps the button, only their own chat with that contact
+app.post('/api/ai/chat-summary', auth, async (req, res) => {
+  const other = userById(String(req.body?.with || '')); if (!other) return res.status(404).json({ error: 'Chat not found.' });
+  if (!aiQuota(req.user, 2)) return res.status(429).json({ error: AI_ERR.quota });
+  const msgs = convMsgs(req.user.id, other.id).filter((m) => !m.deleted && m.type !== 'system' && (m.text || m.type !== 'text')).slice(-150);
+  if (msgs.length < 2) return res.json({ summary: 'There is not much in this chat yet.', reminders: [] });
+  const nm = (id) => (id === req.user.id ? 'Me' : other.name.split(' ')[0]);
+  const lines = msgs.map((m) => new Date(m.ts + 5.5 * 3600000).toISOString().slice(0, 16).replace('T', ' ') + ' ' + nm(m.from) + ': ' + (m.text ? String(m.text).slice(0, 300) : '[' + (m.type === 'call' ? 'call' : m.type) + ']'));
+  const lang = TR_NAMES[req.user.lang] || 'English', nowIst = new Date(now() + 5.5 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
+  const r = await gemini('You summarise a personal chat for "Me" in the Maata app. Current date-time in India: ' + nowIst + '. Write in ' + lang + '. ' +
+    'Give 3-6 short bullet points: the main things discussed, promises, money owed or to be paid (with amounts), plans and dates. Then list future things "Me" may want a reminder for (meetings, calls, payments, deliveries) with an exact India date-time if one is mentioned or clearly implied. ' +
+    'Reply ONLY as JSON: {"summary": string (bullet points separated by new lines), "reminders": [{"text": string, "when": "YYYY-MM-DD HH:MM" India time}]}. Use an empty list if there is nothing to remind.',
+    [{ role: 'user', parts: [{ text: lines.join('\n') }] }], { json: true, maxTokens: 900, temperature: 0.3 });
+  if (r.error || !r.text) return res.status(502).json({ error: AI_ERR[r.error] || AI_ERR.busy });
+  let d; try { d = JSON.parse(r.text); } catch { d = { summary: r.text, reminders: [] }; }
+  const rem = (Array.isArray(d.reminders) ? d.reminders : []).map((x) => ({ text: String(x.text || '').slice(0, 200), at: Date.parse(String(x.when || '').replace(' ', 'T') + ':00+05:30') })).filter((x) => x.text && x.at > now()).slice(0, 5);
+  res.json({ summary: String(d.summary || '').slice(0, 2500), reminders: rem });
+});
+// 3) ⏰ Reminders (sent by the server as a notification + in-app message, so they work even when Maata is closed)
+app.get('/api/reminders', auth, (req, res) => res.json(db.reminders.filter((r) => r.userId === req.user.id && !r.done).sort((a, b) => a.at - b.at).slice(0, 100)));
+app.post('/api/reminders', auth, (req, res) => {
+  const text = clip(req.body?.text, 200), at = Number(req.body?.at); if (!text) return res.status(400).json({ error: 'Write what to remind.' });
+  if (!(at > now() - 60000 && at < now() + 366 * 86400000)) return res.status(400).json({ error: 'Choose a time in the future.' });
+  if (db.reminders.filter((r) => r.userId === req.user.id && !r.done).length >= 200) return res.status(400).json({ error: 'Too many reminders. Delete some first.' });
+  const r = { id: newId(), userId: req.user.id, text, at, chat: clip(req.body?.chat, 60) || null, msgId: clip(req.body?.msgId, 60) || null, createdAt: now(), done: false };
+  db.reminders.push(r); save(); res.json(r);
+});
+app.delete('/api/reminders/:id', auth, (req, res) => { const i = db.reminders.findIndex((r) => r.id === req.params.id && r.userId === req.user.id); if (i > -1) { db.reminders.splice(i, 1); save(); } res.json({ ok: true }); });
+setInterval(() => {
+  const t = now(); let changed = false;
+  for (const r of db.reminders) {
+    if (r.done || r.at > t) continue; r.done = true; r.firedAt = t; changed = true;
+    const u = userById(r.userId); if (!u) continue;
+    const who = r.chat && userById(r.chat), url = r.chat ? '/#chat=' + r.chat : '/';
+    io.to('user:' + u.id).emit('reminder', { id: r.id, text: r.text, chat: r.chat, msgId: r.msgId });
+    pushTo(u, { type: 'msg', title: '⏰ Reminder' + (who ? ' · ' + who.name : ''), body: r.text, tag: 'rem-' + r.id, url }).catch(() => {});
+  }
+  if (changed) { const old = t - 30 * 86400000; for (let i = db.reminders.length - 1; i >= 0; i--) if (db.reminders[i].done && db.reminders[i].firedAt < old) db.reminders.splice(i, 1); save(); }
+}, 30000);
 app.put('/api/business', auth, (req, res) => {
   const b = req.body || {};
   if (b.remove) { delete req.user.business; save(); return res.json(null); }
