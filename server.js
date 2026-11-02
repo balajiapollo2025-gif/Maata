@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 252;
+const MAATA_VERSION = 253;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5224,7 +5224,7 @@ app.get('/admin/api/users', adminAuth, (req, res) => {
     lastSeenAt: isOnline(u.id) ? now() : u.lastSeenAt || null, online: isOnline(u.id), duplicate: !!u.duplicateOf, email: u.email || '',
     ...(agg[u.id] || { logins: 0, calls: 0, talkSec: 0, sent: 0 }),
   }));
-  if (q) list = list.filter((u) => u.name.toLowerCase().includes(q) || u.phone.includes(q));
+  if (q) list = list.filter((u) => u.name.toLowerCase().includes(q) || u.phone.includes(q) || (u.email || '').toLowerCase().includes(q)); // v253: email search too
   if (filter === 'online') list = list.filter((u) => u.online);
   if (filter === 'blocked') list = list.filter((u) => u.status === 'blocked');
   if (filter === 'today') list = list.filter((u) => (u.lastLoginAt || 0) >= t0);
@@ -5233,8 +5233,8 @@ app.get('/admin/api/users', adminAuth, (req, res) => {
   list.sort((a, b) => (b.online - a.online) || ((b.lastLoginAt || 0) - (a.lastLoginAt || 0)));
   if (req.query.format === 'csv') {
     return sendCsv(res, 'maata-customers', [
-      ['Name', 'Mobile', 'Status', 'Joined', 'Last login', 'Logins', 'Calls', 'Talk minutes', 'Messages sent'],
-      ...list.map((u) => [u.name, u.phone, u.status, fmtLocal(u.createdAt), fmtLocal(u.lastLoginAt), u.logins, u.calls, Math.round(u.talkSec / 60), u.sent]),
+      ['Name', 'Mobile', 'Email', 'Status', 'Joined', 'Last login', 'Logins', 'Calls', 'Talk minutes', 'Messages sent'],
+      ...list.map((u) => [u.name, u.phone, u.email || '', u.status, fmtLocal(u.createdAt), fmtLocal(u.lastLoginAt), u.logins, u.calls, Math.round(u.talkSec / 60), u.sent]),
     ]);
   }
   res.json(list);
@@ -5255,7 +5255,7 @@ app.get('/admin/api/users/:id', adminAuth, (req, res) => {
   const logins = db.logins.filter((l) => l.userId === u.id).slice(-30).reverse();
   const reports = db.reports.filter((r) => r.target === u.id).map((r) => ({ ...r, reporterName: nameOf(r.reporter) }));
   res.json({
-    user: { ...publicUser(u), coins: u.coins || 0, referred: db.users.filter((x) => x.referredBy === u.id).length, referredBy: u.referredBy ? (userById(u.referredBy) || {}).name || '' : '', activeDays: (u.activeDays || []).length, status: u.status || 'active', createdAt: u.createdAt, lastLoginAt: u.lastLoginAt, lastSeenAt: u.lastSeenAt, online: isOnline(u.id) },
+    user: { ...publicUser(u), email: u.email || '', coins: u.coins || 0, referred: db.users.filter((x) => x.referredBy === u.id).length, referredBy: u.referredBy ? (userById(u.referredBy) || {}).name || '' : '', activeDays: (u.activeDays || []).length, status: u.status || 'active', createdAt: u.createdAt, lastLoginAt: u.lastLoginAt, lastSeenAt: u.lastSeenAt, online: isOnline(u.id) },
     stats: { ...agg, received, chatPartners: partners.size },
     calls, logins, reports,
   });
