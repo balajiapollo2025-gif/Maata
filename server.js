@@ -243,7 +243,7 @@ const fmtLocal = (ts) => (ts ? new Date(ts + TZ * 60000).toISOString().replace('
 // ---------- HTTP ----------
 const app = express();
 app.set('trust proxy', 1);
-{ const j = express.json({ limit: '100kb' }); app.use((req, res, next) => (req.path === '/api/secure/intruder' || req.path === '/api/ls/ai/diagnose' ? next() : j(req, res, next))); } // intruder photos parse their own (bigger) body
+{ const j = express.json({ limit: '100kb' }); app.use((req, res, next) => (req.path === '/api/secure/intruder' || req.path === '/api/ls/ai/diagnose' || /^\/api\/biz\/[^/]+\/img-ai$/.test(req.path) ? next() : j(req, res, next))); } // intruder photos parse their own (bigger) body
 // HTML files can sit in a "public" folder or right next to server.js (easier to upload from a phone)
 const PAGES = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
 // 📉 Less internet data (hosting bandwidth): API answers bigger than 1.4 KB go out gzip-compressed (about 4× smaller)
@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 253;
+const MAATA_VERSION = 254;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3627,6 +3627,80 @@ app.get('/s/:code/poster', async (req, res) => { // printable A4 poster for the 
 // ---- products & stock ----
 app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
 // product photo (shown to customers in the online shop; not used in billing)
+// ==================== 🖼️ v254 product photos without leaving Maata ====================
+// 🔍 search: Open Food Facts (free product database, also by barcode), Openverse (free-licence photos) and — when
+// GOOGLE_CSE_KEY + GOOGLE_CSE_CX are set on Render — Google image search. The phone only gets ids; the server fetches
+// the chosen picture itself (only addresses it returned, so nobody can use Maata to fetch other things).
+const imgPicks = new Map(); // id -> { url, by, at }
+function imgPick(url, by) { const id = crypto.randomBytes(8).toString('hex'); imgPicks.set(id, { url, by, at: now() }); if (imgPicks.size > 4000) imgPicks.delete(imgPicks.keys().next().value); return id; }
+const okImgUrl = (u) => typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) && u.length < 1000;
+async function getJson(url, ms = 7000) { const r = await fetch(url, { headers: { 'User-Agent': 'Maata/1.0 (maataapp.com; product photos)', Accept: 'application/json' }, signal: AbortSignal.timeout(ms) }); if (!r.ok) throw new Error('http ' + r.status); return r.json(); }
+const imgSearchCache = new Map();
+app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const q = clip(req.query.q, 80), bc = String(req.query.barcode || '').replace(/\D/g, '').slice(0, 14);
+  if (!q && bc.length < 8) return res.status(400).json({ error: 'Type the product name.' });
+  const key = q.toLowerCase() + '|' + bc; let found = imgSearchCache.get(key);
+  if (!found || now() - found.at > 3600000) {
+    const jobs = [], out = { product: null, items: [] };
+    if (bc.length >= 8) jobs.push(getJson('https://world.openfoodfacts.org/api/v2/product/' + bc + '.json?fields=product_name,product_name_en,brands,quantity,image_front_url,image_url,categories').then((d) => {
+      const p = d && d.product; if (!p) return; const name = [p.brands && String(p.brands).split(',')[0], p.product_name_en || p.product_name, p.quantity].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      out.product = { name: name.slice(0, 80), category: String(p.categories || '').split(',').pop().trim().slice(0, 40) };
+      const im = p.image_front_url || p.image_url; if (okImgUrl(im)) out.items.unshift({ url: im, thumb: im.replace(/\.(\d+)\.jpg$/, '.200.jpg'), title: name, source: 'Open Food Facts', license: 'CC BY-SA' });
+    }).catch(() => {}));
+    if (q) {
+      jobs.push(getJson('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(q) + '&search_simple=1&action=process&json=1&page_size=12&fields=product_name,brands,quantity,image_front_url,image_front_small_url').then((d) => {
+        for (const p of (d.products || []).slice(0, 12)) { const im = p.image_front_url; if (okImgUrl(im)) out.items.push({ url: im, thumb: okImgUrl(p.image_front_small_url) ? p.image_front_small_url : im, title: [p.brands, p.product_name, p.quantity].filter(Boolean).join(' ').slice(0, 80), source: 'Open Food Facts', license: 'CC BY-SA' }); }
+      }).catch(() => {}));
+      jobs.push(getJson('https://api.openverse.org/v1/images/?q=' + encodeURIComponent(q) + '&page_size=12&mature=false').then((d) => {
+        for (const p of (d.results || []).slice(0, 12)) if (okImgUrl(p.url)) out.items.push({ url: p.url, thumb: okImgUrl(p.thumbnail) ? p.thumbnail : p.url, title: String(p.title || '').slice(0, 80), source: 'Openverse', license: String(p.license || '').toUpperCase() + (p.license_version ? ' ' + p.license_version : '') });
+      }).catch(() => {}));
+      if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX) jobs.push(getJson('https://www.googleapis.com/customsearch/v1?key=' + encodeURIComponent(process.env.GOOGLE_CSE_KEY) + '&cx=' + encodeURIComponent(process.env.GOOGLE_CSE_CX) + '&searchType=image&safe=active&gl=in&num=10&q=' + encodeURIComponent(q)).then((d) => {
+        for (const p of (d.items || []).slice(0, 10)) if (okImgUrl(p.link)) out.items.unshift({ url: p.link, thumb: okImgUrl(p.image?.thumbnailLink) ? p.image.thumbnailLink : p.link, title: String(p.title || '').slice(0, 80), source: 'Google · ' + String(p.displayLink || '').slice(0, 40), license: 'Check the owner' });
+      }).catch((e) => console.error('[img] google', e.message)));
+    }
+    await Promise.all(jobs);
+    const seen = new Set(); out.items = out.items.filter((x) => !seen.has(x.url) && seen.add(x.url)).slice(0, 30);
+    found = { at: now(), out }; imgSearchCache.set(key, found); if (imgSearchCache.size > 300) imgSearchCache.delete(imgSearchCache.keys().next().value);
+  }
+  res.json({ product: found.out.product, google: !!(process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX), items: found.out.items.map((x) => ({ id: imgPick(x.url, req.user.id), thumb: x.thumb, title: x.title, source: x.source, license: x.license })) });
+});
+app.post('/api/biz/:bizId/img-fetch', auth, async (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const pk = imgPicks.get(String(req.body?.id || '')); if (!pk || pk.by !== req.user.id || now() - pk.at > 3600000) return res.status(400).json({ error: 'Search again and pick a photo.' });
+  try {
+    const r = await fetch(pk.url, { headers: { 'User-Agent': 'Maata/1.0 (maataapp.com)' }, redirect: 'follow', signal: AbortSignal.timeout(12000) });
+    const type = String(r.headers.get('content-type') || ''); if (!r.ok || !/^image\/(jpeg|png|webp|gif)/.test(type)) throw new Error('not an image');
+    const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 8 * 1024 * 1024) throw new Error('too big');
+    res.setHeader('Content-Type', type.split(';')[0]); res.setHeader('Cache-Control', 'no-store'); res.send(buf);
+  } catch (e) { res.status(502).json({ error: 'Could not download this photo. Pick another one.' }); }
+});
+// ✨ AI photo: make a clean product photo from the name, or clean up the owner's own photo (white background)
+const IMG_MODELS = [process.env.GEMINI_IMAGE_MODEL, 'gemini-2.5-flash-image', 'gemini-2.5-flash-image-preview', 'gemini-2.0-flash-preview-image-generation'].filter(Boolean);
+app.post('/api/biz/:bizId/img-ai', auth, express.json({ limit: '6mb' }), async (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  if (!GEMINI_KEY) return res.status(501).json({ error: 'Maata AI is not set up on this server yet.' });
+  if (!aiQuota(req.user, 4)) return res.status(429).json({ error: AI_ERR.quota });
+  const name = clip(req.body?.name, 100), desc = clip(req.body?.description, 200), img = String(req.body?.image || ''), mime = /^image\/(jpeg|png|webp)$/.test(req.body?.mime) ? req.body.mime : 'image/jpeg';
+  if (!name && !img) return res.status(400).json({ error: 'Type the product name first.' });
+  const parts = img
+    ? [{ inlineData: { mimeType: mime, data: img.slice(0, 7e6) } }, { text: 'Make this a clean e-commerce product photo: keep the product EXACTLY as it is (same shape, colours, label text and brand), remove the background and put it on a plain pure white background, centred, soft natural shadow, good light. Square image. Do not add any text, logos or other objects.' }]
+    : [{ text: 'A realistic e-commerce product photo of: ' + name + (desc ? ' (' + desc + ')' : '') + ', as sold in a small Indian shop. Plain pure white background, centred, soft shadow, sharp focus, square image. No text, no watermark, no people, no hands. If it is a branded packet, show a generic unbranded pack.' }];
+  let lastErr = 'service';
+  for (const model of IMG_MODELS) for (const way of geminiAuthOk ? [geminiAuthOk] : AUTH_WAYS) {
+    try {
+      const r = await geminiFetch('models/' + model + ':generateContent', way, { method: 'POST', body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], temperature: 0.4 } }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 404 || r.status === 400 && /not found|not supported|modality/i.test(JSON.stringify(d))) { lastErr = 'service'; break; }
+      if (r.status === 401 || r.status === 403) { lastErr = 'badkey'; continue; }
+      if (r.status === 429) { lastErr = 'limit'; break; }
+      const part = ((d.candidates || [])[0]?.content?.parts || []).find((x) => x.inlineData && x.inlineData.data);
+      if (part) return res.json({ image: part.inlineData.data, mime: part.inlineData.mimeType || 'image/png', ai: true });
+      lastErr = 'busy'; break;
+    } catch (e) { lastErr = 'busy'; console.error('[img-ai]', model, e.message); break; }
+  }
+  res.status(502).json({ error: lastErr === 'limit' ? 'AI photos are busy right now (free limit). Try again in a minute, or use 🔍 Find photo.' : lastErr === 'badkey' ? AI_ERR.badkey : 'AI could not make a photo right now. Try again, or use 🔍 Find photo.' });
+});
 app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
   if (await savePhotoInto(p, req, res)) { bizLog(c, 'product-photo', p.id, p.name); res.json(bizProdOut(p)); }
