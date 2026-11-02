@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 255;
+const MAATA_VERSION = 256;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3649,8 +3649,15 @@ app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
       const im = p.image_front_url || p.image_url; if (okImgUrl(im)) out.items.unshift({ url: im, thumb: im.replace(/\.(\d+)\.jpg$/, '.200.jpg'), title: name, source: 'Open Food Facts', license: 'CC BY-SA' });
     }).catch(() => {}));
     if (q) {
-      jobs.push(getJson('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(q) + '&search_simple=1&action=process&json=1&page_size=12&fields=product_name,brands,quantity,image_front_url,image_front_small_url').then((d) => {
-        for (const p of (d.products || []).slice(0, 12)) { const im = p.image_front_url; if (okImgUrl(im)) out.items.push({ url: im, thumb: okImgUrl(p.image_front_small_url) ? p.image_front_small_url : im, title: [p.brands, p.product_name, p.quantity].filter(Boolean).join(' ').slice(0, 80), source: 'Open Food Facts', license: 'CC BY-SA' }); }
+      // v256: only products sold in India, and only ones whose brand / name really contain the words typed ("Boost" → Boost, not "oat boosts")
+      const words = q.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 2 && !/^(\d+|kg|g|gm|gms|ml|l|ltr|litre|liter|pack|pcs|pc|piece|of|and|the|new)$/.test(w));
+      const hit = (t) => { const T = ' ' + String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ') + ' '; return words.length && words.every((w) => T.includes(' ' + w + ' ') || T.includes(' ' + w + 's ')); };
+      jobs.push(getJson('https://in.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(q) + '&search_simple=1&action=process&json=1&page_size=40&sort_by=unique_scans_n&fields=product_name,product_name_en,brands,quantity,image_front_url,image_front_small_url').then((d) => {
+        const cand = [];
+        for (const p of (d.products || [])) { const im = p.image_front_url, title = [p.brands, p.product_name_en || p.product_name, p.quantity].filter(Boolean).join(' ');
+          if (okImgUrl(im) && hit(title)) cand.push({ brandHit: words.some((w) => (' ' + String(p.brands || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ').includes(' ' + w + ' ')), url: im, thumb: okImgUrl(p.image_front_small_url) ? p.image_front_small_url : im, title: title.slice(0, 80), source: 'Open Food Facts', license: 'CC BY-SA' }); }
+        const best = cand.some((x) => x.brandHit) ? cand.filter((x) => x.brandHit) : cand; // "Boost" = the Boost brand, not other "boost" drinks
+        for (const x of best.slice(0, 14)) { delete x.brandHit; out.items.push(x); }
       }).catch(() => {}));
       // 🛍️ v255: Google Images quality through Serper.dev (SERPER_API_KEY on Render) — "white background" packshots first
       if (process.env.SERPER_API_KEY) jobs.push(fetch('https://google.serper.dev/images', { method: 'POST', headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q + ' product white background', gl: 'in', hl: 'en', num: 20 }), signal: AbortSignal.timeout(8000) })
