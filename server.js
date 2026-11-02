@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 254;
+const MAATA_VERSION = 255;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3652,10 +3652,13 @@ app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
       jobs.push(getJson('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(q) + '&search_simple=1&action=process&json=1&page_size=12&fields=product_name,brands,quantity,image_front_url,image_front_small_url').then((d) => {
         for (const p of (d.products || []).slice(0, 12)) { const im = p.image_front_url; if (okImgUrl(im)) out.items.push({ url: im, thumb: okImgUrl(p.image_front_small_url) ? p.image_front_small_url : im, title: [p.brands, p.product_name, p.quantity].filter(Boolean).join(' ').slice(0, 80), source: 'Open Food Facts', license: 'CC BY-SA' }); }
       }).catch(() => {}));
-      jobs.push(getJson('https://api.openverse.org/v1/images/?q=' + encodeURIComponent(q) + '&page_size=12&mature=false').then((d) => {
-        for (const p of (d.results || []).slice(0, 12)) if (okImgUrl(p.url)) out.items.push({ url: p.url, thumb: okImgUrl(p.thumbnail) ? p.thumbnail : p.url, title: String(p.title || '').slice(0, 80), source: 'Openverse', license: String(p.license || '').toUpperCase() + (p.license_version ? ' ' + p.license_version : '') });
-      }).catch(() => {}));
-      if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX) jobs.push(getJson('https://www.googleapis.com/customsearch/v1?key=' + encodeURIComponent(process.env.GOOGLE_CSE_KEY) + '&cx=' + encodeURIComponent(process.env.GOOGLE_CSE_CX) + '&searchType=image&safe=active&gl=in&num=10&q=' + encodeURIComponent(q)).then((d) => {
+      // 🛍️ v255: Google Images quality through Serper.dev (SERPER_API_KEY on Render) — "white background" packshots first
+      if (process.env.SERPER_API_KEY) jobs.push(fetch('https://google.serper.dev/images', { method: 'POST', headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q + ' product white background', gl: 'in', hl: 'en', num: 20 }), signal: AbortSignal.timeout(8000) })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('serper ' + r.status)))).then((d) => {
+          const g = []; for (const p of (d.images || []).slice(0, 20)) if (okImgUrl(p.imageUrl)) g.push({ url: p.imageUrl, thumb: okImgUrl(p.thumbnailUrl) ? p.thumbnailUrl : p.imageUrl, title: String(p.title || '').slice(0, 80), source: String(p.domain || p.source || 'Google').slice(0, 40), license: 'Check the owner', g: 1 });
+          out.items.unshift(...g);
+        }).catch((e) => console.error('[img] serper', e.message)));
+      if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX) jobs.push(getJson('https://www.googleapis.com/customsearch/v1?key=' + encodeURIComponent(process.env.GOOGLE_CSE_KEY) + '&cx=' + encodeURIComponent(process.env.GOOGLE_CSE_CX) + '&searchType=image&safe=active&gl=in&num=10&imgDominantColor=white&q=' + encodeURIComponent(q + ' product')).then((d) => {
         for (const p of (d.items || []).slice(0, 10)) if (okImgUrl(p.link)) out.items.unshift({ url: p.link, thumb: okImgUrl(p.image?.thumbnailLink) ? p.image.thumbnailLink : p.link, title: String(p.title || '').slice(0, 80), source: 'Google · ' + String(p.displayLink || '').slice(0, 40), license: 'Check the owner' });
       }).catch((e) => console.error('[img] google', e.message)));
     }
@@ -3663,7 +3666,7 @@ app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
     const seen = new Set(); out.items = out.items.filter((x) => !seen.has(x.url) && seen.add(x.url)).slice(0, 30);
     found = { at: now(), out }; imgSearchCache.set(key, found); if (imgSearchCache.size > 300) imgSearchCache.delete(imgSearchCache.keys().next().value);
   }
-  res.json({ product: found.out.product, google: !!(process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX), items: found.out.items.map((x) => ({ id: imgPick(x.url, req.user.id), thumb: x.thumb, title: x.title, source: x.source, license: x.license })) });
+  res.json({ product: found.out.product, google: !!(process.env.SERPER_API_KEY || (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX)), items: found.out.items.map((x) => ({ id: imgPick(x.url, req.user.id), thumb: x.thumb, title: x.title, source: x.source, license: x.license })) });
 });
 app.post('/api/biz/:bizId/img-fetch', auth, async (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return;
