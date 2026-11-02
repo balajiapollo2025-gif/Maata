@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 258;
+const MAATA_VERSION = 259;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3623,6 +3623,31 @@ app.get('/s/:code/poster', async (req, res) => { // printable A4 poster for the 
 <div class="q">${svg}</div><p class="big">Scan with your phone camera</p><p class="te">మీ ఫోన్ కెమెరాతో స్కాన్ చేసి ఆర్డర్ చేయండి</p>
 <div class="st"><div><b>1</b>Scan the QR</div><div><b>2</b>Choose items</div><div><b>3</b>${upi ? 'Pay by UPI' : 'Pay at counter'}</div><div><b>4</b>Collect at counter</div></div>
 <div class="f">🦜 Order on Maata · maataapp.com<small>No queue · See prices & photos · ${upi ? 'UPI or cash' : 'Cash'} · Made in India 🇮🇳</small></div></div></body></html>`);
+});
+// 📒 v259 Catalogue maker: everything the phone needs to draw a colourful catalogue (PDF / status image) of this shop
+app.get('/api/biz/:bizId/catalogue-kit', auth, async (req, res) => {
+  const c = bizCtx(req, res); if (!c) return;
+  const b = c.biz, q = shopQrOf(c.owner), shopLink = PUB() + '/s/' + q.code, appLink = PUB() + '/?ref=cat-' + q.code;
+  const since = now() - 90 * 864e5, sold = new Map();
+  for (const i of db.invoices) { if (i.bizId !== c.bizId || i.status === 'void' || i.createdAt < since) continue; for (const l of (i.items || i.lines || [])) if (l.productId) sold.set(l.productId, (sold.get(l.productId) || 0) + (Number(l.qty) || 1)); }
+  const prods = bizProducts(c.bizId).filter((p) => p.available !== false).map((p) => ({ id: p.id, name: p.name, price: p.price ?? null, mrp: p.mrp ?? null, unit: p.unit || 'pcs', category: p.category || '', description: p.description || '', hasPhoto: !!p.photo, photoV: p.photoV || 0, inStock: p.stock == null || p.stock > 0, sold: sold.get(p.id) || 0 }));
+  const top = prods.filter((p) => p.sold > 0).sort((x, y) => y.sold - x.sold).slice(0, 3).map((p) => p.id);
+  const qr = (link, dark) => QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark, light: '#FFFFFF' } });
+  const st = storeOf(b), rt = ratingSum(c.bizId);
+  res.json({ shop: { name: b.name, address: b.address || '', category: b.category || '', hours: b.hours || '', phone: c.owner.phone || '', upi: !!bizSettings(b).upi, delivery: !!(st && st.on && st.delivery), rating: rt.n >= 3 ? { avg: rt.avg, n: rt.n } : null },
+    products: prods, best: top, links: { shop: shopLink, app: appLink }, qr: { shop: await qr(shopLink, '#0B3B36'), app: await qr(appLink, '#1D4ED8') } });
+});
+// ✨ Maata AI writes the catalogue headline, a short line and an offer line (in the shop's language)
+app.post('/api/biz/:bizId/catalogue-ai', auth, async (req, res) => {
+  const c = bizCtx(req, res); if (!c) return;
+  if (!GEMINI_KEY) return res.status(501).json({ error: 'Maata AI is not set up on this server yet.' });
+  if (!aiQuota(req.user, 1)) return res.status(429).json({ error: AI_ERR.quota });
+  const L = { en: 'English', te: 'Telugu (Telugu script)', hi: 'Hindi (Devanagari script)' }[req.body?.lang] || 'English', occ = clip(req.body?.occasion, 60);
+  const items = bizProducts(c.bizId).filter((p) => p.available !== false).slice(0, 40).map((p) => p.name + (p.price != null ? ' ₹' + p.price : '')).join('; ');
+  const r = await gemini('You write short, catchy text for a small Indian shop\'s product catalogue (printed and shared on WhatsApp). Write in ' + L + '. Be honest: do not invent discounts, prices or free offers that are not given. Reply ONLY as JSON: {"title": "max 5 words", "tagline": "max 10 words about the shop", "offer": "max 10 words call to action, e.g. order on Maata / visit today"}.',
+    [{ role: 'user', parts: [{ text: 'Shop: ' + c.biz.name + '\nType: ' + (c.biz.category || '') + '\nPlace: ' + (c.biz.address || '') + (occ ? '\nOccasion: ' + occ : '') + '\nItems: ' + items }] }], { json: true, maxTokens: 250, temperature: 0.8 }).catch(() => null);
+  try { const d = JSON.parse((r && r.text) || ''); return res.json({ title: clip(d.title, 50), tagline: clip(d.tagline, 90), offer: clip(d.offer, 90) }); }
+  catch { return res.status(502).json({ error: 'Maata AI is busy. Try again.' }); }
 });
 // ---- products & stock ----
 app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
