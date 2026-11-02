@@ -2060,7 +2060,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 256;
+const MAATA_VERSION = 257;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3636,6 +3636,43 @@ function imgPick(url, by) { const id = crypto.randomBytes(8).toString('hex'); im
 const okImgUrl = (u) => typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) && u.length < 1000;
 async function getJson(url, ms = 7000) { const r = await fetch(url, { headers: { 'User-Agent': 'Maata/1.0 (maataapp.com; product photos)', Accept: 'application/json' }, signal: AbortSignal.timeout(ms) }); if (!r.ok) throw new Error('http ' + r.status); return r.json(); }
 const imgSearchCache = new Map();
+// v257: only clean "company" packshots — high quality, plain white background, no hands / people
+let jpegjs = null, PNGlib = null; try { jpegjs = require('jpeg-js'); } catch {} try { PNGlib = require('pngjs').PNG; } catch {}
+function decodeImg(buf, type) {
+  try {
+    if (/jpe?g/.test(type) || (buf[0] === 0xff && buf[1] === 0xd8)) return jpegjs ? jpegjs.decode(buf, { useTArray: true, maxMemoryUsageInMB: 64, maxResolutionInMP: 30 }) : null;
+    if (/png/.test(type) || (buf[0] === 0x89 && buf[1] === 0x50)) return PNGlib ? PNGlib.sync.read(buf) : null;
+  } catch {} return null;
+}
+// share of the picture's outer edge that is white / very light grey (a packshot on white scores ~1, a photo in a hand or on a table scores low)
+function whiteEdge(img) {
+  const { width: w, height: h, data } = img; if (!w || !h) return 0;
+  const bw = Math.max(1, Math.round(Math.min(w, h) * 0.06)); let n = 0, white = 0, inner = 0, innerWhite = 0;
+  const step = Math.max(1, Math.floor(Math.min(w, h) / 120));
+  for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+    const edge = x < bw || y < bw || x >= w - bw || y >= h - bw, i = (y * w + x) * 4;
+    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3] === undefined ? 255 : data[i + 3];
+    const isW = a < 20 || (r > 228 && g > 228 && b > 228 && Math.max(r, g, b) - Math.min(r, g, b) < 22);
+    if (edge) { n++; if (isW) white++; } else { inner++; if (isW) innerWhite++; }
+  }
+  if (!n || !inner) return 0;
+  if (innerWhite / inner > 0.97) return 0; // empty / blank picture
+  return white / n;
+}
+async function whiteScore(url) {
+  try { const r = await fetch(url, { headers: { 'User-Agent': 'Maata/1.0' }, signal: AbortSignal.timeout(5000) }); if (!r.ok) return 0; const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 3e6) return 0; const im = decodeImg(buf, String(r.headers.get('content-type') || '')); return im ? whiteEdge(im) : -1; }
+  catch { return 0; }
+}
+// optional last check by Maata AI (one call per search, cached): is it the product itself, by the company, no hands / people?
+async function aiPackshots(items, q) {
+  if (!GEMINI_KEY || items.length < 2) return null;
+  const parts = []; let k = 0;
+  for (const it of items.slice(0, 12)) { try { const r = await fetch(it.thumb, { signal: AbortSignal.timeout(4000) }); if (!r.ok) continue; const b = Buffer.from(await r.arrayBuffer()); if (b.length > 400000) continue; parts.push({ text: 'Image ' + k + ':' }, { inlineData: { mimeType: String(r.headers.get('content-type') || 'image/jpeg').split(';')[0], data: b.toString('base64') } }); it._k = k++; } catch {} }
+  if (k < 2) return null;
+  const r = await gemini('You check product photos for an online shop. The shop owner searched for: "' + q + '". Keep ONLY images that are a clean official product photo (packshot) of that product: the product pack/item alone, on a plain white background, sharp, no hands, no people, no tables or shelves, no collage, no big text banners. Reply ONLY as JSON: {"keep": [image numbers]}.',
+    [{ role: 'user', parts }], { json: true, maxTokens: 200, temperature: 0 });
+  try { const d = JSON.parse(r.text || ''); return new Set((d.keep || []).map(Number)); } catch { return null; }
+}
 app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return;
   const q = clip(req.query.q, 80), bc = String(req.query.barcode || '').replace(/\D/g, '').slice(0, 14);
@@ -3646,7 +3683,7 @@ app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
     if (bc.length >= 8) jobs.push(getJson('https://world.openfoodfacts.org/api/v2/product/' + bc + '.json?fields=product_name,product_name_en,brands,quantity,image_front_url,image_url,categories').then((d) => {
       const p = d && d.product; if (!p) return; const name = [p.brands && String(p.brands).split(',')[0], p.product_name_en || p.product_name, p.quantity].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
       out.product = { name: name.slice(0, 80), category: String(p.categories || '').split(',').pop().trim().slice(0, 40) };
-      const im = p.image_front_url || p.image_url; if (okImgUrl(im)) out.items.unshift({ url: im, thumb: im.replace(/\.(\d+)\.jpg$/, '.200.jpg'), title: name, source: 'Open Food Facts', license: 'CC BY-SA' });
+      const im = p.image_front_url || p.image_url; if (okImgUrl(im)) out.items.unshift({ url: im, thumb: im.replace(/\.(\d+)\.jpg$/, '.200.jpg'), title: name, source: 'Open Food Facts', license: 'CC BY-SA', bc: 1 });
     }).catch(() => {}));
     if (q) {
       // v256: only products sold in India, and only ones whose brand / name really contain the words typed ("Boost" → Boost, not "oat boosts")
@@ -3660,9 +3697,9 @@ app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
         for (const x of best.slice(0, 14)) { delete x.brandHit; out.items.push(x); }
       }).catch(() => {}));
       // 🛍️ v255: Google Images quality through Serper.dev (SERPER_API_KEY on Render) — "white background" packshots first
-      if (process.env.SERPER_API_KEY) jobs.push(fetch('https://google.serper.dev/images', { method: 'POST', headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q + ' product white background', gl: 'in', hl: 'en', num: 20 }), signal: AbortSignal.timeout(8000) })
+      if (process.env.SERPER_API_KEY) jobs.push(fetch('https://google.serper.dev/images', { method: 'POST', headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q + ' product pack white background', gl: 'in', hl: 'en', num: 30 }), signal: AbortSignal.timeout(8000) })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error('serper ' + r.status)))).then((d) => {
-          const g = []; for (const p of (d.images || []).slice(0, 20)) if (okImgUrl(p.imageUrl)) g.push({ url: p.imageUrl, thumb: okImgUrl(p.thumbnailUrl) ? p.thumbnailUrl : p.imageUrl, title: String(p.title || '').slice(0, 80), source: String(p.domain || p.source || 'Google').slice(0, 40), license: 'Check the owner', g: 1 });
+          const g = []; for (const p of (d.images || []).slice(0, 20)) if (okImgUrl(p.imageUrl)) g.push({ url: p.imageUrl, thumb: okImgUrl(p.thumbnailUrl) ? p.thumbnailUrl : p.imageUrl, title: String(p.title || '').slice(0, 80), source: String(p.domain || p.source || 'Google').slice(0, 40), license: 'Check the owner', g: 1, w: Number(p.imageWidth) || 0, h: Number(p.imageHeight) || 0 });
           out.items.unshift(...g);
         }).catch((e) => console.error('[img] serper', e.message)));
       if (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX) jobs.push(getJson('https://www.googleapis.com/customsearch/v1?key=' + encodeURIComponent(process.env.GOOGLE_CSE_KEY) + '&cx=' + encodeURIComponent(process.env.GOOGLE_CSE_CX) + '&searchType=image&safe=active&gl=in&num=10&imgDominantColor=white&q=' + encodeURIComponent(q + ' product')).then((d) => {
@@ -3671,6 +3708,12 @@ app.get('/api/biz/:bizId/img-search', auth, async (req, res) => {
     }
     await Promise.all(jobs);
     const seen = new Set(); out.items = out.items.filter((x) => !seen.has(x.url) && seen.add(x.url)).slice(0, 30);
+    // keep only white-background, good-size pictures (barcode match from the company database stays first)
+    const scored = await Promise.all(out.items.map(async (x) => ({ x, s: (x.w && x.h && Math.min(x.w, x.h) < 300) ? 0 : await whiteScore(x.bc ? x.url : x.thumb) })));
+    out.items = scored.filter((o) => o.s >= (o.x.bc ? 0.8 : 0.88) || (o.s === -1 && o.x.g)).sort((a, b) => (b.x.bc || 0) - (a.x.bc || 0) || (b.x.g || 0) - (a.x.g || 0) || b.s - a.s).map((o) => o.x).slice(0, 18);
+    const keep = await aiPackshots(out.items.filter((x) => !x.bc), q).catch(() => null);
+    if (keep && keep.size) out.items = out.items.filter((x) => x.bc || (x._k !== undefined && keep.has(x._k)));
+    for (const x of out.items) delete x._k;
     found = { at: now(), out }; imgSearchCache.set(key, found); if (imgSearchCache.size > 300) imgSearchCache.delete(imgSearchCache.keys().next().value);
   }
   res.json({ product: found.out.product, google: !!(process.env.SERPER_API_KEY || (process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX)), items: found.out.items.map((x) => ({ id: imgPick(x.url, req.user.id), thumb: x.thumb, title: x.title, source: x.source, license: x.license })) });
