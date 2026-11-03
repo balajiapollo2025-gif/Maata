@@ -1,7 +1,6 @@
 package com.maataapp.app
 
 import android.app.Activity
-import android.app.KeyguardManager
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -96,9 +95,7 @@ class IncomingCallActivity : Activity() {
             putExtra(MainActivity.EXTRA_URL, "/#answer=$callId")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
-        // ask to unlock (if locked), then open the call in Maata
-        val km = getSystemService(KeyguardManager::class.java)
-        if (Build.VERSION.SDK_INT >= 26 && km.isKeyguardLocked) km.requestDismissKeyguard(this, null)
+        // v264: open the call in Maata straight away — it shows over the lock screen, so the phone PIN is NOT asked (like WhatsApp)
         startActivity(i); finish()
     }
 

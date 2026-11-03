@@ -256,6 +256,7 @@ class MainActivity : Activity() {
             } catch (e: Exception) { openOutside(Uri.parse(url)) }
         }
 
+        if ((intent.getStringExtra(EXTRA_URL) ?: "").contains("#answer=")) overLockScreen(true) // 📞 answered from the lock screen: show the call without unlocking the phone
         web.loadUrl(BuildConfig.APP_URL + (intent.getStringExtra(EXTRA_URL) ?: intent.data?.let { it.encodedPath + (it.encodedFragment?.let { f -> "#$f" } ?: "") } ?: "/"))
         if (intent.getBooleanExtra(EXTRA_STOP_RING, false)) Notifier.stopRinging(this)
         // Back: go back inside Maata; on the first screen keep Maata running in the background (Android 13+ way)
@@ -272,10 +273,26 @@ class MainActivity : Activity() {
             web.evaluateJavascript("window.maataHangup && maataHangup()", null); CallService.stop(this); return
         }
         val path = intent.getStringExtra(EXTRA_URL) ?: intent.data?.let { it.encodedPath + (it.encodedFragment?.let { f -> "#$f" } ?: "") } ?: return
+        if (path.contains("#answer=")) overLockScreen(true)
         val full = BuildConfig.APP_URL + path
         // the page is already open: tell it what to show (chat, or answer a call) without reloading
         if (pageReady) web.evaluateJavascript("window.handleAppLink ? handleAppLink(${org.json.JSONObject.quote(full)}) : location.assign(${org.json.JSONObject.quote(full)})", null)
         else web.loadUrl(full)
+    }
+
+    /** v264: like WhatsApp — an answered call shows over the phone's lock screen (no phone PIN needed). Turned off when the call ends. */
+    private var overLock = false
+    @Suppress("DEPRECATION")
+    fun overLockScreen(on: Boolean) = runOnUiThread {
+        if (on == overLock) return@runOnUiThread
+        overLock = on
+        try {
+            if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(on); setTurnScreenOn(on) }
+            else {
+                val f = android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                if (on) window.addFlags(f) else window.clearFlags(f)
+            }
+        } catch (_: Exception) { }
     }
 
     private fun askFirstPermissions() {
@@ -435,7 +452,11 @@ class MainActivity : Activity() {
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
         /** The web app tells us a call started/ended, so the mic keeps working when the phone locks. */
         @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
-        @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity) }
+        @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity); overLockScreen(false) }
+        /** The person leaves the call screen (to chats) while the phone is still locked: ask for the phone's own unlock first. */
+        @JavascriptInterface fun overLock(on: Boolean) { overLockScreen(on) }
+        @JavascriptInterface fun phoneLocked(): Boolean = try { getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked } catch (_: Exception) { false }
+        @JavascriptInterface fun unlockPhone() { runOnUiThread { try { val km = getSystemService(android.app.KeyguardManager::class.java); if (Build.VERSION.SDK_INT >= 26 && km.isKeyguardLocked) km.requestDismissKeyguard(this@MainActivity, null) } catch (_: Exception) { } } }
         /** Loudspeaker on/off during a call. Off = phone earpiece (or a connected headset / Bluetooth), like a normal call. */
         /** Phone contacts for "New group" and the Contacts tab: JSON [{name, phones:[...]}], or "PERMISSION" while asking. */
         /** What the phone is really doing with call sound (shown when the speaker button is held). */
