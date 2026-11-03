@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 264;
+const MAATA_VERSION = 265;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3724,6 +3724,377 @@ app.post('/api/biz/:bizId/catalogue-ai', auth, async (req, res) => {
     [{ role: 'user', parts: [{ text: 'Shop: ' + c.biz.name + '\nType: ' + (c.biz.category || '') + '\nPlace: ' + (c.biz.address || '') + (occ ? '\nOccasion: ' + occ : '') + '\nItems: ' + items }] }], { json: true, maxTokens: 250, temperature: 0.8 }).catch(() => null);
   try { const d = JSON.parse((r && r.text) || ''); return res.json({ title: clip(d.title, 50), tagline: clip(d.tagline, 90), offer: clip(d.offer, 90) }); }
   catch { return res.status(502).json({ error: 'Maata AI is busy. Try again.' }); }
+});
+// ==================== 🛺 v265 Maata Ride: book an auto / bike taxi / car ====================
+// Customers: pickup by GPS, drop by search or 🎤 voice, fixed price before booking, nearby drivers ring, live tracking,
+// 4-digit OTP to start, cash / UPI to the driver, ⭐ rating. Safety: SOS, live trip link for family, route-change and
+// long-stop checks. Drivers ("Maata Captains"): register with photos (admin verifies), ON / OFF, ring + voice alerts,
+// busy-area map, earnings, zero commission — a small daily plan after a free trial. Also: book for someone else,
+// schedule for later, shared auto (cheaper), parcel by auto / bike.
+const MR_VEH = {
+  auto: { name: 'Auto', icon: '🛺', seats: 3 },
+  bike: { name: 'Bike taxi', icon: '🏍️', seats: 1 },
+  car: { name: 'Car', icon: '🚗', seats: 4 },
+};
+const MR_ACTIVE = ['accepted', 'arrived', 'started'];
+function mrCfg() {
+  let m = db.meta.find((x) => x.id === 'mrCfg');
+  if (!m) {
+    m = { id: 'mrCfg', createdAt: now(), on: true,
+      fares: { auto: { base: 30, baseKm: 1.5, perKm: 15, perMin: 0.5, min: 30 }, bike: { base: 20, baseKm: 2, perKm: 8, perMin: 0.3, min: 20 }, car: { base: 60, baseKm: 2, perKm: 18, perMin: 1, min: 80 } },
+      night: 1.5, nightFrom: 22, nightTo: 5, poolOff: 0.3, parcelExtra: 10,
+      sub: { perDay: 15, freeDays: 30, upi: '' }, radius: [3, 6, 10] };
+    db.meta.push(m); save();
+  }
+  return m;
+}
+const mrDriver = (id) => db.mrDrivers.find((d) => d.id === id);
+const mrRide = (id) => db.mrRides.find((r) => r.id === id);
+const mrPt = (p) => p && Number.isFinite(+p.lat) && Number.isFinite(+p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 ? { lat: +(+p.lat).toFixed(6), lng: +(+p.lng).toFixed(6), text: clip(p.text, 140) } : null;
+const mrKm = (a, b) => geoDist([a.lng, a.lat], [b.lng, b.lat]) / 1000;
+const mrAvg = (d) => (d.rate && d.rate.n ? Math.round((d.rate.sum / d.rate.n) * 10) / 10 : 0);
+const mrSubOk = (d) => (d.subUntil || 0) > now();
+const mrNight = (t = now()) => { const c = mrCfg(), h = new Date(t + 5.5 * 3600e3).getUTCHours(); return c.nightFrom > c.nightTo ? h >= c.nightFrom || h < c.nightTo : h >= c.nightFrom && h < c.nightTo; };
+const mrOtp = () => String(crypto.randomInt(1000, 10000));
+// road distance + time (OSRM), straight line × 1.35 when the route service is busy
+async function mrRoute(a, b) {
+  try { const r = await osrmRoute('car', [[a.lng, a.lat], [b.lng, b.lat]]); if (r && r[0]) return { km: r[0].distance / 1000, min: r[0].duration / 60, line: r[0].geometry }; } catch {}
+  const km = mrKm(a, b) * 1.35; return { km, min: (km / 22) * 60, line: null };
+}
+function mrFare(veh, km, min, o = {}) {
+  const c = mrCfg(), f = c.fares[veh] || c.fares.auto;
+  let x = f.base + Math.max(0, km - f.baseKm) * f.perKm + min * f.perMin; x = Math.max(f.min, x);
+  if (mrNight(o.at)) x *= c.night || 1;
+  if (o.pool) x *= 1 - (c.poolOff || 0);
+  if (o.parcel) x += c.parcelExtra || 0;
+  const est = Math.round(x / 5) * 5; return { est, lo: Math.max(f.min, Math.round((est * 0.95) / 5) * 5), hi: Math.round((est * 1.1) / 5) * 5, night: mrNight(o.at) };
+}
+function mrBusyRides(id) { return db.mrRides.filter((x) => x.driverId === id && MR_ACTIVE.includes(x.status)); }
+// 🎯 who should get this ride first: near, good rating, accepts rides, (shared auto) going the same way
+function mrCandidates(r, maxKm) {
+  const out = [];
+  for (const d of db.mrDrivers) {
+    if (d.status !== 'approved' || !d.online || d.veh !== r.veh || !d.loc || now() - d.loc.at > 150000 || d.id === r.userId || !mrSubOk(d)) continue;
+    if ((r.offered || []).includes(d.id) || (r.declined || []).includes(d.id)) continue;
+    const busy = mrBusyRides(d.id);
+    if (busy.length) { // only a shared auto with an empty seat, going the same way
+      if (!r.pool || busy.some((b) => !b.pool || b.status === 'started') || busy.length >= (MR_VEH[d.veh] || MR_VEH.auto).seats) continue;
+      if (!busy.every((b) => mrKm(b.pickup, r.pickup) < 1.5 && mrKm(b.drop, r.drop) < 3)) continue;
+    }
+    const km = mrKm(d.loc, r.pickup); if (km > maxKm) continue;
+    const acc = d.offers ? d.accepts / d.offers : 0.7, avg = mrAvg(d) || 4.3;
+    out.push({ d, km, score: km + (4.6 - avg) * 0.8 + (1 - acc) * 2 - (busy.length ? 1 : 0) });
+  }
+  return out.sort((a, b) => a.score - b.score);
+}
+function mrSay(lang, veh, km, fare, place) {
+  const v = (MR_VEH[veh] || MR_VEH.auto).name, k = km < 1 ? Math.round(km * 1000) + ' meters' : km.toFixed(1) + ' kilometers';
+  if (lang === 'te') return `కొత్త ${veh === 'auto' ? 'ఆటో' : veh === 'bike' ? 'బైక్' : 'కార్'} బుకింగ్. ${km < 1 ? Math.round(km * 1000) + ' మీటర్లు' : km.toFixed(1) + ' కిలోమీటర్లు'} దూరంలో. ${fare} రూపాయలు.`;
+  if (lang === 'hi') return `नई ${v} बुकिंग. ${km.toFixed(1)} किलोमीटर दूर. ${fare} रुपये.`;
+  return `New ${v} booking, ${k} away${place ? ', ' + place : ''}. ${fare} rupees.`;
+}
+function mrOffer(r, d, km) {
+  r.offered = [...(r.offered || []), d.id]; d.offers = (d.offers || 0) + 1;
+  const u = userById(d.id); if (!u) return;
+  const lang = u.lang || 'en', say = mrSay(lang, r.veh, km, r.fare.est, ''), sayEn = mrSay('en', r.veh, km, r.fare.est, '');
+  const title = (MR_VEH[r.veh] || MR_VEH.auto).icon + ' New ride · ₹' + r.fare.est + (r.pool ? ' · shared' : '') + (r.parcel ? ' · parcel' : '');
+  const body = '📍 ' + (r.pickup.text || 'Pickup') + ' (' + km.toFixed(1) + ' km away) → ' + (r.drop.text || 'Drop') + ' · ' + r.route.km.toFixed(1) + ' km';
+  io.to('user:' + d.id).emit('mr:offer', { ride: mrOut(r, u), km: Math.round(km * 10) / 10 });
+  io.to('user:' + d.id).emit('voice:alert', { kind: 'mr_offer', say: u.voiceAlerts === false ? '' : say, sayEn, lang, title, body, url: '/#mr=' + r.id });
+  pushTo(u, { type: 'order_alert', title, body, tag: 'mr-' + r.id, url: '/#mr=' + r.id, say: u.voiceAlerts === false ? '' : say, sayEn, lang }, { urgency: 'high', ttl: 60 }).catch(() => {});
+}
+const mrWaveTimers = new Map();
+function mrMatch(r, wave = 0) {
+  clearTimeout(mrWaveTimers.get(r.id));
+  if (r.status !== 'searching') return;
+  const c = mrCfg(), radius = c.radius || [3, 6, 10];
+  if (wave >= radius.length) { mrWaveTimers.delete(r.id); r.status = 'nodriver'; r.endedAt = now(); save(); mrTell(r, '😔 No ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase() + ' is free near you right now', 'Try again in a few minutes, or choose another vehicle.'); for (const id of r.offered || []) io.to('user:' + id).emit('mr:gone', { id: r.id }); return; }
+  const list = mrCandidates(r, radius[wave]).slice(0, wave === 0 ? 5 : 8);
+  for (const x of list) mrOffer(r, x.d, x.km);
+  r.wave = wave; save(); mrPushRide(r);
+  mrWaveTimers.set(r.id, setTimeout(() => mrMatch(r, wave + 1), list.length ? 20000 : 6000));
+}
+function mrOut(r, viewer) {
+  const isDrv = viewer && r.driverId === viewer.id, isRider = viewer && r.userId === viewer.id, d = r.driverId ? mrDriver(r.driverId) : null, rider = userById(r.userId);
+  return {
+    id: r.id, status: r.status, veh: r.veh, vehName: (MR_VEH[r.veh] || MR_VEH.auto).name, icon: (MR_VEH[r.veh] || MR_VEH.auto).icon,
+    pickup: r.pickup, drop: r.drop, route: { km: Math.round(r.route.km * 10) / 10, min: Math.round(r.route.min) }, line: r.line || null,
+    fare: r.fare, pay: r.pay, paid: !!r.paid, pool: !!r.pool, parcel: r.parcel || null, forOther: r.forOther || null, note: r.note || '',
+    when: r.when || null, createdAt: r.createdAt, acceptedAt: r.acceptedAt || null, arrivedAt: r.arrivedAt || null, startedAt: r.startedAt || null, endedAt: r.endedAt || null,
+    otp: isRider ? r.otp || null : null, endOtp: isRider && r.parcel ? r.endOtp : null, share: isRider ? PUB() + '/r/' + r.share : null,
+    rated: !!r.rating, rating: r.rating || null, cancelBy: r.cancelBy || null, cancelWhy: r.cancelWhy || '',
+    driver: d && (isRider || isDrv) ? { id: d.id, name: d.name, phone: d.phone, number: d.number, model: d.model, veh: d.veh, face: d.face ? d.face.fid : null, rating: mrAvg(d), rides: d.rides || 0, upi: d.upi || '', loc: d.loc ? { lat: d.loc.lat, lng: d.loc.lng, h: d.loc.h || 0, at: d.loc.at } : null } : null,
+    rider: isDrv || (viewer && (r.offered || []).includes(viewer.id)) ? { id: r.userId, name: rider ? rider.name : 'Customer', phone: isDrv && rider ? rider.phone : '' } : null,
+    mine: isRider ? 'rider' : isDrv ? 'driver' : null,
+  };
+}
+function mrPushRide(r) { const ru = userById(r.userId); if (ru) io.to('user:' + r.userId).emit('mr:ride', mrOut(r, ru)); if (r.driverId) { const du = userById(r.driverId); if (du) io.to('user:' + r.driverId).emit('mr:ride', mrOut(r, du)); } }
+function mrTell(r, title, body, toDriver) { const u = userById(toDriver ? r.driverId : r.userId); if (!u) return; pushTo(u, { type: 'msg', title, body, tag: 'mr-' + r.id, url: '/#mr=' + r.id }, { urgency: 'high', ttl: 600 }).catch(() => {}); mrPushRide(r); }
+
+// ---- config + quote ----
+app.get('/api/mr/config', auth, (req, res) => {
+  const c = mrCfg(), d = mrDriver(req.user.id);
+  const act = db.mrRides.filter((r) => (r.userId === req.user.id || r.driverId === req.user.id) && ['searching', 'scheduled', ...MR_ACTIVE].includes(r.status)).map((r) => mrOut(r, req.user));
+  res.json({ on: c.on !== false, veh: Object.entries(MR_VEH).map(([k, v]) => ({ k, ...v })), night: mrNight(), ai: !!GEMINI_KEY, active: act,
+    driver: d ? { status: d.status, reason: d.reason || '', online: !!d.online, veh: d.veh, number: d.number, subUntil: d.subUntil || 0, subOk: mrSubOk(d), perDay: c.sub.perDay, upiPay: c.sub.upi || '', payReq: (d.payReq || []).filter((p) => p.status === 'pending').length } : null });
+});
+app.post('/api/mr/quote', auth, async (req, res) => {
+  const a = mrPt(req.body?.pickup), b = mrPt(req.body?.drop); if (!a || !b) return res.status(400).json({ error: 'Choose pickup and drop.' });
+  if (mrKm(a, b) < 0.15) return res.status(400).json({ error: 'Pickup and drop are too close.' });
+  if (mrKm(a, b) > 150) return res.status(400).json({ error: 'Maata Ride is for trips up to 150 km.' });
+  const rt = await mrRoute(a, b), at = Number(req.body?.when) || now(), out = [];
+  for (const k of Object.keys(MR_VEH)) {
+    const near = db.mrDrivers.filter((d) => d.status === 'approved' && d.online && d.veh === k && d.loc && now() - d.loc.at < 150000 && !mrBusyRides(d.id).length && mrSubOk(d)).map((d) => mrKm(d.loc, a)).sort((x, y) => x - y);
+    out.push({ veh: k, ...MR_VEH[k], fare: mrFare(k, rt.km, rt.min, { at, parcel: !!req.body?.parcel }), pool: k === 'auto' ? mrFare(k, rt.km, rt.min, { at, pool: true }) : null, drivers: near.filter((x) => x < 6).length, eta: near.length ? Math.max(2, Math.round((near[0] * 1.4 / 20) * 60)) : null });
+  }
+  res.json({ km: Math.round(rt.km * 10) / 10, min: Math.round(rt.min), line: rt.line, options: out, night: mrNight(at) });
+});
+// ---- book ----
+const mrRate = new Map();
+app.post('/api/mr/rides', auth, async (req, res) => {
+  const c = mrCfg(); if (c.on === false) return res.status(503).json({ error: 'Maata Ride is paused right now.' });
+  const b = req.body || {}, a = mrPt(b.pickup), dr = mrPt(b.drop), veh = MR_VEH[b.veh] ? b.veh : 'auto';
+  if (!a || !dr) return res.status(400).json({ error: 'Choose pickup and drop.' });
+  if (db.mrRides.some((r) => r.userId === req.user.id && ['searching', ...MR_ACTIVE].includes(r.status))) return res.status(409).json({ error: 'You already have a ride going on.' });
+  const hits = (mrRate.get(req.user.id) || []).filter((t) => now() - t < 3600e3); if (hits.length >= 12) return res.status(429).json({ error: 'Too many bookings. Try again later.' }); hits.push(now()); mrRate.set(req.user.id, hits);
+  const when = Number(b.when) > now() + 10 * 60000 ? Math.min(Number(b.when), now() + 7 * 864e5) : null;
+  const pool = veh === 'auto' && !!b.pool, parcel = b.parcel && clip(b.parcel.to, 60) ? { to: clip(b.parcel.to, 60), phone: String(b.parcel.phone || '').replace(/\D/g, '').slice(-10), item: clip(b.parcel.item, 80) } : null;
+  const forOther = b.forOther && clip(b.forOther.name, 60) ? { name: clip(b.forOther.name, 60), phone: String(b.forOther.phone || '').replace(/\D/g, '').slice(-10) } : null;
+  const rt = await mrRoute(a, dr);
+  const r = { id: newId(), userId: req.user.id, veh, pickup: a, drop: dr, route: { km: rt.km, min: rt.min }, line: rt.line, fare: mrFare(veh, rt.km, rt.min, { at: when || now(), pool, parcel: !!parcel }),
+    pay: b.pay === 'upi' ? 'upi' : 'cash', pool, parcel, forOther, note: clip(b.note, 140), when, status: when ? 'scheduled' : 'searching', otp: mrOtp(), endOtp: parcel ? mrOtp() : null,
+    share: crypto.randomBytes(9).toString('base64url'), offered: [], declined: [], path: [], createdAt: now() };
+  db.mrRides.push(r); save();
+  if (!when) mrMatch(r);
+  res.json(mrOut(r, req.user));
+});
+app.get('/api/mr/rides', auth, (req, res) => res.json(db.mrRides.filter((r) => r.userId === req.user.id || r.driverId === req.user.id).slice(-60).reverse().map((r) => mrOut(r, req.user))));
+app.get('/api/mr/rides/:id', auth, (req, res) => {
+  const r = mrRide(req.params.id); if (!r || !(r.userId === req.user.id || r.driverId === req.user.id || (r.offered || []).includes(req.user.id))) return res.status(404).json({ error: 'Ride not found.' });
+  res.json(mrOut(r, req.user));
+});
+app.post('/api/mr/rides/:id/cancel', auth, (req, res) => {
+  const r = mrRide(req.params.id); if (!r) return res.status(404).json({ error: 'Ride not found.' });
+  const rider = r.userId === req.user.id, drv = r.driverId === req.user.id; if (!rider && !drv) return res.status(403).json({ error: 'Not your ride.' });
+  if (!['searching', 'scheduled', 'accepted', 'arrived'].includes(r.status)) return res.status(400).json({ error: 'This ride cannot be cancelled now.' });
+  clearTimeout(mrWaveTimers.get(r.id));
+  if (drv) { // the driver drops it: look for another driver
+    const d = mrDriver(req.user.id); if (d) d.cancels = (d.cancels || 0) + 1;
+    r.declined = [...(r.declined || []), req.user.id]; r.driverId = null; r.status = 'searching'; r.acceptedAt = null; r.arrivedAt = null; save();
+    mrTell(r, '⚠️ The driver cancelled', 'Maata is finding another driver for you.'); mrMatch(r, 0); return res.json({ ok: true });
+  }
+  r.status = 'cancelled'; r.cancelBy = 'rider'; r.cancelWhy = clip(req.body?.why, 120); r.endedAt = now(); save();
+  for (const id of r.offered || []) io.to('user:' + id).emit('mr:gone', { id: r.id });
+  if (r.driverId) mrTell(r, '❌ Ride cancelled by the customer', (r.pickup.text || '') + (r.cancelWhy ? ' · ' + r.cancelWhy : ''), true);
+  mrPushRide(r); res.json({ ok: true });
+});
+// ---- driver actions ----
+function mrMyRide(req, res) { const r = mrRide(req.params.id); if (!r || r.driverId !== req.user.id) { res.status(404).json({ error: 'Ride not found.' }); return null; } return r; }
+app.post('/api/mr/rides/:id/accept', auth, (req, res) => {
+  const r = mrRide(req.params.id), d = mrDriver(req.user.id);
+  if (!r || !d || d.status !== 'approved') return res.status(404).json({ error: 'Ride not found.' });
+  if (r.status !== 'searching') return res.status(409).json({ error: r.driverId === d.id ? 'Already yours.' : 'Another driver took this ride.' });
+  if (!(r.offered || []).includes(d.id)) return res.status(403).json({ error: 'This ride was not offered to you.' });
+  if (!mrSubOk(d)) return res.status(402).json({ error: 'Your Maata Captain plan has ended. Pay the plan to take rides.' });
+  r.status = 'accepted'; r.driverId = d.id; r.acceptedAt = now(); d.accepts = (d.accepts || 0) + 1; clearTimeout(mrWaveTimers.get(r.id)); mrWaveTimers.delete(r.id); save();
+  for (const id of r.offered || []) if (id !== d.id) io.to('user:' + id).emit('mr:gone', { id: r.id });
+  const eta = d.loc ? Math.max(2, Math.round((mrKm(d.loc, r.pickup) * 1.4 / 20) * 60)) : null;
+  mrTell(r, (MR_VEH[r.veh] || MR_VEH.auto).icon + ' ' + d.name + ' is coming' + (eta ? ' · ' + eta + ' min' : ''), d.number + ' · ' + (d.model || '') + ' · OTP ' + r.otp);
+  res.json(mrOut(r, req.user));
+});
+app.post('/api/mr/rides/:id/decline', auth, (req, res) => { const r = mrRide(req.params.id); if (r) { r.declined = [...(r.declined || []), req.user.id]; save(); } res.json({ ok: true }); });
+app.post('/api/mr/rides/:id/arrived', auth, (req, res) => {
+  const r = mrMyRide(req, res); if (!r) return; if (r.status !== 'accepted') return res.status(400).json({ error: 'Not now.' });
+  r.status = 'arrived'; r.arrivedAt = now(); save(); mrTell(r, '📍 Your ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase() + ' has arrived', 'Tell the driver your OTP ' + r.otp + ' to start the ride.'); res.json(mrOut(r, req.user));
+});
+app.post('/api/mr/rides/:id/start', auth, (req, res) => {
+  const r = mrMyRide(req, res); if (!r) return; if (!['accepted', 'arrived'].includes(r.status)) return res.status(400).json({ error: 'Not now.' });
+  if (String(req.body?.otp || '').trim() !== r.otp) return res.status(400).json({ error: 'Wrong OTP. Ask the customer for the 4-digit OTP shown in their Maata app.' });
+  r.status = 'started'; r.startedAt = now(); r.minDrop = r.driverId && mrDriver(r.driverId).loc ? mrKm(mrDriver(r.driverId).loc, r.drop) : r.route.km; r.lastMoveAt = now(); save();
+  mrTell(r, '🟢 Ride started', 'Going to ' + (r.drop.text || 'your drop') + '. Share the live trip with family from the ride screen.'); res.json(mrOut(r, req.user));
+});
+app.post('/api/mr/rides/:id/end', auth, (req, res) => {
+  const r = mrMyRide(req, res); if (!r) return; if (r.status !== 'started') return res.status(400).json({ error: 'Not now.' });
+  if (r.parcel && String(req.body?.otp || '').trim() !== r.endOtp) return res.status(400).json({ error: 'Wrong delivery code. Ask the receiver for the code the sender gave them.' });
+  const d = mrDriver(r.driverId); r.status = 'completed'; r.endedAt = now(); r.fare.final = r.fare.est; if (d) d.rides = (d.rides || 0) + 1; save();
+  mrTell(r, '✅ You reached · ₹' + r.fare.final, r.pay === 'upi' ? 'Pay the driver by UPI from the ride screen, then rate your ride.' : 'Pay ₹' + r.fare.final + ' cash to the driver, then rate your ride.');
+  res.json(mrOut(r, req.user));
+});
+app.post('/api/mr/rides/:id/paid', auth, (req, res) => { const r = mrRide(req.params.id); if (!r || (r.driverId !== req.user.id && r.userId !== req.user.id)) return res.status(404).json({ error: 'Ride not found.' }); if (r.driverId === req.user.id) { r.paid = true; r.paidBy = req.body?.method === 'upi' ? 'upi' : 'cash'; } else r.riderSaysPaid = true; save(); mrPushRide(r); res.json(mrOut(r, req.user)); });
+app.post('/api/mr/rides/:id/rate', auth, (req, res) => {
+  const r = mrRide(req.params.id); if (!r || r.userId !== req.user.id || r.status !== 'completed') return res.status(404).json({ error: 'Ride not found.' });
+  if (r.rating) return res.status(400).json({ error: 'Already rated.' });
+  const s = Math.max(1, Math.min(5, Math.round(Number(req.body?.stars) || 0))); if (!s) return res.status(400).json({ error: 'Choose stars.' });
+  r.rating = { stars: s, text: clip(req.body?.text, 200), at: now() };
+  const d = mrDriver(r.driverId); if (d) { d.rate = { sum: (d.rate?.sum || 0) + s, n: (d.rate?.n || 0) + 1 }; if (d.rate.n >= 10 && mrAvg(d) < 3.5 && d.status === 'approved') { d.status = 'paused'; d.reason = 'Rating below 3.5 — Maata will check your rides.'; d.online = false; } }
+  save(); res.json(mrOut(r, req.user));
+});
+// ---- 🛡️ safety ----
+app.post('/api/mr/rides/:id/sos', auth, (req, res) => {
+  const r = mrRide(req.params.id); if (!r || (r.userId !== req.user.id && r.driverId !== req.user.id)) return res.status(404).json({ error: 'Ride not found.' });
+  r.sos = [...(r.sos || []), { by: req.user.id, at: now(), loc: mrPt(req.body?.loc) }]; save();
+  audit('ride:' + r.id, 'SOS', req.user.name + ' (' + req.user.phone + ') pressed SOS on a ' + r.veh + ' ride');
+  console.log('[ride] 🆘 SOS', r.id, req.user.phone);
+  res.json({ ok: true, share: PUB() + '/r/' + r.share });
+});
+app.post('/api/mr/rides/:id/safe', auth, (req, res) => { const r = mrRide(req.params.id); if (r && r.userId === req.user.id) { r.safeAt = now(); save(); } res.json({ ok: true }); });
+function mrSafety(r, d) {
+  if (r.status !== 'started' || !d.loc) return;
+  const k = mrKm(d.loc, r.drop); r.minDrop = Math.min(r.minDrop ?? k, k);
+  if (mrKm(d.loc, r.lastPt || d.loc) > 0.05) { r.lastMoveAt = now(); r.lastPt = { lat: d.loc.lat, lng: d.loc.lng }; } else if (!r.lastPt) r.lastPt = { lat: d.loc.lat, lng: d.loc.lng };
+  const quiet = (t) => now() - (r.alertAt || 0) > t && now() - (r.safeAt || 0) > t;
+  let why = '';
+  if (k > r.minDrop + 1.5) why = 'The vehicle is going away from your drop.';
+  else if (now() - (r.lastMoveAt || now()) > 6 * 60000 && k > 0.3) why = 'The vehicle has not moved for 6 minutes.';
+  if (why && quiet(10 * 60000)) { r.alertAt = now(); io.to('user:' + r.userId).emit('mr:safety', { id: r.id, why }); pushTo(userById(r.userId), { type: 'msg', title: '🛡️ Is everything OK?', body: why + ' Tap to answer or press SOS.', tag: 'mrsafe-' + r.id, url: '/#mr=' + r.id }, { urgency: 'high' }).catch(() => {}); }
+}
+// live trip page for family (no login): driver, vehicle number, where they are now
+app.get('/api/mr/share/:tok', (req, res) => {
+  const r = db.mrRides.find((x) => x.share === String(req.params.tok)); if (!r) return res.status(404).json({ error: 'This trip link is not valid.' });
+  const d = r.driverId ? mrDriver(r.driverId) : null, u = userById(r.userId), live = MR_ACTIVE.includes(r.status);
+  res.json({ status: r.status, veh: (MR_VEH[r.veh] || MR_VEH.auto).name, rider: (r.forOther && r.forOther.name) || (u ? u.name.split(' ')[0] : ''), pickup: r.pickup, drop: r.drop,
+    driver: d ? { name: d.name, number: d.number, model: d.model } : null, at: live && d && d.loc ? { lat: d.loc.lat, lng: d.loc.lng, t: d.loc.at } : null, sos: !!(r.sos || []).length, startedAt: r.startedAt || null, endedAt: r.endedAt || null });
+});
+app.get('/r/:tok', (req, res) => {
+  const t = String(req.params.tok).replace(/[^\w-]/g, '');
+  res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maata Ride · live trip</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#f4f6f5;color:#0b3b36}#m{height:62vh}.c{padding:14px 16px}.b{display:inline-block;background:#0F8A5F;color:#fff;border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px}.s{background:#DC2626}h1{font-size:20px;margin:8px 0 4px}p{margin:4px 0;color:#334}</style></head>
+<body><div id="m"></div><div class="c"><span class="b" id="st">Loading…</span><h1 id="who">🛺 Maata Ride</h1><p id="dr"></p><p id="rt"></p><p style="font-size:12px;color:#789">Live trip shared from the Maata app · maataapp.com</p></div>
+<script>const map=L.map('m').setView([17.4,78.5],13);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);let car,first=true,pk,dp;
+const S={searching:'Finding a driver',scheduled:'Booked for later',accepted:'Driver coming to pickup',arrived:'Driver at pickup',started:'On the way',completed:'Reached ✅',cancelled:'Cancelled',nodriver:'No driver found'};
+async function go(){try{const d=await (await fetch('/api/mr/share/${t}')).json();if(d.error){document.getElementById('st').textContent=d.error;return}
+const st=document.getElementById('st');st.textContent=(d.sos?'🆘 SOS pressed · ':'')+(S[d.status]||d.status);st.className='b'+(d.sos?' s':'');
+document.getElementById('who').textContent='🛺 '+d.rider+' · '+d.veh;document.getElementById('dr').textContent=d.driver?('Driver: '+d.driver.name+' · '+d.driver.number+(d.driver.model?' · '+d.driver.model:'')):'';
+document.getElementById('rt').textContent='📍 '+(d.pickup.text||'Pickup')+' → '+(d.drop.text||'Drop');
+if(!pk){pk=L.marker([d.pickup.lat,d.pickup.lng]).addTo(map).bindTooltip('Pickup');dp=L.marker([d.drop.lat,d.drop.lng]).addTo(map).bindTooltip('Drop')}
+if(d.at){if(!car)car=L.circleMarker([d.at.lat,d.at.lng],{radius:10,color:'#fff',weight:3,fillColor:'#0F8A5F',fillOpacity:1}).addTo(map);else car.setLatLng([d.at.lat,d.at.lng])}
+if(first){first=false;map.fitBounds(L.latLngBounds([[d.pickup.lat,d.pickup.lng],[d.drop.lat,d.drop.lng]].concat(d.at?[[d.at.lat,d.at.lng]]:[])),{padding:[40,40]})}}catch(e){}}
+go();setInterval(go,8000);</script></body></html>`);
+});
+// ---- drivers ("Maata Captains") ----
+function mrDrvOut(d) { return { ...d, payReq: (d.payReq || []).slice(-10), rating: mrAvg(d), subOk: mrSubOk(d) }; }
+app.get('/api/mr/driver', auth, (req, res) => { const d = mrDriver(req.user.id); res.json(d ? mrDrvOut(d) : null); });
+app.post('/api/mr/driver', auth, (req, res) => {
+  const b = req.body || {}, old = mrDriver(req.user.id), veh = MR_VEH[b.veh] ? b.veh : 'auto';
+  const number = String(b.number || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  if (!/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{3,4}$/.test(number)) return res.status(400).json({ error: 'Enter the vehicle number like AP03AB1234.' });
+  const f = (k) => (b[k] && db.lsFiles.some((x) => x.id === b[k] && x.by === req.user.id) ? { fid: b[k] } : old ? old[k] : null);
+  const d = old || { id: req.user.id, createdAt: now(), status: 'pending', online: false, offers: 0, accepts: 0, rides: 0, rate: { sum: 0, n: 0 }, payReq: [] };
+  Object.assign(d, { name: clip(b.name, 60) || req.user.name, phone: req.user.phone, veh, number, model: clip(b.model, 40), upi: clip(b.upi, 60), lang: req.user.lang || 'en',
+    face: f('face'), dl: f('dl'), rc: f('rc'), vphoto: f('vphoto'), dlNo: clip(b.dlNo, 24).toUpperCase(), area: clip(b.area, 80) });
+  if (!d.face || !d.dl || !d.rc || !d.vphoto) return res.status(400).json({ error: 'Add all 4 photos: your face, driving licence, RC and the vehicle.' });
+  if (old && ['rejected', 'pending'].includes(old.status)) { d.status = 'pending'; d.reason = ''; }
+  if (!old) db.mrDrivers.push(d);
+  save(); audit('captain:' + d.id, old ? 'captain-update' : 'captain-register', d.name + ' · ' + d.number);
+  res.json(mrDrvOut(d));
+});
+app.post('/api/mr/driver/online', auth, (req, res) => {
+  const d = mrDriver(req.user.id); if (!d) return res.status(404).json({ error: 'Register as a Maata Captain first.' });
+  if (d.status !== 'approved') return res.status(403).json({ error: d.status === 'pending' ? 'Maata is checking your documents. You can go online after approval.' : d.reason || 'Your account is not active.' });
+  if (req.body?.on && !mrSubOk(d)) return res.status(402).json({ error: 'Your plan has ended. Pay ₹' + mrCfg().sub.perDay + ' / day plan to go online.' });
+  d.online = !!req.body?.on; const p = mrPt(req.body?.loc); if (p) d.loc = { lat: p.lat, lng: p.lng, at: now(), h: 0 }; save();
+  // rides waiting nearby (someone booked a minute ago)
+  if (d.online) for (const r of db.mrRides) if (r.status === 'searching' && r.veh === d.veh && d.loc && mrKm(d.loc, r.pickup) < 6 && !(r.offered || []).includes(d.id)) mrOffer(r, d, mrKm(d.loc, r.pickup));
+  res.json(mrDrvOut(d));
+});
+app.get('/api/mr/driver/stats', auth, (req, res) => {
+  const d = mrDriver(req.user.id); if (!d) return res.status(404).json({ error: 'Not a captain.' });
+  const day = new Date(now() + 5.5 * 3600e3).toISOString().slice(0, 10), mine = db.mrRides.filter((r) => r.driverId === d.id && r.status === 'completed');
+  const sum = (l) => l.reduce((n, r) => n + (r.fare.final || r.fare.est), 0), dayOf = (t) => new Date(t + 5.5 * 3600e3).toISOString().slice(0, 10);
+  const today = mine.filter((r) => dayOf(r.endedAt) === day), week = mine.filter((r) => now() - r.endedAt < 7 * 864e5);
+  res.json({ today: { rides: today.length, money: sum(today) }, week: { rides: week.length, money: sum(week) }, all: { rides: mine.length, money: sum(mine) }, rating: mrAvg(d), ratings: d.rate?.n || 0, accept: d.offers ? Math.round((d.accepts / d.offers) * 100) : null,
+    recent: mine.slice(-15).reverse().map((r) => ({ id: r.id, at: r.endedAt, from: r.pickup.text, to: r.drop.text, fare: r.fare.final || r.fare.est, pay: r.paidBy || r.pay, stars: r.rating ? r.rating.stars : null })) });
+});
+// 🔥 where people are booking now (last 3 hours) — drivers wait there instead of driving around empty
+app.get('/api/mr/driver/heat', auth, (req, res) => {
+  const d = mrDriver(req.user.id); if (!d) return res.status(404).json({ error: 'Not a captain.' });
+  const cells = new Map();
+  for (const r of db.mrRides) { if (now() - r.createdAt > 3 * 3600e3 || r.veh !== d.veh) continue; const k = Math.round(r.pickup.lat * 100) + ':' + Math.round(r.pickup.lng * 100); const c = cells.get(k) || { lat: 0, lng: 0, n: 0, missed: 0, names: {} }; c.lat += r.pickup.lat; c.lng += r.pickup.lng; c.n++; if (r.status === 'nodriver' || r.status === 'searching') c.missed++; const nm = (r.pickup.text || '').split(',')[0]; if (nm) c.names[nm] = (c.names[nm] || 0) + 1; cells.set(k, c); }
+  const out = [...cells.values()].map((c) => ({ lat: c.lat / c.n, lng: c.lng / c.n, n: c.n, missed: c.missed, name: Object.entries(c.names).sort((a, b) => b[1] - a[1])[0]?.[0] || '', km: d.loc ? Math.round(mrKm(d.loc, { lat: c.lat / c.n, lng: c.lng / c.n }) * 10) / 10 : null }))
+    .sort((a, b) => b.n + b.missed - (a.n + a.missed)).slice(0, 8);
+  res.json(out);
+});
+app.post('/api/mr/driver/pay', auth, (req, res) => {
+  const d = mrDriver(req.user.id); if (!d) return res.status(404).json({ error: 'Not a captain.' });
+  const days = [7, 30].includes(Number(req.body?.days)) ? Number(req.body.days) : 7, utr = String(req.body?.utr || '').replace(/\s/g, '').slice(0, 30);
+  if (utr.length < 6) return res.status(400).json({ error: 'Enter the UPI reference number (UTR) of your payment.' });
+  d.payReq = [...(d.payReq || []), { id: newId(), days, amount: days * mrCfg().sub.perDay, utr, status: 'pending', at: now() }].slice(-30); save();
+  res.json(mrDrvOut(d));
+});
+// 🤖 plate reader: Maata AI reads the number plate from the vehicle photo
+app.post('/api/mr/ai/plate', auth, async (req, res) => {
+  if (!GEMINI_KEY) return res.status(501).json({ error: 'Maata AI is not set up.' }); if (!aiQuota(req.user, 1)) return res.status(429).json({ error: AI_ERR.quota });
+  const f = db.lsFiles.find((x) => x.id === String(req.body?.fid || '') && x.by === req.user.id); if (!f) return res.status(404).json({ error: 'Photo not found.' });
+  const chunks = []; try { await new Promise((ok, bad) => { const s = chatFileStream(f.id, 0, f.size - 1); s.on('data', (c) => chunks.push(c)); s.on('end', ok); s.on('error', bad); }); } catch { return res.status(500).json({ error: 'Could not read the photo.' }); }
+  const r = await gemini('Read the Indian vehicle registration number plate in this photo. Also say the vehicle type (auto, bike or car) and the model if it is clear. Reply ONLY as JSON: {"number": "AP03AB1234" or "", "type": "auto|bike|car|", "model": ""}.',
+    [{ role: 'user', parts: [{ inlineData: { mimeType: f.mime, data: Buffer.concat(chunks).toString('base64') } }] }], { json: true, maxTokens: 120, temperature: 0 }).catch(() => null);
+  try { const d = JSON.parse((r && r.text) || ''); res.json({ number: String(d.number || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12), type: MR_VEH[d.type] ? d.type : '', model: clip(d.model, 40) }); } catch { res.status(502).json({ error: 'Could not read the plate. Type it.' }); }
+});
+// 🎤 "bus stand ki auto kavali", "send my mother to the hospital by 5 pm" → what the person wants
+app.post('/api/mr/ai/voice', auth, async (req, res) => {
+  const text = clip(req.body?.text, 300); if (!text) return res.status(400).json({ error: 'Say where you want to go.' });
+  if (!GEMINI_KEY) return res.json({ drop: text, veh: '', forName: '', when: '', parcel: false });
+  if (!aiQuota(req.user, 1)) return res.status(429).json({ error: AI_ERR.quota });
+  const ist = new Date(now() + 5.5 * 3600e3).toISOString().slice(0, 16);
+  const r = await gemini('You understand ride bookings said in Telugu, Hindi, English or mixed, for an Indian ride app (auto, bike taxi, car). Now (India time) is ' + ist + '. Reply ONLY as JSON: {"drop": "place name to search on a map, in English letters", "pickup": "only if they said a different pickup, else empty", "veh": "auto|bike|car|", "forName": "name if booking for someone else, else empty", "when": "YYYY-MM-DDTHH:MM India time if they want it later, else empty", "parcel": true/false, "item": "what to send if parcel"}.',
+    [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 200, temperature: 0, fast: true }).catch(() => null);
+  try { const d = JSON.parse((r && r.text) || ''); res.json({ drop: clip(d.drop, 100), pickup: clip(d.pickup, 100), veh: MR_VEH[d.veh] ? d.veh : '', forName: clip(d.forName, 60), when: /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(d.when || '') ? d.when : '', parcel: !!d.parcel, item: clip(d.item, 80) }); }
+  catch { res.json({ drop: text, veh: '', forName: '', when: '', parcel: false }); }
+});
+// driver location (every few seconds while online) — goes live to the customer's map
+function mrLoc(u, p) {
+  const d = mrDriver(u.id); if (!d || d.status !== 'approved' || !p) return; const pt = mrPt(p); if (!pt) return;
+  d.loc = { lat: pt.lat, lng: pt.lng, at: now(), h: Math.round(Number(p.h) || 0) };
+  for (const r of mrBusyRides(d.id)) {
+    io.to('user:' + r.userId).emit('mr:pos', { id: r.id, lat: pt.lat, lng: pt.lng, h: d.loc.h, eta: r.status === 'accepted' ? Math.max(1, Math.round((mrKm(d.loc, r.pickup) * 1.4 / 20) * 60)) : r.status === 'started' ? Math.max(1, Math.round((mrKm(d.loc, r.drop) * 1.4 / 22) * 60)) : 0 });
+    const last = r.path[r.path.length - 1]; if (!last || now() - last[2] > 15000) { r.path.push([pt.lat, pt.lng, now()]); if (r.path.length > 600) r.path.splice(0, r.path.length - 600); }
+    mrSafety(r, d);
+  }
+}
+app.post('/api/mr/driver/loc', auth, (req, res) => { mrLoc(req.user, req.body); res.json({ ok: true }); });
+// scheduled rides start looking for a driver 10 minutes before; old searches close
+setInterval(() => {
+  let ch = false;
+  for (const r of db.mrRides) {
+    if (r.status === 'scheduled' && r.when - now() < 10 * 60000) { r.status = 'searching'; ch = true; mrMatch(r); mrTell(r, '🔎 Finding your ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase(), 'For your ride at ' + new Date(r.when + 5.5 * 3600e3).toISOString().slice(11, 16)); }
+    else if (r.status === 'searching' && now() - r.createdAt > 6 * 60000 && !mrWaveTimers.has(r.id)) { mrMatch(r, 99); ch = true; }
+    else if (MR_ACTIVE.includes(r.status) && now() - (r.acceptedAt || r.createdAt) > 8 * 3600e3) { r.status = 'completed'; r.endedAt = now(); r.fare.final = r.fare.est; ch = true; }
+  }
+  for (const d of db.mrDrivers) if (d.online && d.loc && now() - d.loc.at > 15 * 60000 && !mrBusyRides(d.id).length) { d.online = false; ch = true; } // phone went quiet
+  if (ch) save();
+}, 30000);
+// ---- admin ----
+app.get('/admin/api/mr', adminAuth, (req, res) => {
+  const day = now() - 864e5, rides = db.mrRides.slice(-300).reverse();
+  res.json({ cfg: mrCfg(), drivers: db.mrDrivers.map((d) => ({ ...mrDrvOut(d), user: (userById(d.id) || {}).name || '' })).sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0) || b.createdAt - a.createdAt),
+    rides: rides.map((r) => ({ ...mrOut(r, null), rider: (userById(r.userId) || {}).name || '', riderPhone: (userById(r.userId) || {}).phone || '', driverName: r.driverId ? (mrDriver(r.driverId) || {}).name : '', sos: r.sos || [], share: PUB() + '/r/' + r.share })),
+    stats: { online: db.mrDrivers.filter((d) => d.online).length, approved: db.mrDrivers.filter((d) => d.status === 'approved').length, pending: db.mrDrivers.filter((d) => d.status === 'pending').length,
+      today: db.mrRides.filter((r) => r.createdAt > day).length, done: db.mrRides.filter((r) => r.createdAt > day && r.status === 'completed').length, nodriver: db.mrRides.filter((r) => r.createdAt > day && r.status === 'nodriver').length,
+      sos: db.mrRides.filter((r) => (r.sos || []).length && now() - r.sos[r.sos.length - 1].at < 864e5).length, payReq: db.mrDrivers.reduce((n, d) => n + (d.payReq || []).filter((p) => p.status === 'pending').length, 0) } });
+});
+app.post('/admin/api/mr/driver/:id/:act', adminAuth, (req, res) => {
+  const d = mrDriver(req.params.id); if (!d) return res.status(404).json({ error: 'Not found.' }); const act = req.params.act, why = clip(req.body?.reason, 200), u = userById(d.id);
+  if (act === 'approve') { d.status = 'approved'; d.reason = ''; if (!d.subUntil || d.subUntil < now()) d.subUntil = now() + (mrCfg().sub.freeDays || 0) * 864e5; d.approvedAt = now(); }
+  else if (act === 'reject') { d.status = 'rejected'; d.reason = why || 'Documents are not clear. Add clear photos and send again.'; d.online = false; }
+  else if (act === 'block') { d.status = 'blocked'; d.reason = why || 'Blocked by Maata.'; d.online = false; }
+  else if (act === 'pause') { d.status = 'paused'; d.reason = why || 'Paused by Maata.'; d.online = false; }
+  else if (act === 'days') { d.subUntil = Math.max(now(), d.subUntil || 0) + Math.max(1, Math.min(365, Number(req.body?.days) || 7)) * 864e5; }
+  else if (act === 'payok' || act === 'paybad') { const p = (d.payReq || []).find((x) => x.id === req.body?.payId && x.status === 'pending'); if (!p) return res.status(404).json({ error: 'Payment not found.' }); p.status = act === 'payok' ? 'ok' : 'rejected'; if (act === 'payok') d.subUntil = Math.max(now(), d.subUntil || 0) + p.days * 864e5; }
+  else return res.status(400).json({ error: 'Unknown action.' });
+  audit(req.admin, 'captain-' + act, d.id, d.name + (why ? ' – ' + why : '')); save();
+  if (u) { const msg = { approve: '✅ You are a Maata Captain! Go online to get rides.', reject: '❌ Captain registration: ' + d.reason, block: '⛔ ' + d.reason, pause: '⏸️ ' + d.reason, days: '📅 Your Captain plan is active till ' + new Date(d.subUntil).toLocaleDateString('en-IN'), payok: '✅ Payment received. Plan active till ' + new Date(d.subUntil).toLocaleDateString('en-IN'), paybad: '❌ Plan payment could not be confirmed. Check the UTR and send again.' }[act];
+    pushTo(u, { type: 'msg', title: '🛺 Maata Ride', body: msg, tag: 'mrcap', url: '/#mr=captain' }).catch(() => {}); }
+  res.json(mrDrvOut(d));
+});
+app.put('/admin/api/mr/cfg', adminAuth, (req, res) => {
+  const c = mrCfg(), b = req.body || {}, num = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def; };
+  if (b.on !== undefined) c.on = !!b.on;
+  for (const k of Object.keys(MR_VEH)) if (b.fares && b.fares[k]) { const f = b.fares[k], o = c.fares[k]; c.fares[k] = { base: num(f.base, 0, 2000, o.base), baseKm: num(f.baseKm, 0, 20, o.baseKm), perKm: num(f.perKm, 0, 200, o.perKm), perMin: num(f.perMin, 0, 20, o.perMin), min: num(f.min, 0, 2000, o.min) }; }
+  if (b.night !== undefined) c.night = num(b.night, 1, 3, c.night);
+  if (b.poolOff !== undefined) c.poolOff = num(b.poolOff, 0, 0.6, c.poolOff);
+  if (b.sub) c.sub = { perDay: num(b.sub.perDay, 0, 500, c.sub.perDay), freeDays: num(b.sub.freeDays, 0, 365, c.sub.freeDays), upi: clip(b.sub.upi, 60) };
+  audit(req.admin, 'ride-settings', 'mrCfg', ''); save(); res.json(c);
 });
 // ---- products & stock ----
 app.get('/api/biz/:bizId/products', auth, (req, res) => { const c = bizCtx(req, res); if (!c) return; res.json(bizProducts(c.bizId).sort((a, b) => a.name.localeCompare(b.name)).map(bizProdOut)); });
@@ -5792,6 +6163,7 @@ async function lsSaveImg(req, res, maxMb = 6) {
 }
 function lsCanSee(f, viewer) { // who may open a file
   if (!f || !viewer) return false; if (f.by === viewer.id) return true;
+  if (db.mrDrivers.some((d) => d.status === 'approved' && ((d.face && d.face.fid === f.id) || (d.vphoto && d.vphoto.fid === f.id)))) return true; // 🛺 Maata Ride: customers see the driver's photo
   for (const p of db.providers) { if (p.face?.fid === f.id || (p.work || []).some((w) => w.fid === f.id)) return true; if (p.idDoc?.fid === f.id) return p.id === viewer.id; }
   return db.lsBookings.some((b) => (b.custId === viewer.id || b.provId === viewer.id || (b.offeredTo || []).includes(viewer.id)) && [...(b.photos || []), ...(b.before || []), ...(b.after || [])].some((x) => x.fid === f.id));
 }
@@ -7549,6 +7921,7 @@ io.on('connection', (socket) => {
   // ⚡ v263 fast connect: the ringing phone gets the connection ready BEFORE you answer (no voice/video flows until you tap Answer)
   socket.on('call:early', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:early', { ...clean(p), dev: String(p.dev || '').slice(0, 40) }); });
   // the app came to the screen / went to the background
+  socket.on('mr:loc', (p) => { try { mrLoc(socket.user, p); } catch {} });
   socket.on('app:fg', (x) => { const o = typeof x === 'object' && x ? x : { fg: !!x }; socket.fg = !!o.fg; socket.native = !!o.native; socket.fgAt = now(); if (socket.fg) deliverRing(socket); });
   socket.on('call:reneg', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:reneg', { ...clean(p), ask: !!p.ask }); });
   socket.on('call:reneg-ans', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:reneg-ans', clean(p)); });
