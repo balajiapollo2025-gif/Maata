@@ -595,6 +595,25 @@ const io = new Server(server, { maxHttpBufferSize: 3e6 }); // allows short speec
 const online = new Map();      // userId -> connected device count
 const activeCalls = new Map(); // callId -> call record (ringing / answered)
 const isOnline = (id) => (online.get(id) || 0) > 0;
+// 📞 v263: is Maata really ON SCREEN on one of this person's devices? (a phone that was closed keeps its connection for a while,
+// but its app is frozen — a call sent only there never rings and turns into a missed call)
+// a call that rang the phone by push: hand it to the app as soon as Maata is on screen
+function deliverRing(socket, delay = 0) {
+  const me = socket.user && socket.user.id, waiting = me && pendingRings.get(me); if (!waiting) return;
+  clearInterval(waiting.timer); pendingRings.delete(me);
+  fcmTo(socket.user, { type: 'call_end', callId: waiting.callId, answered: '1' }, 30).catch(() => {});
+  if (waiting.until > now() && activeCalls.has(waiting.callId)) {
+    setTimeout(() => { socket.emit('call:incoming', waiting.offer); for (const c of waiting.ice) socket.emit('call:ice', c); io.to('user:' + waiting.from).emit('call:ringing', { callId: waiting.callId }); }, delay);
+  }
+}
+function fgSockets(id, nativeOnly) {
+  const ids = io.sockets.adapter.rooms.get('user:' + id), out = []; if (!ids) return out;
+  for (const sid of ids) { const s = io.sockets.sockets.get(sid); if (s && s.fg !== false && (s.fgAt === undefined || now() - s.fgAt < 35000) && (!nativeOnly || s.native)) out.push(s); } // a frozen (closed) app stops saying "on screen" every 20 s
+  return out;
+}
+const fgOnline = (id, nativeOnly) => fgSockets(id, nativeOnly).length > 0;
+// stop the phone ringing (push ring) — the call was answered / declined on another device or cancelled
+function stopRingPush(uid, callId) { const pr = pendingRings.get(uid); if (!pr || pr.callId !== String(callId)) return; clearInterval(pr.timer); pendingRings.delete(uid); fcmTo(userById(uid), { type: 'call_end', callId: pr.callId, answered: '1' }, 30).catch(() => {}); }
 
 const hits = new Map();
 function rateLimit(req, res, next) {
@@ -2116,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 262;
+const MAATA_VERSION = 263;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -7250,15 +7269,7 @@ io.on('connection', (socket) => {
 
   const wasOnline = isOnline(me);
   online.set(me, (online.get(me) || 0) + 1);
-  const waiting = pendingRings.get(me);
-  if (waiting) {
-    clearInterval(waiting.timer);
-    fcmTo(socket.user, { type: 'call_end', callId: waiting.callId, answered: '1' }, 30).catch(() => {});
-    if (waiting.until > now() && activeCalls.has(waiting.callId)) {
-      setTimeout(() => { socket.emit('call:incoming', waiting.offer); for (const c of waiting.ice) socket.emit('call:ice', c); io.to('user:' + waiting.from).emit('call:ringing', { callId: waiting.callId }); }, 1200);
-    }
-    pendingRings.delete(me);
-  }
+  setTimeout(() => { if (socket.connected && socket.fg === undefined) deliverRing(socket); }, 1500); // older apps (new ones say "on screen" themselves)
   if (!wasOnline) toWatchers(me, 'presence', { userId: me, online: true });
   pushLive();
 
@@ -7505,8 +7516,9 @@ io.on('connection', (socket) => {
       db.calls.push(rec); activeCalls.set(callId, rec); save(); pushLive();
       if (!isOnline(p.to) && !hasPush(target)) finishCall(rec, 'unavailable');
     }
-    if (!isOnline(p.to)) {
-      if (!hasPush(target)) return socket.emit('call:unavailable', { callId: p.callId });
+    // v263: Maata open on a screen (phone or computer) → ring there at once; the PHONE also rings by push when Maata is not on its screen
+    const fgs = fgSockets(p.to); for (const s2 of fgs) s2.emit('call:incoming', clean(p));
+    if (!fgOnline(p.to, true) && hasPush(target)) {
       // their app is closed: wake the phone and keep the offer until they open Maata (40 s)
       const saved = contactsOf(target).find((c) => c.id === me), who = saved ? saved.name : socket.user.name + ' (' + socket.user.phone + ')';
       const ringPush = { type: 'call', callId, kind: p.kind === 'video' ? 'video' : 'voice', title: (p.kind === 'video' ? '🎥 ' : '📞 ') + who + ' is calling…', body: 'Maata ' + (p.kind === 'video' ? 'video' : 'voice') + ' call · tap Answer', tag: 'call-' + callId };
@@ -7514,31 +7526,36 @@ io.on('connection', (socket) => {
       // "Ring": repeat the notification (sound + vibration) every 4 s until answered, cancelled or 40 s pass
       const ringOnce = () => { const cur = pendingRings.get(p.to); if (!cur || cur.callId !== callId || cur.until < now() || cur.rings >= 10) { clearInterval(pr.timer); return; } cur.rings++; pushTo(target, ringPush, { ttl: 30, urgency: 'high', webOnly: cur.rings > 1 }); };
       pendingRings.set(p.to, pr); ringOnce(); pr.timer = setInterval(ringOnce, 4000);
-      socket.emit('call:waking', { callId });
+      if (!fgs.length) socket.emit('call:waking', { callId });
       return;
     }
-    io.to(room(p.to)).emit('call:incoming', clean(p));
+    if (!fgs.length) { if (!isOnline(p.to)) return socket.emit('call:unavailable', { callId: p.callId }); io.to(room(p.to)).emit('call:incoming', clean(p)); } // only background apps and no push: try anyway
   });
   socket.on('call:answer', (p) => {
     if (!valid(p)) return;
     const rec = recFor(p);
     if (rec && rec.to === me && !rec.answeredAt) { rec.answeredAt = now(); rec.status = 'answered'; save(); pushLive(); }
-    io.to(room(p.to)).emit('call:answered', clean(p));
+    stopRingPush(me, p.callId);
+    io.to(room(p.to)).emit('call:answered', { ...clean(p), dev: String(p.dev || '').slice(0, 40) });
     socket.to(room(me)).emit('call:taken-elsewhere', { callId: p.callId });
   });
   socket.on('call:reject', (p) => {
     if (!valid(p)) return;
-    finishCall(recFor(p), 'declined');
+    stopRingPush(me, p.callId); finishCall(recFor(p), 'declined');
     io.to(room(p.to)).emit('call:rejected', clean(p));
     socket.to(room(me)).emit('call:taken-elsewhere', { callId: p.callId });
   });
   // 🔁 v260: reconnect the voice of a running call (new network / weak signal) without hanging up
+  // ⚡ v263 fast connect: the ringing phone gets the connection ready BEFORE you answer (no voice/video flows until you tap Answer)
+  socket.on('call:early', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:early', { ...clean(p), dev: String(p.dev || '').slice(0, 40) }); });
+  // the app came to the screen / went to the background
+  socket.on('app:fg', (x) => { const o = typeof x === 'object' && x ? x : { fg: !!x }; socket.fg = !!o.fg; socket.native = !!o.native; socket.fgAt = now(); if (socket.fg) deliverRing(socket); });
   socket.on('call:reneg', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:reneg', { ...clean(p), ask: !!p.ask }); });
   socket.on('call:reneg-ans', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:reneg-ans', clean(p)); });
   socket.on('call:busy', (p) => { if (!valid(p)) return; finishCall(recFor(p), 'busy'); io.to(room(p.to)).emit('call:busy', clean(p)); });
   socket.on('call:ice', (p) => {
     if (!valid(p)) return;
-    const pr = pendingRings.get(p.to); if (pr && pr.callId === String(p.callId) && !isOnline(p.to)) { if (pr.ice.length < 60) pr.ice.push(clean(p)); return; }
+    const pr = pendingRings.get(p.to); if (pr && pr.callId === String(p.callId) && pr.ice.length < 80) pr.ice.push(clean(p)); // kept for the phone that opens Maata from the ring
     io.to(room(p.to)).emit('call:ice', clean(p));
   });
   // Live call translation: the speaker's browser turns speech into text, the server translates it
