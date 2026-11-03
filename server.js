@@ -1838,7 +1838,15 @@ function statusVisible(viewer, st) {
   const pv = owner.statusPrivacy || { mode: 'contacts', list: [] };
   if (pv.mode === 'only') return pv.list.includes(viewer.id) && hasContact(owner, viewer.id);
   if (pv.mode === 'except' && pv.list.includes(viewer.id)) return false;
-  return isMutual(viewer, owner);
+  // v262: the owner saved the viewer (owner's choice), and the viewer also saved the owner OR they already chat with each other.
+  // Before, BOTH had to be saved in Maata contacts — friends who only chat (or whose phone contacts were not synced) never saw the status.
+  return hasContact(owner, viewer.id) && (hasContact(viewer, owner.id) || hasConversation(viewer.id, owner.id));
+}
+// 👁 who can see my status right now (and who cannot, and why)
+function statusAudience(owner) {
+  const ok = [], notSaved = [];
+  for (const c of contactsOf(owner)) { const u = userById(c.id); if (!u || u.status === 'blocked') continue; if (statusVisible(u, { userId: owner.id })) ok.push(u); else if (!hasContact(u, owner.id) && !hasConversation(u.id, owner.id)) notSaved.push(u); }
+  return { ok, notSaved };
 }
 function statusOut(viewer, st) {
   const mine = st.userId === viewer.id;
@@ -1850,7 +1858,27 @@ function statusOut(viewer, st) {
     mediaUrl: st.type === 'text' ? null : '/api/status/media/' + st.id,
   };
 }
-function notifyStatus(u) { for (const w of watchersOf(u.id)) if (hasContact(u, w)) io.to('user:' + w).emit('status:new', { userId: u.id }); }
+// 🔔 v262: like Instagram — a new status also rings the phones of the people who can see it (once every 20 min per person, so many posts = one alert)
+const statusPushAt = new Map();
+function notifyStatus(u, st) {
+  for (const c of contactsOf(u)) {
+    const w = userById(c.id); if (!w || w.status === 'blocked' || !statusVisible(w, { userId: u.id })) continue;
+    io.to('user:' + w.id).emit('status:new', { userId: u.id });
+    if (!st || w.statusPush === false || (w.statusMuted || []).includes(u.id)) continue;
+    const k = u.id + '>' + w.id; if (now() - (statusPushAt.get(k) || 0) < 20 * 60000) continue; statusPushAt.set(k, now());
+    if (statusPushAt.size > 50000) statusPushAt.clear();
+    const saved = contactsOf(w).find((x) => x.id === u.id), who = (saved && saved.name) || u.name;
+    const what = st.type === 'text' ? '💬 ' + String(st.text || '').slice(0, 90) : (st.type === 'video' ? '🎥 New video' : '📷 New photo') + (st.caption ? ': ' + st.caption.slice(0, 80) : '');
+    pushTo(w, { type: 'status', title: '⭕ ' + who + ' added a status', body: what, tag: 'status-' + u.id, url: '/#status=' + u.id }, { ttl: 6 * 3600 }).catch(() => {});
+  }
+}
+app.put('/api/me/status-push', auth, (req, res) => {
+  const b = req.body || {};
+  if (b.on !== undefined) req.user.statusPush = !!b.on;
+  if (b.userId) { const l = req.user.statusMuted || (req.user.statusMuted = []); const i = l.indexOf(String(b.userId)); if (b.mute && i < 0) l.push(String(b.userId).slice(0, 64)); if (!b.mute && i >= 0) l.splice(i, 1); if (l.length > 2000) l.splice(0, l.length - 2000); }
+  save(); res.json({ on: req.user.statusPush !== false, muted: req.user.statusMuted || [] });
+});
+app.get('/api/me/status-push', auth, (req, res) => res.json({ on: req.user.statusPush !== false, muted: req.user.statusMuted || [] }));
 const tooManyStatuses = (u) => db.statuses.filter((x) => x.userId === u.id && x.createdAt > now() - STATUS_TTL).length >= 30;
 
 app.get('/api/status', auth, (req, res) => {
@@ -1873,7 +1901,7 @@ app.post('/api/status/text', auth, (req, res) => {
   if (tooManyStatuses(req.user)) return res.status(429).json({ error: 'You can post up to 30 status updates a day.' });
   const bg = /^#[0-9a-fA-F]{6}$/.test(req.body?.bg || '') ? req.body.bg : '#0F4C5C';
   const st = { id: newId(), userId: req.user.id, type: 'text', text, bg, createdAt: now(), expiresAt: now() + STATUS_TTL, views: [] };
-  db.statuses.push(st); save(); notifyStatus(req.user);
+  db.statuses.push(st); save(); notifyStatus(req.user, st);
   res.json(statusOut(req.user, st));
 });
 
@@ -1885,7 +1913,7 @@ app.post('/api/status/media', auth, express.raw({ type: ['image/*', 'video/*'], 
   const id = newId();
   try { await saveMedia(id, req.body, mime); } catch (e) { console.error('[media]', e.message); return res.status(500).json({ error: 'Could not save the file. Try a smaller one.' }); }
   const st = { id, userId: req.user.id, type, caption: String(req.query.caption || '').trim().slice(0, 300), mime, size: req.body.length, createdAt: now(), expiresAt: now() + STATUS_TTL, views: [] };
-  db.statuses.push(st); save(); notifyStatus(req.user);
+  db.statuses.push(st); save(); notifyStatus(req.user, st);
   res.json(statusOut(req.user, st));
 });
 
@@ -2031,6 +2059,19 @@ app.post('/api/chats/delete', auth, (req, res) => {
   if (req.body?.removeContacts) req.user.contacts = contactsOf(req.user).filter((c) => !ids.includes(c.id));
   save(); res.json({ ok: true });
 });
+// ⚙️ v262 settings backup: the app's settings are kept on the account too, so they never go back to old values
+// (new phone, app data cleared, re-install, log out / log in). { key: [value, changedAt] }
+app.get('/api/me/settings-sync', auth, (req, res) => res.json(req.user.setSync || {}));
+app.put('/api/me/settings-sync', auth, (req, res) => {
+  const inc = req.body && typeof req.body.set === 'object' ? req.body.set : {}, cur = req.user.setSync || (req.user.setSync = {});
+  for (const [k, x] of Object.entries(inc).slice(0, 80)) {
+    if (!/^maata_[a-z0-9_]{1,40}$/i.test(k) || !Array.isArray(x)) continue;
+    const v = x[0] === null ? null : String(x[0]), t = Number(x[1]) || 0; if (v !== null && v.length > 8000) continue;
+    if (!cur[k] || t > cur[k][1]) cur[k] = [v, Math.min(t, now() + 60000)];
+  }
+  if (JSON.stringify(cur).length > 80000) return res.status(413).json({ error: 'Too many settings.' });
+  save(); res.json({ ok: true });
+});
 app.get('/api/prefs', auth, (req, res) => res.json({ quickReplies: req.user.quickReplies || [], lists: req.user.lists || [], favs: req.user.favs || [], stickers: req.user.stickers || [], muted: req.user.muted || [] }));
 app.put('/api/prefs', auth, (req, res) => {
   const b = req.body || {};
@@ -2075,7 +2116,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 261;
+const MAATA_VERSION = 262;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2653,7 +2694,7 @@ app.post('/api/status/from-message', auth, async (req, res) => {
     } catch { return res.status(500).json({ error: 'Could not copy this file to status.' }); }
     st = { ...base, type: m.type, caption: String(m.text || '').slice(0, 300), mime: m.file.mime, size: m.file.size };
   }
-  db.statuses.push(st); save(); notifyStatus(req.user);
+  db.statuses.push(st); save(); notifyStatus(req.user, st);
   res.json({ ok: true });
 });
 function emitUpdate(m) { if (m.group) return io.to('grp:' + m.group).emit('msg:update', m); for (const id of [m.from, m.to]) io.to('user:' + id).emit('msg:update', m); }
@@ -3310,6 +3351,7 @@ app.post('/api/login/pin', rateLimit, async (req, res) => {
 });
 
 // Status privacy: my contacts / my contacts except… / only share with…
+app.get('/api/status/audience', auth, (req, res) => { const a = statusAudience(req.user); res.json({ count: a.ok.length, contacts: contactsOf(req.user).length, notSaved: a.notSaved.slice(0, 50).map((u) => ({ id: u.id, name: (contactsOf(req.user).find((c) => c.id === u.id) || {}).name || u.name })), notSavedCount: a.notSaved.length }); });
 app.get('/api/status/privacy', auth, (req, res) => res.json(req.user.statusPrivacy || { mode: 'contacts', list: [] }));
 app.put('/api/status/privacy', auth, (req, res) => {
   const mode = ['contacts', 'except', 'only'].includes(req.body?.mode) ? req.body.mode : 'contacts';
