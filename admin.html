@@ -798,9 +798,9 @@ function drawMr() {
     const c = d.cfg, f = (v, k, n) => `<label style="display:inline-flex;flex-direction:column;margin:4px 10px 4px 0;font-size:12px">${n}<input data-f="${v}.${k}" type="number" step="any" value="${c.fares[v][k]}" style="width:90px;padding:6px"></label>`;
     box.innerHTML = `<div class="card"><label><input type="checkbox" id="mrOn" ${c.on !== false ? 'checked' : ''}> Maata Ride is ON for customers</label>
       <p class="muted">Set your state's government fares. Price = base fare (covers the first km) + per km + per minute; never below the minimum.</p>
-      ${['auto', 'bike', 'car'].map((v) => `<div style="margin:8px 0"><b>${{ auto: '🛺 Auto', bike: '🏍️ Bike taxi', car: '🚗 Car' }[v]}</b><br>${f(v, 'base', 'Base ₹')}${f(v, 'baseKm', 'Base covers km')}${f(v, 'perKm', '₹ per km')}${f(v, 'perMin', '₹ per minute')}${f(v, 'min', 'Minimum ₹')}</div>`).join('')}
+      ${['auto', 'bike', 'car', 'goods'].map((v) => `<div style="margin:8px 0"><b>${{ auto: '🛺 Auto', bike: '🏍️ Bike taxi', car: '🚗 Car', goods: '🚚 Luggage auto (4-wheeler)' }[v]}</b><br>${f(v, 'base', 'Base ₹')}${f(v, 'baseKm', 'Base covers km')}${f(v, 'perKm', '₹ per km')}${f(v, 'perMin', '₹ per minute')}${f(v, 'min', 'Minimum ₹')}</div>`).join('')}
       <label style="display:inline-flex;flex-direction:column;margin-right:12px;font-size:12px">Night fare × (10 PM – 5 AM)<input id="mrNight" type="number" step="0.1" value="${c.night}" style="width:90px;padding:6px"></label>
-      <label style="display:inline-flex;flex-direction:column;font-size:12px">Shared auto discount (0.3 = 30%)<input id="mrPool" type="number" step="0.05" value="${c.poolOff}" style="width:90px;padding:6px"></label>
+
       <h3>Captain plan (zero commission)</h3>
       <label style="display:inline-flex;flex-direction:column;margin-right:12px;font-size:12px">₹ per day<input id="mrPer" type="number" value="${c.sub.perDay}" style="width:90px;padding:6px"></label>
       <label style="display:inline-flex;flex-direction:column;margin-right:12px;font-size:12px">Free days for new captains<input id="mrFree" type="number" value="${c.sub.freeDays}" style="width:90px;padding:6px"></label>
@@ -808,7 +808,7 @@ function drawMr() {
       <div style="margin-top:12px"><button class="btn" id="mrSave">Save</button></div></div>`;
     $('#mrSave').onclick = async () => {
       const fares = {}; $$('#mrBox [data-f]').forEach((i) => { const [v, k] = i.dataset.f.split('.'); (fares[v] = fares[v] || {})[k] = Number(i.value); });
-      try { await api('/admin/api/mr/cfg', { method: 'PUT', body: JSON.stringify({ on: $('#mrOn').checked, fares, night: Number($('#mrNight').value), poolOff: Number($('#mrPool').value), sub: { perDay: Number($('#mrPer').value), freeDays: Number($('#mrFree').value), upi: $('#mrUpi').value } }) }); toast('Saved ✓'); loadMr(); } catch (e) { toast(e.message); }
+      try { await api('/admin/api/mr/cfg', { method: 'PUT', body: JSON.stringify({ on: $('#mrOn').checked, fares, night: Number($('#mrNight').value), sub: { perDay: Number($('#mrPer').value), freeDays: Number($('#mrFree').value), upi: $('#mrUpi').value } }) }); toast('Saved ✓'); loadMr(); } catch (e) { toast(e.message); }
     };
   }
 }
