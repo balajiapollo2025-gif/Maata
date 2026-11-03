@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 266;
+const MAATA_VERSION = 267;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3808,7 +3808,7 @@ function mrMatch(r, wave = 0) {
   clearTimeout(mrWaveTimers.get(r.id));
   if (r.status !== 'searching') return;
   const c = mrCfg(), radius = c.radius || [3, 6, 10];
-  if (wave >= radius.length) { mrWaveTimers.delete(r.id); r.status = 'nodriver'; r.endedAt = now(); save(); mrTell(r, '😔 No ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase() + ' is free near you right now', 'Try again in a few minutes, or choose another vehicle.'); for (const id of r.offered || []) io.to('user:' + id).emit('mr:gone', { id: r.id }); return; }
+  if (wave >= radius.length) { mrWaveTimers.delete(r.id); r.status = 'nodriver'; r.endedAt = now(); save(); mrVoice(r.userId, 'nodriver', '😔 No ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase() + ' is free near you right now', 'Try again in a few minutes, or choose another vehicle.', r); for (const id of r.offered || []) io.to('user:' + id).emit('mr:gone', { id: r.id }); return; }
   const list = mrCandidates(r, radius[wave]).slice(0, wave === 0 ? 5 : 8);
   for (const x of list) mrOffer(r, x.d, x.km);
   r.wave = wave; save(); mrPushRide(r);
@@ -3829,6 +3829,31 @@ function mrOut(r, viewer) {
   };
 }
 function mrPushRide(r) { const ru = userById(r.userId); if (ru) io.to('user:' + r.userId).emit('mr:ride', mrOut(r, ru)); if (r.driverId) { const du = userById(r.driverId); if (du) io.to('user:' + r.driverId).emit('mr:ride', mrOut(r, du)); } }
+// 🔊 v267 spoken alerts for customers and drivers (in their language; also when Maata is closed — the Android app speaks)
+const MR_VW = { te: { auto: 'ఆటో', bike: 'బైక్', car: 'కారు' }, hi: { auto: 'ऑटो', bike: 'बाइक', car: 'कार' }, en: { auto: 'auto', bike: 'bike', car: 'car' } };
+const mrDigits = (x) => String(x || '').split('').join(' ');
+const MR_SAY = {
+  accepted: { te: (r, d, eta) => `${d.name} వస్తున్నారు${eta ? '. ' + eta + ' నిమిషాల్లో చేరుకుంటారు' : ''}. వాహనం నంబర్ ${mrDigits(d.number)}. మీ ఓటీపీ ${mrDigits(r.otp)}.`,
+    hi: (r, d, eta) => `${d.name} आ रहे हैं${eta ? ', ' + eta + ' मिनट में पहुंचेंगे' : ''}. गाड़ी नंबर ${mrDigits(d.number)}. आपका ओटीपी ${mrDigits(r.otp)}.`,
+    en: (r, d, eta) => `${d.name} is coming${eta ? ' in ' + eta + ' minutes' : ''}. Vehicle number ${mrDigits(d.number)}. Your OTP is ${mrDigits(r.otp)}.` },
+  arrived: { te: (r) => `మీ ${MR_VW.te[r.veh]} వచ్చింది. డ్రైవర్‌కి ఓటీపీ ${mrDigits(r.otp)} చెప్పండి.`, hi: (r) => `आपका ${MR_VW.hi[r.veh]} आ गया है. ड्राइवर को ओटीपी ${mrDigits(r.otp)} बताएं.`, en: (r) => `Your ${MR_VW.en[r.veh]} has arrived. Tell the driver your OTP ${mrDigits(r.otp)}.` },
+  started: { te: () => 'రైడ్ మొదలైంది. సురక్షిత ప్రయాణం.', hi: () => 'सवारी शुरू हो गई. सुरक्षित यात्रा.', en: () => 'Your ride has started. Have a safe trip.' },
+  completed: { te: (r) => `మీరు చేరుకున్నారు. దయచేసి ${r.fare.final || r.fare.est} రూపాయలు చెల్లించండి.`, hi: (r) => `आप पहुंच गए. कृपया ${r.fare.final || r.fare.est} रुपये दें.`, en: (r) => `You have reached. Please pay ${r.fare.final || r.fare.est} rupees.` },
+  nodriver: { te: (r) => `క్షమించండి, దగ్గరలో ${MR_VW.te[r.veh]} దొరకలేదు. కొద్దిసేపటి తర్వాత మళ్ళీ ప్రయత్నించండి.`, hi: (r) => `माफ़ कीजिए, पास में ${MR_VW.hi[r.veh]} नहीं मिला. थोड़ी देर बाद फिर कोशिश करें.`, en: (r) => `Sorry, no ${MR_VW.en[r.veh]} is free near you. Please try again in a few minutes.` },
+  drvcancel: { te: () => 'డ్రైవర్ రైడ్ రద్దు చేశారు. మరో డ్రైవర్ కోసం వెతుకుతున్నాం.', hi: () => 'ड्राइवर ने सवारी रद्द कर दी. दूसरा ड्राइवर ढूंढ रहे हैं.', en: () => 'The driver cancelled. Maata is finding another driver for you.' },
+  searching: { te: (r) => `మీ ${MR_VW.te[r.veh]} కోసం వెతుకుతున్నాం.`, hi: (r) => `आपके ${MR_VW.hi[r.veh]} के लिए ढूंढ रहे हैं.`, en: (r) => `Finding your ${MR_VW.en[r.veh]} now.` },
+  safety: { te: () => 'అంతా బాగుందా? మీరు సురక్షితంగా ఉంటే బటన్ నొక్కండి. లేకపోతే ఎస్ ఓ ఎస్ నొక్కండి.', hi: () => 'सब ठीक है? सुरक्षित हैं तो बटन दबाएं, नहीं तो एस ओ एस दबाएं.', en: () => 'Is everything OK? Tap I am safe, or press SOS.' },
+  // to the driver
+  ridercancel: { te: () => 'కస్టమర్ రైడ్ రద్దు చేశారు.', hi: () => 'ग्राहक ने सवारी रद्द कर दी.', en: () => 'The customer cancelled the ride.' },
+  approved: { te: () => 'అభినందనలు. మీరు మాట కెప్టెన్ అయ్యారు. ఆన్‌లైన్ కి వెళ్ళి రైడ్స్ తీసుకోండి.', hi: () => 'बधाई हो. आप माटा कैप्टन बन गए. ऑनलाइन होकर सवारी लें.', en: () => 'Congratulations. You are a Maata Captain. Go online to get rides.' },
+};
+function mrVoice(uid, key, title, body, r, ...args) {
+  const u = userById(uid); if (!u) return; const S = MR_SAY[key]; if (!S) return;
+  const lang = S[u.lang] ? u.lang : 'en', sayEn = S.en(r, ...args), say = u.voiceAlerts === false ? '' : S[lang](r, ...args), url = '/#mr=' + (r ? r.id : 'captain');
+  io.to('user:' + uid).emit('voice:alert', { kind: 'mr_' + key, say, sayEn, lang, title, body, url });
+  pushTo(u, { type: 'order_alert', title, body, tag: 'mr-' + (r ? r.id : key), url, say, sayEn: u.voiceAlerts === false ? '' : sayEn, lang }, { urgency: 'high', ttl: 600 }).catch(() => {});
+  if (r) mrPushRide(r);
+}
 function mrTell(r, title, body, toDriver) { const u = userById(toDriver ? r.driverId : r.userId); if (!u) return; pushTo(u, { type: 'msg', title, body, tag: 'mr-' + r.id, url: '/#mr=' + r.id }, { urgency: 'high', ttl: 600 }).catch(() => {}); mrPushRide(r); }
 
 // ---- config + quote ----
@@ -3881,11 +3906,11 @@ app.post('/api/mr/rides/:id/cancel', auth, (req, res) => {
   if (drv) { // the driver drops it: look for another driver
     const d = mrDriver(req.user.id); if (d) d.cancels = (d.cancels || 0) + 1;
     r.declined = [...(r.declined || []), req.user.id]; r.driverId = null; r.status = 'searching'; r.acceptedAt = null; r.arrivedAt = null; save();
-    mrTell(r, '⚠️ The driver cancelled', 'Maata is finding another driver for you.'); mrMatch(r, 0); return res.json({ ok: true });
+    mrVoice(r.userId, 'drvcancel', '⚠️ The driver cancelled', 'Maata is finding another driver for you.', r); mrMatch(r, 0); return res.json({ ok: true });
   }
   r.status = 'cancelled'; r.cancelBy = 'rider'; r.cancelWhy = clip(req.body?.why, 120); r.endedAt = now(); save();
   for (const id of r.offered || []) io.to('user:' + id).emit('mr:gone', { id: r.id });
-  if (r.driverId) mrTell(r, '❌ Ride cancelled by the customer', (r.pickup.text || '') + (r.cancelWhy ? ' · ' + r.cancelWhy : ''), true);
+  if (r.driverId) mrVoice(r.driverId, 'ridercancel', '❌ Ride cancelled by the customer', (r.pickup.text || '') + (r.cancelWhy ? ' · ' + r.cancelWhy : ''), r);
   mrPushRide(r); res.json({ ok: true });
 });
 // ---- driver actions ----
@@ -3899,25 +3924,25 @@ app.post('/api/mr/rides/:id/accept', auth, (req, res) => {
   r.status = 'accepted'; r.driverId = d.id; r.acceptedAt = now(); d.accepts = (d.accepts || 0) + 1; clearTimeout(mrWaveTimers.get(r.id)); mrWaveTimers.delete(r.id); save();
   for (const id of r.offered || []) if (id !== d.id) io.to('user:' + id).emit('mr:gone', { id: r.id });
   const eta = d.loc ? Math.max(2, Math.round((mrKm(d.loc, r.pickup) * 1.4 / 20) * 60)) : null;
-  mrTell(r, (MR_VEH[r.veh] || MR_VEH.auto).icon + ' ' + d.name + ' is coming' + (eta ? ' · ' + eta + ' min' : ''), d.number + ' · ' + (d.model || '') + ' · OTP ' + r.otp);
+  mrVoice(r.userId, 'accepted', (MR_VEH[r.veh] || MR_VEH.auto).icon + ' ' + d.name + ' is coming' + (eta ? ' · ' + eta + ' min' : ''), d.number + ' · ' + (d.model || '') + ' · OTP ' + r.otp, r, d, eta);
   res.json(mrOut(r, req.user));
 });
 app.post('/api/mr/rides/:id/decline', auth, (req, res) => { const r = mrRide(req.params.id); if (r) { r.declined = [...(r.declined || []), req.user.id]; save(); } res.json({ ok: true }); });
 app.post('/api/mr/rides/:id/arrived', auth, (req, res) => {
   const r = mrMyRide(req, res); if (!r) return; if (r.status !== 'accepted') return res.status(400).json({ error: 'Not now.' });
-  r.status = 'arrived'; r.arrivedAt = now(); save(); mrTell(r, '📍 Your ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase() + ' has arrived', 'Tell the driver your OTP ' + r.otp + ' to start the ride.'); res.json(mrOut(r, req.user));
+  r.status = 'arrived'; r.arrivedAt = now(); save(); mrVoice(r.userId, 'arrived', '📍 Your ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase() + ' has arrived', 'Tell the driver your OTP ' + r.otp + ' to start the ride.', r); res.json(mrOut(r, req.user));
 });
 app.post('/api/mr/rides/:id/start', auth, (req, res) => {
   const r = mrMyRide(req, res); if (!r) return; if (!['accepted', 'arrived'].includes(r.status)) return res.status(400).json({ error: 'Not now.' });
   if (String(req.body?.otp || '').trim() !== r.otp) return res.status(400).json({ error: 'Wrong OTP. Ask the customer for the 4-digit OTP shown in their Maata app.' });
   r.status = 'started'; r.startedAt = now(); r.minDrop = r.driverId && mrDriver(r.driverId).loc ? mrKm(mrDriver(r.driverId).loc, r.drop) : r.route.km; r.lastMoveAt = now(); save();
-  mrTell(r, '🟢 Ride started', 'Going to ' + (r.drop.text || 'your drop') + '. Share the live trip with family from the ride screen.'); res.json(mrOut(r, req.user));
+  mrVoice(r.userId, 'started', '🟢 Ride started', 'Going to ' + (r.drop.text || 'your drop') + '. Share the live trip with family from the ride screen.', r); res.json(mrOut(r, req.user));
 });
 app.post('/api/mr/rides/:id/end', auth, (req, res) => {
   const r = mrMyRide(req, res); if (!r) return; if (r.status !== 'started') return res.status(400).json({ error: 'Not now.' });
   if (r.parcel && String(req.body?.otp || '').trim() !== r.endOtp) return res.status(400).json({ error: 'Wrong delivery code. Ask the receiver for the code the sender gave them.' });
   const d = mrDriver(r.driverId); r.status = 'completed'; r.endedAt = now(); r.fare.final = r.fare.est; if (d) d.rides = (d.rides || 0) + 1; save();
-  mrTell(r, '✅ You reached · ₹' + r.fare.final, r.pay === 'upi' ? 'Pay the driver by UPI from the ride screen, then rate your ride.' : 'Pay ₹' + r.fare.final + ' cash to the driver, then rate your ride.');
+  mrVoice(r.userId, 'completed', '✅ You reached · ₹' + r.fare.final, r.pay === 'upi' ? 'Pay the driver by UPI from the ride screen, then rate your ride.' : 'Pay ₹' + r.fare.final + ' cash to the driver, then rate your ride.', r);
   res.json(mrOut(r, req.user));
 });
 app.post('/api/mr/rides/:id/paid', auth, (req, res) => { const r = mrRide(req.params.id); if (!r || (r.driverId !== req.user.id && r.userId !== req.user.id)) return res.status(404).json({ error: 'Ride not found.' }); if (r.driverId === req.user.id) { r.paid = true; r.paidBy = req.body?.method === 'upi' ? 'upi' : 'cash'; } else r.riderSaysPaid = true; save(); mrPushRide(r); res.json(mrOut(r, req.user)); });
@@ -3946,7 +3971,7 @@ function mrSafety(r, d) {
   let why = '';
   if (k > r.minDrop + 1.5) why = 'The vehicle is going away from your drop.';
   else if (now() - (r.lastMoveAt || now()) > 6 * 60000 && k > 0.3) why = 'The vehicle has not moved for 6 minutes.';
-  if (why && quiet(10 * 60000)) { r.alertAt = now(); io.to('user:' + r.userId).emit('mr:safety', { id: r.id, why }); pushTo(userById(r.userId), { type: 'msg', title: '🛡️ Is everything OK?', body: why + ' Tap to answer or press SOS.', tag: 'mrsafe-' + r.id, url: '/#mr=' + r.id }, { urgency: 'high' }).catch(() => {}); }
+  if (why && quiet(10 * 60000)) { r.alertAt = now(); io.to('user:' + r.userId).emit('mr:safety', { id: r.id, why }); mrVoice(r.userId, 'safety', '🛡️ Is everything OK?', why + ' Tap to answer or press SOS.', r); }
 }
 // live trip page for family (no login): driver, vehicle number, where they are now
 app.get('/api/mr/share/:tok', (req, res) => {
@@ -4057,7 +4082,7 @@ app.post('/api/mr/driver/loc', auth, (req, res) => { mrLoc(req.user, req.body); 
 setInterval(() => {
   let ch = false;
   for (const r of db.mrRides) {
-    if (r.status === 'scheduled' && r.when - now() < 10 * 60000) { r.status = 'searching'; ch = true; mrMatch(r); mrTell(r, '🔎 Finding your ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase(), 'For your ride at ' + new Date(r.when + 5.5 * 3600e3).toISOString().slice(11, 16)); }
+    if (r.status === 'scheduled' && r.when - now() < 10 * 60000) { r.status = 'searching'; ch = true; mrMatch(r); mrVoice(r.userId, 'searching', '🔎 Finding your ' + (MR_VEH[r.veh] || MR_VEH.auto).name.toLowerCase(), 'For your ride at ' + new Date(r.when + 5.5 * 3600e3).toISOString().slice(11, 16), r); }
     else if (r.status === 'searching' && now() - r.createdAt > 6 * 60000 && !mrWaveTimers.has(r.id)) { mrMatch(r, 99); ch = true; }
     else if (MR_ACTIVE.includes(r.status) && now() - (r.acceptedAt || r.createdAt) > 8 * 3600e3) { r.status = 'completed'; r.endedAt = now(); r.fare.final = r.fare.est; ch = true; }
   }
@@ -4083,7 +4108,8 @@ app.post('/admin/api/mr/driver/:id/:act', adminAuth, (req, res) => {
   else if (act === 'payok' || act === 'paybad') { const p = (d.payReq || []).find((x) => x.id === req.body?.payId && x.status === 'pending'); if (!p) return res.status(404).json({ error: 'Payment not found.' }); p.status = act === 'payok' ? 'ok' : 'rejected'; if (act === 'payok') d.subUntil = Math.max(now(), d.subUntil || 0) + p.days * 864e5; }
   else return res.status(400).json({ error: 'Unknown action.' });
   audit(req.admin, 'captain-' + act, d.id, d.name + (why ? ' – ' + why : '')); save();
-  if (u) { const msg = { approve: '✅ You are a Maata Captain! Go online to get rides.', reject: '❌ Captain registration: ' + d.reason, block: '⛔ ' + d.reason, pause: '⏸️ ' + d.reason, days: '📅 Your Captain plan is active till ' + new Date(d.subUntil).toLocaleDateString('en-IN'), payok: '✅ Payment received. Plan active till ' + new Date(d.subUntil).toLocaleDateString('en-IN'), paybad: '❌ Plan payment could not be confirmed. Check the UTR and send again.' }[act];
+  if (u && act === 'approve') mrVoice(d.id, 'approved', '🛺 Maata Ride', '✅ You are a Maata Captain! Go online to get rides.', null);
+  else if (u) { const msg = { approve: '✅ You are a Maata Captain! Go online to get rides.', reject: '❌ Captain registration: ' + d.reason, block: '⛔ ' + d.reason, pause: '⏸️ ' + d.reason, days: '📅 Your Captain plan is active till ' + new Date(d.subUntil).toLocaleDateString('en-IN'), payok: '✅ Payment received. Plan active till ' + new Date(d.subUntil).toLocaleDateString('en-IN'), paybad: '❌ Plan payment could not be confirmed. Check the UTR and send again.' }[act];
     pushTo(u, { type: 'msg', title: '🛺 Maata Ride', body: msg, tag: 'mrcap', url: '/#mr=captain' }).catch(() => {}); }
   res.json(mrDrvOut(d));
 });
