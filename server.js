@@ -430,9 +430,9 @@ app.get('/manifest.webmanifest', (req, res) => {
   res.type('application/manifest+json').json({
     id: '/', name: 'Maata — free calls & messages', short_name: 'Maata', description: 'Free voice calls, video calls, chat and local services, made in India.',
     start_url: '/?source=app', scope: '/', display: 'standalone', orientation: 'portrait', background_color: '#0A3A47', theme_color: '#0F4C5C', lang: 'en-IN', categories: ['communication', 'social'],
-    icons: [{ src: '/icons/icon-192.png?v=2', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icons/icon-512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-maskable-192.png?v=2', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: '/icons/icon-maskable-512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
-    shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png?v=2', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png?v=2', sizes: '192x192' }] }],
+    icons: [{ src: '/icons/icon-192.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icons/icon-512.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-maskable-192.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: '/icons/icon-maskable-512.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
+    shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png?v=4', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png?v=4', sizes: '192x192' }] }],
   });
 });
 const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png', 'maata-logo.png'];
@@ -443,7 +443,7 @@ app.get('/icons/:f', (req, res) => {
   if (!f) return res.status(404).end();
   res.setHeader('Cache-Control', 'public, max-age=604800'); res.sendFile(f);
 });
-app.get('/favicon.ico', (req, res) => res.redirect(301, '/icons/icon-192.png?v=2'));
+app.get('/favicon.ico', (req, res) => res.redirect(301, '/icons/icon-192.png?v=4'));
 // Play Store app (TWA): proves maataapp.com and the Android app belong together, so the app opens full screen
 app.get('/.well-known/assetlinks.json', (req, res) => {
   const pkg = (process.env.TWA_PACKAGE || '').trim(), fps = (process.env.TWA_SHA256 || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -456,7 +456,7 @@ app.get('/sw.js', (req, res) => {
 const SW_SOURCE = `
 const CACHE = 'maata-shell-v4';
 const API = 'maata-api-v1';
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/socket.io/socket.io.js', '/icons/icon-192.png?v=2', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/socket.io/socket.io.js', '/icons/icon-192.png?v=4', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== MEDIA && k !== API).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 // Pages: always try the network first (so updates show at once), fall back to the saved copy when offline
 // Chat photos, videos, voice notes and files are kept on the phone. The server deletes them after some days,
@@ -551,7 +551,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data.json(); } catch { d = { title: 'Maata', body: e.data ? e.data.text() : '' }; }
   const call = d.type === 'call';
-  const opts = { body: d.body || '', icon: '/icons/icon-192.png?v=2', badge: '/icons/badge-96.png', tag: d.tag || d.type || 'maata', renotify: true, data: { url: d.url || '/', type: d.type, callId: d.callId },
+  const opts = { body: d.body || '', icon: '/icons/icon-192.png?v=4', badge: '/icons/badge-96.png', tag: d.tag || d.type || 'maata', renotify: true, data: { url: d.url || '/', type: d.type, callId: d.callId },
     vibrate: call ? [800, 400, 800, 400, 800, 400, 800] : [150, 80, 150], requireInteraction: call, silent: false, timestamp: Date.now(), image: undefined,
     actions: call ? [{ action: 'answer', title: '📞 Answer' }, { action: 'decline', title: '✖ Decline' }] : [{ action: 'open', title: 'Open' }] };
   e.waitUntil(self.registration.showNotification(d.title || 'Maata', opts));
@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 272;
+const MAATA_VERSION = 274;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
