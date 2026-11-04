@@ -992,6 +992,7 @@ function smSetup() {
   const s = smData.setup, ok = (v) => v ? '<span class="tag t-green">✓ Ready</span>' : '<span class="tag t-amber">Not set</span>';
   $('#smBox').innerHTML = `<div class="card" style="padding:16px;line-height:1.6">
     <h3 style="margin-top:0">📥 Receiving emails at ${esc(s.from.email)} ${ok(s.inbound && s.parser)}</h3>
+    ${s.inbound && !s.parser ? '<p style="color:#C8413A"><b>⚠️ The server is missing the <code>mailparser</code> package.</b> Upload the new <code>package.json</code> to GitHub (repo root) so Render installs it.</p>' : ''}${!s.inbound ? '<p style="color:#C8413A"><b>⚠️ MAIL_INBOUND_KEY is not set on Render.</b></p>' : ''}
     <ol><li>Render → your service → <b>Environment</b> → add <code>MAIL_INBOUND_KEY</code> = any long random password you make up (keep it secret). Save.</li>
     <li>Cloudflare → <b>Workers &amp; Pages</b> → Create → <b>Create Worker</b> → name it <code>maata-mail</code> → Deploy → <b>Edit code</b> → replace everything with the code below → Deploy.</li>
     <li>That worker → <b>Settings → Variables and Secrets</b> → add <code>MAATA_KEY</code> (type <b>Secret</b>) = the same value as <code>MAIL_INBOUND_KEY</code>. Optional: <code>FORWARD_TO</code> = your Gmail, for a backup copy (that Gmail must be a verified destination in Email Routing).</li>
@@ -1011,7 +1012,7 @@ function smSetup() {
 function smSetTab(t, quiet) {
   $$('#smTabs button').forEach((x) => x.classList.toggle('on', x.dataset.t === t));
   smOpen = null;
-  if (t === 'setup') return smSetup();
+  if (t === 'setup') return api('/admin/api/support-mail?box=inbox').then((d) => { smData = d; smSetup(); }).catch((e) => toast(e.message));
   smBox = t; if (!quiet) loadSupportMail();
 }
 $$('#smTabs button').forEach((b) => b.onclick = () => smSetTab(b.dataset.t));
