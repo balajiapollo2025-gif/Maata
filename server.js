@@ -430,9 +430,9 @@ app.get('/manifest.webmanifest', (req, res) => {
   res.type('application/manifest+json').json({
     id: '/', name: 'Maata — free calls & messages', short_name: 'Maata', description: 'Free voice calls, video calls, chat and local services, made in India.',
     start_url: '/?source=app', scope: '/', display: 'standalone', orientation: 'portrait', background_color: '#0A3A47', theme_color: '#0F4C5C', lang: 'en-IN', categories: ['communication', 'social'],
-    icons: [{ src: '/icons/icon-192.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icons/icon-512.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-maskable-192.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: '/icons/icon-maskable-512.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
-    shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png?v=4', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png?v=4', sizes: '192x192' }] }],
+    icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: '/icons/icon-512.png?v=5', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-maskable-192.png?v=5', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: '/icons/icon-maskable-512.png?v=5', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
+    shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192' }] }],
   });
 });
 const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png', 'maata-logo.png'];
@@ -443,7 +443,7 @@ app.get('/icons/:f', (req, res) => {
   if (!f) return res.status(404).end();
   res.setHeader('Cache-Control', 'public, max-age=604800'); res.sendFile(f);
 });
-app.get('/favicon.ico', (req, res) => res.redirect(301, '/icons/icon-192.png?v=4'));
+app.get('/favicon.ico', (req, res) => res.redirect(301, '/icons/icon-192.png?v=5'));
 // Play Store app (TWA): proves maataapp.com and the Android app belong together, so the app opens full screen
 app.get('/.well-known/assetlinks.json', (req, res) => {
   const pkg = (process.env.TWA_PACKAGE || '').trim(), fps = (process.env.TWA_SHA256 || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -456,7 +456,7 @@ app.get('/sw.js', (req, res) => {
 const SW_SOURCE = `
 const CACHE = 'maata-shell-v4';
 const API = 'maata-api-v1';
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/socket.io/socket.io.js', '/icons/icon-192.png?v=4', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/socket.io/socket.io.js', '/icons/icon-192.png?v=5', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== MEDIA && k !== API).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 // Pages: always try the network first (so updates show at once), fall back to the saved copy when offline
 // Chat photos, videos, voice notes and files are kept on the phone. The server deletes them after some days,
@@ -551,7 +551,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data.json(); } catch { d = { title: 'Maata', body: e.data ? e.data.text() : '' }; }
   const call = d.type === 'call';
-  const opts = { body: d.body || '', icon: '/icons/icon-192.png?v=4', badge: '/icons/badge-96.png', tag: d.tag || d.type || 'maata', renotify: true, data: { url: d.url || '/', type: d.type, callId: d.callId },
+  const opts = { body: d.body || '', icon: '/icons/icon-192.png?v=5', badge: '/icons/badge-96.png', tag: d.tag || d.type || 'maata', renotify: true, data: { url: d.url || '/', type: d.type, callId: d.callId },
     vibrate: call ? [800, 400, 800, 400, 800, 400, 800] : [150, 80, 150], requireInteraction: call, silent: false, timestamp: Date.now(), image: undefined,
     actions: call ? [{ action: 'answer', title: '📞 Answer' }, { action: 'decline', title: '✖ Decline' }] : [{ action: 'open', title: 'Open' }] };
   e.waitUntil(self.registration.showNotification(d.title || 'Maata', opts));
@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 275;
+const MAATA_VERSION = 276;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5977,7 +5977,7 @@ const MAATA_ENTITY = process.env.MAATA_ENTITY || 'MAATA TECHNOLOGIES'; /* v275: 
 const ENTITY_FOOT = () => `<hr style="margin-top:36px;border:0;border-top:1px solid #DDE3EA"><small>Maata (maataapp.com) is owned and operated by <b>${MAATA_ENTITY}</b>, India. · <a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></small>`;
 const PAGE_CSS = 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:760px;margin:0 auto;padding:28px 20px 60px;color:#1C2230;line-height:1.65}h1{color:#0F4C5C}h2{color:#0F4C5C;margin-top:28px;font-size:20px}a{color:#11606F}.top{display:flex;align-items:center;gap:12px}.top img{width:56px;height:56px;border-radius:14px}small{color:#5B6474}';
 app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy · Maata</title><style>${PAGE_CSS}</style></head><body>
-<div class="top"><img src="/icons/icon-192.png" alt=""><h1>Maata Privacy Policy</h1></div><small>Last updated: ${new Date().toISOString().slice(0, 10)} · Contact: ${process.env.PUSH_CONTACT || 'support@maataapp.com'}</small>
+<div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>Maata Privacy Policy</h1></div><small>Last updated: ${new Date().toISOString().slice(0, 10)} · Contact: ${process.env.PUSH_CONTACT || 'support@maataapp.com'}</small>
 <p>Maata ("we") is owned and operated by <b>${MAATA_ENTITY}</b>, India. Maata provides free voice calls, video calls and messaging. This policy explains what we collect, why, and your choices.</p>
 <h2>What we collect</h2><ul>
 <li><b>Account:</b> your name, mobile number and a securely hashed password. When you create an account, your mobile number is sent to our SMS provider (Fast2SMS or Message Central) only to deliver the one-time verification code.</li>
@@ -5998,7 +5998,7 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <h2>Changes</h2><p>We will update this page when the policy changes.</p>${ENTITY_FOOT()}</body></html>`));
 // v275: Terms of use
 app.get('/terms', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Use · Maata</title><style>${PAGE_CSS}</style></head><body>
-<div class="top"><img src="/icons/icon-192.png?v=4" alt=""><h1>Maata Terms of Use</h1></div>
+<div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>Maata Terms of Use</h1></div>
 <p>These terms apply to the Maata app and maataapp.com, owned and operated by <b>${MAATA_ENTITY}</b>, India. By using Maata you agree to them.</p>
 <h2>Your account</h2><ul><li>You must be 18 or older and use your own mobile number.</li><li>We verify your number with a one-time password (OTP) sent by SMS. Keep your OTP and password private.</li></ul>
 <h2>Fair use</h2><ul><li>Do not send spam, illegal, abusive or misleading content, or impersonate others.</li><li>Businesses and service providers are responsible for their own products, prices, bills and services.</li><li>We may suspend accounts that break these terms or Indian law.</li></ul>
@@ -6008,7 +6008,7 @@ app.get('/terms', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><
 ${ENTITY_FOOT()}</body></html>`));
 // v275: About / company page (entity name for DLT, Play Store, trademark)
 app.get('/about', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>About · Maata by ${MAATA_ENTITY}</title><style>${PAGE_CSS}</style></head><body>
-<div class="top"><img src="/icons/icon-192.png?v=4" alt=""><h1>About Maata</h1></div>
+<div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>About Maata</h1></div>
 <p><b>Maata</b> is an Indian app for free chat, voice and video calls, status updates, local shops and billing (Maata Business), local services, jobs and maps.</p>
 <h2>Company</h2><p>Maata and the website <b>maataapp.com</b> are owned and operated by <b>${MAATA_ENTITY}</b>, India.</p>
 <h2>Verification codes (OTP)</h2><p>When you sign up or log in to Maata, ${MAATA_ENTITY} sends a one-time password (OTP) by SMS from the sender ID <b>MAATAP</b> to verify your mobile number. Never share this OTP with anyone.</p>
@@ -6032,7 +6032,7 @@ app.get('/delete-data', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><
 <p>To delete <b>everything</b>, delete your account: <a href="/delete-account">maataapp.com/delete-account</a>. Questions: Menu → Help &amp; Support in the app.</p>
 </body></html>`));
 app.get('/delete-account', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your Maata account</title><style>${PAGE_CSS}input,button{font:inherit;padding:12px 14px;border-radius:12px;border:1.5px solid #D5DCE0;width:100%;box-sizing:border-box;margin:6px 0}button{background:#C8413A;color:#fff;border:0;font-weight:700;cursor:pointer}#msg{margin-top:10px;font-weight:600}</style></head><body>
-<div class="top"><img src="/icons/icon-192.png" alt=""><h1>Delete your Maata account</h1></div>
+<div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>Delete your Maata account</h1></div>
 <p>This permanently deletes your Maata account, chats, files, statuses, business profile, catalogue and ads. It cannot be undone.</p><p><b>Deleted at once:</b> your profile and photo, mobile number, chats and files you sent or received, statuses, reels and comments, contacts saved in Maata, call history, Maata AI chats, business profile, catalogue and ads, Find Work / Hire Workers profiles, jobs and alerts, Local Services provider profile, your ratings, live-location (team) history, login history and support tickets.</p><p><b>Kept:</b> bills and orders you made with a shop, and Local Services bookings, stay in that shop's or provider's records because they are their business records. A short security record (your name, number and the time of deletion) is kept for up to 1 year to prevent fraud, then removed. Maata does not keep other copies.</p>
 <p>In the app: <b>⋮ → Settings → Delete my account</b>. Or enter your mobile number and password here:</p>
 <form id="f"><input id="ph" inputmode="tel" placeholder="Mobile number" required><input id="pw" type="password" placeholder="Password" required><button>Delete my account permanently</button></form><div id="msg" role="status"></div>
