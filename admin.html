@@ -347,7 +347,22 @@ textarea.input{min-height:110px;resize:vertical}
     </section>
     <section data-page="smail" hidden>
       <div class="top"><h2>📧 Support mail — support@maataapp.com</h2></div>
-      <div class="tabs" id="smTabs"><button class="on" data-t="inbox">📥 Inbox</button><button data-t="unread">Unread</button><button data-t="star">⭐ Starred</button><button data-t="sent">↩️ Replied</button><button data-t="done">✅ Done</button><button data-t="setup">⚙️ Setup</button></div>
+      <style>
+      #smTabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+      #smTabs button{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:12px;border:1.5px solid #D5DCE0;background:#fff;color:#1C2230;font:inherit;font-weight:600;cursor:pointer}
+      #smTabs button:hover{border-color:#0F4C5C}
+      #smTabs button.on{background:#0F4C5C;border-color:#0F4C5C;color:#fff}
+      #smTabs .n{min-width:20px;padding:1px 7px;border-radius:999px;background:#E8EEF1;color:#0F4C5C;font-size:12px;text-align:center}
+      #smTabs button.on .n{background:rgba(255,255,255,.22);color:#fff}
+      #smTabs .n.new{background:#C8413A;color:#fff}
+      .sm-row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid #eee;cursor:pointer}
+      .sm-row:hover{background:#F6F9FA}.sm-row.unread{background:#F1F8F6}
+      .sm-ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:16px}
+      .sm-ic.in{background:#E3F1EC}.sm-ic.out{background:#E7F1FB}
+      .sm-lbl{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+      .sm-lbl.new{background:#FDECEC;color:#C8413A}.sm-lbl.rep{background:#E5F4E4;color:#1E7B3A}.sm-lbl.wait{background:#FFF4DE;color:#8A5A00}.sm-lbl.done{background:#EFEDFF;color:#4B3FB5}
+    </style>
+      <div id="smTabs"><button class="on" data-t="inbox">📥 Inbox <span class="n" id="smNInbox"></span></button><button data-t="sent">📤 Sent <span class="n" id="smNSent"></span></button><button data-t="star">⭐ Starred <span class="n" id="smNStar"></span></button><button data-t="done">✅ Done <span class="n" id="smNDone"></span></button><button data-t="setup">⚙️ Setup</button></div>
       <div id="smBox"></div>
     </section>
     <section data-page="helpdesk" hidden>
@@ -918,6 +933,8 @@ const SM_WORKER = `export default {
 async function loadSupportMail() {
   smData = await api('/admin/api/support-mail?box=' + smBox + '&q=' + encodeURIComponent(smQ));
   const c = $('#smCount'); c.hidden = !smData.unread; c.textContent = smData.unread;
+  const k = smData.counts || {}, setN = (id, v, red) => { const e = $(id); if (!e) return; e.textContent = v || 0; e.classList.toggle('new', !!red); };
+  setN('#smNInbox', smData.unread || k.inbox, !!smData.unread); setN('#smNSent', k.sent); setN('#smNStar', k.star); setN('#smNDone', k.done);
   drawSm();
 }
 function smSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
@@ -926,12 +943,17 @@ function drawSm() {
   const warn = !s.inbound || !s.send ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;border:2px solid #E8A317">⚠️ ${!s.inbound ? '<b>Receiving is not set up yet.</b> ' : ''}${!s.send ? '<b>Sending is not set up yet.</b> ' : ''}<button class="btn" id="smSetupGo">Open setup</button></div>` : '';
   if (smOpen) return smThread(smOpen);
   box.innerHTML = warn + `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input id="smSearch" placeholder="Search name, email, subject…" value="${esc(smQ)}" style="flex:1;min-width:180px;padding:9px 12px;border-radius:10px;border:1px solid #ddd;font:inherit"><button class="btn ok" id="smNew">✏️ New email</button><button class="btn" id="smRefresh">⟳</button></div>`
-    + (smData.threads.length ? '<div class="card" style="padding:0;overflow:hidden">' + smData.threads.map((t) => `<div data-smt="${esc(t.thread)}" style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid #eee;cursor:pointer;${t.unread ? 'background:#F1F8F6' : ''}">
-      <span style="font-size:18px;line-height:1.2">${t.star ? '⭐' : t.replied ? '↩️' : '📩'}</span>
-      <div style="flex:1;min-width:0"><div style="display:flex;gap:8px"><b style="${t.unread ? '' : 'font-weight:600'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.who.name || t.who.email)}</b>${t.count > 1 ? `<span class="muted">(${t.count})</span>` : ''}${t.unread ? `<span class="tag t-amber">${t.unread} new</span>` : ''}${t.done ? '<span class="tag t-green">Done</span>' : ''}<span class="muted" style="margin-left:auto;white-space:nowrap">${dt(t.last)}</span></div>
-      <div style="${t.unread ? 'font-weight:700' : ''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.hasAtt ? '📎 ' : ''}${esc(t.subject)}</div>
-      <div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.snippet)}</div></div></div>`).join('') + '</div>'
-      : `<div class="card empty">${smQ ? 'No emails match your search.' : smBox === 'inbox' ? 'No emails yet. Emails sent to <b>' + esc(s.from.email) + '</b> will show here.' : 'Nothing here.'}</div>`);
+    + `<div class="muted" style="margin:0 0 8px">${{ inbox: '📥 Emails people sent to ' + esc(s.from.email), sent: '📤 Emails you sent from ' + esc(s.from.email), star: '⭐ Starred conversations', done: '✅ Conversations marked done' }[smBox] || ''}</div>`
+    + (smData.threads.length ? '<div class="card" style="padding:0;overflow:hidden">' + smData.threads.map((t) => {
+      const sent = smBox === 'sent', m = sent ? t.lastOut : (t.lastIn || t.lastOut);
+      const name = sent ? 'To: ' + (m.to || '') : (t.who.name || t.who.email);
+      const lbl = sent ? '' : t.unread ? `<span class="sm-lbl new">${t.unread} new</span>` : t.done ? '<span class="sm-lbl done">Done</span>' : t.replied ? '<span class="sm-lbl rep">↩️ Replied</span>' : '<span class="sm-lbl wait">Not replied</span>';
+      return `<div class="sm-row${t.unread && !sent ? ' unread' : ''}" data-smt="${esc(t.thread)}">
+      <span class="sm-ic ${sent ? 'out' : 'in'}">${t.star ? '⭐' : sent ? '📤' : '📩'}</span>
+      <div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center"><b style="${t.unread && !sent ? '' : 'font-weight:600'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>${!sent && t.who.name ? `<span class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.who.email)}</span>` : ''}${lbl}<span class="muted" style="margin-left:auto;white-space:nowrap">${dt(m.at)}</span></div>
+      <div style="${t.unread && !sent ? 'font-weight:700' : ''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.hasAtt ? '📎 ' : ''}${esc(t.subject)}${t.count > 1 ? ` <span class="muted">(${t.count} messages)</span>` : ''}</div>
+      <div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sent ? 'You: ' : ''}${esc(m.snippet)}</div></div></div>`; }).join('') + '</div>'
+      : `<div class="card empty">${smQ ? 'No emails match your search.' : smBox === 'inbox' ? 'No emails yet. Emails sent to <b>' + esc(s.from.email) + '</b> will show here.' : smBox === 'sent' ? 'You have not sent any email yet. Use ✏️ New email or reply to an email in the Inbox.' : 'Nothing here.'}</div>`);
   $('#smSearch').onkeydown = (e) => { if (e.key === 'Enter') { smQ = e.target.value.trim(); loadSupportMail(); } };
   $('#smNew').onclick = () => smCompose();
   $('#smRefresh').onclick = () => loadSupportMail();
@@ -951,7 +973,7 @@ async function smThread(id) {
   box.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="btn" id="smBack">← Back</button><b style="font-size:17px;flex:1;min-width:160px">${esc(first.subject)}</b>
     <button class="btn" data-sma="star">⭐ Star</button><button class="btn" data-sma="done">✅ Done</button><button class="btn" data-sma="unread">Mark unread</button><button class="btn" data-sma="delete" style="color:#C8413A">🗑 Delete</button></div>`
     + d.msgs.map((m) => `<div class="card" style="padding:12px 14px;margin-bottom:10px;${m.dir === 'out' ? 'margin-left:36px;background:#E3EFF1' : ''}">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>${m.dir === 'out' ? '↩️ Maata Support' + (m.by ? ' <span class="muted">(' + esc(m.by) + ')</span>' : '') : esc(m.from.name || m.from.email)}</b><span class="muted">${m.dir === 'out' ? 'to ' + esc((m.to || []).join(', ')) : '&lt;' + esc(m.from.email) + '&gt;'}</span><span class="muted" style="margin-left:auto">${dt(m.at)}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="sm-lbl ${m.dir === 'out' ? 'rep' : 'new'}" style="${m.dir === 'out' ? '' : 'background:#E3F1EC;color:#0F5C46'}">${m.dir === 'out' ? '📤 Sent' : '📥 Received'}</span><b>${m.dir === 'out' ? 'Maata Support' + (m.by ? ' <span class="muted">(' + esc(m.by) + ')</span>' : '') : esc(m.from.name || m.from.email)}</b><span class="muted">${m.dir === 'out' ? 'to ' + esc((m.to || []).join(', ')) : '&lt;' + esc(m.from.email) + '&gt;'}</span><span class="muted" style="margin-left:auto">${dt(m.at)}</span></div>
       <div data-smbody="${esc(m.id)}" style="margin-top:8px;white-space:pre-wrap;word-wrap:break-word">${esc(m.text || '')}</div>
       ${m.html && m.dir === 'in' ? `<button class="btn" data-smhtml="${esc(m.id)}" style="margin-top:6px">Show formatted email</button>` : ''}
       ${(m.atts || []).length ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + m.atts.map((f) => `<a class="btn" href="/admin/api/support-mail/att/${esc(f.fid)}?dl=1&token=${encodeURIComponent(token)}" target="_blank" rel="noopener" style="text-decoration:none;color:#fff">📎 ${esc(f.name)} <small style="opacity:.8">${smSize(f.size)}</small></a>`).join('') + '</div>' : ''}
@@ -984,7 +1006,7 @@ function smCompose() {
   $('#smBack').onclick = () => drawSm();
   $('#smGo').onclick = async () => {
     $('#smGo').disabled = true;
-    try { const r = await api('/admin/api/support-mail/send', { method: 'POST', body: JSON.stringify({ to: $('#smTo').value.trim(), subject: $('#smSub').value.trim(), text: $('#smText').value }) }); toast('Email sent ✓'); smBox = 'sent'; smSetTab('sent', true); smOpen = r.thread; loadSupportMail(); }
+    try { const r = await api('/admin/api/support-mail/send', { method: 'POST', body: JSON.stringify({ to: $('#smTo').value.trim(), subject: $('#smSub').value.trim(), text: $('#smText').value }) }); toast('Email sent ✓'); smSetTab('sent', true); smBox = 'sent'; smOpen = null; loadSupportMail(); }
     catch (e) { toast(e.message); $('#smGo').disabled = false; }
   };
 }

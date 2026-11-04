@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 278;
+const MAATA_VERSION = 280;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -6074,16 +6074,21 @@ app.get('/admin/api/support-mail', adminAuth, (req, res) => {
     const last = t.msgs[t.msgs.length - 1], firstIn = t.msgs.find((x) => x.dir === 'in') || t.msgs[0];
     const who = firstIn.dir === 'in' ? firstIn.from : { name: '', email: (firstIn.to || [])[0] || '' };
     return { thread: t.thread, subject: firstIn.subject, who, last: last.at, count: t.msgs.length, unread: t.msgs.filter((x) => x.dir === 'in' && !x.read).length,
-      star: t.msgs.some((x) => x.star), replied: last.dir === 'out', snippet: smOut(last).snippet, done: !!t.msgs.find((x) => x.done), hasAtt: t.msgs.some((x) => (x.atts || []).length) };
+      star: t.msgs.some((x) => x.star), replied: last.dir === 'out', snippet: smOut(last).snippet, done: !!t.msgs.find((x) => x.done), hasAtt: t.msgs.some((x) => (x.atts || []).length),
+      lastIn: (() => { const m = t.msgs.filter((x) => x.dir === 'in').pop(); return m ? { at: m.at, from: m.from, snippet: smOut(m).snippet } : null; })(),
+      lastOut: (() => { const m = t.msgs.filter((x) => x.dir === 'out').pop(); return m ? { at: m.at, to: (m.to || [])[0] || '', snippet: smOut(m).snippet, by: m.by } : null; })(),
+      sentCount: t.msgs.filter((x) => x.dir === 'out').length };
   });
+  const all = list;
   if (box === 'unread') list = list.filter((t) => t.unread);
   else if (box === 'star') list = list.filter((t) => t.star);
   else if (box === 'done') list = list.filter((t) => t.done);
-  else if (box === 'sent') list = list.filter((t) => t.replied);
-  else list = list.filter((t) => !t.done);
-  if (q) list = list.filter((t) => (t.subject + ' ' + t.who.name + ' ' + t.who.email + ' ' + t.snippet).toLowerCase().includes(q));
-  list.sort((a, b) => b.last - a.last);
-  res.json({ threads: list.slice(0, 300), unread: db.supportMail.filter((x) => x.dir === 'in' && !x.read).length,
+  else if (box === 'sent') list = list.filter((t) => t.lastOut);
+  else list = list.filter((t) => t.lastIn && !t.done); /* v280: Inbox = received mails only */
+  if (q) list = list.filter((t) => (t.subject + ' ' + t.who.name + ' ' + t.who.email + ' ' + t.snippet + ' ' + ((t.lastOut || {}).to || '')).toLowerCase().includes(q));
+  const key = (t) => (box === 'sent' ? t.lastOut.at : box === 'inbox' || box === 'unread' ? t.lastIn.at : t.last);
+  list.sort((a, b) => key(b) - key(a));
+  res.json({ threads: list.slice(0, 300), unread: db.supportMail.filter((x) => x.dir === 'in' && !x.read).length, counts: { inbox: all.filter((t) => t.lastIn && !t.done).length, sent: db.supportMail.filter((x) => x.dir === 'out').length, star: all.filter((t) => t.star).length, done: all.filter((t) => t.done).length },
     setup: { inbound: !!SM_KEY, parser: !!simpleParser, send: MAIL_VIA || '', from: smFrom(), last: (db.supportMail.filter((x) => x.dir === 'in').pop() || {}).at || 0 } });
 });
 app.get('/admin/api/support-mail/t/:thread', adminAuth, (req, res) => {
