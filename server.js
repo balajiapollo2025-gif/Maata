@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 274;
+const MAATA_VERSION = 275;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5973,10 +5973,12 @@ app.post('/api/me/delete', auth, rateLimit, async (req, res) => {
   deleteAccountData(req.user, 'Your account was deleted.');
   res.json({ ok: true });
 });
+const MAATA_ENTITY = process.env.MAATA_ENTITY || 'MAATA TECHNOLOGIES'; /* v275: legal entity name shown on the website (DLT needs it) */
+const ENTITY_FOOT = () => `<hr style="margin-top:36px;border:0;border-top:1px solid #DDE3EA"><small>Maata (maataapp.com) is owned and operated by <b>${MAATA_ENTITY}</b>, India. · <a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></small>`;
 const PAGE_CSS = 'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:760px;margin:0 auto;padding:28px 20px 60px;color:#1C2230;line-height:1.65}h1{color:#0F4C5C}h2{color:#0F4C5C;margin-top:28px;font-size:20px}a{color:#11606F}.top{display:flex;align-items:center;gap:12px}.top img{width:56px;height:56px;border-radius:14px}small{color:#5B6474}';
 app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy Policy · Maata</title><style>${PAGE_CSS}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png" alt=""><h1>Maata Privacy Policy</h1></div><small>Last updated: ${new Date().toISOString().slice(0, 10)} · Contact: ${process.env.PUSH_CONTACT || 'support@maataapp.com'}</small>
-<p>Maata ("we") provides free voice calls, video calls and messaging. This policy explains what we collect, why, and your choices.</p>
+<p>Maata ("we") is owned and operated by <b>${MAATA_ENTITY}</b>, India. Maata provides free voice calls, video calls and messaging. This policy explains what we collect, why, and your choices.</p>
 <h2>What we collect</h2><ul>
 <li><b>Account:</b> your name, mobile number and a securely hashed password. When you create an account, your mobile number is sent to our SMS provider (Fast2SMS or Message Central) only to deliver the one-time verification code.</li>
 <li><b>Contacts:</b> numbers you save in Maata. If you choose to sync or import phone contacts, numbers are only checked against Maata users; the full list stays on your device.</li>
@@ -5993,11 +5995,29 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <h2>Who we share it with</h2><p>Service providers that run Maata for us: Render (hosting), MongoDB Atlas (database), Cloudflare (domain and file storage), Google (notifications, translation, speech, Gemini AI), and LiveKit (group call media, if enabled). We may share data when required by Indian law.</p>
 <h2>Your choices</h2><ul><li>Block or report anyone; control who sees your status.</li><li>Delete messages, chats or your status at any time.</li><li><b>Delete your account:</b> in the app go to ⋮ → Settings → Delete my account, or visit <a href="/delete-account">maataapp.com/delete-account</a>. Your account, messages, statuses, products and files are deleted from our active systems.</li></ul>
 <h2>Children</h2><p>Maata is for people aged 18 and over. We do not knowingly allow children to use Maata; if we learn that a child has an account, we delete it.</p>
-<h2>Changes</h2><p>We will update this page when the policy changes.</p></body></html>`));
+<h2>Changes</h2><p>We will update this page when the policy changes.</p>${ENTITY_FOOT()}</body></html>`));
+// v275: Terms of use
+app.get('/terms', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Use · Maata</title><style>${PAGE_CSS}</style></head><body>
+<div class="top"><img src="/icons/icon-192.png?v=4" alt=""><h1>Maata Terms of Use</h1></div>
+<p>These terms apply to the Maata app and maataapp.com, owned and operated by <b>${MAATA_ENTITY}</b>, India. By using Maata you agree to them.</p>
+<h2>Your account</h2><ul><li>You must be 18 or older and use your own mobile number.</li><li>We verify your number with a one-time password (OTP) sent by SMS. Keep your OTP and password private.</li></ul>
+<h2>Fair use</h2><ul><li>Do not send spam, illegal, abusive or misleading content, or impersonate others.</li><li>Businesses and service providers are responsible for their own products, prices, bills and services.</li><li>We may suspend accounts that break these terms or Indian law.</li></ul>
+<h2>Privacy</h2><p>How we handle your data is explained in our <a href="/privacy">Privacy Policy</a>.</p>
+<h2>Service</h2><p>Maata is provided as it is. We work to keep it available and secure but cannot promise it will never be interrupted.</p>
+<h2>Contact</h2><p><a href="mailto:${process.env.PUSH_CONTACT || 'support@maataapp.com'}">${process.env.PUSH_CONTACT || 'support@maataapp.com'}</a></p>
+${ENTITY_FOOT()}</body></html>`));
+// v275: About / company page (entity name for DLT, Play Store, trademark)
+app.get('/about', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>About · Maata by ${MAATA_ENTITY}</title><style>${PAGE_CSS}</style></head><body>
+<div class="top"><img src="/icons/icon-192.png?v=4" alt=""><h1>About Maata</h1></div>
+<p><b>Maata</b> is an Indian app for free chat, voice and video calls, status updates, local shops and billing (Maata Business), local services, jobs and maps.</p>
+<h2>Company</h2><p>Maata and the website <b>maataapp.com</b> are owned and operated by <b>${MAATA_ENTITY}</b>, India.</p>
+<h2>Verification codes (OTP)</h2><p>When you sign up or log in to Maata, ${MAATA_ENTITY} sends a one-time password (OTP) by SMS from the sender ID <b>MAATAP</b> to verify your mobile number. Never share this OTP with anyone.</p>
+<h2>Contact</h2><p>Email: <a href="mailto:${process.env.PUSH_CONTACT || 'support@maataapp.com'}">${process.env.PUSH_CONTACT || 'support@maataapp.com'}</a><br>Website: <a href="https://maataapp.com">https://maataapp.com</a></p>
+${ENTITY_FOOT()}</body></html>`));
 // Google Play: how to delete SOME data without deleting the account
 app.get('/delete-data', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delete your data in Maata</title><style>${PAGE_CSS}li{margin:6px 0}</style></head><body>
 <h1>🦜 Maata – delete some of your data</h1>
-<p>You can delete parts of your data in the <b>Maata</b> app (by Maata, maataapp.com) at any time, without deleting your account. Deleted items are removed from our servers at once.</p>
+<p>You can delete parts of your data in the <b>Maata</b> app (by ${MAATA_ENTITY}, maataapp.com) at any time, without deleting your account. Deleted items are removed from our servers at once.</p>
 <ul>
 <li><b>A message:</b> long-press the message → 🗑️ Delete → <i>Delete for everyone</i> (or <i>Delete for me</i>).</li>
 <li><b>Whole chats:</b> in the Chats list long-press a chat (or tap Select) → Delete chats.</li>
