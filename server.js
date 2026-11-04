@@ -454,7 +454,7 @@ app.get('/sw.js', (req, res) => {
   res.send(SW_SOURCE);
 });
 const SW_SOURCE = `
-const CACHE = 'maata-shell-v4';
+const CACHE = 'maata-shell-v5'; /* v277: new cache so the old logo copies are thrown away */
 const API = 'maata-api-v1';
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/socket.io/socket.io.js', '/icons/icon-192.png?v=5', '/icons/badge-96.png']).catch(() => {}))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== MEDIA && k !== API).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
@@ -531,7 +531,7 @@ async function apiFetch(r) {
   }
 }
 async function assetFetch(r) {
-  const c = await caches.open(CACHE), hit = await c.match(r, { ignoreSearch: true });
+  const c = await caches.open(CACHE), hit = await c.match(r); /* v277: exact URL, so ?v= changes always load the new file */
   const net = fetch(r).then((res) => { if (res.ok) c.put(r, res.clone()).catch(() => {}); return res; });
   if (hit) { net.catch(() => {}); return hit; }
   return net;
@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 276;
+const MAATA_VERSION = 277;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
