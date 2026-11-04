@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 277;
+const MAATA_VERSION = 278;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5996,6 +5996,146 @@ app.get('/privacy', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head
 <h2>Your choices</h2><ul><li>Block or report anyone; control who sees your status.</li><li>Delete messages, chats or your status at any time.</li><li><b>Delete your account:</b> in the app go to ⋮ → Settings → Delete my account, or visit <a href="/delete-account">maataapp.com/delete-account</a>. Your account, messages, statuses, products and files are deleted from our active systems.</li></ul>
 <h2>Children</h2><p>Maata is for people aged 18 and over. We do not knowingly allow children to use Maata; if we learn that a child has an account, we delete it.</p>
 <h2>Changes</h2><p>We will update this page when the policy changes.</p>${ENTITY_FOOT()}</body></html>`));
+// ---------- 📧 Support mail (v278): support@maataapp.com in the admin panel ----------
+// IN : Cloudflare Email Routing → Email Worker → POST /api/mail/inbound (raw email, header X-Maata-Key = MAIL_INBOUND_KEY on Render)
+// OUT: replies go through the same email API as password codes (Brevo / Resend / SMTP), from SUPPORT_FROM
+const SM_KEY = (process.env.MAIL_INBOUND_KEY || '').trim();
+const SUPPORT_FROM_RAW = (process.env.SUPPORT_FROM || 'Maata Support <support@maataapp.com>').trim();
+const smFrom = () => { const m = /^(.*?)\s*<([^>]+)>$/.exec(SUPPORT_FROM_RAW); return m ? { name: m[1].replace(/"/g, '').trim() || 'Maata Support', email: m[2].trim() } : { name: 'Maata Support', email: SUPPORT_FROM_RAW }; };
+const smSubj = (s) => String(s || '').replace(/^\s*((re|fw|fwd|aw)\s*:\s*)+/i, '').trim().toLowerCase();
+const smMsgIds = (v) => (Array.isArray(v) ? v.join(' ') : String(v || '')).match(/<[^<>\s]+>/g) || [];
+let simpleParser = null; try { ({ simpleParser } = require('mailparser')); } catch { /* mailparser missing */ }
+function smThreadFor(m) {
+  const refs = [...smMsgIds(m.inReplyTo), ...smMsgIds(m.references)];
+  if (refs.length) { const hit = db.supportMail.find((x) => x.messageId && refs.includes(x.messageId)); if (hit) return hit.thread; }
+  const s = smSubj(m.subject), who = (m.from || {}).email;
+  const hit = s && db.supportMail.slice().reverse().find((x) => smSubj(x.subject) === s && (x.from.email === who || (x.to || []).includes(who)) && now() - x.at < 60 * 864e5);
+  return hit ? hit.thread : newId();
+}
+async function smSendRaw({ to, subject, text, html, inReplyTo, references }) {
+  const from = smFrom(), hdr = {};
+  if (inReplyTo) hdr['In-Reply-To'] = inReplyTo;
+  if (references) hdr.References = references;
+  if (BREVO_KEY) {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': BREVO_KEY, 'Content-Type': 'application/json', accept: 'application/json' }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ sender: from, replyTo: { email: from.email, name: from.name }, to: [{ email: to }], subject, htmlContent: html, textContent: text, headers: Object.keys(hdr).length ? hdr : undefined }) });
+    if (!r.ok) throw new Error('Brevo ' + r.status + ': ' + (await r.text()).slice(0, 200));
+    const j = await r.json().catch(() => ({})); return j.messageId || '';
+  }
+  if (RESEND_KEY) {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ from: from.name + ' <' + from.email + '>', reply_to: from.email, to: [to], subject, html, text, headers: hdr }) });
+    if (!r.ok) throw new Error('Resend ' + r.status + ': ' + (await r.text()).slice(0, 200));
+    return '';
+  }
+  if (!mailer) throw new Error('Email sending is off. Add BREVO_API_KEY or RESEND_API_KEY on Render (see Support mail → Setup).');
+  const info = await mailer.sendMail({ from: from.name + ' <' + from.email + '>', to, subject, html, text, inReplyTo, references });
+  return info.messageId || '';
+}
+const smHtml = (text) => '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.55;color:#1C2230">' + String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])).replace(/\n/g, '<br>')
+  + '<br><br><span style="color:#5B6474;font-size:13px">— Maata Support · <a href="https://maataapp.com" style="color:#11606F">maataapp.com</a><br>' + MAATA_ENTITY + '</span></div>';
+// Email arrives from the Cloudflare worker
+app.post('/api/mail/inbound', express.raw({ type: () => true, limit: '26mb' }), async (req, res) => {
+  if (!SM_KEY || String(req.headers['x-maata-key'] || '') !== SM_KEY) return res.status(401).json({ error: 'bad key' });
+  if (!simpleParser) return res.status(500).json({ error: 'mailparser missing' });
+  try {
+    const p = await simpleParser(req.body);
+    const fa = (p.from && p.from.value && p.from.value[0]) || {};
+    const env = String(req.headers['x-mail-from'] || '').trim();
+    const m = { id: newId(), dir: 'in', at: now(), read: false, star: false,
+      from: { name: String(fa.name || '').slice(0, 120), email: String(fa.address || env || '').toLowerCase().slice(0, 160) },
+      to: ((p.to && p.to.value) || []).map((x) => String(x.address || '').toLowerCase()).filter(Boolean).slice(0, 10),
+      rcpt: String(req.headers['x-mail-to'] || '').toLowerCase().slice(0, 160),
+      subject: String(p.subject || '(no subject)').slice(0, 300),
+      text: String(p.text || '').slice(0, 100000),
+      html: String(p.html || '').slice(0, 300000),
+      messageId: String(p.messageId || '').slice(0, 300), inReplyTo: String(p.inReplyTo || '').slice(0, 300), references: smMsgIds(p.references).join(' ').slice(0, 2000), atts: [] };
+    if (m.messageId && db.supportMail.some((x) => x.messageId === m.messageId)) return res.json({ ok: true, dup: true });
+    let total = 0;
+    for (const a of (p.attachments || []).slice(0, 10)) {
+      if (!a.content || total + a.size > 15 * 1048576) continue;
+      const fid = 'sm_' + newId(); total += a.size;
+      try { await saveChatFile(fid, a.content, a.contentType || 'application/octet-stream'); m.atts.push({ fid, name: String(a.filename || 'file').slice(0, 120), mime: a.contentType || 'application/octet-stream', size: a.size }); } catch (e) { console.log('[support-mail] attachment', e.message); }
+    }
+    m.thread = smThreadFor(m);
+    db.supportMail.push(m); save();
+    io.to('admins').emit('mail:new', { from: m.from, subject: m.subject });
+    feed('mail', '📧 New support email from ' + (m.from.name || m.from.email) + ': ' + m.subject);
+    res.json({ ok: true });
+  } catch (e) { console.log('[support-mail] inbound', e.message); res.status(500).json({ error: 'parse failed' }); }
+});
+const smOut = (m, full) => ({ id: m.id, thread: m.thread, dir: m.dir, at: m.at, read: m.read, star: m.star, from: m.from, to: m.to, subject: m.subject, by: m.by,
+  text: full ? m.text : undefined, html: full ? m.html : undefined, snippet: String(m.text || '').replace(/\s+/g, ' ').slice(0, 140), atts: m.atts || [], status: m.status, err: m.err });
+app.get('/admin/api/support-mail', adminAuth, (req, res) => {
+  const q = String(req.query.q || '').toLowerCase().trim(), box = String(req.query.box || 'inbox');
+  const th = new Map();
+  for (const m of db.supportMail) { const t = th.get(m.thread) || { thread: m.thread, msgs: [] }; t.msgs.push(m); th.set(m.thread, t); }
+  let list = [...th.values()].map((t) => {
+    const last = t.msgs[t.msgs.length - 1], firstIn = t.msgs.find((x) => x.dir === 'in') || t.msgs[0];
+    const who = firstIn.dir === 'in' ? firstIn.from : { name: '', email: (firstIn.to || [])[0] || '' };
+    return { thread: t.thread, subject: firstIn.subject, who, last: last.at, count: t.msgs.length, unread: t.msgs.filter((x) => x.dir === 'in' && !x.read).length,
+      star: t.msgs.some((x) => x.star), replied: last.dir === 'out', snippet: smOut(last).snippet, done: !!t.msgs.find((x) => x.done), hasAtt: t.msgs.some((x) => (x.atts || []).length) };
+  });
+  if (box === 'unread') list = list.filter((t) => t.unread);
+  else if (box === 'star') list = list.filter((t) => t.star);
+  else if (box === 'done') list = list.filter((t) => t.done);
+  else if (box === 'sent') list = list.filter((t) => t.replied);
+  else list = list.filter((t) => !t.done);
+  if (q) list = list.filter((t) => (t.subject + ' ' + t.who.name + ' ' + t.who.email + ' ' + t.snippet).toLowerCase().includes(q));
+  list.sort((a, b) => b.last - a.last);
+  res.json({ threads: list.slice(0, 300), unread: db.supportMail.filter((x) => x.dir === 'in' && !x.read).length,
+    setup: { inbound: !!SM_KEY, parser: !!simpleParser, send: MAIL_VIA || '', from: smFrom(), last: (db.supportMail.filter((x) => x.dir === 'in').pop() || {}).at || 0 } });
+});
+app.get('/admin/api/support-mail/t/:thread', adminAuth, (req, res) => {
+  const msgs = db.supportMail.filter((m) => m.thread === req.params.thread);
+  if (!msgs.length) return res.status(404).json({ error: 'Not found.' });
+  let ch = false; for (const m of msgs) if (m.dir === 'in' && !m.read) { m.read = true; ch = true; } if (ch) save();
+  res.json({ msgs: msgs.map((m) => smOut(m, true)) });
+});
+app.post('/admin/api/support-mail/t/:thread/:act', adminAuth, (req, res) => {
+  const msgs = db.supportMail.filter((m) => m.thread === req.params.thread);
+  if (!msgs.length) return res.status(404).json({ error: 'Not found.' });
+  const a = req.params.act;
+  if (a === 'star') { const v = !msgs.some((m) => m.star); msgs.forEach((m) => { m.star = v; }); }
+  else if (a === 'done') { const v = !msgs.some((m) => m.done); msgs.forEach((m) => { m.done = v; }); }
+  else if (a === 'unread') { const m = msgs.filter((x) => x.dir === 'in').pop(); if (m) m.read = false; }
+  else if (a === 'delete') { for (const m of msgs) for (const f of m.atts || []) deleteChatFile(f.fid).catch(() => {}); db.supportMail = db.supportMail.filter((m) => m.thread !== req.params.thread); audit(req.admin, 'support-mail:delete', msgs[0].subject); }
+  else return res.status(400).json({ error: 'Unknown action.' });
+  save(); res.json({ ok: true });
+});
+app.get('/admin/api/support-mail/att/:fid', adminAuth, async (req, res) => {
+  const m = db.supportMail.find((x) => (x.atts || []).some((f) => f.fid === req.params.fid)); if (!m) return res.status(404).end();
+  const f = m.atts.find((x) => x.fid === req.params.fid);
+  res.setHeader('Content-Type', f.mime); res.setHeader('Content-Disposition', (req.query.dl ? 'attachment' : 'inline') + '; filename="' + f.name.replace(/["\r\n]/g, '') + '"');
+  res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'");
+  try { const st = chatFileStream(f.fid, 0, f.size - 1); st.on('error', () => res.status(404).end()); st.pipe(res); } catch { res.status(404).end(); }
+});
+// Reply to a thread, or write a new email
+app.post('/admin/api/support-mail/send', adminAuth, async (req, res) => {
+  const b = req.body || {}, text = String(b.text || '').trim().slice(0, 20000);
+  if (!text) return res.status(400).json({ error: 'Write the message first.' });
+  let to, subject, inReplyTo = '', references = '', thread;
+  if (b.thread) {
+    const msgs = db.supportMail.filter((m) => m.thread === b.thread); if (!msgs.length) return res.status(404).json({ error: 'Thread not found.' });
+    const lastIn = msgs.filter((m) => m.dir === 'in').pop() || msgs[0];
+    to = lastIn.dir === 'in' ? lastIn.from.email : (lastIn.to || [])[0];
+    subject = /^re:/i.test(lastIn.subject) ? lastIn.subject : 'Re: ' + lastIn.subject;
+    inReplyTo = lastIn.messageId || ''; references = [lastIn.references, lastIn.messageId].filter(Boolean).join(' ').trim(); thread = b.thread;
+  } else {
+    to = cleanEmail(b.to); subject = String(b.subject || '').trim().slice(0, 300); thread = newId();
+    if (!to) return res.status(400).json({ error: 'Enter a valid email address.' });
+    if (!subject) return res.status(400).json({ error: 'Enter a subject.' });
+  }
+  if (!to) return res.status(400).json({ error: 'No email address to reply to.' });
+  const m = { id: newId(), thread, dir: 'out', at: now(), read: true, from: smFrom(), to: [to], subject, text, html: '', by: req.admin, atts: [], messageId: '', inReplyTo, references };
+  try {
+    const mid = await smSendRaw({ to, subject, text, html: smHtml(text), inReplyTo, references });
+    m.messageId = mid ? (mid.startsWith('<') ? mid : '<' + mid + '>') : ''; m.status = 'sent';
+    db.supportMail.push(m); audit(req.admin, 'support-mail:send', to, subject); save();
+    res.json({ ok: true, thread });
+  } catch (e) { res.status(502).json({ error: 'Could not send: ' + e.message }); }
+});
+
 // v275: Terms of use
 app.get('/terms', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Use · Maata</title><style>${PAGE_CSS}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>Maata Terms of Use</h1></div>

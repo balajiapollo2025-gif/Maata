@@ -199,6 +199,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="files"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>📁 Files</button>
     <button data-view="mr"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M3 17V9l4-4h8l4 6v6"/></svg>🛺 Maata Ride <span class="count" id="mrCount" hidden></span></button>
     <button data-view="ls"><svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>🛠️ Local Services &amp; 💼 Jobs <span class="count" id="lsCount" hidden></span></button>
+    <button data-view="smail"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Support mail <span class="count" id="smCount" hidden></span></button>
     <button data-view="helpdesk"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>Help desk <span class="count" id="hdCount" hidden></span></button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
     <button data-view="announce"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg>Announcements</button>
@@ -344,6 +345,11 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="tabs" id="lsTabs"><button class="on" data-t="over">Overview</button><button data-t="pending">⏳ Approvals</button><button data-t="providers">🧑‍🔧 Providers</button><button data-t="bookings">📅 Bookings</button><button data-t="trust">🛡️ Trust &amp; Safety</button><button data-t="appeal">📨 Appeals</button><button data-t="jobs">💼 Local Jobs &amp; Daily Labour</button></div>
       <div id="lsBox"></div>
     </section>
+    <section data-page="smail" hidden>
+      <div class="top"><h2>📧 Support mail — support@maataapp.com</h2></div>
+      <div class="tabs" id="smTabs"><button class="on" data-t="inbox">📥 Inbox</button><button data-t="unread">Unread</button><button data-t="star">⭐ Starred</button><button data-t="sent">↩️ Replied</button><button data-t="done">✅ Done</button><button data-t="setup">⚙️ Setup</button></div>
+      <div id="smBox"></div>
+    </section>
     <section data-page="helpdesk" hidden>
       <div class="top"><h2>Help desk — customer complaints about the app</h2></div>
       <div class="tabs" id="hdTabs"><button class="on" data-f="active">Open</button><button data-f="resolved">Resolved</button><button data-f="all">All</button></div>
@@ -474,14 +480,15 @@ function boot() {
   socket.on('live', setLive);
   socket.on('feed', addFeed);
   socket.on('feed', (f) => { if (f && (f.type === 'ls' || f.type === 'jobs')) lsBadge(); });
+  socket.on('mail:new', (m) => { toast('📧 New email from ' + ((m.from || {}).name || (m.from || {}).email || '')); if (view === 'smail' && !smOpen) loadSupportMail(); else api('/admin/api/support-mail?box=unread').then((d) => { const c = $('#smCount'); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {}); });
   socket.on('report:new', () => { toast('New customer complaint received.'); loadRepCount(); if (view === 'reports') loadReports(); });
   go(location.hash.slice(1) || 'dash');
-  loadRepCount(); lsBadge();
+  loadRepCount(); lsBadge(); api('/admin/api/support-mail?box=unread').then((d) => { const c = $('#smCount'); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {});
   setInterval(() => { if (view === 'dash' && !document.hidden) loadDash(); }, 60000);
 }
 
 // ---------- navigation ----------
-const loaders = { mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -889,6 +896,125 @@ async function loadHelpdesk() {
 }
 document.querySelectorAll('#hdTabs button').forEach((b) => b.onclick = () => { document.querySelectorAll('#hdTabs button').forEach((x) => x.classList.toggle('on', x === b)); hdFilter = b.dataset.f; loadHelpdesk(); });
 
+// ---------- 📧 support mail (v278) ----------
+let smBox = 'inbox', smQ = '', smOpen = null, smData = null;
+const SM_WORKER = `export default {
+  async email(message, env, ctx) {
+    const raw = await new Response(message.raw).arrayBuffer();
+    let ok = false;
+    try {
+      const r = await fetch("https://maataapp.com/api/mail/inbound", {
+        method: "POST",
+        headers: { "Content-Type": "message/rfc822", "X-Maata-Key": env.MAATA_KEY, "X-Mail-From": message.from, "X-Mail-To": message.to },
+        body: raw
+      });
+      ok = r.ok;
+    } catch (e) {}
+    // A copy also goes to your Gmail (set FORWARD_TO), so no email is ever lost
+    if (env.FORWARD_TO) { try { await message.forward(env.FORWARD_TO); ok = true; } catch (e) {} }
+    if (!ok) message.setReject("Mailbox busy, please try again later");
+  }
+};`;
+async function loadSupportMail() {
+  smData = await api('/admin/api/support-mail?box=' + smBox + '&q=' + encodeURIComponent(smQ));
+  const c = $('#smCount'); c.hidden = !smData.unread; c.textContent = smData.unread;
+  drawSm();
+}
+function smSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function drawSm() {
+  const s = smData.setup, box = $('#smBox');
+  const warn = !s.inbound || !s.send ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;border:2px solid #E8A317">⚠️ ${!s.inbound ? '<b>Receiving is not set up yet.</b> ' : ''}${!s.send ? '<b>Sending is not set up yet.</b> ' : ''}<button class="btn" id="smSetupGo">Open setup</button></div>` : '';
+  if (smOpen) return smThread(smOpen);
+  box.innerHTML = warn + `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input id="smSearch" placeholder="Search name, email, subject…" value="${esc(smQ)}" style="flex:1;min-width:180px;padding:9px 12px;border-radius:10px;border:1px solid #ddd;font:inherit"><button class="btn ok" id="smNew">✏️ New email</button><button class="btn" id="smRefresh">⟳</button></div>`
+    + (smData.threads.length ? '<div class="card" style="padding:0;overflow:hidden">' + smData.threads.map((t) => `<div data-smt="${esc(t.thread)}" style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid #eee;cursor:pointer;${t.unread ? 'background:#F1F8F6' : ''}">
+      <span style="font-size:18px;line-height:1.2">${t.star ? '⭐' : t.replied ? '↩️' : '📩'}</span>
+      <div style="flex:1;min-width:0"><div style="display:flex;gap:8px"><b style="${t.unread ? '' : 'font-weight:600'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.who.name || t.who.email)}</b>${t.count > 1 ? `<span class="muted">(${t.count})</span>` : ''}${t.unread ? `<span class="tag t-amber">${t.unread} new</span>` : ''}${t.done ? '<span class="tag t-green">Done</span>' : ''}<span class="muted" style="margin-left:auto;white-space:nowrap">${dt(t.last)}</span></div>
+      <div style="${t.unread ? 'font-weight:700' : ''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.hasAtt ? '📎 ' : ''}${esc(t.subject)}</div>
+      <div class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.snippet)}</div></div></div>`).join('') + '</div>'
+      : `<div class="card empty">${smQ ? 'No emails match your search.' : smBox === 'inbox' ? 'No emails yet. Emails sent to <b>' + esc(s.from.email) + '</b> will show here.' : 'Nothing here.'}</div>`);
+  $('#smSearch').onkeydown = (e) => { if (e.key === 'Enter') { smQ = e.target.value.trim(); loadSupportMail(); } };
+  $('#smNew').onclick = () => smCompose();
+  $('#smRefresh').onclick = () => loadSupportMail();
+  if ($('#smSetupGo')) $('#smSetupGo').onclick = () => smSetTab('setup');
+  $$('[data-smt]').forEach((d) => d.onclick = () => { smOpen = d.dataset.smt; smThread(smOpen); });
+}
+function smFrame(html) {
+  const doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: https:; style-src \'unsafe-inline\'"><base target="_blank"><style>body{font-family:Arial,sans-serif;font-size:14px;margin:8px;color:#1C2230;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>' + html + '</body></html>';
+  const f = document.createElement('iframe'); f.setAttribute('sandbox', 'allow-popups allow-popups-to-escape-sandbox'); f.style.cssText = 'width:100%;border:0;min-height:160px;background:#fff;border-radius:8px'; f.srcdoc = doc;
+  f.style.height = '340px'; f.style.resize = 'vertical'; f.style.border = '1px solid #E3E7EC'; /* sandboxed: its height cannot be read, drag the corner to make it taller */
+  return f;
+}
+async function smThread(id) {
+  const box = $('#smBox'); box.innerHTML = '<div class="card empty">Loading…</div>';
+  let d; try { d = await api('/admin/api/support-mail/t/' + encodeURIComponent(id)); } catch (e) { smOpen = null; toast(e.message); return loadSupportMail(); }
+  const first = d.msgs.find((m) => m.dir === 'in') || d.msgs[0], st = smData.setup;
+  box.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="btn" id="smBack">← Back</button><b style="font-size:17px;flex:1;min-width:160px">${esc(first.subject)}</b>
+    <button class="btn" data-sma="star">⭐ Star</button><button class="btn" data-sma="done">✅ Done</button><button class="btn" data-sma="unread">Mark unread</button><button class="btn" data-sma="delete" style="color:#C8413A">🗑 Delete</button></div>`
+    + d.msgs.map((m) => `<div class="card" style="padding:12px 14px;margin-bottom:10px;${m.dir === 'out' ? 'margin-left:36px;background:#E3EFF1' : ''}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>${m.dir === 'out' ? '↩️ Maata Support' + (m.by ? ' <span class="muted">(' + esc(m.by) + ')</span>' : '') : esc(m.from.name || m.from.email)}</b><span class="muted">${m.dir === 'out' ? 'to ' + esc((m.to || []).join(', ')) : '&lt;' + esc(m.from.email) + '&gt;'}</span><span class="muted" style="margin-left:auto">${dt(m.at)}</span></div>
+      <div data-smbody="${esc(m.id)}" style="margin-top:8px;white-space:pre-wrap;word-wrap:break-word">${esc(m.text || '')}</div>
+      ${m.html && m.dir === 'in' ? `<button class="btn" data-smhtml="${esc(m.id)}" style="margin-top:6px">Show formatted email</button>` : ''}
+      ${(m.atts || []).length ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + m.atts.map((f) => `<a class="btn" href="/admin/api/support-mail/att/${esc(f.fid)}?dl=1&token=${encodeURIComponent(token)}" target="_blank" rel="noopener" style="text-decoration:none;color:#fff">📎 ${esc(f.name)} <small style="opacity:.8">${smSize(f.size)}</small></a>`).join('') + '</div>' : ''}
+    </div>`).join('')
+    + `<div class="card" style="padding:12px 14px"><b>Reply</b> <span class="muted">from ${esc(st.from.name)} &lt;${esc(st.from.email)}&gt; to ${esc(first.dir === 'in' ? first.from.email : (first.to || [])[0])}</span>
+      <textarea id="smReply" rows="6" placeholder="Write your reply…" style="width:100%;box-sizing:border-box;margin-top:8px;padding:10px;border-radius:10px;border:1px solid #ddd;font:inherit"></textarea>
+      <div class="actions" style="margin-top:8px"><button class="btn ok" id="smSend">Send reply ➤</button><button class="btn" id="smSendDone">Send &amp; mark done ✅</button>${st.send ? '' : '<span class="muted">⚠️ Sending is not set up (Setup tab)</span>'}</div></div>`;
+  const msgs = d.msgs;
+  $('#smBack').onclick = () => { smOpen = null; loadSupportMail(); };
+  $$('[data-smhtml]').forEach((b) => b.onclick = () => { const m = msgs.find((x) => x.id === b.dataset.smhtml); const body = document.querySelector(`[data-smbody="${b.dataset.smhtml}"]`); body.innerHTML = ''; body.style.whiteSpace = 'normal'; body.appendChild(smFrame(m.html)); b.remove(); });
+  $$('[data-sma]').forEach((b) => b.onclick = async () => {
+    const a = b.dataset.sma; if (a === 'delete' && !confirm('Delete this whole email conversation?')) return;
+    try { await api('/admin/api/support-mail/t/' + encodeURIComponent(id) + '/' + a, { method: 'POST', body: '{}' }); toast('Done'); if (a === 'delete' || a === 'unread' || a === 'done') { smOpen = null; loadSupportMail(); } else smThread(id); } catch (e) { toast(e.message); }
+  });
+  const send = async (done) => {
+    const text = $('#smReply').value.trim(); if (!text) return toast('Write the reply first.');
+    $('#smSend').disabled = $('#smSendDone').disabled = true;
+    try { await api('/admin/api/support-mail/send', { method: 'POST', body: JSON.stringify({ thread: id, text }) }); if (done) await api('/admin/api/support-mail/t/' + encodeURIComponent(id) + '/done', { method: 'POST', body: '{}' }); toast('Reply sent ✓'); if (done) { smOpen = null; loadSupportMail(); } else smThread(id); }
+    catch (e) { toast(e.message); $('#smSend').disabled = $('#smSendDone').disabled = false; }
+  };
+  $('#smSend').onclick = () => send(false); $('#smSendDone').onclick = () => send(true);
+}
+function smCompose() {
+  smOpen = null; const st = smData.setup;
+  $('#smBox').innerHTML = `<div class="card" style="padding:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><button class="btn" id="smBack">← Back</button><b>New email</b> <span class="muted">from ${esc(st.from.name)} &lt;${esc(st.from.email)}&gt;</span></div>
+    <input id="smTo" type="email" placeholder="To (email address)" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd;font:inherit;margin-bottom:8px">
+    <input id="smSub" placeholder="Subject" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd;font:inherit;margin-bottom:8px">
+    <textarea id="smText" rows="9" placeholder="Message…" style="width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd;font:inherit"></textarea>
+    <div class="actions" style="margin-top:8px"><button class="btn ok" id="smGo">Send ➤</button></div></div>`;
+  $('#smBack').onclick = () => drawSm();
+  $('#smGo').onclick = async () => {
+    $('#smGo').disabled = true;
+    try { const r = await api('/admin/api/support-mail/send', { method: 'POST', body: JSON.stringify({ to: $('#smTo').value.trim(), subject: $('#smSub').value.trim(), text: $('#smText').value }) }); toast('Email sent ✓'); smBox = 'sent'; smSetTab('sent', true); smOpen = r.thread; loadSupportMail(); }
+    catch (e) { toast(e.message); $('#smGo').disabled = false; }
+  };
+}
+function smSetup() {
+  const s = smData.setup, ok = (v) => v ? '<span class="tag t-green">✓ Ready</span>' : '<span class="tag t-amber">Not set</span>';
+  $('#smBox').innerHTML = `<div class="card" style="padding:16px;line-height:1.6">
+    <h3 style="margin-top:0">📥 Receiving emails at ${esc(s.from.email)} ${ok(s.inbound && s.parser)}</h3>
+    <ol><li>Render → your service → <b>Environment</b> → add <code>MAIL_INBOUND_KEY</code> = any long random password you make up (keep it secret). Save.</li>
+    <li>Cloudflare → <b>Workers &amp; Pages</b> → Create → <b>Create Worker</b> → name it <code>maata-mail</code> → Deploy → <b>Edit code</b> → replace everything with the code below → Deploy.</li>
+    <li>That worker → <b>Settings → Variables and Secrets</b> → add <code>MAATA_KEY</code> (type <b>Secret</b>) = the same value as <code>MAIL_INBOUND_KEY</code>. Optional: <code>FORWARD_TO</code> = your Gmail, for a backup copy (that Gmail must be a verified destination in Email Routing).</li>
+    <li>Cloudflare → maataapp.com → <b>Email → Email Routing</b> → Enable (add the records it asks) → <b>Routing rules</b> → Create address <code>support</code> → Action <b>Send to a Worker</b> → <code>maata-mail</code> → Save.</li>
+    <li>Send a test email to ${esc(s.from.email)} from your Gmail. It shows in the Inbox here within a minute.</li></ol>
+    <div style="position:relative"><pre id="smCode" style="background:#0F1B24;color:#DDEBF0;padding:12px;border-radius:10px;overflow:auto;font-size:12.5px;white-space:pre">${esc(SM_WORKER)}</pre><button class="btn" id="smCopy" style="position:absolute;top:8px;right:8px">Copy code</button></div>
+    <p class="muted">Last email received: ${s.last ? dt(s.last) : 'none yet'}</p>
+    <h3>📤 Sending replies ${ok(s.send)}</h3>
+    <p>Replies go out as <b>${esc(s.from.name)} &lt;${esc(s.from.email)}&gt;</b>${s.send ? ' through <b>' + esc(s.send) + '</b>' : ''}.</p>
+    <ol><li>Make a free account at <b>resend.com</b> (3,000 emails/month) → <b>Domains → Add domain</b> → <code>maataapp.com</code> → it shows a few DNS records → add them in Cloudflare DNS (or use its “Auto configure” with Cloudflare) → wait until it says <b>Verified</b>.</li>
+    <li>Resend → <b>API Keys</b> → Create (permission: Sending) → copy it.</li>
+    <li>Render → <b>Environment</b> → add <code>RESEND_API_KEY</code> = that key. Optional: <code>SUPPORT_FROM</code> = <code>Maata Support &lt;support@maataapp.com&gt;</code>. Save.</li></ol>
+    <p class="muted">If BREVO_API_KEY is already set on Render, Brevo is used instead; then add and verify the domain maataapp.com in Brevo → Senders &amp; domains.</p>
+  </div>`;
+  $('#smCopy').onclick = () => { navigator.clipboard.writeText(SM_WORKER).then(() => toast('Code copied ✓'), () => toast('Select the code and copy it.')); };
+}
+function smSetTab(t, quiet) {
+  $$('#smTabs button').forEach((x) => x.classList.toggle('on', x.dataset.t === t));
+  smOpen = null;
+  if (t === 'setup') return smSetup();
+  smBox = t; if (!quiet) loadSupportMail();
+}
+$$('#smTabs button').forEach((b) => b.onclick = () => smSetTab(b.dataset.t));
 // ---------- reels ----------
 async function loadReelsAdmin() {
   const list = await api('/admin/api/reels');
