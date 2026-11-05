@@ -2135,7 +2135,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 281;
+const MAATA_VERSION = 282;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -6156,7 +6156,7 @@ app.get('/about', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><
 <div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>About Maata</h1></div>
 <p><b>Maata</b> is an Indian app for free chat, voice and video calls, status updates, local shops and billing (Maata Business), local services, jobs and maps.</p>
 <h2>Company</h2><p>Maata and the website <b>maataapp.com</b> are owned and operated by <b>${MAATA_ENTITY}</b>, India.</p>
-<h2>Verification codes (OTP)</h2><p>When you sign up or log in to Maata, ${MAATA_ENTITY} sends a one-time password (OTP) by SMS from the sender ID <b>MAATAP</b> to verify your mobile number. Never share this OTP with anyone.</p>
+<h2>Verification codes (OTP)</h2><p>When you sign up or log in to Maata, ${MAATA_ENTITY} sends a one-time password (OTP) by SMS from the sender ID <b>${process.env.SMS_SENDER_ID || 'MATEHN'}</b> to verify your mobile number. Never share this OTP with anyone.</p>
 <h2>Contact</h2><p>Email: <a href="mailto:${process.env.PUSH_CONTACT || 'support@maataapp.com'}">${process.env.PUSH_CONTACT || 'support@maataapp.com'}</a><br>Website: <a href="https://maataapp.com">https://maataapp.com</a></p>
 ${ENTITY_FOOT()}</body></html>`));
 // Google Play: how to delete SOME data without deleting the account
