@@ -869,13 +869,25 @@ const emailKey = (e) => { const v = String(e || '').trim().toLowerCase(); const 
 const emailTaken = (e, except) => { const k = emailKey(e); return db.users.some((x) => x !== except && x.email && emailKey(x.email) === k); };
 const resetCodes = new Map(); // userId -> { hash, until, tries, sentAt }
 app.post('/api/password/forgot', rateLimit, async (req, res) => {
-  const id = String(req.body?.id || '').trim();
+  const id = String(req.body?.id || '').trim(), via = String(req.body?.via || '');
   const u = id.includes('@') ? (db.users.find((x) => x.email === cleanEmail(id)) || db.users.find((x) => x.email && emailKey(x.email) === emailKey(id))) : (cleanMobile(id) && findByMobile(cleanMobile(id)));
   if (!u) return res.status(404).json({ error: 'No Maata account found with this mobile number or email.' });
-  if (!u.email) return res.status(400).json({ error: 'This account has no email address. Please contact Maata support to reset your password.' });
-  if (!MAIL_ON) return res.status(503).json({ error: 'Password reset by email is not switched on yet. Please contact Maata support.' });
+  // v289: code by SMS or by email — the person chooses when both are possible
+  const canSms = SMS_ON && !!u.phone, canMail = MAIL_ON && !!u.email;
+  if (!canSms && !canMail) return res.status(503).json({ error: u.email ? 'Password reset is not switched on yet. Please contact Maata support.' : 'This account has no email address and SMS codes are off. Please contact Maata support to reset your password.' });
+  if (!via && canSms && canMail) return res.json({ choose: true, sms: maskPhone(u.phone), email: maskEmail(u.email) });
+  if (via === 'email' && !canMail) return res.status(400).json({ error: u.email ? 'Email codes are off right now. Choose SMS.' : 'This account has no email address. Choose SMS.' });
+  if (via === 'sms' && !canSms) return res.status(400).json({ error: 'SMS codes are off right now. Choose email.' });
+  const use = via === 'email' ? 'email' : via === 'sms' ? 'sms' : canSms ? 'sms' : 'email';
   const prev = resetCodes.get(u.id);
   if (prev && now() - prev.sentAt < 60000) return res.status(429).json({ error: 'Please wait a minute before asking for another code.' });
+  if (use === 'sms') {
+    const g = smsGuard(u.phone, req.ip || ''); if (g) return res.status(429).json({ error: g });
+    let sm; try { sm = await smsSendOtp(u.phone, u.id); } catch (e) { console.error('[sms reset]', e.message); return res.status(502).json({ error: 'Could not send the SMS code right now.' + (canMail ? ' Try the email code instead.' : ' Try again in a minute.') }); }
+    resetCodes.set(u.id, { sms: sm, until: now() + 10 * 60000, tries: 0, sentAt: now() });
+    audit('customer:' + u.phone, 'password-reset-requested', u.name + ' (sms)');
+    return res.json({ ok: true, via: 'sms', sentTo: maskPhone(u.phone), len: sm.len || 6 });
+  }
   const code = String(crypto.randomInt(100000, 1000000));
   resetCodes.set(u.id, { hash: crypto.createHash('sha256').update(code + u.id).digest('hex'), until: now() + 15 * 60000, tries: 0, sentAt: now() });
   try {
@@ -884,7 +896,7 @@ app.post('/api/password/forgot', rateLimit, async (req, res) => {
       'Your Maata password reset code is ' + code + '. It works for 15 minutes. If you did not ask for this, ignore this email.');
   } catch (e) { console.error('[mail]', e.message); resetCodes.delete(u.id); return res.status(502).json({ error: 'Could not send the email right now. Try again later.' }); }
   audit('customer:' + u.phone, 'password-reset-requested', u.name);
-  res.json({ ok: true, sentTo: maskEmail(u.email) });
+  res.json({ ok: true, via: 'email', sentTo: maskEmail(u.email), len: 6 });
 });
 app.post('/api/password/reset', rateLimit, async (req, res) => {
   const id = String(req.body?.id || '').trim(), code = String(req.body?.code || '').replace(/\D/g, ''), pw = String(req.body?.password || '');
@@ -892,7 +904,8 @@ app.post('/api/password/reset', rateLimit, async (req, res) => {
   const r = u && resetCodes.get(u.id);
   if (!r || r.until < now()) return res.status(400).json({ error: 'The code expired. Ask for a new code.' });
   if (r.tries >= 5) { resetCodes.delete(u.id); return res.status(429).json({ error: 'Too many wrong codes. Ask for a new code.' }); }
-  if (crypto.createHash('sha256').update(code + u.id).digest('hex') !== r.hash) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
+  let good; try { good = r.sms ? await smsCheckOtp(r.sms, code, u.id) : crypto.createHash('sha256').update(code + u.id).digest('hex') === r.hash; } catch (e) { console.error('[sms reset check]', e.message); return res.status(502).json({ error: 'Could not check the code right now. Try again in a minute.' }); }
+  if (!good) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
   if (pw.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   resetCodes.delete(u.id);
   u.passHash = await bcrypt.hash(pw, 10); u.tokenVersion = (u.tokenVersion || 0) + 1; // logs out every other device
@@ -2153,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 288;
+const MAATA_VERSION = 289;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -6159,6 +6172,34 @@ app.post('/admin/api/support-mail/send', adminAuth, async (req, res) => {
   } catch (e) { res.status(502).json({ error: 'Could not send: ' + e.message }); }
 });
 
+// v289: Admin → 📱 SMS: send a test OTP SMS to any number (real SMS, uses balance)
+const smsTests = [];
+app.post('/admin/api/sms/test', adminAuth, async (req, res) => {
+  const phone = cleanMobile(req.body?.phone);
+  if (!phone) return res.status(400).json({ error: 'Enter a 10-digit mobile number.' });
+  if (!SMS_ON) return res.status(503).json({ error: 'SMS is off. Add OJIVA_API_KEY in Render → Environment.' });
+  const recent = smsTests.filter((t) => now() - t.at < 3600000);
+  if (recent.length >= 20) return res.status(429).json({ error: 'Too many test SMS in the last hour (20). Try later.' });
+  const t0 = now(), row = { at: t0, phone: maskPhone(phone), by: req.admin, via: SMS_VIA };
+  try {
+    let code = '';
+    if (SMS_VIA === 'ojiva') {
+      code = String(crypto.randomInt(100000, 1000000));
+      const r = await fetch('https://nexus.ojiva.ai/sms/api/send-campaign', { method: 'POST', headers: { 'X-API-Key': OJ.key, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ campaign_name: 'Maata admin test', sender_id: OJ.sender, template_id: OJ.tpl, dcs: 0, priority: 0, messages: [{ mobile: '91' + phone, message: OJ.text.replace('{#var#}', code), transaction_id: 'test-' + Date.now().toString(36) }] }) });
+      const j = await r.json().catch(() => ({}));
+      if (!(r.ok && String(j.code) === '000')) throw new Error('Ojiva ' + r.status + ' ' + (j.code || '') + ': ' + (j.message || JSON.stringify(j).slice(0, 160)));
+      row.job = j.jobId;
+    } else { await smsSendOtp(phone, 'admin-test'); }
+    Object.assign(row, { ok: true, ms: now() - t0, code }); smsTests.unshift(row); smsTests.length = Math.min(smsTests.length, 50);
+    audit(req.admin, 'sms:test', row.phone);
+    res.json({ ok: true, ms: row.ms, code, job: row.job, text: SMS_VIA === 'ojiva' ? OJ.text.replace('{#var#}', code) : '' });
+  } catch (e) {
+    Object.assign(row, { ok: false, ms: now() - t0, err: e.message }); smsTests.unshift(row); smsTests.length = Math.min(smsTests.length, 50);
+    res.status(502).json({ error: e.message });
+  }
+});
+app.get('/admin/api/sms/info', adminAuth, (req, res) => res.json({ via: SMS_VIA || 'off', on: SMS_ON, sender: OJ.key ? OJ.sender : '', template: OJ.key ? OJ.tpl : '', text: OJ.key ? OJ.text : '', dayMax: SMS.dayMax, sentToday: smsLog.day === istDay() ? smsLog.n : 0, tests: smsTests.slice(0, 20), mail: MAIL_VIA || '' }));
 // v288: SMS balance (Ojiva) for the admin dashboard
 app.get('/admin/api/sms/balance', adminAuth, async (req, res) => {
   if (!OJ.key) return res.json({ via: SMS_VIA || 'off' });

@@ -199,6 +199,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="files"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>📁 Files</button>
     <button data-view="mr"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M3 17V9l4-4h8l4 6v6"/></svg>🛺 Maata Ride <span class="count" id="mrCount" hidden></span></button>
     <button data-view="ls"><svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>🛠️ Local Services &amp; 💼 Jobs <span class="count" id="lsCount" hidden></span></button>
+    <button data-view="sms"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></svg>SMS &amp; OTP</button>
     <button data-view="smail"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Support mail <span class="count" id="smCount" hidden></span></button>
     <button data-view="helpdesk"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>Help desk <span class="count" id="hdCount" hidden></span></button>
     <button data-view="reports"><svg class="ico" viewBox="0 0 24 24"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>Complaints <span class="count" id="repCount" hidden></span></button>
@@ -344,6 +345,11 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="top"><h2>🛠️ Local Services &amp; 💼 Local Jobs</h2></div>
       <div class="tabs" id="lsTabs"><button class="on" data-t="over">Overview</button><button data-t="pending">⏳ Approvals</button><button data-t="providers">🧑‍🔧 Providers</button><button data-t="bookings">📅 Bookings</button><button data-t="trust">🛡️ Trust &amp; Safety</button><button data-t="appeal">📨 Appeals</button><button data-t="jobs">💼 Local Jobs &amp; Daily Labour</button></div>
       <div id="lsBox"></div>
+    </section>
+    <section data-page="sms" hidden>
+      <div class="top"><h2>📱 SMS &amp; OTP</h2></div>
+      <style>.smsx{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.smsx-c{padding:14px 16px}.smsx-l{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#5B6474}.smsx-v{font-size:24px;font-weight:800;margin:4px 0}</style>
+      <div id="smsBox"></div>
     </section>
     <section data-page="smail" hidden>
       <div class="top"><h2>📧 Support mail — support@maataapp.com</h2></div>
@@ -503,7 +509,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { sms: loadSms, smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -911,6 +917,47 @@ async function loadHelpdesk() {
 }
 document.querySelectorAll('#hdTabs button').forEach((b) => b.onclick = () => { document.querySelectorAll('#hdTabs button').forEach((x) => x.classList.toggle('on', x === b)); hdFilter = b.dataset.f; loadHelpdesk(); });
 
+// ---------- 📱 SMS (v289): provider, balance, test SMS ----------
+async function loadSms() {
+  const box = $('#smsBox'); box.innerHTML = '<div class="card empty">Loading…</div>';
+  let info; try { info = await api('/admin/api/sms/info'); } catch (e) { box.innerHTML = '<div class="card empty">' + esc(e.message) + '</div>'; return; }
+  const name = { ojiva: 'Ojiva.ai', f2: 'Fast2SMS', mc: 'Message Central', msg91: 'MSG91', off: 'Off' }[info.via] || info.via;
+  box.innerHTML = `<div class="smsx">
+    <div class="card smsx-c"><div class="smsx-l">SMS provider</div><div class="smsx-v">${info.on ? '🟢 ' : '🔴 '}${esc(name)}</div>${info.sender ? `<div class="muted">Sender ID <b>${esc(info.sender)}</b> · Template <b>${esc(info.template)}</b></div>` : ''}</div>
+    <div class="card smsx-c"><div class="smsx-l">Balance</div><div class="smsx-v" id="smsBal">…</div><div class="muted" id="smsBalNote"></div></div>
+    <div class="card smsx-c"><div class="smsx-l">OTP SMS sent today</div><div class="smsx-v">${info.sentToday} <small class="muted">/ ${info.dayMax} max</small></div><div class="muted">Sign-ups + password resets</div></div>
+  </div>
+  <div class="card" style="padding:16px;margin-top:12px">
+    <h3 style="margin:0 0 6px">📱 Send a test SMS</h3>
+    <p class="muted" style="margin:0 0 10px">Sends the real Maata OTP SMS to this number, so you can check it arrives. Each test uses SMS balance.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="smsTo" inputmode="numeric" maxlength="14" placeholder="10-digit mobile number" style="flex:1;min-width:200px;padding:11px 12px;border-radius:10px;border:1px solid #ccd;font:inherit;font-size:16px;letter-spacing:1px"><button class="btn ok" id="smsGo" ${info.on ? '' : 'disabled'}>Send test SMS ➤</button></div>
+    <div id="smsRes" style="margin-top:10px"></div>
+    ${info.text ? `<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">SMS text (DLT template)</summary><div style="background:#F3F6F8;border-radius:10px;padding:10px;margin-top:6px;font-family:monospace;font-size:13px">${esc(info.text)}</div></details>` : ''}
+  </div>
+  <div class="card" style="padding:0;margin-top:12px;overflow:hidden"><div style="padding:12px 14px;font-weight:700">Recent tests</div>
+    ${info.tests.length ? info.tests.map((t) => `<div style="display:flex;gap:10px;padding:10px 14px;border-top:1px solid #eee;align-items:center"><span>${t.ok ? '✅' : '❌'}</span><b>${esc(t.phone)}</b><span class="muted">${t.ok ? 'sent in ' + (t.ms / 1000).toFixed(1) + ' s' + (t.code ? ' · code ' + esc(t.code) : '') : esc(t.err || '')}</span><span class="muted" style="margin-left:auto;white-space:nowrap">${dt(t.at)}</span></div>`).join('') : '<div class="muted" style="padding:10px 14px;border-top:1px solid #eee">No tests yet (the list clears when the server restarts).</div>'}
+  </div>`;
+  api('/admin/api/sms/balance').then((b) => {
+    const v = $('#smsBal'), n = $('#smsBalNote'); if (!v) return;
+    if (b.via !== 'ojiva') { v.textContent = '—'; n.textContent = 'Shown for Ojiva only'; return; }
+    if (b.error || b.balance == null) { v.textContent = '?'; n.textContent = 'Could not read balance' + (b.error ? ': ' + b.error : ''); return; }
+    v.textContent = b.balance === -1 ? 'Unlimited' : '₹ ' + Number(b.balance).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    if (b.balance !== -1 && b.balance < 100) { v.style.color = '#C8413A'; n.textContent = '⚠️ Low balance. Recharge at nexus.ojiva.ai'; } else n.textContent = 'Ojiva wallet';
+  }).catch(() => {});
+  const go = $('#smsGo'), to = $('#smsTo');
+  to.onkeydown = (e) => { if (e.key === 'Enter') go.click(); };
+  go.onclick = async () => {
+    const ph = to.value.replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
+    if (ph.length !== 10) return toast('Enter a 10-digit mobile number.');
+    go.disabled = true; $('#smsRes').innerHTML = '<span class="muted">Sending…</span>';
+    try {
+      const r = await api('/admin/api/sms/test', { method: 'POST', body: JSON.stringify({ phone: ph }) });
+      $('#smsRes').innerHTML = `<div style="background:#E5F4E4;border-radius:10px;padding:10px 12px">✅ <b>Sent</b> to ${esc(ph)} in ${(r.ms / 1000).toFixed(1)} s${r.code ? ` · test code <b>${esc(r.code)}</b>` : ''}${r.job ? ` · job #${esc(r.job)}` : ''}<br><span class="muted">It should reach the phone within a minute from <b>XX-${esc(info.sender || 'SMS')}</b>.</span></div>`;
+      setTimeout(loadSms, 2500);
+    } catch (e) { $('#smsRes').innerHTML = `<div style="background:#FDECEC;border-radius:10px;padding:10px 12px;color:#8A1F1A">❌ <b>Not sent:</b> ${esc(e.message)}</div>`; }
+    go.disabled = false;
+  };
+}
 // ---------- 📧 support mail (v278) ----------
 let smBox = 'inbox', smQ = '', smOpen = null, smData = null;
 const SM_WORKER = `export default {
