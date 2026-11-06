@@ -766,9 +766,13 @@ const cleanEmail = (e) => { const v = String(e || '').trim().toLowerCase(); retu
 // With no SMS keys, sign-up works as before (email code).
 const SMS = { f2Key: (process.env.FAST2SMS_API_KEY || '').trim(), f2Otp: (process.env.FAST2SMS_OTP_ID || '').trim(), mcId: (process.env.MC_CUSTOMER_ID || '').trim(), mcPw: (process.env.MC_PASSWORD || '').trim(), mcTok: (process.env.MC_AUTH_TOKEN || '').trim(), m91Key: (process.env.MSG91_AUTH_KEY || '').trim(), m91Tpl: (process.env.MSG91_TEMPLATE_ID || '').trim(), dayMax: Number(process.env.SMS_DAILY_MAX) || 300 };
 const MC_ON = !!(SMS.mcId && (SMS.mcTok || SMS.mcPw));
-const SMS_VIA = SMS.f2Key ? 'f2' : MC_ON ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
+// v288: Ojiva.ai SMS gateway (DLT approved, sender MATEHN) — first choice when OJIVA_API_KEY is set in Render.
+//   OJIVA_API_KEY (secret, Render only) · optional: OJIVA_TEMPLATE_ID, SMS_SENDER_ID, OJIVA_TEMPLATE_TEXT (must match the DLT template word for word, {#var#} = the code)
+const OJ = { key: (process.env.OJIVA_API_KEY || '').trim(), tpl: (process.env.OJIVA_TEMPLATE_ID || '1777179385828847752').trim(), sender: (process.env.SMS_SENDER_ID || 'MATEHN').trim(),
+  text: (process.env.OJIVA_TEMPLATE_TEXT || 'Dear User, {#var#} is your OTP to log in to your Maata app account. OTP is valid for 10 minutes. Do not share it with anyone. MATEHN https://maataapp.com').trim() };
+const SMS_VIA = OJ.key ? 'ojiva' : SMS.f2Key ? 'f2' : MC_ON ? 'mc' : SMS.m91Key && SMS.m91Tpl ? 'msg91' : '';
 const SMS_ON = !!SMS_VIA;
-console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'f2' ? 'Fast2SMS' + (SMS.f2Otp ? ' Smart OTP' : '') + (MC_ON ? ' (backup: Message Central)' : '') : SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add FAST2SMS_API_KEY (or MC_CUSTOMER_ID + MC_AUTH_TOKEN) (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
+console.log(SMS_ON ? '[sms] Mobile OTP on via ' + (SMS_VIA === 'ojiva' ? 'Ojiva.ai (sender ' + OJ.sender + ', template ' + OJ.tpl + ')' + (SMS.f2Key || MC_ON ? ' (backup: ' + (SMS.f2Key ? 'Fast2SMS' : 'Message Central') + ')' : '') : SMS_VIA === 'f2' ? 'Fast2SMS' + (SMS.f2Otp ? ' Smart OTP' : '') + (MC_ON ? ' (backup: Message Central)' : '') : SMS_VIA === 'mc' ? 'Message Central VerifyNow' : 'MSG91') : '[sms] Mobile OTP off: add FAST2SMS_API_KEY (or MC_CUSTOMER_ID + MC_AUTH_TOKEN) (or MSG91_AUTH_KEY + MSG91_TEMPLATE_ID) to confirm new numbers by SMS');
 const maskPhone = (p) => '+91 ' + String(p).slice(0, 2) + '••••••' + String(p).slice(-2);
 const smsLog = { day: '', n: 0, byPhone: new Map(), byIp: new Map() };
 function smsGuard(phone, ip) { // returns an error text, or '' when an SMS may go out
@@ -789,8 +793,22 @@ async function mcToken(fresh) {
   mcTok.v = j.token; mcTok.at = now(); return j.token;
 }
 // send → { ref } (Message Central keeps the code) or { hash } (we keep the code)
+async function smsSendOjiva(phone, salt) {
+  const code = String(crypto.randomInt(100000, 1000000));
+  const r = await fetch('https://nexus.ojiva.ai/sms/api/send-campaign', { method: 'POST', headers: { 'X-API-Key': OJ.key, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+    body: JSON.stringify({ campaign_name: 'Maata OTP', sender_id: OJ.sender, template_id: OJ.tpl, dcs: 0, priority: 0, messages: [{ mobile: '91' + phone, message: OJ.text.replace('{#var#}', code), transaction_id: 'otp-' + Date.now().toString(36) }] }) });
+  const j = await r.json().catch(() => ({}));
+  if (r.ok && String(j.code) === '000') return { hash: crypto.createHash('sha256').update(code + salt).digest('hex'), len: 6 };
+  throw new Error('ojiva ' + r.status + ' ' + JSON.stringify(j).slice(0, 200));
+}
 async function smsSendOtp(phone, salt) {
-  if (SMS_VIA === 'f2') { // Fast2SMS: Smart OTP (they make + check the code) or the OTP route (we make the code)
+  let f2Backup = false;
+  if (SMS_VIA === 'ojiva') {
+    try { return await smsSendOjiva(phone, salt); }
+    catch (e) { console.error('[sms send] Ojiva failed:', e.message); if (SMS.f2Key) f2Backup = true; else if (MC_ON) return smsSendMc(phone); else throw e; }
+  }
+  if (SMS_VIA === 'f2' || f2Backup) {
+    // Fast2SMS: Smart OTP (they make + check the code) or the OTP route (we make the code)
     try {
       if (SMS.f2Otp) {
         const r = await fetch('https://www.fast2sms.com/dev/otp/send', { method: 'POST', headers: { authorization: SMS.f2Key, accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify({ otp_id: SMS.f2Otp, mobile: phone }), signal: AbortSignal.timeout(15000) });
@@ -2135,7 +2153,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 287;
+const MAATA_VERSION = 288;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -6141,6 +6159,13 @@ app.post('/admin/api/support-mail/send', adminAuth, async (req, res) => {
   } catch (e) { res.status(502).json({ error: 'Could not send: ' + e.message }); }
 });
 
+// v288: SMS balance (Ojiva) for the admin dashboard
+app.get('/admin/api/sms/balance', adminAuth, async (req, res) => {
+  if (!OJ.key) return res.json({ via: SMS_VIA || 'off' });
+  try { const r = await fetch('https://nexus.ojiva.ai/api/balance', { headers: { 'X-API-Key': OJ.key }, signal: AbortSignal.timeout(12000) }); const j = await r.json().catch(() => ({}));
+    res.json({ via: 'ojiva', sender: OJ.sender, template: OJ.tpl, balance: j.data ? j.data.balance : null, currency: j.data ? j.data.currency : 'INR', ok: !!j.success }); }
+  catch (er) { res.json({ via: 'ojiva', error: er.message }); }
+});
 // v275: Terms of use
 app.get('/terms', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Use · Maata</title><style>${PAGE_CSS}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>Maata Terms of Use</h1></div>
