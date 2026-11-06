@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 289;
+const MAATA_VERSION = 290;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4038,7 +4038,9 @@ app.get('/api/mr/driver', auth, (req, res) => { const d = mrDriver(req.user.id);
 app.post('/api/mr/driver', auth, (req, res) => {
   const b = req.body || {}, old = mrDriver(req.user.id), veh = MR_VEH[b.veh] ? b.veh : 'auto';
   const number = String(b.number || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-  if (!/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{3,4}$/.test(number)) return res.status(400).json({ error: 'Enter the vehicle number like AP03AB1234.' });
+  /* v290: accept every Indian plate style — AP 39 TB 1234, AP39T1234, old AP9X123, BH series 22BH1234AA, temp plates; spaces, dashes and dots are ignored */
+  const plateOk = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{1,4}$/.test(number) || /^\d{2}BH\d{4}[A-Z]{1,2}$/.test(number) || (/^[A-Z0-9]{5,12}$/.test(number) && /[A-Z]/.test(number) && /\d/.test(number));
+  if (!plateOk) return res.status(400).json({ error: number ? 'Check the vehicle number (example: AP 39 TB 1234).' : 'Enter your vehicle number (example: AP 39 TB 1234).', field: 'number' });
   const f = (k) => (b[k] && db.lsFiles.some((x) => x.id === b[k] && x.by === req.user.id) ? { fid: b[k] } : old ? old[k] : null);
   const d = old || { id: req.user.id, createdAt: now(), status: 'pending', online: false, offers: 0, accepts: 0, rides: 0, rate: { sum: 0, n: 0 }, payReq: [] };
   Object.assign(d, { name: clip(b.name, 60) || req.user.name, phone: req.user.phone, veh, number, model: clip(b.model, 40), upi: clip(b.upi, 60), lang: req.user.lang || 'en',
