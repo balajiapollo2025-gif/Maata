@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 292;
+const MAATA_VERSION = 293;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3764,7 +3764,7 @@ app.post('/api/biz/:bizId/catalogue-ai', auth, async (req, res) => {
 // schedule for later, shared auto (cheaper), parcel by auto / bike.
 const MR_VEH = {
   auto: { name: 'Auto', icon: '🛺', seats: 3 },
-  bike: { name: 'Bike taxi', icon: '🏍️', seats: 1 },
+  /* v293: bike taxi removed from Maata Ride (only auto, car and luggage auto) */
   car: { name: 'Car', icon: '🚗', seats: 4 },
   goods: { name: 'Luggage auto (4-wheeler)', icon: '🚚', seats: 1 }, // v269: Tata Ace type — shifting, shop goods, farm produce
 };
@@ -3979,6 +3979,13 @@ app.post('/api/mr/rides/:id/end', auth, (req, res) => {
   const d = mrDriver(r.driverId); r.status = 'completed'; r.endedAt = now(); r.fare.final = r.fare.est; if (d) d.rides = (d.rides || 0) + 1; save();
   mrVoice(r.userId, 'completed', '✅ You reached · ₹' + r.fare.final, r.pay === 'upi' ? 'Pay the driver by UPI from the ride screen, then rate your ride.' : 'Pay ₹' + r.fare.final + ' cash to the driver, then rate your ride.', r);
   res.json(mrOut(r, req.user));
+});
+// v293: captain shows a UPI QR with the fare, the customer scans it with any UPI app
+app.get('/api/mr/rides/:id/upi.svg', auth, async (req, res) => {
+  const r = mrRide(req.params.id); if (!r || (r.driverId !== req.user.id && r.userId !== req.user.id)) return res.status(404).json({ error: 'Ride not found.' });
+  const d = mrDriver(r.driverId); if (!d || !d.upi) return res.status(404).json({ error: 'Add your UPI ID in ✏️ Edit my details, or take cash.' });
+  const amount = Math.round(Number(r.fare.final || r.fare.est) || 0), link = upiLink(d.upi, d.name, amount * 100, 'Maata Ride');
+  res.json({ svg: await QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }), link, upi: d.upi, amount, name: d.name });
 });
 app.post('/api/mr/rides/:id/paid', auth, (req, res) => { const r = mrRide(req.params.id); if (!r || (r.driverId !== req.user.id && r.userId !== req.user.id)) return res.status(404).json({ error: 'Ride not found.' }); if (r.driverId === req.user.id) { r.paid = true; r.paidBy = req.body?.method === 'upi' ? 'upi' : 'cash'; } else r.riderSaysPaid = true; save(); mrPushRide(r); res.json(mrOut(r, req.user)); });
 app.post('/api/mr/rides/:id/rate', auth, (req, res) => {
