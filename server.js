@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 294;
+const MAATA_VERSION = 295;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3766,9 +3766,10 @@ const MR_VEH = {
   auto: { name: 'Auto', icon: '🛺', seats: 3 },
   /* v293: bike taxi removed from Maata Ride (only auto, car and luggage auto) */
   car: { name: 'Car', icon: '🚗', seats: 4 },
+  goods3: { name: 'Luggage auto (3-wheeler)', icon: '🛻', seats: 1 }, // v295: Ape / 3-wheeler goods auto — small loads, shop goods, local shifting
   goods: { name: 'Luggage auto (4-wheeler)', icon: '🚚', seats: 1 }, // v269: Tata Ace type — shifting, shop goods, farm produce
 };
-const MR_FARE_DEF = { auto: { base: 30, baseKm: 1.5, perKm: 15, perMin: 0.5, min: 30 }, bike: { base: 20, baseKm: 2, perKm: 8, perMin: 0.3, min: 20 }, car: { base: 60, baseKm: 2, perKm: 18, perMin: 1, min: 80 }, goods: { base: 200, baseKm: 2, perKm: 22, perMin: 1, min: 200 } };
+const MR_FARE_DEF = { auto: { base: 30, baseKm: 1.5, perKm: 15, perMin: 0.5, min: 30 }, goods3: { base: 120, baseKm: 2, perKm: 16, perMin: 0.8, min: 120 }, bike: { base: 20, baseKm: 2, perKm: 8, perMin: 0.3, min: 20 }, car: { base: 60, baseKm: 2, perKm: 18, perMin: 1, min: 80 }, goods: { base: 200, baseKm: 2, perKm: 22, perMin: 1, min: 200 } };
 const MR_ACTIVE = ['accepted', 'arrived', 'started'];
 function mrCfg() {
   let m = db.meta.find((x) => x.id === 'mrCfg');
@@ -3864,7 +3865,7 @@ function mrOut(r, viewer) {
 }
 function mrPushRide(r) { const ru = userById(r.userId); if (ru) io.to('user:' + r.userId).emit('mr:ride', mrOut(r, ru)); if (r.driverId) { const du = userById(r.driverId); if (du) io.to('user:' + r.driverId).emit('mr:ride', mrOut(r, du)); } }
 // 🔊 v267 spoken alerts for customers and drivers (in their language; also when Maata is closed — the Android app speaks)
-const MR_VW = { te: { auto: 'ఆటో', bike: 'బైక్', car: 'కారు', goods: 'లగేజ్ ఆటో' }, hi: { auto: 'ऑटो', bike: 'बाइक', car: 'कार', goods: 'लगेज ऑटो' }, en: { auto: 'auto', bike: 'bike', car: 'car', goods: 'luggage auto' } };
+const MR_VW = { te: { auto: 'ఆటో', bike: 'బైక్', car: 'కారు', goods: 'లగేజ్ ఆటో', goods3: 'మూడు చక్రాల లగేజ్ ఆటో' }, hi: { auto: 'ऑटो', bike: 'बाइक', car: 'कार', goods: 'लगेज ऑटो', goods3: 'तीन पहिया लगेज ऑटो' }, en: { auto: 'auto', bike: 'bike', car: 'car', goods: 'luggage auto', goods3: '3-wheeler luggage auto' } };
 const mrDigits = (x) => String(x || '').split('').join(' ');
 const MR_SAY = {
   accepted: { te: (r, d, eta) => `${d.name} వస్తున్నారు${eta ? '. ' + eta + ' నిమిషాల్లో చేరుకుంటారు' : ''}. వాహనం నంబర్ ${mrDigits(d.number)}. మీ ఓటీపీ ${mrDigits(r.otp)}.`,
@@ -4096,7 +4097,7 @@ app.post('/api/mr/ai/plate', auth, async (req, res) => {
   if (!GEMINI_KEY) return res.status(501).json({ error: 'Maata AI is not set up.' }); if (!aiQuota(req.user, 1)) return res.status(429).json({ error: AI_ERR.quota });
   const f = db.lsFiles.find((x) => x.id === String(req.body?.fid || '') && x.by === req.user.id); if (!f) return res.status(404).json({ error: 'Photo not found.' });
   const chunks = []; try { await new Promise((ok, bad) => { const s = chatFileStream(f.id, 0, f.size - 1); s.on('data', (c) => chunks.push(c)); s.on('end', ok); s.on('error', bad); }); } catch { return res.status(500).json({ error: 'Could not read the photo.' }); }
-  const r = await gemini('Read the Indian vehicle registration number plate in this photo. Also say the vehicle type (auto = 3-wheeler passenger auto, bike, car, goods = 4-wheeler goods / luggage vehicle like Tata Ace) and the model if it is clear. Reply ONLY as JSON: {"number": "AP03AB1234" or "", "type": "auto|bike|car|goods|", "model": ""}.',
+  const r = await gemini('Read the Indian vehicle registration number plate in this photo. Also say the vehicle type (auto = 3-wheeler passenger auto, bike, car, goods3 = 3-wheeler goods / luggage auto like Ape, goods = 4-wheeler goods / luggage vehicle like Tata Ace) and the model if it is clear. Reply ONLY as JSON: {"number": "AP03AB1234" or "", "type": "auto|car|goods3|goods|", "model": ""}.',
     [{ role: 'user', parts: [{ inlineData: { mimeType: f.mime, data: Buffer.concat(chunks).toString('base64') } }] }], { json: true, maxTokens: 120, temperature: 0 }).catch(() => null);
   try { const d = JSON.parse((r && r.text) || ''); res.json({ number: String(d.number || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12), type: MR_VEH[d.type] ? d.type : '', model: clip(d.model, 40) }); } catch { res.status(502).json({ error: 'Could not read the plate. Type it.' }); }
 });
@@ -4106,7 +4107,7 @@ app.post('/api/mr/ai/voice', auth, async (req, res) => {
   if (!GEMINI_KEY) return res.json({ drop: text, veh: '', forName: '', when: '', parcel: false });
   if (!aiQuota(req.user, 1)) return res.status(429).json({ error: AI_ERR.quota });
   const ist = new Date(now() + 5.5 * 3600e3).toISOString().slice(0, 16);
-  const r = await gemini('You understand ride bookings said in Telugu, Hindi, English or mixed, for an Indian ride app (auto, bike taxi, car, goods = 4-wheeler luggage auto for shifting / goods). Now (India time) is ' + ist + '. Reply ONLY as JSON: {"drop": "place name to search on a map, in English letters", "pickup": "only if they said a different pickup, else empty", "veh": "auto|bike|car|goods|", "forName": "name if booking for someone else, else empty", "when": "YYYY-MM-DDTHH:MM India time if they want it later, else empty", "parcel": true/false, "item": "what to send if parcel"}.',
+  const r = await gemini('You understand ride bookings said in Telugu, Hindi, English or mixed, for an Indian ride app (auto, bike taxi, car, goods3 = 3-wheeler luggage auto for small loads, goods = 4-wheeler luggage auto for shifting / goods). Now (India time) is ' + ist + '. Reply ONLY as JSON: {"drop": "place name to search on a map, in English letters", "pickup": "only if they said a different pickup, else empty", "veh": "auto|car|goods3|goods|", "forName": "name if booking for someone else, else empty", "when": "YYYY-MM-DDTHH:MM India time if they want it later, else empty", "parcel": true/false, "item": "what to send if parcel"}.',
     [{ role: 'user', parts: [{ text }] }], { json: true, maxTokens: 200, temperature: 0, fast: true }).catch(() => null);
   try { const d = JSON.parse((r && r.text) || ''); res.json({ drop: clip(d.drop, 100), pickup: clip(d.pickup, 100), veh: MR_VEH[d.veh] ? d.veh : '', forName: clip(d.forName, 60), when: /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(d.when || '') ? d.when : '', parcel: !!d.parcel, item: clip(d.item, 80) }); }
   catch { res.json({ drop: text, veh: '', forName: '', when: '', parcel: false }); }
