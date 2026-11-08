@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 304;
+const MAATA_VERSION = 305;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4942,6 +4942,18 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
 });
 app.get('/api/my/orders', auth, (req, res) => res.json(db.orders.filter((o) => o.customerId === req.user.id).slice(-60).reverse().map((o) => ordOut(o, false))));
 app.get('/api/my/orders/:id', auth, (req, res) => { const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' }); res.json(ordOut(o, false)); });
+// v305: the customer's bill for an order — the real GST bill once delivered, an order bill before that (print / PDF / share)
+app.get('/api/my/orders/:id/bill', auth, (req, res) => {
+  const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
+  const inv = o.invoiceId && db.invoices.find((x) => x.id === o.invoiceId);
+  if (inv) return res.json({ ...inv, by: undefined, history: undefined });
+  const owner = userById(o.bizId), b = (owner && owner.business) || {}, st = bizSettings(b);
+  const items = o.items.map((l) => ({ name: l.name, unit: l.unit, qty: l.qty, price: l.price, taxRate: l.taxRate, hsn: '', disc: 0, taxable: l.taxable, tax: l.tax, total: l.total }));
+  if (o.fee) items.push({ name: o.mode === 'ship' ? 'Courier / transport charge' : 'Delivery charge', unit: 'trip', qty: 1, price: o.fee, taxRate: 0, hsn: '', disc: 0, taxable: o.fee, tax: 0, total: o.fee });
+  res.json({ id: o.id, number: o.number, createdAt: o.createdAt, customer: { name: o.customerName, phone: o.customerPhone }, taxMode: o.taxMode, items, discount: 0, roundOff: 0, grand: o.grand,
+    payment: { method: o.paidBy || o.pay, status: o.paidBy ? 'paid' : 'due' }, status: ['CANCELLED', 'REJECTED'].includes(o.status) ? 'void' : 'final', voidReason: o.reason || '', orderBill: true,
+    shop: { name: b.name || o.shopName, address: b.address || '', phone: owner ? owner.phone : '', gstin: st.gstin || '', upi: '', footer: 'Order bill · ' + o.number + ' · ' + (o.status || '') } });
+});
 app.post('/api/my/orders/:id/cancel', auth, (req, res) => {
   const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
   if (!['PLACED', 'ACCEPTED'].includes(o.status)) return res.status(400).json({ error: 'The shop is already packing this order. Chat with the shop to cancel.' });
