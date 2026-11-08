@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 305;
+const MAATA_VERSION = 306;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4499,7 +4499,7 @@ app.get('/bill/:id', async (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(i.number)} · ${e(i.shop.name)}</title>
 <style>body{margin:0;background:#EEF2F1;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#13201E}.bill{max-width:420px;margin:16px auto;background:#fff;padding:22px 20px;border-radius:14px}h1{margin:0;font-size:22px;text-align:center}.c{text-align:center;color:#55625F;font-size:13px;line-height:1.5}.row{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:3px 0}hr{border:0;border-top:1px dashed #B9C4C1;margin:10px 0}table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;color:#55625F;font-weight:600;padding:4px 0;border-bottom:1px solid #DDE4E2}td{padding:5px 0;vertical-align:top}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.tot{font-size:20px;font-weight:800}.void{color:#B42318;font-weight:800;text-align:center;font-size:18px;border:2px solid #B42318;border-radius:10px;padding:6px;margin:8px 0}.pay{display:block;text-align:center;background:#0F7A6E;color:#fff;text-decoration:none;padding:13px;border-radius:12px;font-weight:700;margin-top:12px}.qr{text-align:center;margin:12px 0 4px;display:flex;flex-direction:column;align-items:center;gap:6px}.qr b{font-size:16px}.qr svg{width:200px;height:200px}.qr small{color:#55625F;font-size:12px;line-height:1.5}.btn{display:block;margin:12px auto 24px;padding:12px 20px;border:0;border-radius:12px;background:#13201E;color:#fff;font-size:15px}@media print{body{background:#fff}.bill{margin:0;border-radius:0}.btn,.pay{display:none}}${paper ? `@page{size:${paper}mm auto;margin:0}body{background:#fff}.bill{max-width:none;width:${paper - 6}mm;margin:0 auto;padding:3mm 0;border-radius:0;font-size:12px}h1{font-size:17px}.row,table{font-size:12px}.tot{font-size:16px}.qr svg{width:${paper === 58 ? 38 : 50}mm;height:${paper === 58 ? 38 : 50}mm}` : ''}</style></head><body><div class="bill">
-<h1>${e(i.shop.name)}</h1><div class="c">${e(i.shop.address)}${i.shop.phone ? '<br>Phone: ' + e(i.shop.phone) : ''}${i.shop.gstin ? '<br>GSTIN: ' + e(i.shop.gstin) : ''}</div><hr>
+<div class="c" style="margin:-6px 0 6px"><img src="/icons/maata-logo.png?v=5" alt="Maata" style="width:64px;height:64px"></div><h1>${e(i.shop.name)}</h1><div class="c">${e(i.shop.address)}${i.shop.phone ? '<br>Phone: ' + e(i.shop.phone) : ''}${i.shop.gstin ? '<br>GSTIN: ' + e(i.shop.gstin) : ''}</div><hr>
 ${i.status === 'void' ? '<div class="void">CANCELLED – ' + e(i.voidReason) + '</div>' : ''}
 <div class="row"><span>Bill no: <b>${e(i.number)}</b></span><span>${e(new Date(i.createdAt + 5.5 * 3600000).toISOString().slice(0, 16).replace('T', ' '))}</span></div>
 ${i.customer.name || i.customer.phone ? '<div class="row"><span>Customer: ' + e(i.customer.name) + ' ' + e(i.customer.phone) + '</span></div>' : ''}<hr>
@@ -4514,7 +4514,7 @@ ${i.roundOff ? '<div class="row"><span>Round off</span><span>' + (i.roundOff > 0
 <div class="row"><span>Payment</span><span>${e(i.payment.method.toUpperCase())} · ${i.payment.status === 'paid' ? 'Paid' : 'To pay'}</span></div>${i.note ? `<div class="row"><span>Remarks</span><span>${e(i.note)}</span></div>` : ''}
 ${qr ? '<div class="qr"><b>Scan &amp; pay ' + rupees(i.grand) + '</b>' + qr + '<small>Any UPI app · GPay · PhonePe · Paytm · BHIM<br>UPI ID: ' + e(i.shop.upi) + '</small></div>' : ''}
 ${upi ? '<a class="pay" href="' + e(upi) + '">Pay ' + rupees(i.grand) + ' by UPI app</a>' : ''}<hr>
-<div class="c">${e(i.shop.footer)}<br><small>Made with Maata Business</small></div></div>
+<div class="c">${e(i.shop.footer)}</div><div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-top:14px;padding-top:12px;border-top:3px solid;border-image:linear-gradient(90deg,#FF9933 33%,#E8EDEC 33% 66%,#138808 66%) 1"><img src="/icons/maata-logo.png?v=5" alt="Maata" style="width:72px;height:72px"><div style="text-align:left"><b style="font-size:20px;color:#0B3B36">Maata</b><br><small>Billed with Maata Business<br><a href="https://maataapp.com/download" style="color:#1D4ED8">maataapp.com/download</a></small></div></div></div>
 <button class="btn" onclick="window.print()">Print / Save as PDF</button></body></html>`);
 });
 // ---- reports ----
