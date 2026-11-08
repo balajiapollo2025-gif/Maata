@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 303;
+const MAATA_VERSION = 304;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4932,6 +4932,10 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
   const o = { id: newId(), number: 'OD' + String(owner.business.ordSeq).padStart(5, '0'), bizId: owner.id, shopName: owner.business.name, shopPhone: owner.phone, customerId: req.user.id, customerName: req.user.name, customerPhone: req.user.phone, idem: idem || null,
     items: pr.lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: l.qty, price: l.unitPaise, taxRate: l.taxRate, taxable: l.taxable, tax: l.tax, total: l.total })), subtotal: pr.subtotal, tax: pr.tax, fee, grand: pr.total + fee, taxMode: set.taxMode,
     mode, address, shipPref, toPay: mode === 'ship' && !!s.shipToPay, note: clip(b.note, 200), pay, via: b.via === 'qr' ? 'qr' : '', spot: b.via === 'qr' ? clip(b.spot, 30) : '', status: 'PLACED', otp: String(crypto.randomInt(1000, 10000)), createdAt: now(), history: [{ s: 'PLACED', at: now(), by: req.user.name }] };
+  { /* v304: the same basket sent twice within 2 minutes (double tap, slow network retry) = one order */
+    const sig = (x) => x.items.map((i) => i.productId + 'x' + i.qty).sort().join(',') + '|' + x.grand;
+    const twin = db.orders.find((x) => x.customerId === o.customerId && x.bizId === o.bizId && now() - x.createdAt < 120000 && !['CANCELLED', 'REJECTED'].includes(x.status) && sig(x) === sig(o));
+    if (twin) { owner.business.ordSeq--; return res.json(ordOut(twin, false)); } }
   db.orders.push(o); if (o.via === 'qr') { const q = owner.business.shopQr || (owner.business.shopQr = {}); q.orders = (q.orders || 0) + 1; q.sales = (q.sales || 0) + o.grand; }
   save(); ordNotify(o, 'customer');
   res.json(ordOut(o, false));
