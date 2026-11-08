@@ -435,7 +435,7 @@ app.get('/manifest.webmanifest', (req, res) => {
     shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192' }] }],
   });
 });
-const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png', 'maata-logo.png', 'menu-icons.png', 'menu-auto.png'];
+const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png', 'maata-logo.png', 'menu-icons.png', 'menu-auto.png', 'menu-settings.png'];
 app.get('/icons/:f', (req, res) => {
   if (!ICON_FILES.includes(req.params.f)) return res.status(404).end();
   const p1 = path.join(PAGES, 'icons', req.params.f), p2 = path.join(PAGES, req.params.f);
@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 300;
+const MAATA_VERSION = 301;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
