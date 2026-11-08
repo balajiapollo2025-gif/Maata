@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2166,7 +2166,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 296;
+const MAATA_VERSION = 297;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3605,6 +3605,7 @@ function bizCtx(req, res, need) {
   else { const m = (owner.business.members || []).find((x) => x.userId === req.user.id && x.status !== 'removed'); if (m) { role = m.role; perms = BIZ_ROLES[m.role] || []; } }
   if (!role) { res.status(403).json({ error: 'You are not part of this business.' }); return null; }
   if (need && !perms.includes(need)) { res.status(403).json({ error: 'Your role (' + role + ') cannot do this. Ask the shop owner.' }); return null; }
+  if (req.method !== 'GET' && !planOk(owner.id, 'biz')) return planBlock(res, 'biz'); /* v297: Maata Business plan */
   bizSettings(owner.business);
   return { owner, biz: owner.business, bizId: owner.id, role, perms, actor: req.user };
 }
@@ -3788,7 +3789,7 @@ const mrRide = (id) => db.mrRides.find((r) => r.id === id);
 const mrPt = (p) => p && Number.isFinite(+p.lat) && Number.isFinite(+p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180 ? { lat: +(+p.lat).toFixed(6), lng: +(+p.lng).toFixed(6), text: clip(p.text, 140) } : null;
 const mrKm = (a, b) => geoDist([a.lng, a.lat], [b.lng, b.lat]) / 1000;
 const mrAvg = (d) => (d.rate && d.rate.n ? Math.round((d.rate.sum / d.rate.n) * 10) / 10 : 0);
-const mrSubOk = (d) => (d.subUntil || 0) > now();
+const mrSubOk = (d) => planOk(d.id, 'captain'); /* v297: Maata Plans decides (free while the captain plan is not paid) */
 const mrNight = (t = now()) => { const c = mrCfg(), h = new Date(t + 5.5 * 3600e3).getUTCHours(); return c.nightFrom > c.nightTo ? h >= c.nightFrom || h < c.nightTo : h >= c.nightFrom && h < c.nightTo; };
 const mrOtp = () => String(crypto.randomInt(1000, 10000));
 // road distance + time (OSRM), straight line × 1.35 when the route service is busy
@@ -3896,7 +3897,7 @@ app.get('/api/mr/config', auth, (req, res) => {
   const c = mrCfg(), d = mrDriver(req.user.id);
   const act = db.mrRides.filter((r) => (r.userId === req.user.id || r.driverId === req.user.id) && ['searching', 'scheduled', ...MR_ACTIVE].includes(r.status)).map((r) => mrOut(r, req.user));
   res.json({ on: c.on !== false, veh: Object.entries(MR_VEH).map(([k, v]) => ({ k, ...v })), night: mrNight(), ai: !!GEMINI_KEY, active: act,
-    driver: d ? { status: d.status, reason: d.reason || '', online: !!d.online, veh: d.veh, number: d.number, subUntil: d.subUntil || 0, subOk: mrSubOk(d), perDay: c.sub.perDay, upiPay: c.sub.upi || '', payReq: (d.payReq || []).filter((p) => p.status === 'pending').length } : null });
+    driver: d ? { status: d.status, reason: d.reason || '', online: !!d.online, veh: d.veh, number: d.number, subUntil: (() => { const st = planState(d.id, 'captain'); return st.paid ? st.until : 0; })(), subOk: mrSubOk(d), planPaid: planCfg().feats.captain.paid, perDay: c.sub.perDay, upiPay: c.sub.upi || '', payReq: (d.payReq || []).filter((p) => p.status === 'pending').length } : null });
 });
 app.post('/api/mr/quote', auth, async (req, res) => {
   const a = mrPt(req.body?.pickup), b = mrPt(req.body?.drop); if (!a || !b) return res.status(400).json({ error: 'Choose pickup and drop.' });
@@ -3956,7 +3957,7 @@ app.post('/api/mr/rides/:id/accept', auth, (req, res) => {
   if (!r || !d || d.status !== 'approved') return res.status(404).json({ error: 'Ride not found.' });
   if (r.status !== 'searching') return res.status(409).json({ error: r.driverId === d.id ? 'Already yours.' : 'Another driver took this ride.' });
   if (!(r.offered || []).includes(d.id)) return res.status(403).json({ error: 'This ride was not offered to you.' });
-  if (!mrSubOk(d)) return res.status(402).json({ error: 'Your Maata Captain plan has ended. Pay the plan to take rides.' });
+  if (!mrSubOk(d)) return res.status(402).json({ error: '💳 Your Driver Captain plan has ended. Renew it to take rides.', sub: { feat: 'captain' } });
   r.status = 'accepted'; r.driverId = d.id; r.acceptedAt = now(); d.accepts = (d.accepts || 0) + 1; clearTimeout(mrWaveTimers.get(r.id)); mrWaveTimers.delete(r.id); save();
   for (const id of r.offered || []) if (id !== d.id) io.to('user:' + id).emit('mr:gone', { id: r.id });
   const eta = d.loc ? Math.max(2, Math.round((mrKm(d.loc, r.pickup) * 1.4 / 20) * 60)) : null;
@@ -6217,6 +6218,135 @@ app.get('/admin/api/sms/balance', adminAuth, async (req, res) => {
     res.json({ via: 'ojiva', sender: OJ.sender, template: OJ.tpl, balance: j.data ? j.data.balance : null, currency: j.data ? j.data.currency : 'INR', ok: !!j.success }); }
   catch (er) { res.json({ via: 'ojiva', error: er.message }); }
 });
+// ---------- 💳 Maata Plans (v297): monthly / yearly paid subscriptions for Maata Business, Service Providers, Hire Workers and Driver Captains ----------
+// Admin turns "Paid" ON/OFF per feature. While ON, a user gets the free trial first, then pays by UPI (to MAATA TECHNOLOGIES' UPI ID),
+// types the UTR, admin approves → active till a date. 3-day grace after expiry, reminders before expiry, duplicate-UTR check, revenue report.
+const PLAN_FEATS = {
+  biz: { name: 'Maata Business', icon: '💼', who: 'shop owners', perks: ['Billing & GST invoices', 'Stock & product catalogue', 'Online orders & customer messages', 'Reports & staff logins'], def: { monthly: 199, yearly: 1990 } },
+  ls: { name: 'Service Provider', icon: '🧑‍🔧', who: 'electricians, plumbers, mechanics…', perks: ['Get booking requests near you', 'Shown in Maata search', 'Bills & UPI payments', 'Ratings that bring more customers'], def: { monthly: 99, yearly: 990 } },
+  hire: { name: 'Hire Workers', icon: '🤝', who: 'shops & contractors', perks: ['Post jobs (up to 15 open)', 'Applicants call / chat you', 'Daily labour in minutes', 'Verified worker profiles'], def: { monthly: 149, yearly: 1490 } },
+  captain: { name: 'Driver Captain', icon: '🧑‍✈️', who: 'auto, car & luggage auto drivers', perks: ['Zero commission — keep 100% of every fare', 'Rides near you with voice alerts', 'UPI QR for payments', 'SOS & trip safety'], def: { monthly: 299, yearly: 2990 } },
+};
+function planCfg() {
+  let m = db.meta.find((x) => x.id === 'planCfg');
+  if (!m) { m = { id: 'planCfg', createdAt: now(), upi: '', payee: MAATA_ENTITY, feats: {} }; db.meta.push(m); }
+  for (const [k, f] of Object.entries(PLAN_FEATS)) m.feats[k] = { paid: false, monthly: f.def.monthly, yearly: f.def.yearly, trial: 30, grace: 3, paidOnAt: 0, ...(m.feats[k] || {}) };
+  return m;
+}
+const planRec = (uid, feat, make) => {
+  let r = db.subs.find((x) => x.userId === uid && x.feat === feat);
+  if (!r && make) {
+    const c = planCfg().feats[feat], start = Math.max(now(), c.paidOnAt || 0);
+    r = { id: newId(), userId: uid, feat, createdAt: now(), trialUntil: start + c.trial * 864e5, until: 0, reqs: [], log: [] };
+    if (feat === 'captain') { const d = db.mrDrivers.find((x) => x.id === uid); if (d && (d.subUntil || 0) > now()) r.until = d.subUntil; } // keep days already paid on the old captain plan
+    db.subs.push(r); save();
+  }
+  return r;
+};
+// the one place that decides: may this user use this paid feature right now?
+function planState(uid, feat) {
+  const c = planCfg().feats[feat]; if (!c || !c.paid) return { feat, paid: false, ok: true };
+  const r = planRec(uid, feat, true), t = now(), end = Math.max(r.until || 0, r.trialUntil || 0);
+  const mode = (r.until || 0) > t ? 'active' : (r.trialUntil || 0) > t ? 'trial' : end + c.grace * 864e5 > t ? 'grace' : 'expired';
+  return { feat, paid: true, ok: mode !== 'expired', mode, until: end, daysLeft: Math.max(0, Math.ceil((end - t) / 864e5)), graceUntil: end + c.grace * 864e5,
+    monthly: c.monthly, yearly: c.yearly, pending: (r.reqs || []).filter((q) => q.status === 'pending').map((q) => ({ id: q.id, at: q.at, plan: q.plan, amount: q.amount })) };
+}
+const planOk = (uid, feat) => planState(uid, feat).ok;
+const planBlock = (res, feat) => { const f = PLAN_FEATS[feat]; res.status(402).json({ error: '💳 Your ' + f.name + ' plan has ended. Renew it to continue.', sub: { feat } }); return null; };
+app.get('/api/plans/me', auth, (req, res) => {
+  const cfg = planCfg(), mine = {};
+  for (const k of Object.keys(PLAN_FEATS)) { const c = cfg.feats[k]; if (!c.paid) continue; const using = k === 'biz' ? !!req.user.business : k === 'ls' ? !!lsProv(req.user.id) : k === 'captain' ? !!db.mrDrivers.find((d) => d.id === req.user.id) : k === 'hire' ? db.jobs.some((j) => j.by === req.user.id) || !!planRec(req.user.id, k) : false;
+    mine[k] = { ...PLAN_FEATS[k], def: undefined, using, ...(using ? planState(req.user.id, k) : { paid: true, monthly: c.monthly, yearly: c.yearly, trial: c.trial }) }; }
+  res.json({ plans: mine, upi: !!cfg.upi, payee: cfg.payee });
+});
+app.get('/api/plans/:feat', auth, (req, res) => {
+  const f = PLAN_FEATS[req.params.feat]; if (!f) return res.status(404).json({ error: 'Unknown plan.' });
+  const cfg = planCfg(); res.json({ ...f, def: undefined, key: req.params.feat, ...planState(req.user.id, req.params.feat), trial: cfg.feats[req.params.feat].trial, grace: cfg.feats[req.params.feat].grace, upi: !!cfg.upi, payee: cfg.payee });
+});
+app.get('/api/plans/:feat/upi', auth, async (req, res) => {
+  const f = PLAN_FEATS[req.params.feat], cfg = planCfg(); if (!f || !cfg.feats[req.params.feat].paid) return res.status(404).json({ error: 'This plan is free right now.' });
+  if (!cfg.upi) return res.status(503).json({ error: 'Payments are not set up yet. Contact Maata support.' });
+  const yr = req.query.plan === 'y', amount = yr ? cfg.feats[req.params.feat].yearly : cfg.feats[req.params.feat].monthly;
+  const note = 'Maata ' + f.name + ' ' + (yr ? '1 year' : '1 month') + ' ' + String(req.user.phone || '').slice(-4);
+  const link = upiLink(cfg.upi, cfg.payee || MAATA_ENTITY, amount * 100, note);
+  res.json({ amount, link, upi: cfg.upi, payee: cfg.payee, note, svg: await QRCode.toString(link, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) });
+});
+app.post('/api/plans/:feat/pay', auth, (req, res) => {
+  const k = req.params.feat, f = PLAN_FEATS[k], cfg = planCfg(); if (!f || !cfg.feats[k].paid) return res.status(400).json({ error: 'This plan is free right now.' });
+  const utr = String(req.body?.utr || '').replace(/\s/g, '').toUpperCase();
+  if (!/^[A-Z0-9]{10,22}$/.test(utr)) return res.status(400).json({ error: 'Type the 12-digit UPI reference number (UTR) from your payment app.' });
+  if (db.subs.some((s) => (s.reqs || []).some((q) => q.utr === utr && q.status !== 'rejected'))) return res.status(409).json({ error: 'This UTR number was already used. Check the number.' });
+  const r = planRec(req.user.id, k, true); if ((r.reqs || []).filter((q) => q.status === 'pending').length >= 3) return res.status(429).json({ error: 'You already have payments waiting. Maata will check them soon.' });
+  const yr = req.body?.plan === 'y', q = { id: newId(), at: now(), plan: yr ? 'y' : 'm', amount: yr ? cfg.feats[k].yearly : cfg.feats[k].monthly, utr, status: 'pending' };
+  r.reqs = [...(r.reqs || []), q].slice(-40); save();
+  io.to('admins').emit('plan:pay', { feat: k, name: req.user.name, amount: q.amount });
+  feed('plan', '💳 ' + req.user.name + ' paid ₹' + q.amount + ' for ' + f.name + ' (' + (yr ? 'year' : 'month') + ') · UTR ' + utr + ' — check and approve');
+  res.json({ ok: true, ...planState(req.user.id, k) });
+});
+// ---- admin ----
+app.get('/admin/api/plans', adminAuth, (req, res) => {
+  const cfg = planCfg(), t = now(), m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
+  const stats = {}, pending = [], subs = [];
+  for (const k of Object.keys(PLAN_FEATS)) stats[k] = { active: 0, trial: 0, grace: 0, expired: 0, revenueMonth: 0, revenueAll: 0, pending: 0 };
+  for (const r of db.subs) {
+    const u = userById(r.userId); if (!u || !PLAN_FEATS[r.feat]) continue; const s = stats[r.feat], st = planState(r.userId, r.feat);
+    if (st.paid) s[st.mode]++;
+    for (const q of r.reqs || []) { if (q.status === 'approved') { s.revenueAll += q.amount; if ((q.doneAt || q.at) >= m0.getTime()) s.revenueMonth += q.amount; } if (q.status === 'pending') { s.pending++; pending.push({ ...q, feat: r.feat, userId: r.userId, name: u.name, phone: maskPhone(u.phone) }); } }
+    subs.push({ userId: r.userId, feat: r.feat, name: u.name, phone: maskPhone(u.phone), mode: st.paid ? st.mode : 'free', until: st.until || Math.max(r.until || 0, r.trialUntil || 0), paid: (r.reqs || []).filter((q) => q.status === 'approved').reduce((a, q) => a + q.amount, 0), last: (r.log || []).slice(-1)[0] || null });
+  }
+  pending.sort((a, b) => a.at - b.at); subs.sort((a, b) => a.until - b.until);
+  res.json({ cfg: { upi: cfg.upi, payee: cfg.payee, feats: cfg.feats }, feats: Object.fromEntries(Object.entries(PLAN_FEATS).map(([k, f]) => [k, { name: f.name, icon: f.icon, who: f.who }])), stats, pending, subs: subs.slice(0, 1000), now: t });
+});
+app.put('/admin/api/plans/cfg', adminAuth, (req, res) => {
+  const cfg = planCfg(), b = req.body || {};
+  if (b.upi != null) { const v = String(b.upi).trim(); if (v && !/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v)) return res.status(400).json({ error: 'Enter a valid UPI ID, like maata@ybl.' }); cfg.upi = v; }
+  if (b.payee != null) cfg.payee = String(b.payee).trim().slice(0, 60) || MAATA_ENTITY;
+  for (const [k, v] of Object.entries(b.feats || {})) {
+    const c = cfg.feats[k]; if (!c) continue;
+    if (v.paid != null && !!v.paid !== c.paid) { c.paid = !!v.paid; if (c.paid) c.paidOnAt = now(); audit(req.admin, 'plans:' + (c.paid ? 'paid-on' : 'paid-off'), k); feed('plan', '💳 ' + PLAN_FEATS[k].name + ' is now ' + (c.paid ? 'PAID' : 'FREE')); }
+    for (const f of ['monthly', 'yearly', 'trial', 'grace']) if (v[f] != null) { const n = Math.round(Number(v[f])); if (!(n >= 0 && n <= 100000)) return res.status(400).json({ error: 'Check the numbers.' }); c[f] = n; }
+  }
+  if (Object.values(cfg.feats).some((c) => c.paid) && !cfg.upi) { save(); return res.json({ ok: true, warn: 'Add the Maata UPI ID so people can pay.' }); }
+  save(); res.json({ ok: true });
+});
+app.post('/admin/api/plans/req/:id/:act', adminAuth, (req, res) => {
+  const r = db.subs.find((s) => (s.reqs || []).some((q) => q.id === req.params.id)); if (!r) return res.status(404).json({ error: 'Not found.' });
+  const q = r.reqs.find((x) => x.id === req.params.id); if (q.status !== 'pending') return res.status(400).json({ error: 'Already ' + q.status + '.' });
+  const u = userById(r.userId), f = PLAN_FEATS[r.feat];
+  if (req.params.act === 'approve') {
+    const days = q.plan === 'y' ? 365 : 30; r.until = Math.max(now(), r.until || 0, r.trialUntil || 0) + days * 864e5; q.status = 'approved'; q.doneAt = now(); q.by = req.admin;
+    r.log = [...(r.log || []), { at: now(), kind: 'paid', days, amount: q.amount, by: req.admin }].slice(-60);
+    if (u) pushTo(u, { title: '✅ ' + f.name + ' plan active', body: 'Payment of ₹' + q.amount + ' received. Active till ' + new Date(r.until).toLocaleDateString('en-IN') + '. Thank you!', tag: 'plan-' + r.feat, url: '/' });
+  } else if (req.params.act === 'reject') {
+    q.status = 'rejected'; q.doneAt = now(); q.by = req.admin; q.why = String(req.body?.why || '').slice(0, 200);
+    if (u) pushTo(u, { title: '⚠️ ' + f.name + ' payment not found', body: (q.why || 'We could not find this UPI payment.') + ' Check the UTR number and try again, or contact Maata support.', tag: 'plan-' + r.feat, url: '/' });
+  } else return res.status(400).json({ error: 'Unknown action.' });
+  audit(req.admin, 'plans:' + req.params.act, u ? u.name : r.userId, f.name + ' ₹' + q.amount + ' ' + q.utr); save(); res.json({ ok: true });
+});
+// give free days / months, extend, or end a plan by hand
+app.post('/admin/api/plans/user/:uid/:feat', adminAuth, (req, res) => {
+  if (!PLAN_FEATS[req.params.feat] || !userById(req.params.uid)) return res.status(404).json({ error: 'Not found.' });
+  const r = planRec(req.params.uid, req.params.feat, true), days = Math.round(Number(req.body?.days) || 0), note = String(req.body?.note || '').slice(0, 120);
+  if (req.body?.stop) { r.until = 0; r.trialUntil = 0; r.log = [...(r.log || []), { at: now(), kind: 'stopped', by: req.admin, note }]; }
+  else { if (!days || Math.abs(days) > 3650) return res.status(400).json({ error: 'Enter the number of days (1–3650).' }); r.until = Math.max(now(), r.until || 0, r.trialUntil || 0) + days * 864e5; r.log = [...(r.log || []), { at: now(), kind: 'gift', days, by: req.admin, note }].slice(-60);
+    const u = userById(r.userId); if (u && days > 0) pushTo(u, { title: '🎁 ' + PLAN_FEATS[r.feat].name, body: days + ' free days added to your Maata plan' + (note ? ' — ' + note : '') + '.', tag: 'plan-' + r.feat, url: '/' }); }
+  audit(req.admin, 'plans:' + (req.body?.stop ? 'stop' : 'gift'), req.params.uid, req.params.feat + ' ' + days + 'd'); save(); res.json({ ok: true, state: planState(r.userId, r.feat) });
+});
+// reminders: 3 days and 1 day before the end, on the day it ends, and when the grace period is over
+setInterval(() => {
+  const cfg = planCfg(), t = now();
+  for (const r of db.subs) {
+    const c = cfg.feats[r.feat]; if (!c || !c.paid) continue; const u = userById(r.userId); if (!u) continue;
+    const end = Math.max(r.until || 0, r.trialUntil || 0), left = (end - t) / 864e5, f = PLAN_FEATS[r.feat];
+    const step = left <= 0 ? (t > end + c.grace * 864e5 ? 'over' : 'ended') : left <= 1 ? 'd1' : left <= 3 ? 'd3' : '';
+    if (!step || (r.told || {})[step] === end) continue;
+    r.told = { ...(r.told || {}), [step]: end };
+    const body = step === 'd3' ? 'Your plan ends in 3 days. Renew now from ₹' + c.monthly + '/month to keep working without a break.' : step === 'd1' ? 'Your plan ends tomorrow. Renew from ₹' + c.monthly + '/month.' : step === 'ended' ? 'Your plan ended today. You have ' + c.grace + ' extra days — renew to keep everything running.' : 'Your plan has stopped. Renew from ₹' + c.monthly + '/month to start again.';
+    pushTo(u, { title: f.icon + ' ' + f.name + ' plan', body, tag: 'plan-' + r.feat, url: '/?plan=' + r.feat }).catch(() => {});
+  }
+  save();
+}, 3 * 3600000);
+
 // v275: Terms of use
 app.get('/terms', (req, res) => res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terms of Use · Maata</title><style>${PAGE_CSS}</style></head><body>
 <div class="top"><img src="/icons/icon-192.png?v=5" alt=""><h1>Maata Terms of Use</h1></div>
@@ -6523,7 +6653,7 @@ app.post('/api/ls/ai/diagnose', auth, express.json({ limit: '3mb' }), async (req
 app.get('/api/ls/search', auth, (req, res) => {
   const la = Number(req.query.lat), lo = Number(req.query.lng), here = isFinite(la) && isFinite(lo) && (la || lo) ? { lat: la, lng: lo } : null;
   const cat = String(req.query.cat || ''), q = String(req.query.q || '').toLowerCase().trim(), km = Number(req.query.km) || 0, sort = String(req.query.sort || 'best');
-  let l = db.providers.filter((p) => p.status === 'approved' && p.id !== req.user.id && lsCityOn(p.city) && (!cat || p.cats.includes(cat)) && !blockedOf(userById(p.id) || {}).includes(req.user.id)
+  let l = db.providers.filter((p) => p.status === 'approved' && planOk(p.id, 'ls') && p.id !== req.user.id && lsCityOn(p.city) && (!cat || p.cats.includes(cat)) && !blockedOf(userById(p.id) || {}).includes(req.user.id)
     && (!q || (p.name || '').toLowerCase().includes(q) || p.cats.some((k) => (lsCat(k).en + ' ' + lsCat(k).te).toLowerCase().includes(q)) || (p.prices || []).some((x) => x.name.toLowerCase().includes(q)))).map((p) => lsCard(p, here));
   if (here && km) l = l.filter((c) => c.distKm == null || c.distKm <= km);
   if (req.query.now === '1') l = l.filter((c) => c.online); if (req.query.women === '1') l = l.filter((c) => c.gender === 'f');
@@ -6567,7 +6697,7 @@ const lsBookHits = new Map();
 function lsOffer(b, pids, ms) { b.offeredTo = [...new Set([...(b.offeredTo || []), ...pids])]; b.acceptBy = now() + ms; b.offerNow = pids; for (const pid of pids) { const p = lsProv(pid); if (p) lsStats(p).offered++; } }
 function lsPickNext(b, n) { // next best providers for this job (auto-reassign / emergency)
   const here = b.address && b.address.lat != null ? b.address : null;
-  return db.providers.filter((p) => p.status === 'approved' && p.cats.includes(b.cat) && p.id !== b.custId && !(b.offeredTo || []).includes(p.id) && lsCityOn(p.city) && !blockedOf(userById(p.id) || {}).includes(b.custId))
+  return db.providers.filter((p) => p.status === 'approved' && planOk(p.id, 'ls') && p.cats.includes(b.cat) && p.id !== b.custId && !(b.offeredTo || []).includes(p.id) && lsCityOn(p.city) && !blockedOf(userById(p.id) || {}).includes(b.custId))
     .map((p) => lsCard(p, here)).filter((c) => (b.emergency ? c.online : true) && (c.distKm == null || c.distKm <= Math.max(10, c.areaKm || 0))).sort((a, z) => lsScore(z) - lsScore(a)).slice(0, n).map((c) => c.id);
 }
 app.post('/api/ls/bookings', auth, (req, res) => {
@@ -6658,7 +6788,7 @@ app.get('/api/ls/reminders', auth, (req, res) => res.json((req.user.lsRem || [])
 app.delete('/api/ls/reminders/:id', auth, (req, res) => { req.user.lsRem = (req.user.lsRem || []).filter((r) => r.id !== req.params.id); save(); res.json({ ok: true }); });
 setInterval(() => { const t = now(); let ch = false; for (const u of db.users) for (const r of u.lsRem || []) if (!r.told && r.dueAt <= t) { r.told = t; ch = true; const c = lsCat(r.cat); pushTo(u, { type: 'msg', title: '🔔 ' + (c ? c.e + ' ' + c.en : 'Service') + ' time', body: 'Your last service was ' + Math.round((t - r.lastAt) / 86400000) + ' days ago. Book again on Maata in one tap.', tag: 'lsrem-' + r.id, url: '/?lsrem=1' }).catch(() => {}); } if (ch) save(); }, 3600000);
 // ---- providers: jobs ----
-function lsPro(req, res) { const p = lsProv(req.user.id); if (!p || p.status !== 'approved') { res.status(403).json({ error: 'Only approved service providers can do this.' }); return null; } return p; }
+function lsPro(req, res) { const p = lsProv(req.user.id); if (!p || p.status !== 'approved') { res.status(403).json({ error: 'Only approved service providers can do this.' }); return null; } if (!planOk(p.id, 'ls')) return planBlock(res, 'ls'); return p; }
 function lsJob(req, res, p) { const b = lsBk(req.params.id); if (!b || b.provId !== p.id) { res.status(404).json({ error: 'Job not found.' }); return null; } return b; }
 app.get('/api/ls/pro/jobs', auth, (req, res) => {
   const p = lsPro(req, res); if (!p) return; const today = lsDay(now()), month = today.slice(0, 7);
@@ -7140,6 +7270,7 @@ app.get('/api/jobs/:id', auth, (req, res, next) => {
 // ➕ post a job (employers)
 app.post('/api/jobs', auth, (req, res) => {
   if (!req.body?.agree) return res.status(400).json({ error: 'Please accept the Local Jobs rules first.' });
+  if (!planOk(req.user.id, 'hire')) return planBlock(res, 'hire'); /* v297: Hire Workers plan */
   const h = (jobPostHits.get(req.user.id) || []).filter((t) => now() - t < 86400000); if (h.length >= 6) return res.status(429).json({ error: 'You can post 6 jobs a day. Try again tomorrow.' });
   if (db.jobs.filter((j) => j.by === req.user.id && ['open', 'held'].includes(j.status)).length >= 15) return res.status(400).json({ error: 'You have 15 open jobs. Close some jobs first.' });
   const f = jobClean(req.body || {}); if (!f.place) { const emp = jobEmployer(req.user.id); if (emp && emp.place) f.place = { ...emp.place }; } if (!f.place) return res.status(400).json({ error: 'Add the work place (location).' });

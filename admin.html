@@ -199,6 +199,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="files"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>📁 Files</button>
     <button data-view="mr"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M3 17V9l4-4h8l4 6v6"/></svg>🛺 Maata Ride <span class="count" id="mrCount" hidden></span></button>
     <button data-view="ls"><svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>🛠️ Local Services &amp; 💼 Jobs <span class="count" id="lsCount" hidden></span></button>
+    <button data-view="plans"><svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>Plans &amp; payments <span class="count" id="plCount" hidden></span></button>
     <button data-view="sms"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></svg>SMS &amp; OTP</button>
     <button data-view="smail"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Support mail <span class="count" id="smCount" hidden></span></button>
     <button data-view="helpdesk"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><circle cx="12" cy="17.5" r=".6"/></svg>Help desk <span class="count" id="hdCount" hidden></span></button>
@@ -345,6 +346,19 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="top"><h2>🛠️ Local Services &amp; 💼 Local Jobs</h2></div>
       <div class="tabs" id="lsTabs"><button class="on" data-t="over">Overview</button><button data-t="pending">⏳ Approvals</button><button data-t="providers">🧑‍🔧 Providers</button><button data-t="bookings">📅 Bookings</button><button data-t="trust">🛡️ Trust &amp; Safety</button><button data-t="appeal">📨 Appeals</button><button data-t="jobs">💼 Local Jobs &amp; Daily Labour</button></div>
       <div id="lsBox"></div>
+    </section>
+    <section data-page="plans" hidden>
+      <div class="top"><h2>💳 Plans &amp; subscriptions</h2></div>
+      <style>.plx-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.plx-kpi .card{padding:14px 16px}.plx-kpi small{display:block;color:#5B6474;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}.plx-kpi b{font-size:24px}
+      .plx-feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}.plx-f{padding:14px 16px;border-top:4px solid #C9D1D6}.plx-f.on{border-top-color:#0F8A5F}
+      .plx-h{display:flex;gap:10px;align-items:center}.plx-ic{font-size:28px}.plx-h>div{flex:1}
+      .plx-sw{position:relative;width:96px;height:38px;border-radius:999px;border:0;background:#C9D1D6;cursor:pointer;color:#fff;font-weight:800;font-size:13px;padding:0 10px 0 40px;text-align:left;transition:background .2s}.plx-sw i{position:absolute;left:4px;top:4px;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+      .plx-sw.on{background:#0F8A5F;padding:0 40px 0 12px}.plx-sw.on i{left:62px}
+      .plx-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:12px 0 8px}.plx-in label{font-size:12px;color:#5B6474;font-weight:600;display:grid;gap:3px}.plx-in input{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:9px;border:1px solid #ccd;font:inherit;font-size:15px}
+      .plx-st{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;margin-bottom:10px}.plx-q{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid #eee}
+      .plx-t{width:100%;border-collapse:collapse;font-size:14px}.plx-t th,.plx-t td{padding:9px 12px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.plx-t th{font-size:12px;color:#5B6474;text-transform:uppercase}
+      #plBox input:not([type]),#plBox select{padding:9px 12px;border-radius:10px;border:1px solid #ccd;font:inherit}</style>
+      <div id="plBox"></div>
     </section>
     <section data-page="sms" hidden>
       <div class="top"><h2>📱 SMS &amp; OTP</h2></div>
@@ -501,15 +515,16 @@ function boot() {
   socket.on('live', setLive);
   socket.on('feed', addFeed);
   socket.on('feed', (f) => { if (f && (f.type === 'ls' || f.type === 'jobs')) lsBadge(); });
+  socket.on('plan:pay', (m) => { toast('💳 ' + m.name + ' paid ₹' + m.amount + ' — check it in Plans'); if (view === 'plans') loadPlans(); else { const c = $('#plCount'); c.hidden = false; c.textContent = (Number(c.textContent) || 0) + 1; } });
   socket.on('mail:new', (m) => { toast('📧 New email from ' + ((m.from || {}).name || (m.from || {}).email || '')); if (view === 'smail' && !smOpen) loadSupportMail(); else api('/admin/api/support-mail?box=unread').then((d) => { const c = $('#smCount'); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {}); });
   socket.on('report:new', () => { toast('New customer complaint received.'); loadRepCount(); if (view === 'reports') loadReports(); });
   go(location.hash.slice(1) || 'dash');
-  loadRepCount(); lsBadge(); api('/admin/api/support-mail?box=unread').then((d) => { const c = $('#smCount'); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {});
+  loadRepCount(); lsBadge(); api('/admin/api/plans').then((d) => { const c = $('#plCount'); c.hidden = !d.pending.length; c.textContent = d.pending.length; }).catch(() => {}); api('/admin/api/support-mail?box=unread').then((d) => { const c = $('#smCount'); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {});
   setInterval(() => { if (view === 'dash' && !document.hidden) loadDash(); }, 60000);
 }
 
 // ---------- navigation ----------
-const loaders = { sms: loadSms, smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { plans: loadPlans, sms: loadSms, smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 function go(v) {
   if (!loaders[v]) v = 'dash';
   view = v; history.replaceState(null, '', '#' + v);
@@ -917,6 +932,51 @@ async function loadHelpdesk() {
 }
 document.querySelectorAll('#hdTabs button').forEach((b) => b.onclick = () => { document.querySelectorAll('#hdTabs button').forEach((x) => x.classList.toggle('on', x === b)); hdFilter = b.dataset.f; loadHelpdesk(); });
 
+// ---------- 💳 Plans & subscriptions (v297) ----------
+let plD = null, plQ = '', plF = '';
+async function loadPlans() {
+  try { plD = await api('/admin/api/plans'); } catch (e) { $('#plBox').innerHTML = '<div class="card empty">' + esc(e.message) + '</div>'; return; }
+  const n = plD.pending.length, c = $('#plCount'); c.hidden = !n; c.textContent = n; drawPlans();
+}
+const plRs = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+function drawPlans() {
+  const D = plD, box = $('#plBox'), anyPaid = Object.values(D.cfg.feats).some((f) => f.paid);
+  const totM = Object.values(D.stats).reduce((a, s) => a + s.revenueMonth, 0), totA = Object.values(D.stats).reduce((a, s) => a + s.revenueAll, 0), act = Object.values(D.stats).reduce((a, s) => a + s.active, 0);
+  box.innerHTML = `<div class="plx-kpi"><div class="card"><small>Revenue this month</small><b>${plRs(totM)}</b></div><div class="card"><small>Revenue all time</small><b>${plRs(totA)}</b></div><div class="card"><small>Paying subscribers</small><b>${act}</b></div><div class="card"><small>Payments to check</small><b style="color:${D.pending.length ? '#C8413A' : 'inherit'}">${D.pending.length}</b></div></div>
+  <div class="card" style="padding:14px 16px;margin:12px 0">
+    <b>💰 Where people pay (Maata UPI)</b> ${anyPaid && !D.cfg.upi ? '<span class="tag t-amber">Needed — people cannot pay without it</span>' : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="plUpi" placeholder="UPI ID, e.g. maata@ybl" value="${esc(D.cfg.upi || '')}" style="flex:1;min-width:200px"><input id="plPayee" placeholder="Name shown in UPI apps" value="${esc(D.cfg.payee || '')}" style="flex:1;min-width:200px"><button class="btn ok" id="plUpiSave">Save</button></div>
+    <p class="muted" style="margin:6px 0 0">Use a business/current account UPI in the name of MAATA TECHNOLOGIES. Every payment shows here with its UTR number for you to check in the bank / UPI app.</p>
+  </div>
+  <div class="plx-feats">${Object.entries(D.feats).map(([k, f]) => { const c = D.cfg.feats[k], s = D.stats[k]; return `<div class="card plx-f ${c.paid ? 'on' : ''}" data-plk="${k}">
+    <div class="plx-h"><span class="plx-ic">${f.icon}</span><div><b>${esc(f.name)}</b><br><small class="muted">${esc(f.who)}</small></div>
+      <button class="plx-sw ${c.paid ? 'on' : ''}" data-plsw="${k}" title="Click to switch"><i></i><span>${c.paid ? 'PAID' : 'FREE'}</span></button></div>
+    <div class="plx-in"><label>Monthly ₹<input type="number" min="0" data-plv="monthly" value="${c.monthly}"></label><label>Yearly ₹<input type="number" min="0" data-plv="yearly" value="${c.yearly}"></label><label>Free trial (days)<input type="number" min="0" data-plv="trial" value="${c.trial}"></label><label>Extra days after end<input type="number" min="0" data-plv="grace" value="${c.grace}"></label></div>
+    <div class="plx-st"><span>✅ ${s.active} paying</span><span>🎁 ${s.trial} trial</span><span>⚠️ ${s.grace} grace</span><span>⛔ ${s.expired} ended</span><span>💰 ${plRs(s.revenueMonth)} this month</span></div>
+    <button class="btn" data-plsave="${k}">Save prices</button></div>`; }).join('')}</div>
+  <h3 style="margin:18px 0 8px">⏳ Payments to check ${D.pending.length ? '(' + D.pending.length + ')' : ''}</h3>
+  ${D.pending.length ? '<div class="card" style="padding:0;overflow:hidden">' + D.pending.map((q) => `<div class="plx-q"><div><b>${esc(q.name)}</b> <span class="muted">${esc(q.phone)}</span><br>${D.feats[q.feat].icon} ${esc(D.feats[q.feat].name)} · ${q.plan === 'y' ? '1 year' : '1 month'} · <b>${plRs(q.amount)}</b><br><span class="muted">UTR</span> <code>${esc(q.utr)}</code> <span class="muted">· ${dt(q.at)}</span></div>
+    <div class="actions"><button class="btn ok" data-plq="${q.id}" data-a="approve">✅ Money received</button><button class="btn" data-plq="${q.id}" data-a="reject" style="color:#C8413A">✖ Not found</button></div></div>`).join('') + '</div>' : '<div class="card empty">No payments waiting. 🎉</div>'}
+  <h3 style="margin:18px 0 8px">👥 Subscribers</h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="plSearch" placeholder="Search name or phone…" value="${esc(plQ)}" style="flex:1;min-width:180px"><select id="plFeat"><option value="">All plans</option>${Object.entries(D.feats).map(([k, f]) => `<option value="${k}" ${plF === k ? 'selected' : ''}>${f.icon} ${esc(f.name)}</option>`).join('')}</select></div>
+  <div class="card" style="padding:0;overflow:auto"><table class="plx-t"><tr><th>Name</th><th>Plan</th><th>Status</th><th>Till</th><th>Paid</th><th></th></tr>
+  ${D.subs.filter((s) => (!plF || s.feat === plF) && (!plQ || (s.name + ' ' + s.phone).toLowerCase().includes(plQ.toLowerCase()))).slice(0, 300).map((s) => `<tr><td><b>${esc(s.name)}</b><br><small class="muted">${esc(s.phone)}</small></td><td>${D.feats[s.feat].icon} ${esc(D.feats[s.feat].name)}</td><td><span class="tag ${{ active: 't-green', trial: 't-blue', grace: 't-amber', expired: 't-red', free: '' }[s.mode] || ''}">${{ active: 'Paying', trial: 'Trial', grace: 'Grace', expired: 'Ended', free: 'Free' }[s.mode]}</span></td><td>${s.until ? new Date(s.until).toLocaleDateString('en-IN') : '—'}</td><td>${plRs(s.paid)}</td>
+    <td style="white-space:nowrap"><button class="btn" data-plg="${s.userId}|${s.feat}">🎁 Add days</button> <button class="btn" data-plstop="${s.userId}|${s.feat}" title="End the plan now">⏹</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted" style="padding:14px">Nobody yet. People show here once a plan is PAID and they use that feature.</td></tr>'}</table></div>`;
+  $('#plUpiSave').onclick = async () => { try { await api('/admin/api/plans/cfg', { method: 'PUT', body: JSON.stringify({ upi: $('#plUpi').value, payee: $('#plPayee').value }) }); toast('Saved ✓'); loadPlans(); } catch (e) { toast(e.message); } };
+  $$('[data-plsw]').forEach((b) => b.onclick = async () => {
+    const k = b.dataset.plsw, c = D.cfg.feats[k], f = D.feats[k], to = !c.paid;
+    if (!confirm(to ? `Make ${f.name} PAID?\n\nEveryone using it gets ${c.trial} free days first, then pays ₹${c.monthly}/month (or ₹${c.yearly}/year).` : `Make ${f.name} FREE again?\n\nEveryone can use it without paying.`)) return;
+    try { const r = await api('/admin/api/plans/cfg', { method: 'PUT', body: JSON.stringify({ feats: { [k]: { paid: to } } }) }); toast(r.warn || (f.name + (to ? ' is now PAID' : ' is now FREE'))); loadPlans(); } catch (e) { toast(e.message); }
+  });
+  $$('[data-plsave]').forEach((b) => b.onclick = async () => { const k = b.dataset.plsave, v = {}; $$(`[data-plk="${k}"] [data-plv]`).forEach((i) => { v[i.dataset.plv] = Number(i.value); }); try { await api('/admin/api/plans/cfg', { method: 'PUT', body: JSON.stringify({ feats: { [k]: v } }) }); toast('Prices saved ✓'); loadPlans(); } catch (e) { toast(e.message); } });
+  $$('[data-plq]').forEach((b) => b.onclick = async () => { const a = b.dataset.a; let why = ''; if (a === 'reject') { why = prompt('Why? (the user sees this)', 'We could not find this UPI payment.'); if (why == null) return; } else if (!confirm('Did this money reach the Maata bank / UPI account? Check the UTR number first.')) return;
+    try { await api('/admin/api/plans/req/' + b.dataset.plq + '/' + a, { method: 'POST', body: JSON.stringify({ why }) }); toast(a === 'approve' ? 'Plan activated ✓' : 'Rejected'); loadPlans(); } catch (e) { toast(e.message); } });
+  $$('[data-plg]').forEach((b) => b.onclick = async () => { const [u, f] = b.dataset.plg.split('|'); const d = prompt('How many free days to add? (30 = 1 month)', '30'); if (!d) return; const note = prompt('Note for the user (optional)', '') || '';
+    try { await api('/admin/api/plans/user/' + u + '/' + f, { method: 'POST', body: JSON.stringify({ days: Number(d), note }) }); toast('Added ✓'); loadPlans(); } catch (e) { toast(e.message); } });
+  $$('[data-plstop]').forEach((b) => b.onclick = async () => { if (!confirm('End this plan now? The user will have to pay to continue.')) return; const [u, f] = b.dataset.plstop.split('|'); try { await api('/admin/api/plans/user/' + u + '/' + f, { method: 'POST', body: JSON.stringify({ stop: true }) }); toast('Ended'); loadPlans(); } catch (e) { toast(e.message); } });
+  $('#plSearch').oninput = (e) => { plQ = e.target.value; clearTimeout(drawPlans.t); drawPlans.t = setTimeout(() => { drawPlans(); const s = $('#plSearch'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }, 300); };
+  $('#plFeat').onchange = (e) => { plF = e.target.value; drawPlans(); };
+}
 // ---------- 📱 SMS (v289): provider, balance, test SMS ----------
 async function loadSms() {
   const box = $('#smsBox'); box.innerHTML = '<div class="card empty">Loading…</div>';
