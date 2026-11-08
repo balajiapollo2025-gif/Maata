@@ -1551,6 +1551,7 @@ function contactView(meUser, u, extra = {}) {
     ...(c && (c.first || c.last || c.company) ? { cFirst: c.first || '', cLast: c.last || '', cCompany: c.company || '' } : {}),
     blocked: blockedOf(meUser).includes(u.id),
     online: inContacts && isOnline(u.id),
+    lastSeen: inContacts && !isOnline(u.id) ? u.lastSeenAt || u.lastLoginAt || null : null, /* v307: "last seen today at 5:47 PM" like WhatsApp */
     biz: u.business ? { name: u.business.name, category: u.business.category } : null,
     ...extra,
   };
@@ -2166,7 +2167,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 306;
+const MAATA_VERSION = 307;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -8504,7 +8505,7 @@ io.on('connection', (socket) => {
     if (n <= 0) {
       online.delete(me);
       const u = userById(me); if (u) { u.lastSeenAt = now(); save(); }
-      toWatchers(me, 'presence', { userId: me, online: false });
+      toWatchers(me, 'presence', { userId: me, online: false, lastSeen: now() });
       for (const rec of [...activeCalls.values()]) if (rec.from === me || rec.to === me) finishCall(rec, 'missed');
     } else online.set(me, n);
     pushLive();
