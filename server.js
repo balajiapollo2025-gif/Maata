@@ -2183,7 +2183,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 310;
+const MAATA_VERSION = 311;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4960,6 +4960,91 @@ app.post('/api/shop/:bizId/orders', auth, (req, res) => {
 app.get('/api/my/orders', auth, (req, res) => res.json(db.orders.filter((o) => o.customerId === req.user.id).slice(-60).reverse().map((o) => ordOut(o, false))));
 app.get('/api/my/orders/:id', auth, (req, res) => { const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' }); res.json(ordOut(o, false)); });
 // v305: the customer's bill for an order — the real GST bill once delivered, an order bill before that (print / PDF / share)
+// 🔗 v311 link previews in chat (like WhatsApp): title, short text, picture and site name of a shared link.
+// Safety: only http(s) on ports 80/443, never private / local addresses (checked at connect time, also after redirects),
+// max 3 redirects, max 600 KB of page, 8 s; pictures are passed through Maata (so the other site never sees the person)
+// and only pictures that belong to a preview we made. Results are kept 6 hours.
+const LP = { cache: new Map(), imgs: new Map(), allowLocal: process.env.LINKPREV_ALLOW_LOCAL === '1' };
+const lpNet = require('net'), lpDns = require('dns'), lpHttps = require('https');
+function lpPrivateIp(ip) {
+  if (LP.allowLocal) return false;
+  if (lpNet.isIPv4(ip)) { const [a, b] = ip.split('.').map(Number); return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224; }
+  const x = ip.toLowerCase(); if (x.startsWith('::ffff:')) return lpPrivateIp(x.slice(7));
+  return x === '::1' || x === '::' || x.startsWith('fc') || x.startsWith('fd') || x.startsWith('fe8') || x.startsWith('fe9') || x.startsWith('fea') || x.startsWith('feb');
+}
+function lpLookup(host, opts, cb) {
+  lpDns.lookup(host, { all: true }, (err, list) => {
+    if (err) return cb(err);
+    const ok = (list || []).filter((a) => !lpPrivateIp(a.address));
+    if (!ok.length || ok.length !== list.length) return cb(new Error('blocked address'));
+    if (opts && opts.all) return cb(null, ok);
+    cb(null, ok[0].address, ok[0].family);
+  });
+}
+function lpGet(url, maxBytes, accept, hops = 0) {
+  return new Promise((resolve, reject) => {
+    let u; try { u = new URL(url); } catch { return reject(new Error('bad url')); }
+    if (!/^https?:$/.test(u.protocol) || (u.port && !['80', '443'].includes(u.port) && !LP.allowLocal) || u.username || u.password) return reject(new Error('not allowed'));
+    if (lpNet.isIP(u.hostname.replace(/^\[|\]$/g, '')) && lpPrivateIp(u.hostname.replace(/^\[|\]$/g, ''))) return reject(new Error('blocked address'));
+    const mod = u.protocol === 'https:' ? lpHttps : http;
+    const req = mod.request(u, { method: 'GET', lookup: lpLookup, timeout: 8000, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MaataLinkPreview/1.0; +https://maataapp.com)', Accept: accept, 'Accept-Language': 'en-IN,en;q=0.8' } }, (r) => {
+      if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) { r.resume(); if (hops >= 3) return reject(new Error('too many redirects')); return resolve(lpGet(new URL(r.headers.location, u).href, maxBytes, accept, hops + 1)); }
+      if (r.statusCode !== 200) { r.resume(); return reject(new Error('status ' + r.statusCode)); }
+      const chunks = []; let n = 0;
+      r.on('data', (c) => { n += c.length; if (n > maxBytes) { chunks.push(c.slice(0, Math.max(0, c.length - (n - maxBytes)))); req.destroy(); resolve({ buf: Buffer.concat(chunks), type: String(r.headers['content-type'] || ''), url: u.href, cut: true }); return; } chunks.push(c); });
+      r.on('end', () => resolve({ buf: Buffer.concat(chunks), type: String(r.headers['content-type'] || ''), url: u.href }));
+      r.on('error', reject);
+    });
+    req.on('timeout', () => req.destroy(new Error('timeout'))); req.on('error', reject); req.end();
+  });
+}
+function lpDecode(t) { return String(t || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, d) => { try { return String.fromCodePoint(+d); } catch { return ''; } }).replace(/&#x([0-9a-f]+);/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ''; } }).replace(/\s+/g, ' ').trim(); }
+function lpParse(html, base) {
+  const head = html.slice(0, 400000), meta = {};
+  for (const m of head.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = m[0], key = (tag.match(/\b(?:property|name|itemprop)\s*=\s*["']([^"']+)["']/i) || [])[1], val = (tag.match(/\bcontent\s*=\s*"([^"]*)"/i) || tag.match(/\bcontent\s*=\s*'([^']*)'/i) || [])[1];
+    if (key && val != null && !(key.toLowerCase() in meta)) meta[key.toLowerCase()] = lpDecode(val);
+  }
+  const title = meta['og:title'] || meta['twitter:title'] || lpDecode((head.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]);
+  const desc = meta['og:description'] || meta['twitter:description'] || meta.description || '';
+  let img = meta['og:image'] || meta['og:image:url'] || meta['og:image:secure_url'] || meta['twitter:image'] || meta['twitter:image:src'] || meta.image || '';
+  if (!img) { const ic = head.match(/<link\b[^>]*rel\s*=\s*["'][^"']*(?:apple-touch-icon|icon)[^"']*["'][^>]*>/i); if (ic) img = (ic[0].match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1] || ''; }
+  try { if (img) img = new URL(lpDecode(img), base).href; } catch { img = ''; }
+  if (img && !/^https?:/i.test(img)) img = '';
+  const host = new URL(base).hostname.replace(/^www\./, '');
+  return { url: base, title: title.slice(0, 200), desc: desc.slice(0, 300), site: (meta['og:site_name'] || host).slice(0, 80), host, img };
+}
+async function linkPreview(url) {
+  const hit = LP.cache.get(url); if (hit && hit.at > now() - 6 * 3600e3) return hit.v;
+  let v = null;
+  try {
+    const r = await lpGet(url, 600 * 1024, 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5');
+    if (/html|xml/i.test(r.type)) {
+      const cs = (r.type.match(/charset=([\w-]+)/i) || [])[1] || 'utf-8'; let html; try { html = new TextDecoder(cs).decode(r.buf); } catch { html = r.buf.toString('utf8'); }
+      v = lpParse(html, r.url); if (!v.title && !v.desc && !v.img) v = null;
+    } else if (/^image\//i.test(r.type) && !r.cut) { const h = new URL(r.url).hostname.replace(/^www\./, ''); v = { url: r.url, title: '', desc: '', site: h, host: h, img: r.url }; }
+  } catch { v = null; }
+  if (v && v.img) { const id = crypto.createHash('sha1').update(v.img).digest('hex').slice(0, 20); LP.imgs.set(id, { src: v.img, at: now() }); v.imgId = id; }
+  LP.cache.set(url, { at: now(), v }); if (LP.cache.size > 800) LP.cache.delete(LP.cache.keys().next().value);
+  if (LP.imgs.size > 1500) LP.imgs.delete(LP.imgs.keys().next().value);
+  return v;
+}
+app.get('/api/link-preview', auth, async (req, res) => {
+  let url = String(req.query.url || '').trim().slice(0, 2000); if (/^www\./i.test(url)) url = 'https://' + url;
+  if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Bad link' });
+  const v = await linkPreview(url);
+  res.set('Cache-Control', 'private, max-age=3600');
+  if (!v) return res.json({ preview: null });
+  res.json({ preview: { url: v.url, title: v.title, desc: v.desc, site: v.site, host: v.host, img: v.imgId ? '/api/link-preview/img/' + v.imgId : '' } });
+});
+app.get('/api/link-preview/img/:id', async (req, res) => {
+  const rec = LP.imgs.get(String(req.params.id)); if (!rec) return res.status(404).end();
+  try {
+    const r = await lpGet(rec.src, 3 * 1024 * 1024, 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8');
+    if (!/^image\/(png|jpe?g|webp|gif|avif|x-icon|vnd\.microsoft\.icon)/i.test(r.type) || r.cut) return res.status(415).end();
+    res.set({ 'Content-Type': r.type.split(';')[0], 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' }); res.end(r.buf);
+  } catch { res.status(404).end(); }
+});
 app.get('/api/my/orders/:id/bill', auth, (req, res) => {
   const o = db.orders.find((x) => x.id === req.params.id && x.customerId === req.user.id); if (!o) return res.status(404).json({ error: 'Order not found.' });
   const inv = o.invoiceId && db.invoices.find((x) => x.id === o.invoiceId);
