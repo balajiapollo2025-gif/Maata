@@ -2183,7 +2183,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 312;
+const MAATA_VERSION = 313;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5008,16 +5008,44 @@ function lpParse(html, base) {
   const title = meta['og:title'] || meta['twitter:title'] || lpDecode((head.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]);
   const desc = meta['og:description'] || meta['twitter:description'] || meta.description || '';
   let img = meta['og:image'] || meta['og:image:url'] || meta['og:image:secure_url'] || meta['twitter:image'] || meta['twitter:image:src'] || meta.image || '';
-  if (!img) { const ic = head.match(/<link\b[^>]*rel\s*=\s*["'][^"']*(?:apple-touch-icon|icon)[^"']*["'][^>]*>/i); if (ic) img = (ic[0].match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1] || ''; }
+  let icon = false;
+  if (!img) { icon = true; const ic = head.match(/<link\b[^>]*rel\s*=\s*["'][^"']*(?:apple-touch-icon|icon)[^"']*["'][^>]*>/i); if (ic) img = (ic[0].match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1] || ''; }
   try { if (img) img = new URL(lpDecode(img), base).href; } catch { img = ''; }
   if (img && !/^https?:/i.test(img)) img = '';
   const host = new URL(base).hostname.replace(/^www\./, '');
-  return { url: base, title: title.slice(0, 200), desc: desc.slice(0, 300), site: (meta['og:site_name'] || host).slice(0, 80), host, img };
+  const video = /video/i.test(meta['og:type'] || '') || !!meta['og:video'] || !!meta['og:video:url'];
+  return { url: base, title: title.slice(0, 200), desc: desc.slice(0, 300), site: (meta['og:site_name'] || host).slice(0, 80), host, img, icon: icon && !!img, video };
+}
+// YouTube / Vimeo do not give their page details to servers, so ask their official oEmbed service (title, channel, thumbnail)
+function lpYouTubeId(u) {
+  try {
+    const x = new URL(u), h = x.hostname.replace(/^(www|m|music)\./, '');
+    if (h === 'youtu.be') return x.pathname.slice(1).split('/')[0];
+    if (h === 'youtube.com' || h === 'youtube-nocookie.com') {
+      if (x.searchParams.get('v')) return x.searchParams.get('v');
+      const m = x.pathname.match(/^\/(?:shorts|embed|live|v)\/([\w-]{6,})/); if (m) return m[1];
+    }
+  } catch {}
+  return '';
+}
+async function lpVideo(url) {
+  const yt = lpYouTubeId(url);
+  if (yt && /^[\w-]{6,20}$/.test(yt)) {
+    const watch = /\/shorts\//.test(url) ? 'https://www.youtube.com/shorts/' + yt : 'https://www.youtube.com/watch?v=' + yt;
+    let o = {}; try { const r = await lpGet('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(watch), 200 * 1024, 'application/json'); o = JSON.parse(r.buf.toString('utf8')); } catch {}
+    return { url, title: String(o.title || 'YouTube video').slice(0, 200), desc: String(o.author_name || '').slice(0, 120), site: 'YouTube', host: 'youtube.com', img: /\/shorts\//.test(url) ? 'https://i.ytimg.com/vi/' + yt + '/oardefault.jpg' : 'https://i.ytimg.com/vi/' + yt + '/hqdefault.jpg', imgAlt: 'https://i.ytimg.com/vi/' + yt + '/hqdefault.jpg', video: true, short: /\/shorts\//.test(url) };
+  }
+  if (/^https?:\/\/(www\.)?vimeo\.com\/\d+/i.test(url)) {
+    try { const r = await lpGet('https://vimeo.com/api/oembed.json?url=' + encodeURIComponent(url), 200 * 1024, 'application/json'); const o = JSON.parse(r.buf.toString('utf8'));
+      return { url, title: String(o.title || 'Vimeo video').slice(0, 200), desc: String(o.author_name || '').slice(0, 120), site: 'Vimeo', host: 'vimeo.com', img: o.thumbnail_url || '', video: true }; } catch {}
+  }
+  return null;
 }
 async function linkPreview(url) {
   const hit = LP.cache.get(url); if (hit && hit.at > now() - 6 * 3600e3) return hit.v;
   let v = null;
-  try {
+  try { v = await lpVideo(url); } catch { v = null; }
+  if (!v) try {
     const r = await lpGet(url, 600 * 1024, 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5');
     if (/html|xml/i.test(r.type)) {
       const cs = (r.type.match(/charset=([\w-]+)/i) || [])[1] || 'utf-8'; let html; try { html = new TextDecoder(cs).decode(r.buf); } catch { html = r.buf.toString('utf8'); }
@@ -5026,7 +5054,7 @@ async function linkPreview(url) {
       if (v && /(^|\.)(accounts|consent)\.google\.com$|^login\.|^signin\./i.test(new URL(r.url).hostname)) v = null;
     } else if (/^image\//i.test(r.type) && !r.cut) { const h = new URL(r.url).hostname.replace(/^www\./, ''); v = { url: r.url, title: '', desc: '', site: h, host: h, img: r.url }; }
   } catch { v = null; }
-  if (v && v.img) { const id = crypto.createHash('sha1').update(v.img).digest('hex').slice(0, 20); LP.imgs.set(id, { src: v.img, at: now() }); v.imgId = id; }
+  if (v && v.img) { const id = crypto.createHash('sha1').update(v.img).digest('hex').slice(0, 20); LP.imgs.set(id, { src: v.img, alt: v.imgAlt || '', at: now() }); v.imgId = id; }
   LP.cache.set(url, { at: now(), v }); if (LP.cache.size > 800) LP.cache.delete(LP.cache.keys().next().value);
   if (LP.imgs.size > 1500) LP.imgs.delete(LP.imgs.keys().next().value);
   return v;
@@ -5037,12 +5065,13 @@ app.get('/api/link-preview', auth, async (req, res) => {
   const v = await linkPreview(url);
   res.set('Cache-Control', 'private, max-age=3600');
   if (!v) return res.json({ preview: null });
-  res.json({ preview: { url: v.url, title: v.title, desc: v.desc, site: v.site, host: v.host, img: v.imgId ? '/api/link-preview/img/' + v.imgId : '' } });
+  res.json({ preview: { url: v.url, title: v.title, desc: v.desc, site: v.site, host: v.host, img: v.imgId ? '/api/link-preview/img/' + v.imgId : '', icon: !!v.icon, video: !!v.video, short: !!v.short } });
 });
 app.get('/api/link-preview/img/:id', async (req, res) => {
   const rec = LP.imgs.get(String(req.params.id)); if (!rec) return res.status(404).end();
   try {
-    const r = await lpGet(rec.src, 3 * 1024 * 1024, 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8');
+    const acc = 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8';
+    let r; try { r = await lpGet(rec.src, 3 * 1024 * 1024, acc); } catch (e) { if (!rec.alt) throw e; r = await lpGet(rec.alt, 3 * 1024 * 1024, acc); }
     if (!/^image\/(png|jpe?g|webp|gif|avif|x-icon|vnd\.microsoft\.icon)/i.test(r.type) || r.cut) return res.status(415).end();
     res.set({ 'Content-Type': r.type.split(';')[0], 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' }); res.end(r.buf);
   } catch { res.status(404).end(); }
