@@ -2183,7 +2183,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 313;
+const MAATA_VERSION = 314;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5063,7 +5063,7 @@ app.get('/api/link-preview', auth, async (req, res) => {
   let url = String(req.query.url || '').trim().slice(0, 2000); if (/^www\./i.test(url)) url = 'https://' + url;
   if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Bad link' });
   const v = await linkPreview(url);
-  res.set('Cache-Control', 'private, max-age=3600');
+  res.set('Cache-Control', 'no-store'); // the phone must not keep an old answer (Maata keeps its own 6 h copy)
   if (!v) return res.json({ preview: null });
   res.json({ preview: { url: v.url, title: v.title, desc: v.desc, site: v.site, host: v.host, img: v.imgId ? '/api/link-preview/img/' + v.imgId : '', icon: !!v.icon, video: !!v.video, short: !!v.short } });
 });
