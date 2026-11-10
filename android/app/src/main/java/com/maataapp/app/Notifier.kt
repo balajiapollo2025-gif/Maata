@@ -75,8 +75,28 @@ object Notifier {
         return if (System.currentTimeMillis() - p.getLong("ringingAt", 0) < 60_000) id else null
     }
 
+    // 📞 v308: remember calls that were already hung up / answered elsewhere, so a late push does not ring again
+    fun markEnded(ctx: Context, callId: String) = prefs(ctx).edit().putString("ended", callId).putLong("endedAt", System.currentTimeMillis()).apply()
+    fun wasEnded(ctx: Context, callId: String): Boolean {
+        val p = prefs(ctx); return p.getString("ended", null) == callId && System.currentTimeMillis() - p.getLong("endedAt", 0) < 120_000
+    }
+    /** Tell the Maata server "this phone is ringing", so the caller sees "Ringing…" (like WhatsApp). */
+    fun ackRinging(ctx: Context, callId: String) {
+        val token = token(ctx); if (token.isEmpty()) return
+        Thread {
+            try {
+                val c = java.net.URL(BuildConfig.APP_URL + "/api/push/ringing").openConnection() as java.net.HttpURLConnection
+                c.requestMethod = "POST"; c.doOutput = true; c.connectTimeout = 8000; c.readTimeout = 8000
+                c.setRequestProperty("Content-Type", "application/json")
+                c.outputStream.use { it.write(org.json.JSONObject().put("fcm", token).put("callId", callId).toString().toByteArray()) }
+                c.responseCode; c.disconnect()
+            } catch (_: Exception) { }
+        }.start()
+    }
+
     fun showIncomingCall(ctx: Context, callId: String, caller: String, kind: String) {
         if (ringingCallId(ctx) == callId) return // already ringing for this call
+        if (wasEnded(ctx, callId)) return
         prefs(ctx).edit().putString("ringing", callId).putLong("ringingAt", System.currentTimeMillis())
             .putString("ringingName", caller).putString("ringingKind", kind).apply()
         if (!canPost(ctx)) return

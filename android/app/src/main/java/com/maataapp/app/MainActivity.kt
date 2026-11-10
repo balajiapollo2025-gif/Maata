@@ -39,6 +39,11 @@ class MainActivity : Activity() {
     companion object {
         const val EXTRA_URL = "maata_url"
         @Volatile var foreground = false
+        // 📞 v308: Maata really in front of the person (resumed + has focus), and the call the Maata page is showing right now
+        @Volatile var resumed = false
+        @Volatile var focused = false
+        @Volatile var shownCallId: String? = null
+        fun onScreen() = resumed && focused
         const val EXTRA_STOP_RING = "maata_stop_ring"
         const val EXTRA_HANGUP = "maata_hangup"
         private const val REQ_FILE = 11
@@ -433,6 +438,9 @@ class MainActivity : Activity() {
 
     // leaving Maata with an update downloaded: install it quietly (Android 12+), like Play Store apps
     override fun onStart() { super.onStart(); foreground = true }
+    override fun onResume() { super.onResume(); resumed = true }
+    override fun onPause() { resumed = false; super.onPause() }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); focused = hasFocus }
     override fun onStop() {
         super.onStop(); foreground = false
         if (updFile != null && !CallService.running && canSilentUpdate()) try { installDownloaded() } catch (_: Exception) { }
@@ -452,6 +460,9 @@ class MainActivity : Activity() {
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
         /** The web app tells us a call started/ended, so the mic keeps working when the phone locks. */
         @JavascriptInterface fun callStarted(kind: String, name: String) { CallService.start(this@MainActivity, if (kind == "video") "video" else "voice", name.take(40)) }
+        @JavascriptInterface fun onScreen(): Boolean = MainActivity.onScreen()
+        // the Maata page is showing this incoming call on screen: the phone's own ring is not needed
+        @JavascriptInterface fun callShown(callId: String) { shownCallId = callId; if (Notifier.ringingCallId(this@MainActivity) == callId) Notifier.stopRinging(this@MainActivity) }
         @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity); overLockScreen(false) }
         /** The person leaves the call screen (to chats) while the phone is still locked: ask for the phone's own unlock first. */
         @JavascriptInterface fun overLock(on: Boolean) { overLockScreen(on) }

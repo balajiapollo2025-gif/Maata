@@ -12,10 +12,20 @@ class MaataMessagingService : FirebaseMessagingService() {
         Notifier.createChannels(this)
         when (d["type"]) {
             "call" -> {
+                val callId = d["callId"] ?: return
                 val name = (d["title"] ?: "Maata call").replace("📞 ", "").replace("🎥 ", "").replace(" is calling…", "")
-                Notifier.showIncomingCall(this, d["callId"] ?: return, name, d["kind"] ?: "voice")
+                val kind = d["kind"] ?: "voice"
+                if (Notifier.wasEnded(this, callId)) return // hung up / answered before this push arrived
+                Notifier.ackRinging(this, callId) // the caller now sees "Ringing…"
+                if (MainActivity.shownCallId == callId) return // Maata is open and already showing this call
+                if (MainActivity.onScreen()) {
+                    // Maata is open in front of the person: give the page 3 s to show the call; if it does not, ring here
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (MainActivity.shownCallId != callId && !Notifier.wasEnded(this, callId)) Notifier.showIncomingCall(this, callId, name, kind)
+                    }, 3000)
+                } else Notifier.showIncomingCall(this, callId, name, kind)
             }
-            "call_end" -> if (Notifier.ringingCallId(this) == d["callId"]) Notifier.stopRinging(this)
+            "call_end" -> { d["callId"]?.let { Notifier.markEnded(this, it) }; if (Notifier.ringingCallId(this) == d["callId"]) Notifier.stopRinging(this) }
             // Maata Secure: the owner rings this phone from another device; it rings even on silent
             "secure_alarm" -> { SecureAlarm.start(this); Notifier.showMessage(this, d["title"] ?: "Maata Secure alarm", d["body"] ?: "Open Maata to stop the alarm.", "maata-secure", d["url"] ?: "/?secure=1") }
             "secure_stop" -> SecureAlarm.stop(this)
