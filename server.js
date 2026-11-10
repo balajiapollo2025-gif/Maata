@@ -2183,7 +2183,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 311;
+const MAATA_VERSION = 312;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5022,6 +5022,8 @@ async function linkPreview(url) {
     if (/html|xml/i.test(r.type)) {
       const cs = (r.type.match(/charset=([\w-]+)/i) || [])[1] || 'utf-8'; let html; try { html = new TextDecoder(cs).decode(r.buf); } catch { html = r.buf.toString('utf8'); }
       v = lpParse(html, r.url); if (!v.title && !v.desc && !v.img) v = null;
+      // a sign-in / consent page is not what was shared (e.g. Play testing links) → plain card with the link's own site
+      if (v && /(^|\.)(accounts|consent)\.google\.com$|^login\.|^signin\./i.test(new URL(r.url).hostname)) v = null;
     } else if (/^image\//i.test(r.type) && !r.cut) { const h = new URL(r.url).hostname.replace(/^www\./, ''); v = { url: r.url, title: '', desc: '', site: h, host: h, img: r.url }; }
   } catch { v = null; }
   if (v && v.img) { const id = crypto.createHash('sha1').update(v.img).digest('hex').slice(0, 20); LP.imgs.set(id, { src: v.img, at: now() }); v.imgId = id; }
