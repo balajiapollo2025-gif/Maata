@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 320;
+const MAATA_VERSION = 321;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2212,7 +2212,9 @@ app.post('/api/app-seen', auth, (req, res) => {
 app.get('/api/version', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }
-  res.json({ server: MAATA_VERSION, android });
+  // v321: how the reels are doing (is the video tool installed on the server, how many reels are already made light)
+  const live = db.reels.filter((r) => !r.removed && r.file);
+  res.json({ server: MAATA_VERSION, android, reels: { videoTool: !!FFMPEG, total: live.length, light: live.filter((r) => r.tc === 1).length, waiting: RT.queue.length, working: RT.busy, failed: live.filter((r) => r.tc === -1).length, storage: R2_ON ? 'r2' : 'db' } });
 });
 // ---------- 🗺️ Maata Maps: places added by Maata people (villages often miss shops on public maps) + Maata shops ----------
 const PLACE_CATS = ['shop', 'food', 'fuel', 'hospital', 'pharmacy', 'temple', 'school', 'atm', 'mechanic', 'hotel', 'office', 'other'];
