@@ -588,6 +588,25 @@ let apkMirror = (process.env.APK_URL || '').trim(); // e.g. the GitHub copy of m
 (async () => { if (apkMirror) return; const repo = (process.env.GITHUB_REPO || 'balajiapollo2025-gif/Maata').trim();
   for (const u of ['https://raw.githubusercontent.com/' + repo + '/main/public/maata.apk', 'https://raw.githubusercontent.com/' + repo + '/main/maata.apk']) {
     try { const r = await fetch(u, { method: 'HEAD', signal: AbortSignal.timeout(8000) }); if (r.ok && Number(r.headers.get('content-length') || 0) > 1e6) { apkMirror = u; console.log('[apk] downloads served from', u); return; } } catch { /* try next */ } } })();
+// 🍎 v320: an iPhone that opens the download link / QR gets the "add to home screen" steps, not an Android file it cannot open
+const IOS_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Maata on iPhone</title>
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=5"><meta name="theme-color" content="#0b5d4b">
+<style>body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#f6f4ef;color:#1c1c1e;line-height:1.45}main{max-width:480px;margin:0 auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
+.top{text-align:center}.top img{width:96px;height:96px;border-radius:22px;box-shadow:0 6px 20px rgba(0,0,0,.15)}h1{font-size:24px;margin:14px 0 4px}.sub{color:#555;margin:0 0 22px}
+.st{display:flex;gap:12px;align-items:center;background:#fff;border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 3px rgba(0,0,0,.06)}.n{flex:none;width:28px;height:28px;border-radius:50%;background:#0b5d4b;color:#fff;display:grid;place-items:center;font-weight:800}
+.i{flex:none;width:34px;text-align:center;font-size:24px}.st p{margin:0;font-size:16px}a.btn{display:block;text-align:center;background:#0b5d4b;color:#fff;text-decoration:none;font-weight:700;padding:15px;border-radius:14px;margin-top:20px;font-size:17px}
+.note{font-size:13px;color:#666;margin-top:16px;text-align:center}</style></head><body><main>
+<div class="top"><img src="/icons/maata-logo.png?v=5" alt="Maata"><h1>Maata on your iPhone</h1><p class="sub">No App Store download needed — add Maata to your home screen in 30 seconds.</p></div>
+<div class="st"><span class="n">1</span><span class="i">🧭</span><p>Open this page in <b>Safari</b>.</p></div>
+<div class="st"><span class="n">2</span><span class="i"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1"/></svg></span><p>Tap the <b>Share</b> button at the bottom.</p></div>
+<div class="st"><span class="n">3</span><span class="i">➕</span><p>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</p></div>
+<div class="st"><span class="n">4</span><span class="i">🦜</span><p>Open <b>Maata</b> from your home screen, log in and tap <b>Turn on</b> notifications.</p></div>
+<a class="btn" href="/">Open Maata</a><p class="note">Notifications on iPhone need iOS 16.4 or newer.<br>Android phone? <a href="/download?android=1">Download the Android app</a></p></main></body></html>`;
+app.get(['/download', '/app'], (req, res, next) => {
+  const ua = String(req.headers['user-agent'] || '');
+  if (req.query.android !== '1' && (/iPhone|iPad|iPod/.test(ua) || req.query.ios === '1')) { res.setHeader('Cache-Control', 'no-cache'); return res.type('html').send(IOS_PAGE); }
+  next();
+});
 app.get(['/download', '/app', '/maata.apk'], (req, res, next) => {
   if (apkMirror && req.query.local !== '1') { res.setHeader('Cache-Control', 'no-cache'); return res.redirect(302, apkMirror + '?v=' + Date.now()); }
   next();
@@ -2183,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 319;
+const MAATA_VERSION = 320;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
