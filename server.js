@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 321;
+const MAATA_VERSION = 322;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2214,7 +2214,7 @@ app.get('/api/version', (req, res) => {
   let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }
   // v321: how the reels are doing (is the video tool installed on the server, how many reels are already made light)
   const live = db.reels.filter((r) => !r.removed && r.file);
-  res.json({ server: MAATA_VERSION, android, reels: { videoTool: !!FFMPEG, total: live.length, light: live.filter((r) => r.tc === 1).length, waiting: RT.queue.length, working: RT.busy, failed: live.filter((r) => r.tc === -1).length, storage: R2_ON ? 'r2' : 'db' } });
+  res.json({ server: MAATA_VERSION, android, reels: { videoTool: !!FFMPEG, total: live.length, light: live.filter((r) => r.tc === 1).length, waiting: RT.queue.length, working: RT.busy, failed: live.filter((r) => r.tc === -1).length, why: live.filter((r) => r.tcErr).slice(0, 5).map((r) => ({ reel: r.id.slice(0, 6), mb: +(r.file.size / 1048576).toFixed(1), type: r.file.mime, tries: r.tcTries || 0, err: r.tcErr })), storage: R2_ON ? 'r2' : 'db' } });
 });
 // ---------- 🗺️ Maata Maps: places added by Maata people (villages often miss shops on public maps) + Maata shops ----------
 const PLACE_CATS = ['shop', 'food', 'fuel', 'hospital', 'pharmacy', 'temple', 'school', 'atm', 'mechanic', 'hotel', 'office', 'other'];
@@ -8755,7 +8755,7 @@ function ffRun(args, ms) {
     p.on('close', (c) => { clearTimeout(t); c === 0 ? ok() : bad(new Error('ffmpeg ' + c + ' ' + err.split('\n').slice(-3).join(' '))); });
   });
 }
-async function reelTranscode(r) {
+async function reelTranscode(r, safe) {
   const buf = await reelBuffer(r); if (!buf || buf.length !== r.file.size) throw new Error('could not read');
   const dir = require('os').tmpdir(), inF = require('path').join(dir, 'rin-' + r.id), outF = require('path').join(dir, 'rout-' + r.id + '.mp4');
   fs.writeFileSync(inF, buf);
@@ -8763,12 +8763,13 @@ async function reelTranscode(r) {
     // v318 quality: 720p (1080p for a 1080p+ phone video kept at 720p short side… like Instagram), sharp Lanczos resize,
     // CRF 21 / up to 3 Mbit/s — clear on a phone screen and still smooth on 4G
     const wmF = reelWmFile(r.id), wm = fs.existsSync(wmF);
-    const scale = "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)':flags=lanczos,fps=fps='min(30,source_fps)'";
+    // v322: "safe" second try for videos that failed (slow server, odd phone files): fastest preset, no frame-rate filter, more time
+    const scale = "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)':flags=lanczos" + (safe ? '' : ",fps=fps='min(30,source_fps)'");
     const vf = wm ? ['-i', wmF, '-filter_complex', '[0:v:0]' + scale + '[b];[1:v]scale=iw*main_w/720:-1[w];[b][w]overlay=0:main_h-overlay_h:format=auto[v]', '-map', '[v]', '-map', '0:a:0?']
       : ['-map', '0:v:0', '-map', '0:a:0?', '-vf', scale];
-    await ffRun(['-hide_banner', '-loglevel', 'error', '-y', '-i', inF, ...vf,
-      '-c:v', 'libx264', '-preset', 'faster', '-crf', '21', '-maxrate', '3000k', '-bufsize', '6000k', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', '60',
-      '-c:a', 'aac', '-b:a', '96k', '-ac', '2', '-movflags', '+faststart', '-threads', '2', '-max_muxing_queue_size', '1024', outF], 240000);
+    await ffRun(['-hide_banner', '-loglevel', 'error', '-y', '-fflags', '+genpts+discardcorrupt', '-err_detect', 'ignore_err', '-i', inF, ...vf, ...(safe ? ['-fpsmax', '30'] : []),
+      '-c:v', 'libx264', '-preset', safe ? 'ultrafast' : 'faster', '-crf', safe ? '23' : '21', '-maxrate', '3000k', '-bufsize', '6000k', '-profile:v', safe ? 'main' : 'high', '-pix_fmt', 'yuv420p', '-g', '60',
+      '-c:a', 'aac', '-b:a', '96k', '-ac', '2', '-af', 'aresample=async=1', '-movflags', '+faststart', '-threads', safe ? '1' : '2', '-max_muxing_queue_size', '4096', outF], safe ? 900000 : 360000);
     const out = fs.readFileSync(outF);
     if (out.length < 2000 || (!wm && out.length >= buf.length * 0.92)) return false; // already small: keep the original
     const old = r.file.id, nid = await storeReelFile(out, 'video/mp4');
@@ -8784,14 +8785,15 @@ async function reelWork() {
     while (RT.queue.length) {
       const r = db.reels.find((x) => x.id === RT.queue[0]); RT.queue.shift();
       if (!r || r.removed || r.tc || !r.file || r.file.size > 30 * 1024 * 1024) continue;
-      try { const changed = await reelTranscode(r); r.tc = 1; r.fs = 1; save(); RT.done++; if (changed) console.log('[reels] made light', r.id, reelKbps(r) + ' kbit/s'); }
-      catch (e) { r.tcTries = (r.tcTries || 0) + 1; if (r.tcTries >= 2) r.tc = -1; save(); RT.failed++; console.error('[reels] transcode', r.id, e.message); }
+      try { const changed = await reelTranscode(r, (r.tcTries || 0) >= 1); r.tc = 1; r.fs = 1; delete r.tcErr; save(); RT.done++; if (changed) console.log('[reels] made light', r.id, reelKbps(r) + ' kbit/s'); }
+      catch (e) { r.tcTries = (r.tcTries || 0) + 1; r.tcErr = String(e.message || e).slice(0, 160); if (r.tcTries >= 3) r.tc = -1; else RT.queue.push(r.id); save(); RT.failed++; console.error('[reels] transcode', r.id, e.message); }
       await new Promise((ok) => setTimeout(ok, 1500));
     }
   } finally { RT.busy = false; }
 }
 function reelsQueueOld() {
   if (!FFMPEG) return console.log('[reels] ffmpeg-static not installed — reels are not made lighter');
+  for (const r of db.reels) if (r.tc === -1 && !r.tcV322) { r.tc = undefined; r.tcTries = 1; r.tcV322 = 1; } // v322: one more try in safe mode for the ones that failed
   db.reels.filter((r) => !r.removed && !r.tc && r.file).sort((a, b) => b.createdAt - a.createdAt).forEach(reelQueue); // newest first
 }
 loadDb()
