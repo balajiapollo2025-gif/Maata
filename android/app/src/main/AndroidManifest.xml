@@ -23,6 +23,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- new order / new job while Maata is closed: a few seconds to ring the bell and say the order out loud -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Team tracking: location while the staff member is on duty (always shows a notification) -->
@@ -102,7 +103,7 @@
         <service
             android:name=".CallService"
             android:exported="false"
-            android:foregroundServiceType="microphone|camera" />
+            android:foregroundServiceType="microphone|camera|mediaProjection" />
 
         <!-- Team tracking: shares location only while the staff member is on duty -->
         <service
