@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 323;
+const MAATA_VERSION = 324;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5657,25 +5657,32 @@ async function storeReelFile(buf, mime) {
 }
 // Recently watched reels are kept in memory (up to ~140 MB), so the next person gets them instantly
 // instead of the server reading them from the database again.
-const memFiles = new Map(); let memBytes = 0; const MEM_MAX = 140 * 1024 * 1024;
+const memFiles = new Map(), memLoading = new Map(); let memBytes = 0; const MEM_MAX = 140 * 1024 * 1024;
 async function memFile(fileId, size) {
   if (memFiles.has(fileId)) { const b = memFiles.get(fileId); memFiles.delete(fileId); memFiles.set(fileId, b); return b; }
   if (size > 20 * 1024 * 1024) return null;
+  if (isR2(fileId)) { // v324: reels kept in Cloudflare R2 are fetched once by the server and then served from memory
+    if (!memLoading.has(fileId)) memLoading.set(fileId, (async () => { const g = await fetch(r2Url('GET', fileId, 600), { signal: AbortSignal.timeout(60000) }); if (!g.ok) throw new Error('r2 ' + g.status); return Buffer.from(await g.arrayBuffer()); })().finally(() => setTimeout(() => memLoading.delete(fileId), 0)));
+    const buf = await memLoading.get(fileId); if (!memFiles.has(fileId)) { memFiles.set(fileId, buf); memBytes += buf.length; while (memBytes > MEM_MAX && memFiles.size > 1) { const [k, v] = memFiles.entries().next().value; memFiles.delete(k); memBytes -= v.length; } }
+    return buf;
+  }
   const chunks = []; await new Promise((ok, bad) => { const st = chatFileStream(fileId, 0, size - 1); st.on('data', (c) => chunks.push(c)); st.on('end', ok); st.on('error', bad); });
   const buf = Buffer.concat(chunks); memFiles.set(fileId, buf); memBytes += buf.length;
   while (memBytes > MEM_MAX && memFiles.size > 1) { const [k, v] = memFiles.entries().next().value; memFiles.delete(k); memBytes -= v.length; }
   return buf;
 }
-function streamStored(fileId, mime, size, req, res) {
-  if (isR2(fileId)) { res.setHeader('Cache-Control', 'private, max-age=600'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime, 'response-cache-control': 'private, max-age=2592000, immutable' })); }
+// v324: reels are no longer sent to the phone as a jump to Cloudflare's storage address (*.r2.cloudflarestorage.com) —
+// some Indian mobile networks stall on that address. The phone now gets the video from maataapp.com itself.
+function streamStored(fileId, mime, size, req, res, viaUs) {
+  if (isR2(fileId) && !(viaUs && size <= 20 * 1024 * 1024 && process.env.REELS_REDIRECT !== '1')) { res.setHeader('Cache-Control', 'private, max-age=600'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime, 'response-cache-control': 'private, max-age=2592000, immutable' })); }
   let start = 0, end = size - 1, code = 200;
   const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
   if (r) { if (r[1]) { start = parseInt(r[1], 10); end = r[2] ? Math.min(parseInt(r[2], 10), size - 1) : size - 1; } else if (r[2]) start = Math.max(0, size - parseInt(r[2], 10)); if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); } code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`); }
   res.status(code); res.setHeader('Content-Type', mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1);
   res.setHeader('Cache-Control', 'private, max-age=2592000, immutable'); res.setHeader('ETag', '"' + fileId + '"'); // a reel never changes: phones keep it
   if (req.headers['if-none-match'] === '"' + fileId + '"') return res.status(304).end();
-  memFile(fileId, size).then((buf) => { if (buf) res.end(buf.subarray(start, end + 1)); else { const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res); } })
-    .catch(() => { const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res); });
+  memFile(fileId, size).then((buf) => { if (buf) res.end(buf.subarray(start, end + 1)); else if (isR2(fileId)) res.destroy(); else { const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res); } })
+    .catch(() => { if (isR2(fileId)) return res.destroy(); const st = chatFileStream(fileId, start, end); st.on('error', () => res.destroy()); st.pipe(res); });
 }
 const reelById = (id) => db.reels.find((r) => r.id === id && !r.removed);
 function canSeeReel(viewer, r) { const o = userById(r.by); return !!o && o.status !== 'blocked' && !blockedOf(o).includes(viewer.id) && !blockedOf(viewer).includes(o.id) && (!r.hidden || r.by === viewer.id); }
@@ -5718,12 +5725,12 @@ const viewerFromQuery = (req) => { try { return findUserByToken(String(req.query
 app.get('/api/reels/file/:id', (req, res) => {
   const v = viewerFromQuery(req), r = reelById(req.params.id) || (v && db.reels.find((x) => x.id === req.params.id && x.by === v.id));
   if (!v || !r || !canSeeReel(v, r)) return res.status(404).end();
-  streamStored(r.file.id, r.file.mime, r.file.size, req, res);
+  streamStored(r.file.id, r.file.mime, r.file.size, req, res, true);
 });
 app.get('/api/reels/thumb/:id', (req, res) => {
   const v = viewerFromQuery(req), r = db.reels.find((x) => x.id === req.params.id);
   if (!v || !r || !r.thumb || r.removed) return res.status(404).end();
-  streamStored(r.thumb.id, 'image/jpeg', r.thumb.size, req, res);
+  streamStored(r.thumb.id, 'image/jpeg', r.thumb.size, req, res, true);
 });
 app.get('/api/reels', auth, (req, res) => {
   const tab = String(req.query.tab || 'foryou'), me2 = req.user, contacts = new Set(contactsOf(me2).map((c) => c.id));
@@ -6094,8 +6101,8 @@ app.get('/admin/api/reels', adminAuth, (req, res) => res.json(db.reels.slice().s
 app.get('/admin/api/reels/:id/:what', (req, res) => {
   try { if (jwt.verify(String(req.query.t || ''), JWT_SECRET).typ !== 'admin') throw 0; } catch { return res.status(401).end(); }
   const r = db.reels.find((x) => x.id === req.params.id); if (!r) return res.status(404).end();
-  if (req.params.what === 'thumb' && r.thumb) return streamStored(r.thumb.id, 'image/jpeg', r.thumb.size, req, res);
-  if (req.params.what === 'video') return streamStored(r.file.id, r.file.mime, r.file.size, req, res);
+  if (req.params.what === 'thumb' && r.thumb) return streamStored(r.thumb.id, 'image/jpeg', r.thumb.size, req, res, true);
+  if (req.params.what === 'video') return streamStored(r.file.id, r.file.mime, r.file.size, req, res, true);
   res.status(404).end();
 });
 app.post('/admin/api/reels/:id/:action', adminAuth, (req, res) => {
