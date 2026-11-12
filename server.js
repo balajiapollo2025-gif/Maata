@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 322;
+const MAATA_VERSION = 323;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5667,7 +5667,7 @@ async function memFile(fileId, size) {
   return buf;
 }
 function streamStored(fileId, mime, size, req, res) {
-  if (isR2(fileId)) { res.setHeader('Cache-Control', 'private, max-age=3000'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime, 'response-cache-control': 'private, max-age=2592000, immutable' })); }
+  if (isR2(fileId)) { res.setHeader('Cache-Control', 'private, max-age=600'); return res.redirect(302, r2Url('GET', fileId, 3600, { 'response-content-type': mime, 'response-cache-control': 'private, max-age=2592000, immutable' })); }
   let start = 0, end = size - 1, code = 200;
   const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
   if (r) { if (r[1]) { start = parseInt(r[1], 10); end = r[2] ? Math.min(parseInt(r[2], 10), size - 1) : size - 1; } else if (r[2]) start = Math.max(0, size - parseInt(r[2], 10)); if (start > end || start >= size) { res.setHeader('Content-Range', `bytes */${size}`); return res.status(416).end(); } code = 206; res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`); }
@@ -8749,7 +8749,8 @@ async function reelBuffer(r) {
 }
 function ffRun(args, ms) {
   return new Promise((ok, bad) => {
-    const p = require('child_process').spawn(FFMPEG, args, { stdio: ['ignore', 'ignore', 'pipe'] }); let err = '';
+    const nice = fs.existsSync('/usr/bin/nice') ? '/usr/bin/nice' : fs.existsSync('/bin/nice') ? '/bin/nice' : null; // v323: lowest CPU priority — chats, calls and reels stay fast
+    const p = require('child_process').spawn(nice || FFMPEG, nice ? ['-n', '19', FFMPEG, ...args] : args, { stdio: ['ignore', 'ignore', 'pipe'] }); let err = '';
     const t = setTimeout(() => { p.kill('SIGKILL'); bad(new Error('ffmpeg timeout')); }, ms);
     p.stderr.on('data', (d) => { err = (err + d).slice(-600); }); p.on('error', (e) => { clearTimeout(t); bad(e); });
     p.on('close', (c) => { clearTimeout(t); c === 0 ? ok() : bad(new Error('ffmpeg ' + c + ' ' + err.split('\n').slice(-3).join(' '))); });
@@ -8774,10 +8775,11 @@ async function reelTranscode(r, safe) {
     if (out.length < 2000 || (!wm && out.length >= buf.length * 0.92)) return false; // already small: keep the original
     const old = r.file.id, nid = await storeReelFile(out, 'video/mp4');
     r.file = { id: nid, mime: 'video/mp4', size: out.length }; save();
-    deleteChatFile(old).catch(() => {});
+    db.meta.oldReelFiles = [...(db.meta.oldReelFiles || []), { id: old, at: now() }]; save(); // v323: deleted 6 h later, not while phones may still be playing it
     return true;
   } finally { try { fs.unlinkSync(inF); } catch {} try { fs.unlinkSync(outF); } catch {} try { fs.unlinkSync(reelWmFile(r.id)); } catch {} }
 }
+setInterval(() => { const L = db.meta.oldReelFiles || []; if (!L.length) return; const keep = []; for (const x of L) { if (now() - x.at > 6 * 3600e3) deleteChatFile(x.id).catch(() => {}); else keep.push(x); } if (keep.length !== L.length) { db.meta.oldReelFiles = keep; save(); } }, 30 * 60e3);
 function reelQueue(r) { if (FFMPEG && r && !r.tc && !RT.queue.includes(r.id)) { RT.queue.push(r.id); reelWork(); } }
 async function reelWork() {
   if (RT.busy) return; RT.busy = true;
