@@ -2183,7 +2183,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 315;
+const MAATA_VERSION = 316;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5590,7 +5590,42 @@ app.post('/api/activity/seen', auth, (req, res) => { req.user.activitySeen = now
 // Videos go to Cloudflare R2 when it is set up (free downloads, lots of space), otherwise to the database.
 const REEL_MAX = 16 * 1024 * 1024, REEL_DAY_LIMIT = 20;
 const reelHits = new Map();
+// ⚡ v316 "fast start": phones save the video's index (moov) at the END of the file, so a player must download the whole
+// reel (or jump to the end first) before the first frame. We move the index to the front — the reel then starts playing
+// from its first few KB, like Instagram. Pure JS (no ffmpeg); if anything looks unusual the file is left unchanged.
+function mp4Boxes(b, off, end) {
+  const out = [];
+  while (off + 8 <= end) {
+    let size = b.readUInt32BE(off), hdr = 8; const type = b.toString('latin1', off + 4, off + 8);
+    if (size === 1) { if (off + 16 > end) return null; size = Number(b.readBigUInt64BE(off + 8)); hdr = 16; } else if (size === 0) size = end - off;
+    if (size < hdr || off + size > end) return null;
+    out.push({ type, start: off, size, hdr }); off += size;
+  }
+  return off === end ? out : null;
+}
+function mp4ShiftOffsets(b, off, end, from, delta) {
+  const list = mp4Boxes(b, off, end); if (!list) return false;
+  for (const x of list) {
+    const body = x.start + x.hdr;
+    if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(x.type)) { if (!mp4ShiftOffsets(b, body, x.start + x.size, from, delta)) return false; }
+    else if (x.type === 'stco') { const n = b.readUInt32BE(body + 4); if (body + 8 + n * 4 > x.start + x.size) return false; for (let i = 0; i < n; i++) { const p = body + 8 + i * 4, v = b.readUInt32BE(p); if (v >= from) { if (v + delta > 0xffffffff) return false; b.writeUInt32BE(v + delta, p); } } }
+    else if (x.type === 'co64') { const n = b.readUInt32BE(body + 4); if (body + 8 + n * 8 > x.start + x.size) return false; for (let i = 0; i < n; i++) { const p = body + 8 + i * 8, v = b.readBigUInt64BE(p); if (v >= BigInt(from)) b.writeBigUInt64BE(v + BigInt(delta), p); } }
+  }
+  return true;
+}
+function mp4FastStart(buf) {
+  try {
+    const top = mp4Boxes(buf, 0, buf.length); if (!top) return null;
+    if (top.some((x) => x.type === 'moof')) return null; // fragmented: already streams
+    const mdat = top.find((x) => x.type === 'mdat'), moov = top.find((x) => x.type === 'moov');
+    if (!mdat || !moov || top.filter((x) => x.type === 'moov').length !== 1 || moov.start < mdat.start) return null; // already fast
+    const mv = Buffer.from(buf.subarray(moov.start, moov.start + moov.size));
+    if (!mp4ShiftOffsets(mv, 0, mv.length, mdat.start, mv.length)) return null;
+    return Buffer.concat([buf.subarray(0, mdat.start), mv, buf.subarray(mdat.start, moov.start), buf.subarray(moov.start + moov.size)]);
+  } catch { return null; }
+}
 async function storeReelFile(buf, mime) {
+  if (/mp4|quicktime|3gpp|m4v/i.test(mime || '')) { const f = mp4FastStart(buf); if (f && f.length === buf.length) buf = f; }
   if (R2_ON) {
     const id = 'r2-' + newId();
     const r = await fetch(r2Url('PUT', id, 600), { method: 'PUT', body: buf, headers: { 'Content-Type': mime }, signal: AbortSignal.timeout(60000) });
@@ -5639,7 +5674,7 @@ app.post('/api/reels', auth, express.raw({ type: ['video/*'], limit: '17mb' }), 
   if (dur > 62) return res.status(400).json({ error: 'Reels can be up to 60 seconds.' });
   const mime = String(req.headers['content-type'] || 'video/mp4').split(';')[0];
   let fid; try { fid = await storeReelFile(req.body, mime); } catch (e) { console.error('[reels]', e.message); return res.status(500).json({ error: 'Could not save the video. Try again.' }); }
-  const r = { id: newId(), by: req.user.id, caption: clip(req.query.caption, 300), file: { id: fid, mime, size: req.body.length }, dur, createdAt: now(), likes: [], viewers: [], viewCount: 0 };
+  const r = { id: newId(), by: req.user.id, caption: clip(req.query.caption, 300), file: { id: fid, mime, size: req.body.length }, dur, createdAt: now(), likes: [], viewers: [], viewCount: 0, fs: 1 };
   db.reels.push(r); day.push(now()); reelHits.set(req.user.id, day); save();
   feed('reel', req.user.name + ' posted a reel');
   res.json(reelView(req.user, r));
@@ -8665,6 +8700,22 @@ io.on('connection', (socket) => {
   });
 });
 
+// ⚡ v316: older reels get "fast start" too — one every few seconds in the background after the server starts
+async function reelsFastStartOld() {
+  for (const r of db.reels) {
+    if (r.removed || r.fs || !r.file || !/mp4|quicktime|3gpp|m4v/i.test(r.file.mime || '') || r.file.size > 20 * 1024 * 1024) continue;
+    try {
+      let buf;
+      if (isR2(r.file.id)) { const g = await fetch(r2Url('GET', r.file.id, 600), { signal: AbortSignal.timeout(60000) }); if (!g.ok) throw new Error('get ' + g.status); buf = Buffer.from(await g.arrayBuffer()); }
+      else buf = await memFile(r.file.id, r.file.size);
+      if (!buf || buf.length !== r.file.size) { r.fs = 1; continue; }
+      const f = mp4FastStart(buf);
+      if (f && f.length === buf.length) { const old = r.file.id, nid = await storeReelFile(f, r.file.mime); r.file = { ...r.file, id: nid }; if (isR2(old)) r2Delete(old); }
+      r.fs = 1; save();
+    } catch (e) { console.error('[reels faststart]', r.id, e.message); r.fs = 1; }
+    await new Promise((ok) => setTimeout(ok, 4000));
+  }
+}
 loadDb()
   .then(() => {
     let fixed = 0; const dups = [];
@@ -8678,7 +8729,7 @@ loadDb()
     if (dups.length) console.log('[phones] same number registered twice (delete one in the admin panel): ' + dups.join(' | '));
   })
   .then(() => { cleanStatuses(); cleanExpiredMessages(); return setupPush().catch((e) => console.error('[push] setup failed', e.message)); })
-  .then(() => server.listen(PORT, () => console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`)))
+  .then(() => server.listen(PORT, () => { console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`); setTimeout(() => reelsFastStartOld().catch(() => {}), 60000); }))
   .catch((e) => {
     console.error('[db] Could not connect to MongoDB. Check MONGODB_URI, the database password, and Network Access (allow 0.0.0.0/0).');
     console.error(e.message);
