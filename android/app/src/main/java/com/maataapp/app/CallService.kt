@@ -26,8 +26,15 @@ class CallService : Service() {
         const val EXTRA_KIND = "kind"
         const val EXTRA_NAME = "name"
         @Volatile var running = false
+        // 🖥️ v326: while the screen is shared, this service also carries Android's "media projection" type
+        @Volatile var withProjection = false
+        @Volatile private var lastKind = "voice"
+        @Volatile private var lastName = "Maata"
+
+        fun projection(ctx: Context, on: Boolean) { withProjection = on; if (on || running) start(ctx, lastKind, lastName) }
 
         fun start(ctx: Context, kind: String, name: String) {
+            lastKind = kind; lastName = name
             val i = Intent(ctx, CallService::class.java).putExtra(EXTRA_KIND, kind).putExtra(EXTRA_NAME, name)
             try { if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i) } catch (_: Exception) { }
         }
@@ -64,6 +71,7 @@ class CallService : Service() {
         if (Build.VERSION.SDK_INT >= 30) {
             var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
             if (kind == "video") types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+            if (withProjection) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
             try { startForeground(NOTIF_ID, n, types) }
             catch (_: Exception) {
                 // no camera permission (or not allowed now): try microphone only; if even that is not allowed, just stop quietly
@@ -90,6 +98,7 @@ class CallService : Service() {
     }
 
     override fun onDestroy() {
+        if (ScreenShare.active) ScreenShare.stop(this, false); withProjection = false
         running = false
         try { cpuLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) { }
         try { earLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) { }

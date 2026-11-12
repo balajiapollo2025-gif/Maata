@@ -48,6 +48,7 @@ class MainActivity : Activity() {
         const val EXTRA_HANGUP = "maata_hangup"
         private const val REQ_FILE = 11
         private const val REQ_PERMS = 12
+        private const val REQ_SCREEN = 13
         const val ACTION_INSTALL_STATUS = "com.maataapp.app.INSTALL_STATUS"
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
     }
@@ -348,12 +349,25 @@ class MainActivity : Activity() {
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_SCREEN) { // 🖥️ v326 screen sharing: Android said yes / no
+            if (resultCode != RESULT_OK || data == null) { screenState("denied"); return }
+            CallService.projection(this, true) // the call notification must carry the "screen" type before capture starts (Android 14+)
+            android.os.Handler(mainLooper).postDelayed({
+                val ok = ScreenShare.begin(this, resultCode, data,
+                    { url -> if (::web.isInitialized) web.evaluateJavascript("window.maataScreenFrame&&maataScreenFrame(" + org.json.JSONObject.quote(url) + ")") { ScreenShare.frameDone() } else ScreenShare.frameDone() },
+                    { screenState("stopped"); CallService.projection(this, false) })
+                if (ok) screenState("on") else { CallService.projection(this, false); screenState("failed") }
+            }, 450)
+            return
+        }
         if (requestCode == REQ_FILE) {
             val uris: Array<Uri>? = if (resultCode != RESULT_OK || data == null) null
                 else data.clipData?.let { c -> Array(c.itemCount) { c.getItemAt(it).uri } } ?: data.data?.let { arrayOf(it) }
             fileCallback?.onReceiveValue(uris); fileCallback = null
         }
     }
+
+    private fun screenState(st: String) { if (::web.isInitialized) web.evaluateJavascript("window.maataScreenState&&maataScreenState(" + org.json.JSONObject.quote(st) + ")", null) }
 
     private fun openOutside(u: Uri) {
         try { startActivity(Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -463,7 +477,12 @@ class MainActivity : Activity() {
         @JavascriptInterface fun onScreen(): Boolean = MainActivity.onScreen()
         // the Maata page is showing this incoming call on screen: the phone's own ring is not needed
         @JavascriptInterface fun callShown(callId: String) { shownCallId = callId; if (Notifier.ringingCallId(this@MainActivity) == callId) Notifier.stopRinging(this@MainActivity) }
-        @JavascriptInterface fun callEnded() { runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity); overLockScreen(false) }
+        @JavascriptInterface fun canShareScreen(): Boolean = true
+        @JavascriptInterface fun startScreenShare() { runOnUiThread {
+            try { startActivityForResult(getSystemService(android.media.projection.MediaProjectionManager::class.java).createScreenCaptureIntent(), REQ_SCREEN) }
+            catch (_: Exception) { screenState("failed") } } }
+        @JavascriptInterface fun stopScreenShare() { runOnUiThread { ScreenShare.stop(this@MainActivity) } }
+        @JavascriptInterface fun callEnded() { if (ScreenShare.active) runOnUiThread { ScreenShare.stop(this@MainActivity) }; runOnUiThread { stopRouteGuard(); volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE }; CallService.stop(this@MainActivity); overLockScreen(false) }
         /** The person leaves the call screen (to chats) while the phone is still locked: ask for the phone's own unlock first. */
         @JavascriptInterface fun overLock(on: Boolean) { overLockScreen(on) }
         @JavascriptInterface fun phoneLocked(): Boolean = try { getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked } catch (_: Exception) { false }
