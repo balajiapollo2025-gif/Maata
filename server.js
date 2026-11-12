@@ -2183,7 +2183,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 316;
+const MAATA_VERSION = 318;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5588,7 +5588,7 @@ app.post('/api/activity/seen', auth, (req, res) => { req.user.activitySeen = now
 
 // ---------- Reels (short videos, up to 60 s) ----------
 // Videos go to Cloudflare R2 when it is set up (free downloads, lots of space), otherwise to the database.
-const REEL_MAX = 16 * 1024 * 1024, REEL_DAY_LIMIT = 20;
+const REEL_MAX = 50 * 1024 * 1024, REEL_DAY_LIMIT = 20; // v318: the full-quality phone video comes up; Maata makes the light copy
 const reelHits = new Map();
 // ⚡ v316 "fast start": phones save the video's index (moov) at the END of the file, so a player must download the whole
 // reel (or jump to the end first) before the first frame. We move the index to the front — the reel then starts playing
@@ -5661,23 +5661,31 @@ function canSeeReel(viewer, r) { const o = userById(r.by); return !!o && o.statu
 function reelView(viewer, r) {
   const o = userById(r.by) || {}, saved = contactsOf(viewer).find((c) => c.id === r.by);
   return { id: r.id, caption: r.caption, dur: r.dur || 0, createdAt: r.createdAt, likes: (r.likes || []).length, liked: (r.likes || []).includes(viewer.id), views: r.viewCount || 0,
-    comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, mine: r.by === viewer.id, hidden: !!r.hidden,
+    comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, saves: (r.saves || []).length, saved: (r.saves || []).includes(viewer.id), shares: r.shares || 0, remixes: r.remixCount || 0, fv: String((r.file && r.file.id) || '').slice(-8), mine: r.by === viewer.id, hidden: !!r.hidden,
     shop: (r.products || []).length, place: r.loc ? r.loc.place : '', smart: !!(r.subs && r.subs.length), remix: !!r.remixOf,
     by: { id: r.by, name: (saved && saved.name) || o.name || 'Maata user', photo: !!o.photo, photoV: o.photoV || 0, biz: o.business ? o.business.name : null, followed: (viewer.following || []).includes(r.by) } };
 }
-app.post('/api/reels', auth, express.raw({ type: ['video/*'], limit: '17mb' }), async (req, res) => {
+app.post('/api/reels', auth, express.raw({ type: ['video/*'], limit: '52mb' }), async (req, res) => {
   const day = (reelHits.get(req.user.id) || []).filter((t) => now() - t < 86400000);
   if (day.length >= REEL_DAY_LIMIT) return res.status(429).json({ error: 'You can post up to ' + REEL_DAY_LIMIT + ' reels a day.' });
   if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a video.' });
-  if (req.body.length > REEL_MAX) return res.status(413).json({ error: 'The video is too big (16 MB max). Try a shorter video.' });
+  if (req.body.length > REEL_MAX) return res.status(413).json({ error: 'The video is too big (50 MB max). Try a shorter video.' });
   const dur = Math.round(Number(req.query.dur) || 0);
   if (dur > 62) return res.status(400).json({ error: 'Reels can be up to 60 seconds.' });
   const mime = String(req.headers['content-type'] || 'video/mp4').split(';')[0];
   let fid; try { fid = await storeReelFile(req.body, mime); } catch (e) { console.error('[reels]', e.message); return res.status(500).json({ error: 'Could not save the video. Try again.' }); }
-  const r = { id: newId(), by: req.user.id, caption: clip(req.query.caption, 300), file: { id: fid, mime, size: req.body.length }, dur, createdAt: now(), likes: [], viewers: [], viewCount: 0, fs: 1 };
-  db.reels.push(r); day.push(now()); reelHits.set(req.user.id, day); save();
+  const r = { id: newId(), by: req.user.id, caption: clip(req.query.caption, 300), file: { id: fid, mime, size: req.body.length }, dur, createdAt: now(), likes: [], viewers: [], viewCount: 0, fs: 1, ...(req.query.wm === '1' ? { wmWait: now() } : {}) };
+  db.reels.push(r); day.push(now()); reelHits.set(req.user.id, day); save(); if (!r.wmWait) reelQueue(r); else setTimeout(() => { if (r.wmWait) { delete r.wmWait; reelQueue(r); } }, 60000);
   feed('reel', req.user.name + ' posted a reel');
   res.json(reelView(req.user, r));
+});
+// v318: the small "🦜 Maata" mark (drawn by the phone as a see-through picture) is put on the light copy by the server
+const reelWmFile = (id) => require('path').join(require('os').tmpdir(), 'rwm-' + id + '.png');
+app.post('/api/reels/:id/wm', auth, express.raw({ type: ['image/png'], limit: '200kb' }), (req, res) => {
+  const r = db.reels.find((x) => x.id === req.params.id && x.by === req.user.id); if (!r) return res.status(404).json({ error: 'Not found.' });
+  if (Buffer.isBuffer(req.body) && req.body.length > 50 && req.body.slice(1, 4).toString() === 'PNG') { fs.writeFileSync(reelWmFile(r.id), req.body); r.wm = 1; }
+  if (r.wmWait) { delete r.wmWait; save(); reelQueue(r); }
+  res.json({ ok: true });
 });
 app.post('/api/reels/:id/thumb', auth, express.raw({ type: ['image/*'], limit: '1mb' }), async (req, res) => {
   const r = db.reels.find((x) => x.id === req.params.id && x.by === req.user.id); if (!r) return res.status(404).json({ error: 'Not found.' });
@@ -5706,13 +5714,14 @@ app.get('/api/reels', auth, (req, res) => {
   else if (tab === 'friends') list = list.filter((r) => contacts.has(r.by));
   else if (tab === 'mine') list = list.filter((r) => r.by === me2.id);
   else if (tab.startsWith('user:')) list = list.filter((r) => r.by === tab.slice(5));
+  else if (tab === 'saved') list = list.filter((r) => (r.saves || []).includes(me2.id)).sort((a, b) => (b.savedAt?.[me2.id] || 0) - (a.savedAt?.[me2.id] || 0));
   else list = list.filter((r) => !r.hidden);
   if (tab === 'explore') list.sort((a, b) => ((b.likes || []).length * 3 + (b.viewCount || 0)) - ((a.likes || []).length * 3 + (a.viewCount || 0)));
   else if (tab === 'home') list.sort((a, b) => b.createdAt - a.createdAt);
   else if (tab === 'foryou') { // simple ranking: fresh + liked + watched, friends a little higher, unseen first
     const score = (r) => { const ageH = (now() - r.createdAt) / 3600000; return ((r.likes || []).length * 3 + (r.viewCount || 0) * 0.3 + (contacts.has(r.by) ? 8 : 0) + 5) / Math.pow(ageH + 2, 1.2) - ((r.viewers || []).includes(me2.id) ? 1000 : 0); };
     list.sort((a, b) => score(b) - score(a));
-  } else if (tab !== 'nearby') list.sort((a, b) => b.createdAt - a.createdAt);
+  } else if (tab !== 'nearby' && tab !== 'saved') list.sort((a, b) => b.createdAt - a.createdAt);
   const first = String(req.query.first || '');
   if (first) { const f = db.reels.find((r) => r.id === first && !r.removed && canSeeReel(me2, r)); if (f) list = [f, ...list.filter((r) => r.id !== first)]; }
   const skip = Math.max(0, Number(req.query.skip) || 0);
@@ -5925,7 +5934,7 @@ app.post('/api/reels/:id/details', auth, (req, res) => {
   if (Array.isArray(b.products)) r.products = b.products.map(String).filter((id) => db.products.some((p) => p.id === id && p.ownerId === req.user.id)).slice(0, 5);
   if (b.loc && isFinite(b.loc.lat) && isFinite(b.loc.lng)) r.loc = { lat: Math.round(Number(b.loc.lat) * 100) / 100, lng: Math.round(Number(b.loc.lng) * 100) / 100, place: clip(b.loc.place, 60) }; // ~1 km accuracy only (privacy)
   if (Array.isArray(b.subs)) { r.subs = b.subs.slice(0, 150).map((x) => ({ start: Math.max(0, +x.start || 0), end: Math.max(0, +x.end || 0), text: clip(x.text, 90) })).filter((x) => x.text && x.end > x.start); r.subLang = clip(b.subLang, 5); }
-  if (b.remixOf) { const o = db.reels.find((x) => x.id === String(b.remixOf)); if (o) { r.remixOf = o.id; addActivity(o.by, req.user, 'remix', r.id); } }
+  if (b.remixOf) { const o = db.reels.find((x) => x.id === String(b.remixOf)); if (o) { if (r.remixOf !== o.id) o.remixCount = (o.remixCount || 0) + 1; r.remixOf = o.id; addActivity(o.by, req.user, 'remix', r.id); } }
   save(); res.json(reelView(req.user, r));
 });
 app.get('/api/reels/:id/extra', auth, (req, res) => {
@@ -5964,6 +5973,13 @@ app.post('/api/reels/:id/watch', auth, (req, res) => {
   const day = new Date().toISOString().slice(0, 10); r.daily = r.daily || {}; r.daily[day] = (r.daily[day] || 0) + 1;
   const ks = Object.keys(r.daily); if (ks.length > 40) delete r.daily[ks.sort()[0]];
   save(); res.json({ ok: true });
+});
+// v318 🔖 save a reel (like Instagram) — only you see your saved reels
+app.post('/api/reels/:id/save', auth, (req, res) => {
+  const r = reelById(req.params.id); if (!r || !canSeeReel(req.user, r)) return res.status(404).json({ error: 'Not found.' });
+  const s2 = new Set(r.saves || []), on = req.body?.save !== undefined ? !!req.body.save : !s2.has(req.user.id);
+  if (on) { s2.add(req.user.id); r.savedAt = { ...(r.savedAt || {}), [req.user.id]: now() }; } else { s2.delete(req.user.id); if (r.savedAt) delete r.savedAt[req.user.id]; }
+  r.saves = [...s2]; save(); res.json({ saved: on, saves: r.saves.length });
 });
 app.post('/api/reels/:id/shared', auth, (req, res) => { const r = reelById(req.params.id); if (r) { r.shares = (r.shares || 0) + 1; save(); } res.json({ ok: true }); });
 app.post('/api/reels/:id/product-tap', auth, (req, res) => { const r = reelById(req.params.id); if (r && r.by !== req.user.id) { r.productTaps = (r.productTaps || 0) + 1; save(); } res.json({ ok: true }); });
@@ -8700,21 +8716,62 @@ io.on('connection', (socket) => {
   });
 });
 
-// ⚡ v316: older reels get "fast start" too — one every few seconds in the background after the server starts
-async function reelsFastStartOld() {
-  for (const r of db.reels) {
-    if (r.removed || r.fs || !r.file || !/mp4|quicktime|3gpp|m4v/i.test(r.file.mime || '') || r.file.size > 20 * 1024 * 1024) continue;
-    try {
-      let buf;
-      if (isR2(r.file.id)) { const g = await fetch(r2Url('GET', r.file.id, 600), { signal: AbortSignal.timeout(60000) }); if (!g.ok) throw new Error('get ' + g.status); buf = Buffer.from(await g.arrayBuffer()); }
-      else buf = await memFile(r.file.id, r.file.size);
-      if (!buf || buf.length !== r.file.size) { r.fs = 1; continue; }
-      const f = mp4FastStart(buf);
-      if (f && f.length === buf.length) { const old = r.file.id, nid = await storeReelFile(f, r.file.mime); r.file = { ...r.file, id: nid }; if (isR2(old)) r2Delete(old); }
-      r.fs = 1; save();
-    } catch (e) { console.error('[reels faststart]', r.id, e.message); r.fs = 1; }
-    await new Promise((ok) => setTimeout(ok, 4000));
-  }
+// 🎞️ v317 — reels are re-made for phones like Instagram does: 720p, about 1.8 Mbit/s, sound 96 kbit/s, index at the front,
+// sideways phone videos turned upright. A phone video is often 8–20 Mbit/s, which stops to buffer on a normal 4G line.
+// Runs in the background, one reel at a time (the original plays until the small one is ready). Needs the ffmpeg-static package.
+let FFMPEG = null; try { FFMPEG = require('ffmpeg-static'); if (FFMPEG && !fs.existsSync(FFMPEG)) FFMPEG = null; } catch { FFMPEG = null; }
+const RT = { queue: [], busy: false, done: 0, failed: 0 };
+const reelKbps = (r) => (r.file && r.dur ? Math.round(r.file.size * 8 / r.dur / 1000) : 0);
+async function reelBuffer(r) {
+  if (isR2(r.file.id)) { const g = await fetch(r2Url('GET', r.file.id, 600), { signal: AbortSignal.timeout(90000) }); if (!g.ok) throw new Error('get ' + g.status); return Buffer.from(await g.arrayBuffer()); }
+  return memFile(r.file.id, r.file.size);
+}
+function ffRun(args, ms) {
+  return new Promise((ok, bad) => {
+    const p = require('child_process').spawn(FFMPEG, args, { stdio: ['ignore', 'ignore', 'pipe'] }); let err = '';
+    const t = setTimeout(() => { p.kill('SIGKILL'); bad(new Error('ffmpeg timeout')); }, ms);
+    p.stderr.on('data', (d) => { err = (err + d).slice(-600); }); p.on('error', (e) => { clearTimeout(t); bad(e); });
+    p.on('close', (c) => { clearTimeout(t); c === 0 ? ok() : bad(new Error('ffmpeg ' + c + ' ' + err.split('\n').slice(-3).join(' '))); });
+  });
+}
+async function reelTranscode(r) {
+  const buf = await reelBuffer(r); if (!buf || buf.length !== r.file.size) throw new Error('could not read');
+  const dir = require('os').tmpdir(), inF = require('path').join(dir, 'rin-' + r.id), outF = require('path').join(dir, 'rout-' + r.id + '.mp4');
+  fs.writeFileSync(inF, buf);
+  try {
+    // v318 quality: 720p (1080p for a 1080p+ phone video kept at 720p short side… like Instagram), sharp Lanczos resize,
+    // CRF 21 / up to 3 Mbit/s — clear on a phone screen and still smooth on 4G
+    const wmF = reelWmFile(r.id), wm = fs.existsSync(wmF);
+    const scale = "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)':flags=lanczos,fps=fps='min(30,source_fps)'";
+    const vf = wm ? ['-i', wmF, '-filter_complex', '[0:v:0]' + scale + '[b];[1:v]scale=iw*main_w/720:-1[w];[b][w]overlay=0:main_h-overlay_h:format=auto[v]', '-map', '[v]', '-map', '0:a:0?']
+      : ['-map', '0:v:0', '-map', '0:a:0?', '-vf', scale];
+    await ffRun(['-hide_banner', '-loglevel', 'error', '-y', '-i', inF, ...vf,
+      '-c:v', 'libx264', '-preset', 'faster', '-crf', '21', '-maxrate', '3000k', '-bufsize', '6000k', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', '60',
+      '-c:a', 'aac', '-b:a', '96k', '-ac', '2', '-movflags', '+faststart', '-threads', '2', '-max_muxing_queue_size', '1024', outF], 240000);
+    const out = fs.readFileSync(outF);
+    if (out.length < 2000 || (!wm && out.length >= buf.length * 0.92)) return false; // already small: keep the original
+    const old = r.file.id, nid = await storeReelFile(out, 'video/mp4');
+    r.file = { id: nid, mime: 'video/mp4', size: out.length }; save();
+    deleteChatFile(old).catch(() => {});
+    return true;
+  } finally { try { fs.unlinkSync(inF); } catch {} try { fs.unlinkSync(outF); } catch {} try { fs.unlinkSync(reelWmFile(r.id)); } catch {} }
+}
+function reelQueue(r) { if (FFMPEG && r && !r.tc && !RT.queue.includes(r.id)) { RT.queue.push(r.id); reelWork(); } }
+async function reelWork() {
+  if (RT.busy) return; RT.busy = true;
+  try {
+    while (RT.queue.length) {
+      const r = db.reels.find((x) => x.id === RT.queue[0]); RT.queue.shift();
+      if (!r || r.removed || r.tc || !r.file || r.file.size > 30 * 1024 * 1024) continue;
+      try { const changed = await reelTranscode(r); r.tc = 1; r.fs = 1; save(); RT.done++; if (changed) console.log('[reels] made light', r.id, reelKbps(r) + ' kbit/s'); }
+      catch (e) { r.tcTries = (r.tcTries || 0) + 1; if (r.tcTries >= 2) r.tc = -1; save(); RT.failed++; console.error('[reels] transcode', r.id, e.message); }
+      await new Promise((ok) => setTimeout(ok, 1500));
+    }
+  } finally { RT.busy = false; }
+}
+function reelsQueueOld() {
+  if (!FFMPEG) return console.log('[reels] ffmpeg-static not installed — reels are not made lighter');
+  db.reels.filter((r) => !r.removed && !r.tc && r.file).sort((a, b) => b.createdAt - a.createdAt).forEach(reelQueue); // newest first
 }
 loadDb()
   .then(() => {
@@ -8729,7 +8786,7 @@ loadDb()
     if (dups.length) console.log('[phones] same number registered twice (delete one in the admin panel): ' + dups.join(' | '));
   })
   .then(() => { cleanStatuses(); cleanExpiredMessages(); return setupPush().catch((e) => console.error('[push] setup failed', e.message)); })
-  .then(() => server.listen(PORT, () => { console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`); setTimeout(() => reelsFastStartOld().catch(() => {}), 60000); }))
+  .then(() => server.listen(PORT, () => { console.log(`Maata running on http://localhost:${PORT}  (admin: /admin)`); setTimeout(reelsQueueOld, 45000); }))
   .catch((e) => {
     console.error('[db] Could not connect to MongoDB. Check MONGODB_URI, the database password, and Network Access (allow 0.0.0.0/0).');
     console.error(e.message);
