@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 324;
+const MAATA_VERSION = 325;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -8776,7 +8776,7 @@ async function reelTranscode(r, safe) {
     const vf = wm ? ['-i', wmF, '-filter_complex', '[0:v:0]' + scale + '[b];[1:v]scale=iw*main_w/720:-1[w];[b][w]overlay=0:main_h-overlay_h:format=auto[v]', '-map', '[v]', '-map', '0:a:0?']
       : ['-map', '0:v:0', '-map', '0:a:0?', '-vf', scale];
     await ffRun(['-hide_banner', '-loglevel', 'error', '-y', '-fflags', '+genpts+discardcorrupt', '-err_detect', 'ignore_err', '-i', inF, ...vf, ...(safe ? ['-fpsmax', '30'] : []),
-      '-c:v', 'libx264', '-preset', safe ? 'ultrafast' : 'faster', '-crf', safe ? '23' : '21', '-maxrate', '3000k', '-bufsize', '6000k', '-profile:v', safe ? 'main' : 'high', '-pix_fmt', 'yuv420p', '-g', '60',
+      '-c:v', 'libx264', '-preset', safe ? 'ultrafast' : 'faster', '-crf', safe ? '23' : '22', '-maxrate', '2200k', '-bufsize', '4400k', // v325: ~2 Mbit/s like Instagram — clear, and smooth on Jio/Airtel 4G '-profile:v', safe ? 'main' : 'high', '-pix_fmt', 'yuv420p', '-g', '60',
       '-c:a', 'aac', '-b:a', '96k', '-ac', '2', '-af', 'aresample=async=1', '-movflags', '+faststart', '-threads', safe ? '1' : '2', '-max_muxing_queue_size', '4096', outF], safe ? 900000 : 360000);
     const out = fs.readFileSync(outF);
     if (out.length < 2000 || (!wm && out.length >= buf.length * 0.92)) return false; // already small: keep the original
@@ -8803,6 +8803,7 @@ async function reelWork() {
 function reelsQueueOld() {
   if (!FFMPEG) return console.log('[reels] ffmpeg-static not installed — reels are not made lighter');
   for (const r of db.reels) if (r.tc === -1 && !r.tcV322) { r.tc = undefined; r.tcTries = 1; r.tcV322 = 1; } // v322: one more try in safe mode for the ones that failed
+  for (const r of db.reels) if (r.tc === 1 && !r.tcV325 && reelKbps(r) > 2500) { r.tc = undefined; r.tcTries = 0; r.tcV325 = 1; } // v325: heavier light copies made lighter (~2 Mbit/s)
   db.reels.filter((r) => !r.removed && !r.tc && r.file).sort((a, b) => b.createdAt - a.createdAt).forEach(reelQueue); // newest first
 }
 loadDb()
