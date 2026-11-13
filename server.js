@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 327;
+const MAATA_VERSION = 328;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -8601,7 +8601,7 @@ io.on('connection', (socket) => {
   const CALL_EMO = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
   socket.on('call:react', (p) => { if (!valid(p) || !CALL_EMO.includes(p.e)) return; io.to(room(p.to)).emit('call:react', { from: me, callId: String(p.callId).slice(0, 64), e: p.e }); });
   socket.on('call:saver', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:saver', { from: me, callId: String(p.callId).slice(0, 64), on: !!p.on }); });
-  socket.on('call:rec', (p) => { if (!valid(p)) return; io.to(room(p.to)).emit('call:rec', { from: me, callId: String(p.callId).slice(0, 64), on: !!p.on }); });
+  socket.on('call:rec', () => {}); // v328: recording is private to the person recording — nothing is passed on
   // the LISTENER asks: "send me your voice, I want it in my language" → the other phone starts sending short voice clips
   socket.on('call:tr', (p) => {
     if (!valid(p)) return; const rec = recFor(p); if (!rec) return;
