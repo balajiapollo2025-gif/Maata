@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 330;
+const MAATA_VERSION = 331;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -2214,7 +2214,7 @@ app.get('/api/version', (req, res) => {
   let android = 0; for (const f of [path.join(PAGES, 'app-version.json'), path.join(__dirname, 'app-version.json')]) { try { android = JSON.parse(fs.readFileSync(f, 'utf8')).version || 0; break; } catch { /* next */ } }
   // v321: how the reels are doing (is the video tool installed on the server, how many reels are already made light)
   const live = db.reels.filter((r) => !r.removed && r.file);
-  res.json({ server: MAATA_VERSION, android, reels: { videoTool: !!FFMPEG, total: live.length, light: live.filter((r) => r.tc === 1).length, waiting: RT.queue.length, working: RT.busy, failed: live.filter((r) => r.tc === -1).length, why: live.filter((r) => r.tcErr).slice(0, 5).map((r) => ({ reel: r.id.slice(0, 6), mb: +(r.file.size / 1048576).toFixed(1), type: r.file.mime, tries: r.tcTries || 0, err: r.tcErr })), storage: R2_ON ? 'r2' : 'db' } });
+  res.json({ server: MAATA_VERSION, android, reels: { videoTool: !!FFMPEG, total: live.length, light: live.filter((r) => r.tc === 1).length, waiting: RT.queue.length, working: RT.busy, failed: live.filter((r) => r.tc === -1).length, why: live.filter((r) => r.tcErr).slice(0, 5).map((r) => ({ reel: r.id.slice(0, 6), mb: +(r.file.size / 1048576).toFixed(1), type: r.file.mime, tries: r.tcTries || 0, err: r.tcErr })), storage: R2_ON ? 'r2' : 'db', cdn: MEDIA_CDN ? 'on' : 'off' } });
 });
 // ---------- 🗺️ Maata Maps: places added by Maata people (villages often miss shops on public maps) + Maata shops ----------
 const PLACE_CATS = ['shop', 'food', 'fuel', 'hospital', 'pharmacy', 'temple', 'school', 'atm', 'mechanic', 'hotel', 'office', 'other'];
@@ -2813,6 +2813,10 @@ const R2_ON = !!(R2.account && R2.key && R2.secret && R2.bucket);
 const MAX_BIG_FILE = 2 * 1024 * 1024 * 1024;
 console.log(R2_ON ? '[files] Cloudflare R2 storage on: files up to 2 GB (bucket ' + R2.bucket + ')' : '[files] Files up to 16 MB (add R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET for 2 GB)');
 const isR2 = (id) => typeof id === 'string' && id.startsWith('r2-');
+// 🌐 v331 Cloudflare CDN for reels: when the R2 bucket has a custom domain (e.g. https://media.maataapp.com) set as
+// R2_PUBLIC_URL, phones load reels from the Cloudflare server nearest to them (Mumbai, Chennai, Hyderabad…) — free, no Render bandwidth
+const MEDIA_CDN = String(process.env.R2_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+const cdnUrl = (id) => (MEDIA_CDN && isR2(id) ? MEDIA_CDN + '/' + encodeURIComponent(id) : '');
 const rfc3986 = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 function r2Url(method, key, expires = 3600, extra = {}) {
   const host = R2.account + '.r2.cloudflarestorage.com', region = 'auto', service = 's3';
@@ -5649,7 +5653,7 @@ async function storeReelFile(buf, mime) {
   if (/mp4|quicktime|3gpp|m4v/i.test(mime || '')) { const f = mp4FastStart(buf); if (f && f.length === buf.length) buf = f; }
   if (R2_ON) {
     const id = 'r2-' + newId();
-    const r = await fetch(r2Url('PUT', id, 600), { method: 'PUT', body: buf, headers: { 'Content-Type': mime }, signal: AbortSignal.timeout(60000) });
+    const r = await fetch(r2Url('PUT', id, 600), { method: 'PUT', body: buf, headers: { 'Content-Type': mime, 'Cache-Control': 'public, max-age=31536000, immutable' }, signal: AbortSignal.timeout(60000) });
     if (!r.ok) throw new Error('R2 upload failed ' + r.status);
     return id;
   }
@@ -5689,7 +5693,7 @@ function canSeeReel(viewer, r) { const o = userById(r.by); return !!o && o.statu
 function reelView(viewer, r) {
   const o = userById(r.by) || {}, saved = contactsOf(viewer).find((c) => c.id === r.by);
   return { id: r.id, caption: r.caption, dur: r.dur || 0, createdAt: r.createdAt, likes: (r.likes || []).length, liked: (r.likes || []).includes(viewer.id), views: r.viewCount || 0,
-    comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, saves: (r.saves || []).length, saved: (r.saves || []).includes(viewer.id), shares: r.shares || 0, remixes: r.remixCount || 0, fv: String((r.file && r.file.id) || '').slice(-8), mine: r.by === viewer.id, hidden: !!r.hidden,
+    comments: db.reelComments.filter((c) => c.reelId === r.id).length, hasThumb: !!r.thumb, saves: (r.saves || []).length, saved: (r.saves || []).includes(viewer.id), shares: r.shares || 0, remixes: r.remixCount || 0, cdn: r.file ? cdnUrl(r.file.id) : '', fv: String((r.file && r.file.id) || '').slice(-8), mine: r.by === viewer.id, hidden: !!r.hidden,
     shop: (r.products || []).length, place: r.loc ? r.loc.place : '', smart: !!(r.subs && r.subs.length), remix: !!r.remixOf,
     by: { id: r.by, name: (saved && saved.name) || o.name || 'Maata user', photo: !!o.photo, photoV: o.photoV || 0, biz: o.business ? o.business.name : null, followed: (viewer.following || []).includes(r.by) } };
 }
