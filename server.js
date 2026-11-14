@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 336;
+const MAATA_VERSION = 337;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4565,6 +4565,72 @@ app.get('/api/biz/:bizId/report', auth, (req, res) => {
   const from = Number(req.query.from) || istDayStart(now() - 6 * 86400000), to = Number(req.query.to) || now() + 1;
   const days = []; for (let t = istDayStart(from); t < to; t += 86400000) { const s = bizStats(c.bizId, t, t + 86400000); days.push({ day: istDayKey(t), sales: s.sales, bills: s.bills }); if (days.length > 92) break; }
   res.json({ from, to, ...bizStats(c.bizId, from, to), days });
+});
+// 📊 v337 Reports for retailers: one call gives every report for the chosen dates (bills, day-wise, online/offline, items, categories, stock, GST, payments, customers, staff, hours, profit)
+app.get('/api/biz/:bizId/reports', auth, (req, res) => {
+  const c = bizCtx(req, res, 'reports'); if (!c) return;
+  const to = Math.min(Number(req.query.to) || now() + 1, now() + 86400000), from = Math.max(Number(req.query.from) || istDayStart(now() - 6 * 86400000), to - 400 * 86400000);
+  const prods = bizProducts(c.bizId), pById = new Map(prods.map((p) => [p.id, p]));
+  const ordById = new Map(); for (const o of db.orders) if (o.bizId === c.bizId) ordById.set(o.id, o);
+  const all = db.invoices.filter((i) => i.bizId === c.bizId && i.createdAt >= from && i.createdAt < to).sort((a, b) => a.createdAt - b.createdAt);
+  const ok = all.filter((i) => i.status !== 'void');
+  const chan = (i) => { if (i.orderId) { const o = ordById.get(i.orderId); return o && o.via === 'qr' ? 'qr' : 'online'; } return 'shop'; };
+  const costOf = (l) => { const p = l.productId && pById.get(l.productId); return p && p.cost != null && p.cost !== '' ? Math.round(Number(p.cost) * 100) * l.qty : null; };
+  const S = { sales: 0, bills: ok.length, voids: all.length - ok.length, voidAmt: 0, tax: 0, taxable: 0, discount: 0, unpaid: 0, unpaidN: 0, cost: 0, costSales: 0, noCost: 0, qty: 0, byPay: { cash: 0, upi: 0 }, byChan: { shop: 0, online: 0, qr: 0 }, nChan: { shop: 0, online: 0, qr: 0 } };
+  const dayMap = new Map(), items = new Map(), cats = new Map(), rates = new Map(), hsn = new Map(), cust = new Map(), staff = new Map(), hours = new Array(24).fill(0), hoursN = new Array(24).fill(0);
+  const dayOf = (t) => { const k = istDayKey(t); let d = dayMap.get(k); if (!d) dayMap.set(k, d = { day: k, bills: 0, shop: 0, online: 0, qr: 0, cash: 0, upi: 0, tax: 0, disc: 0, sales: 0, profit: 0, orders: 0, ordersDone: 0, ordersLost: 0 }); return d; };
+  for (let t = istDayStart(from); t < to && dayMap.size < 400; t += 86400000) dayOf(t);
+  for (const i of all) if (i.status === 'void') S.voidAmt += i.grand;
+  for (const i of ok) {
+    const ch = chan(i), d = dayOf(i.createdAt), pm = i.payment.method === 'upi' ? 'upi' : 'cash';
+    S.sales += i.grand; S.tax += i.tax || 0; S.taxable += i.taxable || 0; S.discount += i.discount || 0; S.byPay[pm] += i.grand; S.byChan[ch] += i.grand; S.nChan[ch]++;
+    if (i.payment.status !== 'paid') { S.unpaid += i.grand; S.unpaidN++; }
+    d.bills++; d[ch] += i.grand; d[pm] += i.grand; d.tax += i.tax || 0; d.disc += i.discount || 0; d.sales += i.grand;
+    const h = new Date(i.createdAt + 5.5 * 3600000).getUTCHours(); hours[h] += i.grand; hoursN[h]++;
+    const ck = i.customer && (i.customer.phone || i.customer.name) ? (i.customer.phone || i.customer.name.toLowerCase()) : '';
+    if (ck) { const x = cust.get(ck) || { name: i.customer.name || '', phone: i.customer.phone || '', bills: 0, amount: 0, due: 0, last: 0 }; x.bills++; x.amount += i.grand; if (i.payment.status !== 'paid') x.due += i.grand; x.last = Math.max(x.last, i.createdAt); if (!x.name && i.customer.name) x.name = i.customer.name; cust.set(ck, x); }
+    { const x = staff.get(i.by) || { name: i.byName || '', bills: 0, amount: 0, voids: 0, cash: 0, upi: 0 }; x.bills++; x.amount += i.grand; x[pm] += i.grand; staff.set(i.by, x); }
+    for (const l of i.items) {
+      const p = l.productId && pById.get(l.productId), k = l.productId || 'n:' + l.name.toLowerCase(), cst = costOf(l);
+      const it = items.get(k) || { name: l.name, unit: l.unit || 'pcs', category: (p && p.category) || '', qty: 0, amount: 0, taxable: 0, tax: 0, cost: 0, costKnown: true, bills: 0, stock: p && p.stock != null ? p.stock : null };
+      it.qty += l.qty; it.amount += l.total; it.taxable += l.taxable || 0; it.tax += l.tax || 0; it.bills++; if (cst == null) it.costKnown = false; else it.cost += cst; items.set(k, it);
+      if (cst != null) { S.cost += cst; S.costSales += l.taxable || 0; d.profit += (l.taxable || 0) - cst; } else S.noCost++;
+      S.qty += l.qty;
+      const cn = (p && p.category) || (l.productId ? 'No category' : 'Loose / other items'); const ca = cats.get(cn) || { name: cn, qty: 0, amount: 0, items: new Set(), profit: 0 }; ca.qty += l.qty; ca.amount += l.total; ca.items.add(k); if (cst != null) ca.profit += (l.taxable || 0) - cst; cats.set(cn, ca);
+      const rt = Number(l.taxRate) || 0, r = rates.get(rt) || { rate: rt, taxable: 0, tax: 0, total: 0, lines: 0 }; r.taxable += l.taxable || 0; r.tax += l.tax || 0; r.total += l.total; r.lines++; rates.set(rt, r);
+      const hk = (l.hsn || '').trim() || '—', hx = hsn.get(hk + '|' + rt) || { hsn: hk, rate: rt, desc: l.name, qty: 0, taxable: 0, tax: 0, total: 0 }; hx.qty += l.qty; hx.taxable += l.taxable || 0; hx.tax += l.tax || 0; hx.total += l.total; hsn.set(hk + '|' + rt, hx);
+    }
+  }
+  for (const i of all) if (i.status === 'void') { const x = staff.get(i.by) || { name: i.byName || '', bills: 0, amount: 0, voids: 0, cash: 0, upi: 0 }; x.voids++; staff.set(i.by, x); }
+  // online orders placed in these dates (also the ones not delivered)
+  const ords = db.orders.filter((o) => o.bizId === c.bizId && o.createdAt >= from && o.createdAt < to);
+  const O = { total: ords.length, delivered: 0, active: 0, cancelled: 0, rejected: 0, failed: 0, value: 0, doneValue: 0, lostValue: 0, byMode: { delivery: 0, pickup: 0, ship: 0, qr: 0 }, byModeAmt: { delivery: 0, pickup: 0, ship: 0, qr: 0 }, cod: 0, upi: 0 };
+  for (const o of ords) {
+    const m = o.via === 'qr' ? 'qr' : o.mode || 'pickup', d = dayOf(o.createdAt); O.value += o.grand; O.byMode[m] = (O.byMode[m] || 0) + 1; O.byModeAmt[m] = (O.byModeAmt[m] || 0) + o.grand; d.orders++;
+    if (o.status === 'DELIVERED') { O.delivered++; O.doneValue += o.grand; d.ordersDone++; } else if (ORD_ACTIVE.includes(o.status)) O.active++; else { O[o.status === 'REJECTED' ? 'rejected' : o.status === 'DELIVERY_FAILED' ? 'failed' : 'cancelled']++; O.lostValue += o.grand; d.ordersLost++; }
+    if (o.pay === 'upi') O.upi++; else O.cod++;
+  }
+  // stock now + what moved in these dates
+  const lastSale = new Map(), soldIn = new Map(), mv = { purchase: [0, 0], sale: [0, 0], return: [0, 0], damage: [0, 0], void: [0, 0], adjust: [0, 0] };
+  const moves = [];
+  for (const m of db.stockMoves) { if (m.bizId !== c.bizId) continue; if (m.reason === 'sale') lastSale.set(m.productId, Math.max(lastSale.get(m.productId) || 0, m.at));
+    if (m.at >= from && m.at < to) { const k = mv[m.reason] ? m.reason : 'adjust'; mv[k][0]++; mv[k][1] += m.delta; if (m.reason === 'sale') soldIn.set(m.productId, (soldIn.get(m.productId) || 0) - m.delta); else moves.push({ at: m.at, name: m.name, delta: m.delta, after: m.after, reason: m.reason, ref: m.reason === 'void' ? 'cancelled bill' : m.ref || '' }); } }
+  const dead = now() - 30 * 86400000;
+  const stock = prods.map((p) => { const cost = p.cost != null && p.cost !== '' ? Number(p.cost) : null, st = p.stock; const ls = lastSale.get(p.id) || 0;
+    return { name: p.name, unit: p.unit || 'pcs', category: p.category || '', stock: st ?? null, lowAt: p.lowAt ?? null, price: Math.round((p.price || 0) * 100), cost: cost != null ? Math.round(cost * 100) : null, mrp: p.mrp != null ? Math.round(Number(p.mrp) * 100) : null,
+      valueCost: st != null && st > 0 && cost != null ? Math.round(cost * 100 * st) : 0, valuePrice: st != null && st > 0 ? Math.round((p.price || 0) * 100 * st) : 0, sold: Math.round((soldIn.get(p.id) || 0) * 1000) / 1000, lastSale: ls,
+      status: st == null ? 'untracked' : st <= 0 ? 'out' : p.lowAt != null && st <= p.lowAt ? 'low' : (!ls || ls < dead) && (p.createdAt || 0) < dead ? 'dead' : 'ok', hidden: p.available === false }; });
+  const SK = { count: stock.length, tracked: stock.filter((x) => x.status !== 'untracked').length, valueCost: stock.reduce((s, x) => s + x.valueCost, 0), valuePrice: stock.reduce((s, x) => s + x.valuePrice, 0), out: stock.filter((x) => x.status === 'out').length, low: stock.filter((x) => x.status === 'low').length, dead: stock.filter((x) => x.status === 'dead').length, noCost: stock.filter((x) => x.cost == null).length };
+  const bills = all.slice(-3000).reverse().map((i) => ({ id: i.id, number: i.number, at: i.createdAt, customer: (i.customer && i.customer.name) || '', phone: (i.customer && i.customer.phone) || '', items: i.items.length, qty: Math.round(i.items.reduce((s, l) => s + l.qty, 0) * 1000) / 1000, pay: i.payment.method, paid: i.payment.status === 'paid', grand: i.grand, tax: i.tax || 0, disc: i.discount || 0, status: i.status, chan: chan(i), by: i.byName || '', offline: !!i.offline, note: i.note || '' }));
+  const r2 = (x) => Math.round(x * 1000) / 1000;
+  res.json({ from, to, shop: { name: c.biz.name, gstin: bizSettings(c.biz).gstin || '', address: c.biz.address || '' }, summary: { ...S, qty: r2(S.qty), profit: S.costSales - S.cost, avg: ok.length ? Math.round(S.sales / ok.length) : 0 },
+    days: [...dayMap.values()].sort((a, b) => (a.day < b.day ? -1 : 1)), bills,
+    items: [...items.values()].map((x) => ({ ...x, qty: r2(x.qty), profit: x.costKnown ? x.taxable - x.cost : null })).sort((a, b) => b.amount - a.amount),
+    cats: [...cats.values()].map((x) => ({ name: x.name, qty: r2(x.qty), amount: x.amount, items: x.items.size, profit: x.profit })).sort((a, b) => b.amount - a.amount),
+    gst: { rates: [...rates.values()].sort((a, b) => a.rate - b.rate), hsn: [...hsn.values()].map((x) => ({ ...x, qty: r2(x.qty) })).sort((a, b) => b.taxable - a.taxable) },
+    orders: O, orderList: ords.slice(-500).reverse().map((o) => ({ number: o.number, at: o.createdAt, customer: o.customerName || '', mode: o.via === 'qr' ? 'qr' : o.mode, status: o.status, grand: o.grand, pay: o.pay || 'cash', items: o.items.length })),
+    stock, stockSum: SK, moves: { sum: mv, list: moves.slice(-400).reverse() },
+    customers: [...cust.values()].sort((a, b) => b.amount - a.amount).slice(0, 300), staff: [...staff.values()].sort((a, b) => b.amount - a.amount), hours, hoursN });
 });
 // ---- staff ----
 app.post('/api/biz/:bizId/staff', auth, async (req, res) => {
