@@ -2202,7 +2202,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 338;
+const MAATA_VERSION = 339;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -8415,7 +8415,8 @@ io.on('connection', (socket) => {
     if (p?.replyTo) {
       const q = db.messages.find((x) => x.id === String(p.replyTo));
       if (q && (ok.group ? q.group === ok.group.id : ((q.from === me && q.to === ok.target.id) || (q.from === ok.target.id && q.to === me)))) {
-        fields.replyTo = { id: q.id, from: q.from, type: q.type || 'text', text: String(q.deleted ? '' : q.text || q.file?.name || q.contact?.name || q.poll?.question || q.event?.title || '').slice(0, 120) };
+        const media = !q.deleted && q.file && /^(image|video)\//.test(q.file.mime || '');
+        fields.replyTo = { id: q.id, from: q.from, type: q.type || 'text', text: String(q.deleted ? '' : q.text || (media ? '' : q.file?.name) || q.contact?.name || q.poll?.question || q.event?.title || '').slice(0, 120), ...(media ? { file: { id: q.file.id, mime: q.file.mime } } : {}) };
       }
     }
     const m = deliverMessage(socket.user, ok.target, fields, socket.id);
