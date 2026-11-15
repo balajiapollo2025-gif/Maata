@@ -435,6 +435,23 @@ function notifyOffline(fromUser, m) {
 }
 // Calls to someone whose app is closed: wake the phone with a push, keep the call waiting ~40 s
 const pendingRings = new Map(); // userId -> { offer, ice: [], until, callId, from }
+// 🔍 v342 Google Search: robots.txt, sitemap.xml, Google HTML-file verification (no code change: set it in Render), private pages kept out of Google
+const SEO_PAGES = [['/', 'daily', '1.0'], ['/about', 'monthly', '0.8'], ['/developers', 'monthly', '0.5'], ['/privacy', 'yearly', '0.3'], ['/terms', 'yearly', '0.3']];
+const SEO_PRIVATE = /^\/(admin|api\/|bill\/|r\/|ls\/t\/|v1\/|s\/|delete-data|delete-account|maata\.apk)/;
+app.use((req, res, next) => { if (SEO_PRIVATE.test(req.path)) res.setHeader('X-Robots-Tag', 'noindex, nofollow'); next(); });
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(['User-agent: *', 'Allow: /', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /bill/', 'Disallow: /r/', 'Disallow: /ls/t/', 'Disallow: /v1/', 'Disallow: /s/', '', 'Sitemap: ' + APP_ORIGIN + '/sitemap.xml', ''].join('\n'));
+});
+app.get('/sitemap.xml', (req, res) => {
+  let day = new Date().toISOString().slice(0, 10); try { day = fs.statSync(path.join(PAGES, 'index.html')).mtime.toISOString().slice(0, 10); } catch {}
+  res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    SEO_PAGES.map(([u, f, pr]) => `  <url><loc>${APP_ORIGIN}${u}</loc><lastmod>${day}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n') + '\n</urlset>\n');
+});
+// Google Search Console "HTML file" method: Render → Environment → GOOGLE_SITE_VERIFICATION_FILE = google1234abcd.html (the file name Google gives; several allowed, comma separated)
+app.get(/^\/(google[0-9a-f]{8,32}\.html)$/, (req, res, next) => {
+  const f = req.params[0], ok = String(process.env.GOOGLE_SITE_VERIFICATION_FILE || '').split(/[\s,]+/).map((x) => x.replace(/^\//, '')).filter(Boolean);
+  if (!ok.includes(f)) return next(); res.type('text/html').set('Cache-Control', 'no-cache').send('google-site-verification: ' + f);
+});
 app.get('/manifest.webmanifest', (req, res) => {
   res.type('application/manifest+json').json({
     id: '/', name: 'Maata — free calls & messages', short_name: 'Maata', description: 'Free voice calls, video calls, chat and local services, made in India.',
@@ -2202,7 +2219,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 341;
+const MAATA_VERSION = 342;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
