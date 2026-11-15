@@ -1957,7 +1957,7 @@ function statusOut(viewer, st) {
     id: st.id, userId: st.userId, type: st.type, text: st.text || '', bg: st.bg || null, caption: st.caption || '', mime: st.mime || null,
     createdAt: st.createdAt, expiresAt: st.expiresAt,
     viewed: mine || (st.views || []).some((v) => v.userId === viewer.id),
-    ...(mine ? { viewCount: (st.views || []).length } : {}),
+    ...(mine ? { viewCount: (st.views || []).length, likeCount: (st.views || []).filter((v) => v.liked).length } : { liked: (st.views || []).some((v) => v.userId === viewer.id && v.liked) }),
     mediaUrl: st.type === 'text' ? null : '/api/status/media/' + st.id,
   };
 }
@@ -2054,10 +2054,22 @@ app.post('/api/status/:id/view', auth, (req, res) => {
   }
   res.json({ ok: true });
 });
+// ❤️ v343: like a status (WhatsApp status like) — only the owner sees who liked, in the viewers list
+app.post('/api/status/:id/like', auth, (req, res) => {
+  const st = db.statuses.find((x) => x.id === req.params.id);
+  if (!st || st.expiresAt <= now() || st.userId === req.user.id || !statusVisible(req.user, st)) return res.status(404).json({ error: 'Not found.' });
+  st.views = st.views || [];
+  let v = st.views.find((x) => x.userId === req.user.id);
+  if (!v) { v = { userId: req.user.id, at: now() }; st.views.push(v); }
+  v.liked = req.body?.like === undefined ? !v.liked : !!req.body.like;
+  save();
+  io.to('user:' + st.userId).emit('status:view', { id: st.id, count: st.views.length, likes: st.views.filter((x) => x.liked).length });
+  res.json({ liked: v.liked });
+});
 app.get('/api/status/:id/views', auth, (req, res) => {
   const st = db.statuses.find((x) => x.id === req.params.id && x.userId === req.user.id);
   if (!st) return res.status(404).json({ error: 'Not found.' });
-  res.json((st.views || []).slice().reverse().map((v) => { const u = userById(v.userId); return { at: v.at, user: u ? contactView(req.user, u) : { id: v.userId, name: 'Deleted user', displayName: 'Deleted user' } }; }));
+  res.json((st.views || []).slice().reverse().map((v) => { const u = userById(v.userId); return { at: v.at, liked: !!v.liked, user: u ? contactView(req.user, u) : { id: v.userId, name: 'Deleted user', displayName: 'Deleted user' } }; }));
 });
 app.delete('/api/status/:id', auth, async (req, res) => {
   const st = db.statuses.find((x) => x.id === req.params.id && x.userId === req.user.id);
@@ -2219,7 +2231,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 342;
+const MAATA_VERSION = 343;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -8435,6 +8447,11 @@ io.on('connection', (socket) => {
         const media = !q.deleted && q.file && /^(image|video)\//.test(q.file.mime || '');
         fields.replyTo = { id: q.id, from: q.from, type: q.type || 'text', text: String(q.deleted ? '' : q.text || (media ? '' : q.file?.name) || q.contact?.name || q.poll?.question || q.event?.title || '').slice(0, 120), ...(media ? { file: { id: q.file.id, mime: q.file.mime } } : {}) };
       }
+    }
+    // ⭕ v343: reply to a status (like WhatsApp) — the chat message carries a small quote of that status
+    if (p?.statusReply && !ok.group) {
+      const st = db.statuses.find((x) => x.id === String(p.statusReply));
+      if (st && st.userId === ok.target.id && statusVisible(socket.user, st)) fields.replyTo = { id: 'st:' + st.id, status: st.id, from: st.userId, type: st.type, text: String(st.type === 'text' ? st.text || '' : st.caption || '').slice(0, 120), ...(st.type === 'text' ? { bg: st.bg || '#0F4C5C' } : { mime: st.mime }) };
     }
     const m = deliverMessage(socket.user, ok.target, fields, socket.id);
     reply({ message: m });

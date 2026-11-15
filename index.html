@@ -2177,6 +2177,61 @@ button.rp-card{cursor:pointer}.rp-card small{font-size:12.5px;color:var(--muted)
 .quote{display:flex;align-items:stretch;gap:8px}.quote .q-tx{flex:1;min-width:0}.quote .q-th{flex:none;width:52px;height:52px;object-fit:cover;border-radius:6px;margin:-2px -4px -2px 0;background:#0002}.reply-bar .quote .q-th{width:56px;height:56px}
 @media (hover:none){#messages .bubble,#messages .bubble *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#messages .bubble input,#messages .bubble textarea{-webkit-user-select:text;user-select:text}}
 #messages .bubble img,#messages .bubble video{-webkit-user-drag:none;-webkit-touch-callout:none}
+
+/* ⭕ v343 status viewer like WhatsApp: blurred backdrop, phone-shaped frame, overlaid header, eye count, reply + like */
+.overlay.stv{padding:0;background:#0B0F14;overflow:hidden;align-items:center;justify-content:center}
+.st-qt{display:grid;place-items:center;color:#fff;font-size:8px;line-height:1.1;text-align:center;overflow:hidden;padding:3px;word-break:break-word}
+.stv-bg{position:absolute;inset:0;background:#0B0F14 center/cover no-repeat;filter:blur(38px) brightness(.62) saturate(1.2);transform:scale(1.18);transition:background-color .3s}
+.stv-frame{position:relative;width:min(100vw,calc((100dvh - 40px) * 9 / 16),480px);height:calc(100dvh - 40px);border-radius:14px;overflow:hidden;background:#000;box-shadow:0 10px 40px #0008;z-index:1}
+.stv-stage{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.stv-stage .stv-fill{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(24px) brightness(.55);transform:scale(1.15);pointer-events:none}
+.stv-stage>img:not(.stv-fill),.stv-stage>video{position:relative;width:100%;height:100%;object-fit:contain;-webkit-user-drag:none;pointer-events:none}
+.stv-stage .st-text{position:absolute;inset:0}
+.stv-top{position:absolute;left:0;right:0;top:0;padding:calc(8px + env(safe-area-inset-top,0px)) 0 26px;background:linear-gradient(#000a,#0000);z-index:2;transition:opacity .2s}
+.stv-top .bars{gap:3px;padding:0 8px}.stv-top .bars span{height:2.5px}
+.stv-head{display:flex;align-items:center;gap:8px;padding:10px 6px 0 10px}
+.stv-head .who{flex:1;min-width:0;line-height:1.25;text-shadow:0 1px 3px #0008}
+.stv-head .who b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stv-head .who small{font-size:12.5px;opacity:.9}
+.stv-ib{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;background:none;flex:none}
+.stv-ib:hover{background:#ffffff1f}
+.stv-ib svg,.stv-out svg,.stv-nav svg,.stv-rbtn svg,.stv-like svg,.stv-send svg,.views-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#stvMenu svg circle{fill:currentColor;stroke:none}
+.stv-mback{display:none}
+.stv-bot{position:absolute;left:0;right:0;bottom:0;padding:30px 12px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(#0000,#000a);z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;transition:opacity .2s}
+.stv-bot .st-caption{padding:0 6px;text-shadow:0 1px 3px #000;max-height:30vh;overflow-y:auto}
+.stv-bot .st-caption:empty{display:none}
+.stv .st-foot{padding:0}
+.stv .views-btn{display:flex;align-items:center;gap:6px;background:none;padding:6px 14px;font-size:15px}
+.stv .views-btn .lk{color:#ff4d6d;margin-left:6px}
+.stv-reply{display:flex;align-items:center;gap:10px;width:100%}
+.stv-rbtn{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;padding:11px;border-radius:999px;background:#ffffff26;color:#fff;font-weight:600;font-size:15px;backdrop-filter:blur(6px)}
+.stv-like{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:#ffffff26;color:#fff;flex:none}
+.stv-like[aria-pressed="true"]{color:#ff3b5c}.stv-like[aria-pressed="true"] svg{fill:currentColor}
+.stv-like.pop{animation:stvPop .35s}
+@keyframes stvPop{50%{transform:scale(1.35)}}
+.stv-type{display:flex;gap:8px;width:100%}
+.stv-type input{flex:1;min-width:0;padding:12px 16px;border-radius:999px;border:0;background:#fff;color:#111;font:inherit;font-size:15px}
+.stv-send{width:46px;height:46px;border-radius:50%;background:#21C063;color:#fff;display:grid;place-items:center;flex:none}
+.stv-menu{position:absolute;right:10px;top:calc(62px + env(safe-area-inset-top,0px));z-index:4;min-width:190px;background:#233138;border-radius:12px;padding:6px 0;box-shadow:0 8px 24px #0009}
+.stv-menu button{display:block;width:100%;text-align:left;padding:11px 18px;color:#e9edef;font-size:14.5px;background:none}
+.stv-menu button:hover{background:#ffffff14}
+.stv-menu button.red{color:#ff6b6b}
+.stv .views-list{z-index:5;border-radius:16px 16px 0 0;max-height:65%}
+.stv-out{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));z-index:2;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;background:none}
+.stv-out:hover{background:#ffffff1f}
+.stv-back{left:18px}.stv-x{right:18px}
+.stv-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;background:#0007}
+.stv-nav:hover{background:#000a}.stv-nav[disabled]{opacity:0;pointer-events:none}
+.stv-prev{left:calc(50% - min(100vw,calc((100dvh - 40px) * 9 / 16),480px) / 2 - 70px)}
+.stv-next{right:calc(50% - min(100vw,calc((100dvh - 40px) * 9 / 16),480px) / 2 - 70px)}
+.stv.hold .stv-top,.stv.hold .stv-bot{opacity:0}
+.stv-paused .stv-top .bars span i{opacity:.75}
+@media (max-width:640px){
+  .stv-frame{width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+  .stv-out,.stv-nav{display:none}
+  .stv-mback{display:grid;width:34px;margin-right:-4px}
+}
 </style>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -2519,18 +2574,40 @@ button.rp-card{cursor:pointer}.rp-card small{font-size:12.5px;color:var(--muted)
 </section>
 
 <!-- ============ STATUS VIEWER ============ -->
-<section class="overlay" id="stViewer" hidden role="dialog" aria-modal="true" aria-label="Status">
-  <div class="bars" id="stBars"></div>
-  <div class="ov-head">
-    <div id="stVAvatar"></div>
-    <div class="who"><b id="stVName"></b><small id="stVTime"></small></div>
-    <button class="ov-btn" id="stVDelete" aria-label="Delete this status" hidden><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
-    <button class="ov-btn" id="stVClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+<section class="overlay stv" id="stViewer" hidden role="dialog" aria-modal="true" aria-label="Status">
+  <div class="stv-bg" id="stvBg" aria-hidden="true"></div>
+  <button class="stv-out stv-back" id="stvBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+  <button class="stv-out stv-x" id="stVClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  <button class="stv-nav stv-prev" id="stvPrev" aria-label="Previous status"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+  <button class="stv-nav stv-next" id="stvNext" aria-label="Next status"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+  <div class="stv-frame" id="stvFrame">
+    <div class="stv-stage" id="stStage"></div>
+    <div class="stv-top">
+      <div class="bars" id="stBars"></div>
+      <div class="stv-head">
+        <button class="stv-ib stv-mback" id="stvMBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+        <div id="stVAvatar"></div>
+        <div class="who"><b id="stVName"></b><small id="stVTime"></small></div>
+        <button class="stv-ib" id="stvPause" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+        <button class="stv-ib" id="stvMute" aria-label="Mute" hidden></button>
+        <button class="stv-ib" id="stvMenu" aria-label="More options"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+      </div>
+    </div>
+    <div class="stv-menu" id="stvMenuBox" hidden></div>
+    <div class="stv-bot">
+      <div class="st-caption" id="stVCaption"></div>
+      <div class="st-foot" id="stVFoot" hidden><button class="views-btn" id="stViewsBtn" aria-label="Viewers"></button></div>
+      <div class="stv-reply" id="stvReplyRow" hidden>
+        <button class="stv-rbtn" id="stvReplyOpen"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg><span>Reply</span></button>
+        <button class="stv-like" id="stvLike" aria-label="Like" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.5-9.3C1.2 8.5 3.4 5 6.9 5c2 0 3.3 1 5.1 3 1.8-2 3.1-3 5.1-3 3.5 0 5.7 3.5 4.4 6.7C19.5 16.4 12 21 12 21z"/></svg></button>
+      </div>
+      <form class="stv-type" id="stvTypeForm" hidden>
+        <input id="stvReplyInput" maxlength="1000" placeholder="Reply…" autocomplete="off">
+        <button class="stv-send" aria-label="Send reply"><svg viewBox="0 0 24 24"><path d="M4 12 20 4l-6 16-3-7z"/></svg></button>
+      </form>
+    </div>
+    <div class="views-list" id="stViews" hidden></div>
   </div>
-  <div class="st-stage" id="stStage"></div>
-  <div class="st-caption" id="stVCaption"></div>
-  <div class="st-foot" id="stVFoot" hidden><button class="views-btn" id="stViewsBtn">👁 0 views</button></div>
-  <div class="views-list" id="stViews" hidden></div>
 </section>
 
 <!-- ============ ADD CONTACT ============ -->
@@ -3064,7 +3141,7 @@ function connectSocket() {
   socket.on('msg:hidden', ({ id }) => { for (const k of Object.keys(messagesCache)) messagesCache[k] = messagesCache[k].filter((m) => m.id !== id); if (activeId) renderMessages(); });
   socket.on('star:update', ({ ids, star }) => { ids.forEach((i) => (star ? starred.add(i) : starred.delete(i))); if (activeId) renderMessages(); });
   socket.on('status:new', () => { clearTimeout(statusTimer); statusTimer = setTimeout(loadStatus, 800); });
-  socket.on('status:view', (x) => { const st = statusData.mine.find((m) => m.id === x.id); if (st) { st.viewCount = x.count; if (!$('#stViewer').hidden && V.groups[V.gi]?.mine && V.groups[V.gi].statuses[V.si]?.id === x.id) $('#stViewsBtn').textContent = '👁 ' + x.count + ' view' + (x.count === 1 ? '' : 's'); } });
+  socket.on('status:view', (x) => { const st = statusData.mine.find((m) => m.id === x.id); if (st) { st.viewCount = x.count; if (x.likes !== undefined) st.likeCount = x.likes; if (!$('#stViewer').hidden && V.groups[V.gi]?.mine && V.groups[V.gi].statuses[V.si]?.id === x.id) stViewsLabel(st); } });
   socket.on('call:caption:self', onCaptionSelf);
   socket.on('user:new', (u) => { if (u.id !== me.id && !userById(u.id)) { users.push(u); renderContacts(); } });
   socket.on('msg:new', onMessage);
@@ -4803,44 +4880,80 @@ $('#stPost').onclick = async () => {
   xhr.send(C.blob);
 };
 
-// ----- viewer -----
-const V = { groups: [], gi: 0, si: 0, raf: 0, start: 0, dur: 6000, elapsed: 0, paused: false, video: null, downAt: 0 };
+// ----- viewer (v343: looks and works like WhatsApp status) -----
+const V = { groups: [], gi: 0, si: 0, raf: 0, start: 0, dur: 6000, elapsed: 0, paused: false, userPause: false, hold: false, video: null, downAt: 0, muted: false, holdT: 0 };
+const SVG_PLAY = '<svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg>', SVG_PAUSE = '<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>';
+const SVG_SND = '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>', SVG_MUTE = '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>';
+const SVG_EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+function stWhen(ts) {
+  const d = new Date(ts), t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+  const day = (x) => new Date(x).toDateString();
+  return (day(ts) === day(Date.now()) ? 'Today' : day(ts) === day(Date.now() - 864e5) ? 'Yesterday' : d.toLocaleDateString([], { day: 'numeric', month: 'short' })) + ' at ' + t;
+}
+function stViewsLabel(st) { const b = $('#stViewsBtn'); b.innerHTML = SVG_EYE + '<span></span>'; b.querySelector('span').textContent = String(st.viewCount || 0); if (st.likeCount) { const l = el('span', 'lk', '♥ ' + st.likeCount); b.append(l); } }
+function stCur() { const g = V.groups[V.gi]; return { g, st: g && g.statuses[V.si] }; }
+function stBusy() { return !$('#stvTypeForm').hidden || !$('#stViews').hidden || !$('#stvMenuBox').hidden; }
+function stSyncPause() {
+  const stop = V.userPause || V.hold || stBusy() || document.visibilityState === 'hidden';
+  if (stop !== V.paused) { V.paused = stop; V.start = performance.now(); if (V.video) { if (stop) V.video.pause(); else V.video.play().catch(() => {}); } }
+  $('#stViewer').classList.toggle('stv-paused', stop);
+  const pb = $('#stvPause'); pb.innerHTML = V.userPause ? SVG_PLAY : SVG_PAUSE; pb.setAttribute('aria-label', V.userPause ? 'Play' : 'Pause');
+}
 function openViewer(groups, gi) {
-  V.groups = groups; V.gi = gi;
+  V.groups = groups; V.gi = gi; V.userPause = false; V.hold = false;
   const g = groups[gi]; V.si = g.mine ? 0 : Math.max(0, g.statuses.findIndex((x) => !x.viewed));
   $('#stViewer').hidden = false; showStatusItem();
 }
 function closeViewer() {
   cancelAnimationFrame(V.raf); if (V.video) { V.video.pause(); V.video = null; }
-  $('#stViewer').hidden = true; $('#stStage').innerHTML = ''; $('#stViews').hidden = true; loadStatus();
+  $('#stViewer').hidden = true; $('#stStage').innerHTML = ''; $('#stViews').hidden = true; $('#stvMenuBox').hidden = true; $('#stvTypeForm').hidden = true; loadStatus();
+}
+function stBack() { // phone Back: close what is open on top first, like WhatsApp
+  if (!$('#stvMenuBox').hidden) { $('#stvMenuBox').hidden = true; return stSyncPause(); }
+  if (!$('#stViews').hidden) { $('#stViews').hidden = true; return stSyncPause(); }
+  if (!$('#stvTypeForm').hidden) return stCloseType();
+  closeViewer();
 }
 function showStatusItem() {
   cancelAnimationFrame(V.raf); if (V.video) { V.video.pause(); V.video = null; }
-  const g = V.groups[V.gi], st = g.statuses[V.si];
+  const { g, st } = stCur();
   if (!st) return closeViewer();
   const bars = $('#stBars'); bars.innerHTML = '';
   g.statuses.forEach((x, i) => { const s2 = document.createElement('span'); const f = document.createElement('i'); f.style.width = i < V.si ? '100%' : '0'; s2.append(f); bars.append(s2); });
   const avBox = $('#stVAvatar'); avBox.innerHTML = ''; avBox.append(avatar(g.user, 'sm'));
-  $('#stVName').textContent = g.mine ? 'My status' : nameOf(g.user);
-  $('#stVTime').textContent = ago2(st.createdAt);
-  $('#stVDelete').hidden = !g.mine; $('#stVFoot').hidden = !g.mine; $('#stViews').hidden = true;
-  if (g.mine) $('#stViewsBtn').textContent = '👁 ' + (st.viewCount || 0) + ' view' + (st.viewCount === 1 ? '' : 's');
+  $('#stVName').textContent = g.mine ? 'You' : nameOf(g.user);
+  $('#stVTime').textContent = stWhen(st.createdAt);
+  $('#stVFoot').hidden = !g.mine; $('#stViews').hidden = true; $('#stvMenuBox').hidden = true; $('#stvTypeForm').hidden = true;
+  $('#stvReplyRow').hidden = g.mine;
+  if (g.mine) stViewsLabel(st);
+  const lk = $('#stvLike'); lk.setAttribute('aria-pressed', String(!!st.liked));
   $('#stVCaption').textContent = st.caption || '';
-  const stage = $('#stStage'); stage.innerHTML = ''; stage.style.background = '';
-  V.elapsed = 0; V.paused = false; V.dur = 6000;
+  $('#stvPrev').disabled = V.gi === 0 && V.si === 0;
+  $('#stvNext').disabled = V.gi === V.groups.length - 1 && V.si === g.statuses.length - 1;
+  const stage = $('#stStage'); stage.innerHTML = '';
+  const bg = $('#stvBg'); bg.style.backgroundImage = ''; bg.style.backgroundColor = '#0B0F14';
+  V.elapsed = 0; V.dur = 6000; V.paused = false; V.start = performance.now();
+  $('#stvMute').hidden = st.type !== 'video';
   if (st.type === 'text') {
     const d = document.createElement('div'); d.className = 'st-text'; d.style.background = st.bg; d.textContent = st.text; stage.append(d);
+    bg.style.backgroundColor = st.bg;
     V.dur = Math.min(12000, 4000 + st.text.length * 60);
   } else if (st.type === 'image') {
-    const img = document.createElement('img'); img.alt = st.caption || 'Status photo'; img.src = mediaSrc(st); stage.append(img);
+    const src = mediaSrc(st);
+    const fill = document.createElement('img'); fill.className = 'stv-fill'; fill.alt = ''; fill.src = src;
+    const img = document.createElement('img'); img.alt = st.caption || 'Status photo'; img.src = src; img.draggable = false;
+    stage.append(fill, img); bg.style.backgroundImage = 'url("' + src + '")';
   } else {
-    const v = document.createElement('video'); v.src = mediaSrc(st); v.playsInline = true; v.autoplay = true; v.preload = 'auto';
+    const v = document.createElement('video'); v.src = mediaSrc(st); v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.muted = V.muted;
     v.onended = () => nextStatus(); v.onerror = () => { toast('Could not play this video.'); };
-    stage.append(v); V.video = v; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    stage.append(v); V.video = v; v.play().catch(() => { v.muted = true; V.muted = true; stMuteIcon(); v.play().catch(() => {}); });
+    stMuteIcon();
   }
   if (!g.mine && !st.viewed) { st.viewed = true; api('/api/status/' + st.id + '/view', { method: 'POST' }).catch(() => {}); }
-  V.start = performance.now(); tickStatus();
+  V.paused = !V.paused; stSyncPause(); // apply the current pause state to this item
+  tickStatus();
 }
+function stMuteIcon() { const b = $('#stvMute'); b.innerHTML = V.muted ? SVG_MUTE : SVG_SND; b.setAttribute('aria-label', V.muted ? 'Unmute' : 'Mute'); }
 function tickStatus() {
   V.raf = requestAnimationFrame(tickStatus);
   const bar = $('#stBars').children[V.si]?.firstChild; if (!bar) return;
@@ -4858,46 +4971,110 @@ function nextStatus() {
   showStatusItem();
 }
 function prevStatus() {
-  if (V.si > 0) V.si--; else if (V.gi > 0) { V.gi--; V.si = 0; }
+  if (V.si > 0) V.si--; else if (V.gi > 0) { V.gi--; V.si = V.groups[V.gi].statuses.length - 1; }
   showStatusItem();
 }
+// tap left third = back, tap right = next, hold = pause and hide the bars, swipe up = viewers / reply, swipe down = close
 const stage2 = $('#stStage');
-stage2.addEventListener('pointerdown', () => { V.downAt = Date.now(); V.paused = true; if (V.video) V.video.pause(); });
+let stY = 0, stX = 0;
+stage2.addEventListener('pointerdown', (e) => {
+  if (stBusy()) return;
+  V.downAt = Date.now(); stY = e.clientY; stX = e.clientX; V.hold = true; stSyncPause();
+  clearTimeout(V.holdT); V.holdT = setTimeout(() => { if (V.hold) $('#stViewer').classList.add('hold'); }, 260);
+});
 stage2.addEventListener('pointerup', (e) => {
-  const held = Date.now() - V.downAt; V.paused = false; V.start = performance.now();
-  if (V.video) V.video.play().catch(() => {});
+  if (!V.hold) { if (stBusy()) { $('#stvMenuBox').hidden = true; $('#stViews').hidden = true; if (!$('#stvTypeForm').hidden) stCloseType(); else stSyncPause(); } return; }
+  clearTimeout(V.holdT); $('#stViewer').classList.remove('hold');
+  const held = Date.now() - V.downAt, dy = e.clientY - stY, dx = e.clientX - stX; V.hold = false; stSyncPause();
+  if (dy < -60 && Math.abs(dy) > Math.abs(dx)) { const { g } = stCur(); return g.mine ? $('#stViewsBtn').click() : stOpenType(); }
+  if (dy > 90 && Math.abs(dy) > Math.abs(dx)) return closeViewer();
+  if (Math.abs(dx) > 60) return dx < 0 ? nextStatus() : prevStatus();
   if (held < 250) { const r = stage2.getBoundingClientRect(); if (e.clientX - r.left < r.width / 3) prevStatus(); else nextStatus(); }
 });
-stage2.addEventListener('pointercancel', () => { V.paused = false; if (V.video) V.video.play().catch(() => {}); });
-$('#stVClose').onclick = closeViewer;
+stage2.addEventListener('pointercancel', () => { clearTimeout(V.holdT); $('#stViewer').classList.remove('hold'); V.hold = false; stSyncPause(); });
+stage2.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('visibilitychange', () => { if (!$('#stViewer').hidden) stSyncPause(); });
+$('#stVClose').onclick = closeViewer; $('#stvBack').onclick = closeViewer; $('#stvMBack').onclick = closeViewer;
+$('#stvPrev').onclick = prevStatus; $('#stvNext').onclick = nextStatus;
+$('#stvPause').onclick = () => { V.userPause = !V.userPause; stSyncPause(); };
+$('#stvMute').onclick = () => { V.muted = !V.muted; if (V.video) V.video.muted = V.muted; stMuteIcon(); };
 document.addEventListener('keydown', (e) => {
-  if ($('#stViewer').hidden) return;
-  if (e.key === 'Escape') closeViewer(); else if (e.key === 'ArrowRight') nextStatus(); else if (e.key === 'ArrowLeft') prevStatus();
+  if ($('#stViewer').hidden || e.target.matches('input,textarea')) return;
+  if (e.key === 'Escape') stBack(); else if (e.key === 'ArrowRight') nextStatus(); else if (e.key === 'ArrowLeft') prevStatus(); else if (e.key === ' ') { e.preventDefault(); $('#stvPause').click(); }
 });
-$('#stVDelete').onclick = async () => {
-  const g = V.groups[V.gi], st = g.statuses[V.si];
-  V.paused = true;
-  if (!confirm('Delete this status update?')) { V.paused = false; V.start = performance.now(); return; }
+async function stDelete() {
+  const { g, st } = stCur();
+  if (!confirm('Delete this status update?')) return stSyncPause();
   try {
     await api('/api/status/' + st.id, { method: 'DELETE' });
     g.statuses.splice(V.si, 1); toast('Status deleted.');
     if (!g.statuses.length) return closeViewer();
     V.si = Math.min(V.si, g.statuses.length - 1); showStatusItem();
-  } catch (err) { toast(err.message); }
+  } catch (err) { toast(err.message); stSyncPause(); }
+}
+async function stSave() {
+  const { st } = stCur();
+  try { const r = await fetch(mediaSrc(st)); const bl = await r.blob(); const a2 = document.createElement('a'); a2.href = URL.createObjectURL(bl); a2.download = 'Maata-status-' + st.id.slice(0, 6) + (st.type === 'video' ? '.mp4' : '.jpg'); document.body.append(a2); a2.click(); a2.remove(); setTimeout(() => URL.revokeObjectURL(a2.href), 4000); toast('Saved ✓'); } catch { toast('Could not save. Try again.'); }
+}
+async function stShare() {
+  const { st } = stCur();
+  try {
+    if (st.type === 'text') { if (navigator.share) await navigator.share({ text: st.text }); else { await navigator.clipboard.writeText(st.text); toast('Copied ✓'); } return; }
+    const bl = await (await fetch(mediaSrc(st))).blob(), f = new File([bl], 'status' + (st.type === 'video' ? '.mp4' : '.jpg'), { type: bl.type });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], text: st.caption || '' }); else stSave();
+  } catch { /* closed */ }
+}
+$('#stvMenu').onclick = (e) => {
+  e.stopPropagation();
+  const box = $('#stvMenuBox');
+  if (!box.hidden) { box.hidden = true; return stSyncPause(); }
+  const { g, st } = stCur(); box.innerHTML = '';
+  const item = (t, fn, red) => { const b = el('button', red ? 'red' : null, t); b.onclick = () => { box.hidden = true; fn(); }; box.append(b); };
+  if (g.mine) {
+    if (st.type !== 'text') item('Save', () => { stSave(); stSyncPause(); });
+    item('Share…', () => { stShare(); stSyncPause(); });
+    item('Viewers', () => $('#stViewsBtn').click());
+    item('Status privacy', () => { closeViewer(); openStatusPrivacy(); });
+    item('Delete', stDelete, true);
+  } else {
+    item('Message ' + nameOf(g.user), () => { const id = g.user.id; closeViewer(); openChat(id); });
+    item('Mute ' + nameOf(g.user) + "'s status", async () => { try { await api('/api/me/status-push', { method: 'PUT', body: JSON.stringify({ userId: g.user.id, mute: true }) }); toast('Muted. You will not get alerts for their status.'); } catch (err) { toast(err.message); } stSyncPause(); });
+  }
+  box.hidden = false; stSyncPause();
 };
+$('#stViewer').addEventListener('click', (e) => { const box = $('#stvMenuBox'); if (!box.hidden && !box.contains(e.target) && !e.target.closest('#stvMenu')) { box.hidden = true; stSyncPause(); } });
 $('#stViewsBtn').onclick = async () => {
-  const g = V.groups[V.gi], st = g.statuses[V.si];
-  V.paused = true; if (V.video) V.video.pause();
-  const box = $('#stViews'); box.hidden = false; box.innerHTML = '<h3>Viewed by</h3><p class="info-note" style="padding:0">Loading…</p>';
+  const { st } = stCur();
+  const box = $('#stViews'); box.hidden = false; stSyncPause(); box.innerHTML = '<h3>Viewed by</h3><p class="info-note" style="padding:0">Loading…</p>';
   try {
     const list = await api('/api/status/' + st.id + '/views');
     box.innerHTML = '<h3>Viewed by ' + list.length + '</h3>';
     if (!list.length) { const p2 = document.createElement('p'); p2.className = 'info-note'; p2.style.padding = '0'; p2.textContent = 'No views yet.'; box.append(p2); }
-    for (const v of list) { const row = document.createElement('div'); row.className = 'set-row'; const t2 = document.createElement('div'); t2.className = 'txt'; t2.innerHTML = '<b></b><small></small>'; t2.querySelector('b').textContent = nameOf(v.user); t2.querySelector('small').textContent = ago2(v.at); row.append(avatar(v.user, 'sm'), t2); box.append(row); }
+    for (const v of list) { const row = document.createElement('div'); row.className = 'set-row'; const t2 = document.createElement('div'); t2.className = 'txt'; t2.innerHTML = '<b></b><small></small>'; t2.querySelector('b').textContent = nameOf(v.user); t2.querySelector('small').textContent = stWhen(v.at); row.append(avatar(v.user, 'sm'), t2); if (v.liked) { const h = el('span', null, '❤️'); h.style.marginLeft = 'auto'; h.setAttribute('aria-label', 'Liked'); row.append(h); } box.append(row); }
     const close = document.createElement('button'); close.className = 'primary'; close.style.marginTop = '10px'; close.textContent = 'Close';
-    close.onclick = () => { box.hidden = true; V.paused = false; V.start = performance.now(); if (V.video) V.video.play().catch(() => {}); };
+    close.onclick = () => { box.hidden = true; stSyncPause(); };
     box.append(close);
-  } catch (err) { box.hidden = true; toast(err.message); }
+  } catch (err) { box.hidden = true; stSyncPause(); toast(err.message); }
+};
+// reply + like (others' statuses)
+function stOpenType() { $('#stvReplyRow').hidden = true; const f = $('#stvTypeForm'); f.hidden = false; stSyncPause(); const i = $('#stvReplyInput'); i.value = ''; i.focus(); }
+function stCloseType() { $('#stvTypeForm').hidden = true; $('#stvReplyRow').hidden = false; $('#stvReplyInput').blur(); stSyncPause(); }
+$('#stvReplyOpen').onclick = stOpenType;
+$('#stvReplyInput').addEventListener('blur', () => setTimeout(() => { if (!$('#stvTypeForm').hidden && document.activeElement !== $('#stvReplyInput') && !$('#stvReplyInput').value.trim()) stCloseType(); }, 150));
+$('#stvTypeForm').onsubmit = (e) => {
+  e.preventDefault();
+  const { g, st } = stCur(), text = $('#stvReplyInput').value.trim(); if (!text) return;
+  socket.timeout(10000).emit('msg:send', { to: g.user.id, text, statusReply: st.id }, (err, res) => {
+    if (err || res?.error) return toast(res?.error || 'Not sent. Try again.');
+    const l = messagesCache[g.user.id]; if (l && res.message) l.push(res.message);
+    toast('Reply sent ✓');
+  });
+  $('#stvReplyInput').value = ''; stCloseType();
+};
+$('#stvLike').onclick = async () => {
+  const { st } = stCur(), b = $('#stvLike'), on = !st.liked;
+  st.liked = on; b.setAttribute('aria-pressed', String(on)); b.classList.remove('pop'); void b.offsetWidth; if (on) b.classList.add('pop');
+  try { await api('/api/status/' + st.id + '/like', { method: 'POST', body: JSON.stringify({ like: on }) }); } catch (err) { st.liked = !on; b.setAttribute('aria-pressed', String(!on)); toast(err.message); }
 };
 
 // ================= chat attachments & rich messages =================
@@ -6042,6 +6219,13 @@ new MutationObserver(() => { if (selectMode && $('#messages').hidden) exitSelect
 
 // ----- reply -----
 function quoteNode(q) {
+  if (q.status) { // ⭕ v343: a reply to a status
+    const d = el('div', 'quote st-q'); const who = q.from === me.id ? 'You' : nameOf(userById(q.from) || { name: 'Them' });
+    const tx = el('div', 'q-tx'); tx.append(el('b', null, who + ' · Status'), el('span', null, q.type === 'text' ? q.text || 'Status' : (q.type === 'video' ? '🎥 ' : '📷 ') + (q.text || (q.type === 'video' ? 'Video' : 'Photo')))); d.append(tx);
+    if (q.type === 'text') { const th = el('div', 'q-th st-qt', (q.text || '').slice(0, 30)); th.style.background = q.bg || '#0F4C5C'; d.classList.add('has-th'); d.append(th); }
+    else { d.classList.add('has-th'); let th; if (q.type === 'image') { th = el('img', 'q-th'); th.alt = ''; th.loading = 'lazy'; th.src = '/api/status/media/' + q.status + '?t=' + encodeURIComponent(token); } else { th = el('video', 'q-th'); th.muted = true; th.playsInline = true; th.preload = 'metadata'; th.src = '/api/status/media/' + q.status + '?t=' + encodeURIComponent(token) + '#t=0.5'; } th.onerror = () => { th.remove(); d.classList.remove('has-th'); }; d.append(th); }
+    return d;
+  }
   const d = el('div', 'quote'); d.dataset.qid = q.id;
   const who = q.from === me.id ? 'You' : nameOf(userById(q.from) || { name: 'Them' });
   const src = q.file ? q : findMsg(q.id) || q, f = src.file, mime = (f && f.mime) || '', ty = q.type || src.type;
@@ -15576,7 +15760,7 @@ const BACK_LAYERS = [
   ['.menu-shade', () => closeMsgMenu()],
   ['#mediaView', () => closeMediaView()],
   ['section.mv[aria-label="View once"]', () => { const b = document.querySelector('section.mv[aria-label="View once"] button'); if (b) b.click(); }],
-  ['#stViewer', () => closeViewer()],
+  ['#stViewer', () => stBack()],
   ['#camView', () => closeCamera()],
   ['#stCompose', () => { const b = $('#stComposeClose'); if (b) b.click(); }],
   ['#emojiPanel', () => toggleEmojiPanel(false)],
@@ -18213,7 +18397,7 @@ function mpVoiceSheet(after) {
 }
 
 // ================= Version: shown in Settings, and "What's new" once after every update =================
-const APP_VERSION = 342;
+const APP_VERSION = 343;
 const APP_NOTES = ["🦜 New Maata logo — on the app icon, notifications, the login page, app lock, catalogues and the website.", "🚚 Maata Ride: new 🚚 Luggage auto (4-wheeler, like Tata Ace) for shifting, shop goods and farm produce — write what you are moving and book. Drivers with a goods vehicle can register in 🧑‍✈️ Maata Captain.", "🛺 Maata Ride: the “Shared auto” option was removed — choose Auto, Bike taxi or Car. The map on the Book screen is bigger again.", "🔊 Maata Ride voice alerts: customers hear “Ravi is coming in 4 minutes, vehicle number…, your OTP is…”, “Your auto has arrived”, “Ride started”, “Please pay … rupees”; drivers hear every new booking and “The customer cancelled”. In Telugu, Hindi or English, also when Maata is closed. 🔊 ON / OFF and ▶️ Test on the ride screens.", "🛺 NEW: Maata Ride — book an auto, bike taxi or car (Menu → 🛺 Book a ride). Fixed price before booking, 🎤 say where to go in Telugu, nearby drivers ring, live tracking, 4-digit OTP, cash or UPI to the driver, ⭐ rating. Shared auto (cheaper), book for someone else, book for later and send a parcel. Safety: 🆘 SOS, live trip link for family, and Maata asks if you are OK when the vehicle changes route or stops long. Drivers: Menu → 🧑‍✈️ Maata Captain — register, zero commission, see busy areas and earnings.", "🔓 Answering a call never asks for the app PIN, fingerprint, face or voice password any more — also when Maata was closed. The lock comes back by itself when the call ends.", "📞 Calls fixed: when Maata is closed or in the background the phone now always rings like a normal call (no more only a “missed call”), you can answer without typing the app PIN (the lock comes back after the call), and after Answer the call starts at once — the two phones already connect while it rings.", "🔔 Like Instagram: when a contact posts a new status you get a notification on your phone — tap it to see the status. Turn it off in Settings → Privacy → Status.", "⭕ Status fixed: friends you chat with on Maata now see your status in Updates (before, both of you had to save each other in Maata contacts). Under My status you now see “👁 N contacts can see your status” and who cannot, with a 💬 button to message them.", "⚙️ Your settings are now saved on your Maata account too: after clearing app data, re-installing, a new phone or logging in again, they come back by themselves and do not change back to old values.", "📒 Catalogue: the Status image is now a Maata Status image — tap “📱 Post on my Maata Status” to put it on your Maata Status in one tap, or share it.", "📞 Clearer voice calls: the other person no longer hears their own voice back (new 🔇 Echo guard), and when the voice stops or the network changes (Wi-Fi ↔ mobile data) Maata brings the voice back by itself — the call does not need to be cut. Weak network: Maata lowers the voice data so words do not break. Settings → Call quality.", "📒 NEW: Share catalogue — Business tools → 📒 Share catalogue (or Maata Business → More). A colourful A4 catalogue PDF with your product photos, prices, MRP & % OFF, ★ best sellers (from your real sales), shop name, address and phone, a QR to order from your shop on Maata and a QR to download Maata. 5 colours, English / తెలుగు / हिन्दी, ✨ Maata AI writes the title and offer line, and a ready Maata Status image (post it on your Maata Status in one tap). Share PDF, download it, or share the online shop link.", "📚 Maata photo library: when you type a product name, photos that other Maata shops uploaded show by themselves — tap one to use it. 🤖 Maata AI also finds other names (కందిపప్పు = toor dal), fills unit, GST and category, and shows the price other shops ask. Stock → 📚 Add photos from Maata shops fills many products in one tap. A barcode another shop has fills everything. Bill settings → turn off sharing your photos if you want.", "✨ Ask Maata AI on any shop profile: prices, timings, delivery, and it can make your order list.", "✨ Chat summary and ⏰ reminders: in a contact profile, or ⌄ on a message → Remind me.", "👤 Contact profile like WhatsApp: status ring, Share, Pay (shop UPI), business hours, category and address.", "✏️ Edit contact like WhatsApp: first name, last name, business name, and save to phone contacts.", "↻ Pull down on the chats list to refresh Maata and get the newest version.", "🌐 Maata Translate: read chats in your language and reply in theirs (Settings → Chat translation, or ⋮ in a chat → Translate this chat).", "🎤 New voice message player: play, pause, speed and ⬇ download.", "📵 Maata Business: counter billing now works without internet (cash). Bills are numbered, printed and saved on the phone, then sent by themselves when the internet is back.", "📞 Settings → Calls when Maata is closed: check your phone once and make a test call.", "🔐 Fixed: on the Sign Up page the “Create account” button was hidden at the bottom. It now always stays on the screen (phones and computers).", "📱 Log in / Sign Up page now scrolls on every phone (also with big font size), so the “Create account” button is never hidden.", "📞 Like WhatsApp: a voice or video call that is not answered now shows in the chat — “Missed voice call · Tap to call back”.", "⚡ Faster and steadier Maata: the server now saves your chats without pausing the app, uses much less memory, and opens chats faster — ready for many more people.", "📱 New accounts: the mobile number is now confirmed with an SMS code (OTP), so nobody can sign up with someone else’s number.", "🖨️ Shop QR · Scan & Order: the A4 colour poster now opens inside Maata with ← Back, and buttons to 📤 Share PDF (WhatsApp, Gmail…), 🖨️ Print, 📥 Save PDF in phone and 🖼️ Share image. Before, it opened full screen with no way back.", "🛠️ Local Services: 📚 Education (home tutor, online tutor, music classes) and 💈 Salon / haircut were removed.", "📱 Like WhatsApp: in the Maata app your phone contacts now show by themselves — no “Sync” button. All your contacts are shown (✅ on Maata and 📨 Invite). New contacts, changed names and deleted contacts update by themselves when you open Maata.", "🙋 Find Work / Hire Workers: the bottom bar now shows at once, also before you register, and My work, 🔔 Alerts and Profile open without registering (Profile shows the Daily Labour and Local Jobs registrations with a 📝 Register button for each). Tapping Find Work no longer jumps straight into the registration form.", "🧱 Daily Labour registration is shorter: schooling is not asked any more (it is asked only for Local Jobs).", "📝 Find Work: Daily Labour and Local Jobs now have SEPARATE registrations — 👷 Daily Labour (work you do, pay per day) and 🏪 Local Jobs (schooling, job you can do, salary per month). Register for one or both; your photo, name, age and area are filled once. Profile tab shows both.", "🟢 Find Work: “Free for work today” now has a big OFF | ON button — tap ON when you are free, OFF when you are not.", "👷 Find Work: the bottom bar now has two separate buttons — 👷 Daily Labour (per day / contract: mason, coolie, painter, farm, loading) and 🏪 Local Jobs (monthly salary / part time: shop, hotel, driver, delivery, office) — each with the number of jobs near you. Maata opens the one you use, or the one that fits your work.", "⏰ Find Work: the 5-minute job announcements now come from 6 AM to 6 PM. Work that comes in the evening / night is said first at 6 AM. ☀️ At 6 AM Maata asks “Are you free for work today?” (to workers who were free in the last week). No job voice at night (9 PM – 6 AM) — it comes as a silent notification and in 🔔 Alerts.", "🌐 Fixed: with Telugu (or any language) chosen, some words came in another language (Tamil). Now every word is checked — only your language is shown.", "💼 Local Jobs is now two simple menu options: 🙋 “Find Work” for workers and 🏪 “Hire Workers” for shop owners, labour contractors, house owners and farmers. Workers register with photo (Maata AI checks it), name, age, schooling, work and area — or just press 🎤 Speak and Maata AI fills it, and 🔊 Listen how tells the steps. Owners register their shop / business name, address and location. New 🔔 Alerts tab: every alert with the time — tap 🔊 to hear it again. Owners can 🔁 give the same work again in one tap.", "💼 Local Jobs: the big green “✅ I will come” button is now on every job in the list (and 🔊 to hear it). Tapping “Open” on a job alert opens that job (before, it opened Business profile). Jobs near your home area are shown even when the phone / computer location is far.", "🔔 Local Jobs: while “Free for work today” is ON, Maata now tells you a job near you every 5 minutes (a different one each time, until you apply or press “Not interested”; when an owner confirms you, “Free today” turns OFF by itself; 6 AM – 9 PM). The card shows when it last checked, and 🔊 Hear now tells you at once.", "✅ Local Jobs is simpler for workers: open a job and press the big green “✅ I will come” button. The owner hears it at once (also when Maata is closed) with your name, work, phone and where you are now. When the owner presses “✅ Confirm”, you hear “Work confirmed” with the work place and a 🧭 Go button for the way. “✖ Not interested” hides that job. Opening a job from an alert reads it out loud.", "🟢 Local Jobs: “Free for work today” — when it is ON, employers can see you, and every 5 minutes Maata tells you out loud the jobs near you for your work (also when Maata is closed, 6 AM – 9 PM). When it is OFF you are not shown in the workers list.", "👷 Local Jobs → Workers now shows only workers who turned on “🟢 Free today”. Tap “👥 All workers” to see everyone (others show “⚪ Not free today”).", "🔊 One language for everything: when you choose Menu → App language, the voice alerts (new order, new job, new delivery), Maata AI and the “Read out loud” voice also change to that language.", "🌐 Maata now opens in English, and the WHOLE app changes to your language when you choose it: Menu → App language (తెలుగు, हिन्दी, தமிழ், ಕನ್ನಡ, മലയാളം, मराठी, বাংলা, ગુજરાતી, ਪੰਜਾਬੀ, اردو). Buttons, menus, pages and messages change; people’s chats, names and shop items stay as they wrote them.", "💼 Local Jobs & Daily Labour is easier: the bottom buttons now say 🙋 Need work · 👷 Workers · 📢 Give work · 📋 My work. The first time, Maata asks “I need work” or “I need workers” and opens the right page.", "💼 NEW: Local Jobs & Daily Labour — Menu → Local Jobs & Daily Labour. 👷 Daily Labour (mason, coolie, painter, centring, farm work, loading) and 🏪 Local Jobs (shop sales, cashier, hotel, delivery boy, driver, cook, office). Workers: make a profile in 1 minute (🎤 say your work in Telugu), turn on “🟢 Free today” and get a voice alert when work comes near you. Apply in one tap. Employers: 🎤 say what you need (“2 మేస్త్రీలు కావాలి, రోజుకు 900”) — Maata AI fills the form, shows the usual pay and alerts free workers near you. 🎯 Best match first, ⭐ shortlist, ✅ hire. 🛡️ Jobs that ask workers for money are blocked, 18+ only, women can hide their number, 🚩 report.", "👥 Communities: groups inside a community are now private. Members tap “Ask to join” and a group admin approves (admins can open a group to everyone in the community).", "📢 Announcements: members now see “Only admins can send messages” instead of a message box.", "📇 Maata now asks before reading your phone contacts, and explains why.", "🔔 New orders, deliveries and Local Services jobs now ring with the Maata order bell and are said out loud even when Maata is closed (new Maata Android app). Open Orders / Provider → fix the ⚠️ items once → ▶️ Test with Maata closed.", "⭐ Fixed: a chat no longer turns dark after you star, pin or set a disappearing time on a message.", "📢 Advertise fixed: “＋ Create ad” now opens a new ad and sends it for review (before, it opened “Edit ad” and did not save).", "📷 Local Services: “Take selfie”, ID photo, work photos, problem photo and before / after job photos now open the camera inside Maata (switch front / back camera, retake, or pick from gallery).", "🧑‍🔧 Local Services provider registration is simpler: 5 steps, Maata AI fills your work page right there, and you can speak in your own language (తెలుగు, English, हिन्दी, தமிழ், ಕನ್ನಡ, മലയാളം and more). 📍 “Use my location” now shows “Finding your location…”, then a ✅ pin on the map with your address — drag the pin if it is not exact.", "🛠️ NEW: Maata Local Services — book an electrician, plumber, AC mechanic, painter, tutor, beauty parlour, photographer and more near you. 🎤 Say your problem in Telugu and Maata AI finds the right person and the usual price. Live tracking, a 4-digit arrival code, approve the price before work, pay directly (cash / UPI), ⭐ rate, 🛡️ warranty re-visit, 🚨 emergency, 🆘 SOS. Workers: Menu → Local Services → 🧑‍🔧 Provider to register free.", "✍️ Like WhatsApp: you now see “typing…” (and “recording audio…”) at the top of the chat and in the chats list while the other person writes. In groups: “Ravi is typing…”.", "📍 Shops near you: choose 2 km · 5 km · 10 km · All, see “🛵 Delivers to you” on shops that deliver to your place, tap “📍 Allow location” to see nearest shops first, and scroll down for more shops (no 60-shop limit).", "⭐ Shop ratings: customers who bought from a shop (a delivered Maata order or a bill sent to their number) can rate it 1–5 stars with a few words. Everyone sees the stars and reviews in Shops, and can sort by ⭐ Top rated. Shops see their ratings in Maata Business and can reply.", "🕵️ Intruder photos: Settings → Account → 🕵️ Intruder photos (also in App lock and Maata Secure). Tap a photo to see it big, 💾 save it to Downloads or 📤 share it. With Maata Secure on, the photos are also kept on your account and you get a notification — see them from another phone even if this one is stolen.", "👥 Contacts fixed: friends who joined Maata after you synced your contacts now show as “On Maata” by themselves, searching a name checks Maata at once, big phone books (1000+ contacts) are checked fully, and the 📨 invite button opens the chat if the person is already on Maata.", "💬 “Send bill on Maata” now shows Sending… / ✅ Sent on the button. If the customer is not on Maata, send the bill by WhatsApp or SMS in one tap. Messages that were hidden behind open screens now show on top.", "🗑️ Maata Business: delete a product (Stock → tap the product → 🗑️ Delete product, or in Edit, or long-press it in Counter billing). Old bills are not changed. You can also just hide it.", "⚡ Bill printing is now fast, like other billing software: the bill goes to the printer as text (about 7× less data). Telugu / Hindi item names still print correctly. Printer settings → ⚡ Fast printing (on by default).", "📋 Menu is shorter: Maata Business billing is now opened from Menu → Business tools → 📊 Maata Business.", "📸 Counter billing with pictures: items show their photo (or an automatic food picture ☕ 🥟 🧆 🍛 when there is no photo), category tabs (Tea & Coffee, Snacks, Chaat, Tiffin, Meals, Drinks…), long-press for ½ / 1 / 2 / 3 plates or an extra add-on, and 📷 add an item photo right from the counter. 📸 Photos / 📋 List switch.", "🌗 Receipt printer: new Print darkness setting (Light · Normal · Dark · Darker · Darkest) with a live preview — bills print darker and clearer. Printer settings → Options.", "🔗 Links in chats can now be tapped, like WhatsApp. A shop bill link opens the full bill (in your browser with the new Maata app, or inside Maata).", "📝 Counter billing: add Remarks to a bill (e.g. “Exchange in 7 days”, “Balance next visit”). Remarks show on the bill, the printed receipt, the PDF and the bill sent to the customer.", "🏪 Maata Business → Counter billing for walk-in customers: big item buttons (most sold first), one-tap barcode, weight items by keypad, ₹ Amount for loose items, 💵 cash “give back” calculator, ⏸ hold a bill while serving the next person, and 📊 today’s cash & UPI total.", "🛡️ Maata Secure: save both IMEI numbers of dual-SIM phones (IMEI 1 and IMEI 2). Both go on the police / CEIR report.", "📵 Maata now opens without internet, like WhatsApp: your chats, contacts and photos you already saw are shown from the phone. Messages you type offline wait with 🕓 and are sent by themselves when the internet is back.", "🔒 Like WhatsApp: screenshots and screen recording are blocked while someone’s profile or profile photo is open (needs the new Maata app). Long-press save is blocked too.", "⏺️ Call recording: in a call tap ⋯ → Record call. Both voices are saved on your phone (Downloads → Maata) and you can play or share it. The other person sees that the call is being recorded.", "🌐 Live call translation and automatic chat translation were removed. Calls and chats work normally in your own words.", "📹 Video calls: clear voice like WhatsApp — the voice now always gets priority, video is sharp but lowers itself when the network is weak (new Auto quality). Live translation starts by itself only when you two chose different languages (tap 🌐 otherwise).", "🗣️ Call translation is more accurate (Maata AI remembers the last sentences of the call, speaks everyday Telugu/Hindi) and no longer goes silent: short words are heard, a lost sentence is tried again, and you are told if it could not be understood.", "🗣️ Call translation: you now hear ONE voice — only the translation in your language (their original voice is silent while they speak another language). The other person no longer hears your phone reading the translation, and sees only their own words.", "🗣️ Call translation: now the LISTENER decides — when your language is Telugu and the other person speaks English (or any language), Maata AI translates it for you automatically. New 🎤 Test live translation button in Settings → Language & Translation.", "🎙️ Translated voice: choose Female or Male in Settings → Language & Translation. Male now really speaks with a man voice (Maata AI voice).", "🗣️ Live call translation fixed: Maata AI now hears the voice itself and finds the language spoken (English, Telugu, Hindi… or mixed), then you hear it in YOUR language — also in the Maata Android app. Tap 🌐 in a call to translate even when both chose the same language.", "🙂 Face unlock is now automatic: set it up once, then just look at the phone — Maata AI scans and opens by itself (no head turning each time). It asks to close your eyes only when it is not fully sure.", "🙂 Face unlock with Maata AI: look at the phone, blink and turn your head → Maata opens (a photo or video does not work). Voice password now also checks your face, and Maata takes a photo of anyone who tries to open it 3 times. Menu → Settings → App lock.", "✏️ Live location groups: admins can now change the group name (✏️ at the top of the group, or Members → Group name).", "📍 Live location map: each person now sits exactly on their real place at every zoom (no more jumping when you zoom), moves smoothly like Google Maps, and updates every 30 seconds while you are watching.", "📍 Live location sets itself up: when you turn sharing ON, Maata opens each Android permission screen for you — just tap “Allow”. Old Maata apps update by themselves when sharing is on.", "📍 Live location: the group admin now sees which Maata app version each member has. If it is old, tap “📲 Ask to update” and the member gets a notification to update.", "📍 Live location: phones that go quiet are woken every 3 minutes, so the place keeps updating when Maata is closed. The admin sees “✅ Phone ready” or what to fix on each phone. New 📞 Maata call and 🎥 video call buttons next to 📱 Phone for each member.", "📍 Live location: when a phone goes quiet with Maata closed, Maata now wakes it with a push and gets the location again (automatic every few minutes, or tap “📲 Wake phone”). The admin also sees WHY a phone shows “No signal” (permission, battery saver, autostart, GPS off) — needs the new Maata app on that phone.", "📱 Shop QR · Scan & Order: shops print a QR poster (Maata Business → More). Customers scan it with any phone camera, pick items (or 📷 scan product barcodes), pay by UPI or cash and collect at the counter — no queue. One QR per table for hotels. Shops hear “Counter order from …”. ", "🔊 Voice alerts: shops hear “New order from …, … rupees” and delivery persons hear “New delivery for you” out loud (Telugu, Hindi or English), also when Maata is closed. Reminders if an order waits. Turn on / off in Maata Business → More or My deliveries.", "📱 Online orders: new “UPI payment” — customers pay with PhonePe / Google Pay / Paytm (amount filled in) or scan the QR right after ordering. Shops tap “UPI money received”. Delivery persons see big 💵 Cash and 📱 UPI QR buttons at the door, and “PAID — do not collect” for paid orders.", "💰 Delivery: at the door the customer can pay by 💵 cash or 📱 UPI QR (exact amount), whatever they chose while ordering. The bill shows how it was really paid.", "📍 Live location: sharing now keeps going when Maata is closed or the phone is locked, and the admin sees “online” even when the person is not moving. New “Keep sharing when Maata is closed” steps in the group page (needs the new Maata app).", "💾 Maata Business backup: save all products, product photos, bills (also as CSV for Excel) and settings to Google Drive or your phone, and bring missing products back any time. More → Business backup. Product photos are now smaller (faster to load, same sharp look).", "📄 Maata Business bills: 📥 Download PDF (a neat A4 invoice, saved in Downloads → Maata) and 📤 Share PDF to WhatsApp, Gmail, Drive or any app. Open a bill in Bills to see the buttons.", "🖨️ Receipt printer fix: no more strange symbols in the middle of bills, and the paper is cut automatically after printing (you can switch cutting off in printer settings).", "🛒 New colourful shopping cart button at the top of Chats.", "🖼️ Maata Business: add a photo to each product (camera or gallery). Customers see it in your online shop and can tap to see it big. Bills stay without photos.", "🏢 Business messages: banks, schools, hospitals, offices and shops can now send you updates in Maata (✔ verified, you choose All / Important / None, report & block). Organisations: Maata Business → More → Business messaging API.", "🖨️ Printer: if Android does not show the Bluetooth \"Allow\" box, Maata now explains why and opens Maata settings for you.", "🛍️ New shopping button at the top of Chats (next to coins): shops near you and your orders in one tap.", "🖨️ Receipt printer: search and pair Bluetooth printers inside Maata (classic and Bluetooth Low Energy printers), or connect by USB cable (OTG) or Wi-Fi / LAN (IP address). New 🔧 Check printer button.", "🔒 Live location: only the group maker is admin and only they can give admin permission. Members see nobody else, and an admin's location is seen only by the group maker.", "📍 Live location groups for a work team or your family: each person turns sharing ON, and the admin sees them live on a map until they turn it OFF. Alerts for phone off, GPS off and fake GPS, plus a History map of the day. Menu → Live location.", "🔒 App lock now asks for your PIN only when you open Maata again after closing it, not when you come back from minimise. 🖨️ Printer setup is also in Bill settings and on every bill.", "🖨️ Maata Business: print bills on a 58 / 80 mm Bluetooth receipt printer (Telugu names and the UPI QR print too). More → Bluetooth printer.", "📱 Maata Business: choose UPI and Maata shows a QR with the exact bill amount (also printed on the bill). Card and Credit were removed from billing.", "📤 Share now works like WhatsApp: photos, videos and files open your phone's share menu (WhatsApp, Quick Share, Drive…) instead of copying.", "🚚 Shops can send orders to other towns by courier or lorry transport and add the tracking / LR number (AI can read the receipt photo). Customers see it in their order.", "✏️ Mark & send: draw, highlight, circle, add words or hide private details on a photo or a chat screenshot, then send it. Long-press a message, or select messages and tap ✏️."];
 let SERVER_VER = null;
 async function checkVersion() {
