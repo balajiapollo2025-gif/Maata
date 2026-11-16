@@ -60,4 +60,5 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.core:core-ktx:1.16.0")
+    implementation("com.google.android.gms:play-services-auth-api-phone:18.1.0") // v346 OTP auto-fill (SMS User Consent)
 }
