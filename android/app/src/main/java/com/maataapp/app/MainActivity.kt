@@ -49,6 +49,7 @@ class MainActivity : Activity() {
         private const val REQ_FILE = 11
         private const val REQ_PERMS = 12
         private const val REQ_SCREEN = 13
+        private const val REQ_SMS = 14
         const val ACTION_INSTALL_STATUS = "com.maataapp.app.INSTALL_STATUS"
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
     }
@@ -346,9 +347,46 @@ class MainActivity : Activity() {
     private var pendingTrack = false
     private var btOut = java.io.ByteArrayOutputStream()
 
+    // 📩 v346 OTP auto-fill: Google's SMS User Consent API. No SMS permission — when the Maata OTP SMS arrives, Android asks
+    // "Allow Maata to read this message?"; one tap on Allow puts the code into the box on the page.
+    private var otpReceiver: android.content.BroadcastReceiver? = null
+    private fun otpStop() { otpReceiver?.let { try { unregisterReceiver(it) } catch (_: Exception) { } }; otpReceiver = null }
+    @Suppress("DEPRECATION")
+    private fun otpStart() {
+        otpStop()
+        val r = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: android.content.Context?, i: Intent?) {
+                if (i?.action != com.google.android.gms.auth.api.phone.SmsRetriever.SMS_RETRIEVED_ACTION) return
+                val ex = i.extras ?: return
+                val st = ex.get(com.google.android.gms.auth.api.phone.SmsRetriever.EXTRA_STATUS) as? com.google.android.gms.common.api.Status
+                if (st?.statusCode == com.google.android.gms.common.api.CommonStatusCodes.SUCCESS) {
+                    val ci = ex.getParcelable<Intent>(com.google.android.gms.auth.api.phone.SmsRetriever.EXTRA_CONSENT_INTENT)
+                    // safety: only open Google's own consent screen, never an intent that grants file access
+                    val who = ci?.resolveActivity(packageManager)
+                    if (ci != null && who?.packageName == "com.google.android.gms" &&
+                        (ci.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)) == 0) {
+                        try { startActivityForResult(ci, REQ_SMS) } catch (_: Exception) { }
+                    }
+                }
+                otpStop()
+            }
+        }
+        val f = android.content.IntentFilter(com.google.android.gms.auth.api.phone.SmsRetriever.SMS_RETRIEVED_ACTION)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(r, f, com.google.android.gms.auth.api.phone.SmsRetriever.SEND_PERMISSION, null, android.content.Context.RECEIVER_EXPORTED)
+        else registerReceiver(r, f, com.google.android.gms.auth.api.phone.SmsRetriever.SEND_PERMISSION, null)
+        otpReceiver = r
+        com.google.android.gms.auth.api.phone.SmsRetriever.getClient(this).startSmsUserConsent(null)
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_SMS) {
+            val msg = if (resultCode == RESULT_OK) data?.getStringExtra(com.google.android.gms.auth.api.phone.SmsRetriever.EXTRA_SMS_MESSAGE) else null
+            val code = msg?.let { Regex("(?<!\\d)\\d{4,8}(?!\\d)").find(it)?.value } ?: ""
+            if (::web.isInitialized) web.evaluateJavascript("window.maataOtp && maataOtp(" + org.json.JSONObject.quote(code) + ")", null)
+            return
+        }
         if (requestCode == REQ_SCREEN) { // 🖥️ v326 screen sharing: Android said yes / no
             if (resultCode != RESULT_OK || data == null) { screenState("denied"); return }
             CallService.projection(this, true) // the call notification must carry the "screen" type before capture starts (Android 14+)
@@ -460,7 +498,7 @@ class MainActivity : Activity() {
         if (updFile != null && !CallService.running && canSilentUpdate()) try { installDownloaded() } catch (_: Exception) { }
     }
 
-    override fun onDestroy() { try { unregisterReceiver(installStatus) } catch (_: Exception) { }; try { tts?.shutdown() } catch (_: Exception) { }; tts = null; try { recognizer?.destroy() } catch (_: Exception) { }; stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
+    override fun onDestroy() { try { unregisterReceiver(installStatus) } catch (_: Exception) { }; otpStop(); try { tts?.shutdown() } catch (_: Exception) { }; tts = null; try { recognizer?.destroy() } catch (_: Exception) { }; stopPhoneRing(); stopRouteGuard(); CallService.stop(this); super.onDestroy() }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
@@ -469,6 +507,8 @@ class MainActivity : Activity() {
 
     /** Functions the Maata web app can call: window.MaataAndroid.getFcmToken() and so on. */
     inner class Bridge {
+        @JavascriptInterface fun otpListen() { runOnUiThread { try { otpStart() } catch (_: Exception) { } } }
+        @JavascriptInterface fun otpStopListen() { runOnUiThread { otpStop() } }
         @JavascriptInterface fun getFcmToken(): String = Notifier.token(this@MainActivity)
         @JavascriptInterface fun deviceModel(): String = "${Build.MANUFACTURER} ${Build.MODEL}"
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
