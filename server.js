@@ -2283,7 +2283,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 346;
+const MAATA_VERSION = 347;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4052,6 +4052,25 @@ app.post('/api/mr/rides', auth, async (req, res) => {
   db.mrRides.push(r); save();
   if (!when) mrMatch(r);
   res.json(mrOut(r, req.user));
+});
+// ⚡ v347 quick icons on the Chats screen: who I am (shop / captain / service provider), a ride going on now, small counts
+app.get('/api/home/quick', auth, (req, res) => {
+  const u = req.user, since = Number(req.query.since) || now() - 864e5;
+  const ride = db.mrRides.slice().reverse().find((r) => (r.userId === u.id || r.driverId === u.id) && ['searching', ...MR_ACTIVE].includes(r.status));
+  let rideOut = null;
+  if (ride) {
+    const rider = ride.userId === u.id, other = rider ? (ride.driverId ? userById(ride.driverId) : null) : userById(ride.userId), d = ride.driverId ? mrDriver(ride.driverId) : null;
+    rideOut = { id: ride.id, status: ride.status, rider, veh: ride.veh, name: other ? String(other.name || '').split(' ')[0] : '', number: rider && d ? d.number || '' : '' };
+  }
+  const bizIds = [u.business ? u.id : null, ...db.users.filter((o) => o.business && (o.business.members || []).some((m) => m.userId === u.id && m.status !== 'removed' && (BIZ_ROLES[m.role] || []).includes('bill'))).map((o) => o.id)].filter(Boolean);
+  const drv = mrDriver(u.id), pro = lsProv(u.id);
+  res.json({
+    ride: rideOut,
+    shop: bizIds.length > 0, orders: bizIds.length ? db.orders.filter((o) => bizIds.includes(o.bizId) && o.status === 'PLACED').length : 0,
+    captain: !!(drv && drv.status === 'approved'), online: !!(drv && drv.online),
+    pro: !!(pro && pro.status === 'approved'),
+    jobsNew: (db.jobs || []).filter((j) => j.status === 'open' && j.by !== u.id && j.createdAt > since).length,
+  });
 });
 app.get('/api/mr/rides', auth, (req, res) => res.json(db.mrRides.filter((r) => r.userId === req.user.id || r.driverId === req.user.id).slice(-60).reverse().map((r) => mrOut(r, req.user))));
 app.get('/api/mr/rides/:id', auth, (req, res) => {
