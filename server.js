@@ -829,7 +829,7 @@ const maskPhone = (p) => '+91 ' + String(p).slice(0, 2) + '••••••' +
 const smsLog = { day: '', n: 0, byPhone: new Map(), byIp: new Map() };
 function smsGuard(phone, ip) { // returns an error text, or '' when an SMS may go out
   const d = istDay(); if (smsLog.day !== d) { smsLog.day = d; smsLog.n = 0; smsLog.byPhone.clear(); smsLog.byIp.clear(); }
-  if (smsLog.n >= SMS.dayMax) return 'Too many sign-ups today. Please try again tomorrow.';
+  if (smsLog.n >= SMS.dayMax) return 'Too many SMS codes were sent today. Please try again tomorrow, or log in with your password.';
   const t = now(), ph = (smsLog.byPhone.get(phone) || []).filter((x) => t - x < 3600000), ipl = (smsLog.byIp.get(ip) || []).filter((x) => t - x < 3600000);
   if (ph.length && t - ph[ph.length - 1] < 45000) return 'A code was just sent to ' + maskPhone(phone) + '. Wait a minute before asking again.';
   if (ph.length >= 4) return 'Too many codes for this number. Try again after an hour.';
@@ -919,6 +919,9 @@ const maskEmail = (e) => { const [a, d] = String(e).split('@'); return a.slice(0
 // Same mailbox written differently (Gmail ignores dots and +tags: ra.vi+1@gmail.com = ravi@gmail.com) → one account only
 const emailKey = (e) => { const v = String(e || '').trim().toLowerCase(); const at = v.lastIndexOf('@'); if (at < 1) return v; let a = v.slice(0, at), d = v.slice(at + 1); if (d === 'googlemail.com') d = 'gmail.com'; if (d === 'gmail.com') a = a.split('+')[0].replace(/\./g, ''); else a = a.split('+')[0]; return a + '@' + d; };
 const emailTaken = (e, except) => { const k = emailKey(e); return db.users.some((x) => x !== except && x.email && emailKey(x.email) === k); };
+// v346: people who joined with mobile + SMS code have no password until they set one in Settings
+const NO_PW = 'Your account uses SMS code login, so it has no password yet. First set one: Menu → Settings → Account → Change password.';
+const pwCheck = (u, pw) => (u && u.passHash ? bcrypt.compare(String(pw || ''), u.passHash) : Promise.resolve(false));
 const resetCodes = new Map(); // userId -> { hash, until, tries, sentAt }
 app.post('/api/password/forgot', rateLimit, async (req, res) => {
   const id = String(req.body?.id || '').trim(), via = String(req.body?.via || '');
@@ -967,7 +970,7 @@ app.post('/api/password/reset', rateLimit, async (req, res) => {
   res.json({ token: sign(u), user: publicUser(u) });
 });
 app.put('/api/me/email', auth, async (req, res) => {
-  if (!(await bcrypt.compare(String(req.body?.password || ''), req.user.passHash || ''))) return res.status(400).json({ error: 'Wrong password.' });
+  if (req.user.passHash && !(await bcrypt.compare(String(req.body?.password || ''), req.user.passHash))) return res.status(400).json({ error: 'Wrong password.' });
   const e = String(req.body?.email || '').trim() ? cleanEmail(req.body.email) : '';
   if (e === null) return res.status(400).json({ error: 'Enter a valid email address.' });
   if (e && emailTaken(e, req.user)) return res.status(409).json({ error: 'This email is already used by another Maata account.' });
@@ -975,7 +978,7 @@ app.put('/api/me/email', auth, async (req, res) => {
   save(); res.json({ ...publicUser(req.user), email: req.user.email || '' });
 });
 app.post('/api/me/password', auth, rateLimit, async (req, res) => {
-  if (!(await bcrypt.compare(String(req.body?.current || ''), req.user.passHash || ''))) return res.status(400).json({ error: 'Your current password is wrong.' });
+  if (req.user.passHash && !(await bcrypt.compare(String(req.body?.current || ''), req.user.passHash))) return res.status(400).json({ error: 'Your current password is wrong.' });
   const pw = String(req.body?.password || ''); if (pw.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
   req.user.passHash = await bcrypt.hash(pw, 10); req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
   kick(req.user.id, 'Your password was changed. Please log in again.'); save();
@@ -989,7 +992,7 @@ const signingUp = new Set();  // numbers / emails being created right now (two t
 setInterval(() => { for (const [k, v] of signupCodes) if (v.until < now()) signupCodes.delete(k); }, 10 * 60000).unref?.();
 function signupCheck(phone, email) {
   if (findByMobile(phone) || signingUp.has('p' + phone)) return 'This mobile number is already registered. Log in instead (or use “Forgot password”).';
-  if (emailTaken(email) || signingUp.has('e' + emailKey(email))) return 'This email is already used by another Maata account. Log in, or use a different email.';
+  if (email && (emailTaken(email) || signingUp.has('e' + emailKey(email)))) return 'This email is already used by another Maata account. Log in, or use a different email.';
   return '';
 }
 app.post('/api/register', rateLimit, async (req, res) => {
@@ -1040,9 +1043,9 @@ app.post('/api/register', rateLimit, async (req, res) => {
 async function makeAccount(req, res, d) {
   const { name, phone, email } = d;
   const dup = signupCheck(phone, email); if (dup) return res.status(409).json({ error: dup });
-  signingUp.add('p' + phone); signingUp.add('e' + emailKey(email));
+  signingUp.add('p' + phone); if (email) signingUp.add('e' + emailKey(email));
   try {
-  const u = { id: newId(), name, phone, email, passHash: d.passHash, createdAt: now(), status: 'active', tokenVersion: 0 };
+  const u = { id: newId(), name, phone, ...(email ? { email } : {}), ...(d.passHash ? { passHash: d.passHash } : {}), createdAt: now(), status: 'active', tokenVersion: 0 };
   if (d.emailVerified) u.emailVerified = now();
   if (d.phoneVerified) u.phoneVerified = now();
   // joined from a friend's invite link: remember who invited, and save each other as contacts
@@ -1057,14 +1060,63 @@ async function makeAccount(req, res, d) {
   save();
   if (inviter) { io.to('user:' + inviter.id).emit('invite:joined', { name: u.name }); try { pushTo(inviter, { type: 'msg', title: '🎉 ' + u.name + ' joined Maata', body: 'Your friend joined from your invite. Say hi!', tag: 'joined-' + u.id }); } catch {} }
   res.json({ token: sign(u), user: publicUser(u) });
-  } finally { signingUp.delete('p' + phone); signingUp.delete('e' + emailKey(email)); }
+  } finally { signingUp.delete('p' + phone); if (email) signingUp.delete('e' + emailKey(email)); }
 }
 
+// 📱 v346 quick login / sign-up: mobile number → SMS code → (new person: name) → done. No email, no password.
+const otpTickets = new Map(); // ticket -> { sms, until, tries, sentAt, phone, ok }
+setInterval(() => { for (const [k, v] of otpTickets) if (v.until < now()) otpTickets.delete(k); }, 10 * 60000).unref?.();
+app.get('/api/auth/mode', (req, res) => res.json({ otp: SMS_ON }));
+function loginOk(u, req, res, how) {
+  if (u.twoStep) { const ticket = crypto.randomBytes(18).toString('base64url'); pinTickets.set(ticket, { uid: u.id, t: now(), tries: 0 }); return res.json({ needPin: true, ticket, hint: u.twoStep.hint || '' }); }
+  recordLogin(u, req, how);
+  if (u.secure && u.secure.on) { secEvent(u, 'login', 'New login on ' + deviceName(req.headers['user-agent']) + '.'); pushTo(u, { type: 'msg', title: '🛡️ New login to Maata', body: 'Your account was just opened on ' + deviceName(req.headers['user-agent']) + '. Not you? Open Maata Secure and log out other devices.', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {}); }
+  save();
+  res.json({ token: sign(u), user: publicUser(u) });
+}
+app.post('/api/otp/send', rateLimit, async (req, res) => {
+  if (!SMS_ON) return res.status(503).json({ error: 'SMS codes are off right now. Log in with your password.', noSms: true });
+  const phone = cleanMobile(req.body?.phone);
+  if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number (without +91 or 0).' });
+  const u = findByMobile(phone);
+  if (u && u.status === 'blocked') return res.status(403).json({ error: 'This account is blocked. Contact Maata support.' });
+  const g = smsGuard(phone, req.ip || ''); if (g) return res.status(429).json({ error: g });
+  for (const [k, v] of otpTickets) if (v.phone === phone) otpTickets.delete(k);
+  const ticket = crypto.randomBytes(18).toString('base64url'); let sm;
+  try { sm = await smsSendOtp(phone, ticket); } catch (e) { console.error('[sms otp]', e.message); return res.status(502).json({ error: 'Could not send the SMS code right now. Check the number and try again in a minute.' }); }
+  otpTickets.set(ticket, { sms: sm, until: now() + 10 * 60000, tries: 0, sentAt: now(), phone });
+  res.json({ ticket, len: sm.len || 0, sentTo: maskPhone(phone) });
+});
+app.post('/api/otp/verify', rateLimit, async (req, res) => {
+  const tk = String(req.body?.ticket || ''), r = otpTickets.get(tk);
+  if (!r || r.until < now()) { otpTickets.delete(tk); return res.status(400).json({ error: 'The code expired. Tap “Send code again”.', expired: true }); }
+  if (!r.ok) {
+    const code = String(req.body?.code || '').replace(/\D/g, '');
+    if (r.tries >= 5) { otpTickets.delete(tk); return res.status(429).json({ error: 'Too many wrong codes. Tap “Send code again”.', expired: true }); }
+    if (code.length < 4) return res.status(400).json({ error: 'Type the code from the SMS.' });
+    let good; try { good = await smsCheckOtp(r.sms, code, tk); } catch (e) { console.error('[sms otp check]', e.message); return res.status(502).json({ error: 'Could not check the code right now. Try again in a minute.' }); }
+    if (!good) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
+    r.ok = true; r.until = now() + 15 * 60000; // number confirmed: a new person now has 15 minutes to type their name
+  }
+  const u = findByMobile(r.phone);
+  if (u) {
+    otpTickets.delete(tk);
+    if (u.status === 'blocked') return res.status(403).json({ error: 'This account is blocked. Contact Maata support.' });
+    if (!u.phoneVerified) u.phoneVerified = now();
+    return loginOk(u, req, res, 'login-otp');
+  }
+  const name = String(req.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  if (!name) return res.json({ needName: true });
+  if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 letters.' });
+  otpTickets.delete(tk);
+  return makeAccount(req, res, { name, phone: r.phone, email: '', passHash: '', phoneVerified: true, ref: req.body?.ref ? String(req.body.ref).slice(0, 20) : '' });
+});
 app.post('/api/login', rateLimit, async (req, res) => {
   const phone = cleanMobile(req.body?.phone);
   const password = String(req.body?.password || '');
   if (!phone) return res.status(400).json({ error: 'Enter your 10-digit mobile number.' });
   const u = db.users.find((x) => x.phone === phone) || findByMobile(phone);
+  if (u && !u.passHash) return res.status(401).json({ error: 'This number logs in with an SMS code. Tap “Login with OTP”.', useOtp: true });
   if (!u || !(await bcrypt.compare(password, u.passHash))) {
     if (u && u.secure && u.secure.on) { secEvent(u, 'login-fail', 'Wrong password used to log in to your account.'); const bad = u.secure.events.filter((e) => e.type === 'login-fail' && now() - e.t < 3600000).length; save(); if (bad === 3) pushTo(u, { type: 'msg', title: '🛡️ Maata Secure', body: 'Someone tried to log in to your Maata account with a wrong password 3 times.', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {}); }
     return res.status(401).json({ error: 'Wrong mobile number or password.' });
@@ -1077,7 +1129,7 @@ app.post('/api/login', rateLimit, async (req, res) => {
   res.json({ token: sign(u), user: publicUser(u) });
 });
 
-app.get('/api/me', auth, (req, res) => res.json({ ...publicUser(req.user), email: req.user.email || '' }));
+app.get('/api/me', auth, (req, res) => res.json({ ...publicUser(req.user), email: req.user.email || '', hasPw: !!req.user.passHash }));
 
 // ---------- My profile: name, about, photo ----------
 app.put('/api/me/profile', auth, (req, res) => {
@@ -1347,7 +1399,7 @@ app.post('/api/secure/settings', auth, async (req, res) => {
   const u = req.user, s = secOf(u), b = req.body || {};
   if (b.on !== undefined) {
     if (!b.on) { // off: forget phones and locations (privacy)
-      if (!(await bcrypt.compare(String(b.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'Enter your Maata password to turn off protection.' });
+      if (!(await pwCheck(u, b.password))) return res.status(403).json({ error: u.passHash ? 'Enter your Maata password to turn off protection.' : NO_PW });
       s.on = false; s.phones = []; secEvent(u, 'off', 'Maata Secure turned off. Saved locations were deleted.');
     } else if (!s.on) { s.on = true; secEvent(u, 'on', 'Maata Secure turned on.'); }
   }
@@ -1377,7 +1429,7 @@ app.post('/api/secure/rename', auth, (req, res) => {
 });
 app.post('/api/secure/remove', auth, async (req, res) => {
   const u = req.user, s = secOf(u), id = String(req.body?.dev || ''), p = secPhone(u, id); if (!p) return res.status(404).json({ error: 'Phone not found.' });
-  if (p.lost && !(await bcrypt.compare(String(req.body?.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'This phone is in lost mode. Enter your Maata password to remove it.' });
+  if (p.lost && !(await pwCheck(u, req.body?.password))) return res.status(403).json({ error: u.passHash ? 'This phone is in lost mode. Enter your Maata password to remove it.' : NO_PW });
   s.phones = s.phones.filter((x) => x !== p); secEvent(u, 'remove', p.name + ' was removed from Maata Secure.'); save(); res.json(secView(u, String(req.body?.me || '')));
 });
 // the phone reports in (only while Maata Secure is on and this phone is enrolled)
@@ -1404,7 +1456,7 @@ app.post('/api/secure/cmd', auth, async (req, res) => {
   if (!s.on) return res.status(400).json({ error: 'Maata Secure is off.' });
   if (!['alarm', 'stop', 'locate', 'lost', 'found'].includes(cmd)) return res.status(400).json({ error: 'Unknown action.' });
   if (!p) return res.status(404).json({ error: 'Phone not found.' });
-  if (['lost', 'found'].includes(cmd) && !(await bcrypt.compare(String(b.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'Wrong Maata password.' });
+  if (['lost', 'found'].includes(cmd) && !(await pwCheck(u, b.password))) return res.status(403).json({ error: u.passHash ? 'Wrong Maata password.' : NO_PW });
   const from = clip(String(b.from || 'another device'), 50);
   let told = 0;
   if (cmd === 'alarm') { p.alarm = true; secEvent(u, 'alarm', 'Alarm played on ' + p.name + ' (from ' + from + ').', { dev: p.id }); }
@@ -1420,7 +1472,7 @@ app.post('/api/secure/cmd', auth, async (req, res) => {
 app.post('/api/secure/logout-others', auth, async (req, res) => {
   if (!secLimit(req, res, 40)) return;
   const u = req.user;
-  if (!(await bcrypt.compare(String(req.body?.password || ''), u.passHash || ''))) return res.status(403).json({ error: 'Wrong Maata password.' });
+  if (!(await pwCheck(u, req.body?.password))) return res.status(403).json({ error: u.passHash ? 'Wrong Maata password.' : NO_PW });
   u.tokenVersion = (u.tokenVersion || 0) + 1; u.devices = [];
   secEvent(u, 'logout', 'All other devices were logged out.'); save();
   const keep = String(req.body?.socket || '');
@@ -2231,7 +2283,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 345;
+const MAATA_VERSION = 346;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3454,7 +3506,7 @@ app.get('/api/search', auth, (req, res) => {
 const pinTickets = new Map();
 app.post('/api/twostep', auth, async (req, res) => {
   const b = req.body || {};
-  if (!(await bcrypt.compare(String(b.password || ''), req.user.passHash))) return res.status(400).json({ error: 'Your current password is wrong.' });
+  if (req.user.passHash && !(await bcrypt.compare(String(b.password || ''), req.user.passHash))) return res.status(400).json({ error: 'Your current password is wrong.' });
   if (b.off) { delete req.user.twoStep; save(); return res.json({ on: false }); }
   if (!/^\d{6}$/.test(String(b.pin || ''))) return res.status(400).json({ error: 'The PIN must be 6 digits.' });
   req.user.twoStep = { hash: await bcrypt.hash(String(b.pin), 10), hint: String(b.hint || '').slice(0, 60), at: now() }; save();
@@ -6336,8 +6388,8 @@ function deleteAccountData(u, why) {
 }
 // Google Play requires that people can delete their own account (in the app, and from a web page)
 app.post('/api/me/delete', auth, rateLimit, async (req, res) => {
-  const ok = await bcrypt.compare(String(req.body?.password || ''), req.user.passHash || '');
-  if (!ok) return res.status(400).json({ error: 'Wrong password.' });
+  const ok = await pwCheck(req.user, req.body?.password);
+  if (!ok) return res.status(400).json({ error: req.user.passHash ? 'Wrong password.' : NO_PW });
   audit('customer:' + req.user.phone, 'self-delete', req.user.name + ' (' + req.user.phone + ')');
   deleteAccountData(req.user, 'Your account was deleted.');
   res.json({ ok: true });
