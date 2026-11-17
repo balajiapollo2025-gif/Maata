@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 358;
+const MAATA_VERSION = 359;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4072,11 +4072,13 @@ function gsHead(p) {
   const sp = (p.members || []).find((m) => m.role === 'sarpanch' && m.status === 'active'), u = sp && userById(sp.userId);
   return { sarpanch: u ? { name: p.spName || u.name || '', title: p.spTitle || (p.kind === 'town' ? 'Councillor' : 'Sarpanch'), photo: p.photo ? '/api/gs/pphoto/' + p.id + '?v=' + (p.photo.v || 1) : '' } : null };
 }
-function gsAccess(u, c) {
+// v359: a sarpanch / ward member who complains from their own phone still sees it on the desk (as team), and as a person in "My complaints"
+function gsIsTeam(u, c) { const m = gsMember(u, gsP(c.pid)); return !!m && (m.role !== 'ward' || String(m.ward) === String(c.ward) || c.assignedTo === u.id); }
+function gsAccess(u, c, as) {
+  const team = gsIsTeam(u, c);
+  if (as === 'team' && team) return 'team';
   if (c.userId === u.id) return 'citizen';
-  const m = gsMember(u, gsP(c.pid)); if (!m) return null;
-  if (m.role !== 'ward' || String(m.ward) === String(c.ward) || c.assignedTo === u.id) return 'team';
-  return null;
+  return team ? 'team' : null;
 }
 const gsOver = (c) => ['new', 'seen', 'reopened'].includes(c.status) && now() - (c.reopenedAt || c.createdAt) > GS_OVERDUE;
 const gsFileOut = (f) => (f ? { id: f.id, mime: f.mime } : null);
@@ -4234,7 +4236,7 @@ app.get('/api/gs/complaints/mine', auth, (req, res) => {
 });
 app.get('/api/gs/complaints/:id', auth, (req, res) => {
   if (!gsOn(res)) return;
-  const c = db.gsComplaints.find((x) => x.id === req.params.id), who = c && gsAccess(req.user, c);
+  const c = db.gsComplaints.find((x) => x.id === req.params.id), who = c && gsAccess(req.user, c, String(req.query.as || ''));
   if (!who) return res.status(404).json({ error: 'Complaint not found.' });
   if (who === 'team' && c.status === 'new') { gsStep(c, 'seen', req.user.id); save(); gsCitizenNotice(c, 'seen'); }
   res.json(gsView(c, who));
@@ -4254,7 +4256,7 @@ app.get('/api/gs/team', auth, (req, res) => {
   if (!gsOn(res)) return;
   const off = gsOfficial(req.user); if (!off) return res.status(403).json({ error: 'Only the sarpanch and ward members of an approved panchayat can open this.' });
   const { p, m } = off;
-  const mineAll = db.gsComplaints.filter((c) => c.pid === p.id && gsAccess(req.user, c) === 'team');
+  const mineAll = db.gsComplaints.filter((c) => c.pid === p.id && gsIsTeam(req.user, c));
   const ms = new Date(); ms.setDate(1); ms.setHours(0, 0, 0, 0);
   const month = db.gsComplaints.filter((c) => c.pid === p.id && c.createdAt >= ms.getTime()), solvedM = month.filter((c) => c.status === 'solved');
   const days = solvedM.map((c) => ((c.timeline || []).filter((t) => t.s === 'solved').pop()?.at || c.updatedAt) - c.createdAt);
@@ -4271,7 +4273,7 @@ app.get('/api/gs/team', auth, (req, res) => {
 });
 app.post('/api/gs/complaints/:id/act', auth, async (req, res) => {
   if (!gsOn(res)) return;
-  const c = db.gsComplaints.find((x) => x.id === req.params.id); if (!c || gsAccess(req.user, c) !== 'team') return res.status(404).json({ error: 'Complaint not found.' });
+  const c = db.gsComplaints.find((x) => x.id === req.params.id); if (!c || !gsIsTeam(req.user, c)) return res.status(404).json({ error: 'Complaint not found.' });
   const p = gsP(c.pid), me = gsMember(req.user, p), b = req.body || {}, act = String(b.act || '');
   if (c.status === 'solved' && act !== 'note') return res.status(400).json({ error: 'This complaint is already solved.' });
   if (act === 'assign' || (act === 'accept' && b.to)) {
@@ -4369,7 +4371,7 @@ app.get('/api/home/quick', auth, (req, res) => {
     captain: !!(drv && drv.status === 'approved'), online: !!(drv && drv.online),
     pro: !!(pro && pro.status === 'approved'),
     jobsNew: (db.jobs || []).filter((j) => j.status === 'open' && j.by !== u.id && j.createdAt > since).length,
-    gs: (() => { if (!featureFlags().gramaSeva) return null; const off = gsOfficial(u); return { joined: !!(u.gs && u.gs.pid), official: off ? off.m.role : '', newCount: off ? db.gsComplaints.filter((c) => c.pid === off.p.id && ['new', 'reopened'].includes(c.status) && gsAccess(u, c) === 'team').length : 0, mineOpen: db.gsComplaints.filter((c) => c.userId === u.id && c.status !== 'solved').length }; })(),
+    gs: (() => { if (!featureFlags().gramaSeva) return null; const off = gsOfficial(u); return { joined: !!(u.gs && u.gs.pid), official: off ? off.m.role : '', newCount: off ? db.gsComplaints.filter((c) => c.pid === off.p.id && ['new', 'reopened'].includes(c.status) && gsIsTeam(u, c)).length : 0, mineOpen: db.gsComplaints.filter((c) => c.userId === u.id && c.status !== 'solved').length }; })(),
   });
 });
 app.get('/api/mr/rides', auth, (req, res) => res.json(db.mrRides.filter((r) => r.userId === req.user.id || r.driverId === req.user.id).slice(-60).reverse().map((r) => mrOut(r, req.user))));
