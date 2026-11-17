@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 366;
+const MAATA_VERSION = 367;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4197,9 +4197,10 @@ app.get('/api/gs/search', auth, (req, res) => {
   const q = String(req.query.q || '').trim().toLowerCase(), here = gsLocOf(req.query), live = db.gsPanch.filter((p) => p.status === 'approved');
   const mine = new Set([req.user.gs && req.user.gs.pid, ...db.gsPanch.filter((p) => gsMember(req.user, p)).map((p) => p.id)].filter(Boolean));
   let list;
-  if (q.length >= 3) list = live.filter((p) => [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q)));
-  else if (here) list = live.filter((p) => p.loc && gsKm(here, p.loc) <= GS_NEAR_KM).sort((a, b) => gsKm(here, a.loc) - gsKm(here, b.loc));
-  else list = [];
+  // v367: nothing is listed until 3+ letters are typed (no nearby list, no all-India list)
+  const home = req.user.gs && gsP(req.user.gs.pid);
+  if (home && home.status === 'approved') return res.json([gsPub(home)]); // joined: only my own village, nothing else
+  list = q.length >= 3 ? live.filter((p) => [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q))) : [];
   for (const id of mine) { const p = gsP(id); if (p && p.status === 'approved' && !list.includes(p)) list.unshift(p); } // always my own village
   res.json(list.slice(0, 30).map((p) => ({ ...gsPub(p), ...(here && p.loc ? { km: Math.round(gsKm(here, p.loc)) } : {}) })));
 });
@@ -4209,6 +4210,11 @@ app.post('/api/gs/panch/loc', auth, (req, res) => {
   const u = req.user, p = db.gsPanch.find((x) => x.status !== 'rejected' && (x.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'));
   const loc = gsLocOf(req.body); if (!p || !loc) return res.json({ ok: false });
   if (!p.loc || req.body?.force) { p.loc = loc; save(); }
+  res.json({ ok: true });
+});
+app.post('/api/gs/leave', auth, (req, res) => { // v367: leave my village (to choose another one)
+  if (!gsOn(res)) return;
+  if (req.user.gs) { delete req.user.gs; save(); }
   res.json({ ok: true });
 });
 app.post('/api/gs/join', auth, (req, res) => {
