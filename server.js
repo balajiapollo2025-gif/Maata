@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs', 'gsPanch', 'gsComplaints'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt', gsPanch: 'createdAt', gsComplaints: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -720,6 +720,7 @@ const FEATURE_LIST = [
   ['Account & app', 'support', '🆘 Help & Support (complaints)'],
   ['Updates & social', 'maps', '🗺️ Maata Maps (navigation)'],
   ['Account & app', 'invite', '🎁 Invite a friend'],
+  ['Business', 'gramaSeva', '🏛️ Grama Seva (village / ward complaints to sarpanch & ward members)'],
   ['Account & app', 'coins', '🪙 Referral coins (1 coin when an invited friend uses Maata 3 days)'],
 ];
 function featureFlags() {
@@ -2283,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 357;
+const MAATA_VERSION = 358;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4053,6 +4054,304 @@ app.post('/api/mr/rides', auth, async (req, res) => {
   if (!when) mrMatch(r);
   res.json(mrOut(r, req.user));
 });
+
+// ==================== 🏛️ v358 MAATA GRAMA SEVA — village / town-ward complaints → sarpanch & ward members ====================
+// People join their panchayat (village, ward, house no). A complaint gets a reference number, the team gets a voice alert,
+// accepts it, marks it solved, and the person gets a chat message (+ the team's voice note) and can say 👍 / 👎 (👎 reopens it).
+// No Aadhaar / Voter ID is collected. Sarpanch accounts are checked by the Maata team before they go live.
+const GS_CATS = { water: ['💧', 'నీళ్లు', 'Water'], light: ['💡', 'వీధి దీపం', 'Street light'], drain: ['🚰', 'డ్రైనేజ్', 'Drainage'], road: ['🛣️', 'రోడ్డు', 'Road'], garbage: ['🗑️', 'చెత్త', 'Garbage'], pension: ['👵', 'పెన్షన్', 'Pension'], cert: ['📄', 'సర్టిఫికేట్', 'Certificate'], health: ['🏥', 'ఆరోగ్యం', 'Health'], other: ['➕', 'ఇతర', 'Other'] };
+const GS_OVERDUE = 48 * 3600000;
+const gsUploads = new Map(); // id -> { by, mime, size, at } (files waiting to be attached to a complaint)
+const gsP = (id) => db.gsPanch.find((p) => p.id === id);
+const gsMember = (u, p) => (p && p.status === 'approved' ? (p.members || []).find((m) => m.userId === u.id && m.status === 'active') || null : null);
+function gsOfficial(u) { for (const p of db.gsPanch) { const m = gsMember(u, p); if (m) return { p, m }; } return null; }
+function gsCode(name) { const w = String(name || '').toUpperCase().replace(/[^A-Z ]/g, ' ').trim().split(/\s+/).filter(Boolean); let c = w.length > 1 ? w.map((x) => x[0]).join('') : (w[0] || '').slice(0, 3); c = c.slice(0, 4); return c.length >= 2 ? c : 'GP'; }
+const gsPub = (p) => ({ id: p.id, name: p.name, mandal: p.mandal || '', district: p.district || '', state: p.state || '', kind: p.kind || 'village', wards: p.wards || 0, code: p.code, status: p.status, ...gsHead(p) });
+// v358: the sarpanch's name + photo, shown to the people of that village
+function gsHead(p) {
+  const sp = (p.members || []).find((m) => m.role === 'sarpanch' && m.status === 'active'), u = sp && userById(sp.userId);
+  return { sarpanch: u ? { name: p.spName || u.name || '', title: p.spTitle || (p.kind === 'town' ? 'Councillor' : 'Sarpanch'), photo: p.photo ? '/api/gs/pphoto/' + p.id + '?v=' + (p.photo.v || 1) : '' } : null };
+}
+function gsAccess(u, c) {
+  if (c.userId === u.id) return 'citizen';
+  const m = gsMember(u, gsP(c.pid)); if (!m) return null;
+  if (m.role !== 'ward' || String(m.ward) === String(c.ward) || c.assignedTo === u.id) return 'team';
+  return null;
+}
+const gsOver = (c) => ['new', 'seen', 'reopened'].includes(c.status) && now() - (c.reopenedAt || c.createdAt) > GS_OVERDUE;
+const gsFileOut = (f) => (f ? { id: f.id, mime: f.mime } : null);
+function gsView(c, who) {
+  const p = gsP(c.pid), a = c.assignedTo ? userById(c.assignedTo) : null, cu = userById(c.userId);
+  return { id: c.id, ref: c.ref, pid: c.pid, pname: p ? p.name : '', cat: c.cat, text: c.text || '', ward: c.ward || '', house: c.house || '', loc: c.loc || null,
+    photo: gsFileOut(c.photo), voice: gsFileOut(c.voice), solvedPhoto: gsFileOut(c.solvedPhoto), solvedVoice: gsFileOut(c.solvedVoice), solvedNote: c.solvedNote || '',
+    status: c.status, overdue: gsOver(c), rating: c.rating || null, createdAt: c.createdAt, updatedAt: c.updatedAt || c.createdAt,
+    timeline: (c.timeline || []).map((t) => ({ s: t.s, at: t.at, by: t.by && userById(t.by) ? String(userById(t.by).name || '').split(' ')[0] : '' })),
+    assigned: a ? { id: a.id, name: a.name } : null,
+    ...(who === 'team' ? { citizen: cu ? { id: cu.id, name: cu.name, phone: cu.phone || '' } : null } : {}), who };
+}
+function gsTeamFor(p, c) { // sarpanch + secretary + the ward member of that ward + whoever it is assigned to
+  return (p.members || []).filter((m) => m.status === 'active' && (m.role !== 'ward' || String(m.ward) === String(c.ward) || m.userId === c.assignedTo)).map((m) => userById(m.userId)).filter(Boolean);
+}
+function gsTell(users, ev, data, push) {
+  for (const u of users) { io.to('user:' + u.id).emit(ev, data); if (push) pushTo(u, { type: 'msg', title: push.title, body: push.body, tag: 'gs-' + data.id, url: '/?gs=' + data.id }).catch(() => {}); }
+}
+function gsStep(c, s, by) { c.status = s; c.updatedAt = now(); (c.timeline = c.timeline || []).push({ s, at: now(), by: by || null }); }
+const gsCatTe = (k) => (GS_CATS[k] || GS_CATS.other)[1], gsCatEn = (k) => (GS_CATS[k] || GS_CATS.other)[2];
+function gsCitizenNotice(c, s) {
+  const u = userById(c.userId); if (!u) return;
+  const say = { seen: 'మీ ఫిర్యాదు సర్పంచ్ గారు చూశారు', accepted: 'మీ ఫిర్యాదు అంగీకరించారు. పని త్వరలో మొదలవుతుంది', working: 'మీ ఫిర్యాదు పై పని జరుగుతోంది', solved: 'మీ సమస్య పరిష్కారమైంది' }[s];
+  const sayEn = { seen: 'Your complaint was seen by the sarpanch', accepted: 'Your complaint was accepted', working: 'Work has started on your complaint', solved: 'Your problem is solved' }[s];
+  if (!say) return;
+  gsTell([u], 'gs:update', { id: c.id, ref: c.ref, status: s, say, sayEn }, s === 'seen' ? null : { title: (s === 'solved' ? '✅ ' : '🏛️ ') + c.ref, body: say + ' · ' + gsCatTe(c.cat) });
+}
+function gsFileOk(id, u, kinds) {
+  const f = gsUploads.get(String(id || '')); if (!f || f.by !== u.id) return null;
+  if (!kinds.some((k) => f.mime.startsWith(k))) return null;
+  gsUploads.delete(String(id)); return { id: String(id), mime: f.mime, size: f.size };
+}
+setInterval(() => { for (const [k, v] of gsUploads) if (now() - v.at > 6 * 3600000) { gsUploads.delete(k); deleteChatFile(k).catch?.(() => {}); } }, 30 * 60000).unref?.();
+const gsOn = (res) => { if (!featureFlags().gramaSeva) { res.status(403).json({ error: 'Grama Seva is not switched on yet.' }); return false; } return true; };
+
+app.post('/api/gs/upload', auth, express.raw({ type: ['image/*', 'audio/*', 'video/webm'], limit: '8mb' }), async (req, res) => {
+  if (!gsOn(res)) return;
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: 'Choose a photo or record your voice first.' });
+  const mime = String(req.headers['content-type'] || '').split(';')[0].trim().replace('video/webm', 'audio/webm').slice(0, 60);
+  if (!/^(image|audio)\//.test(mime)) return res.status(400).json({ error: 'Only photos and voice can be added.' });
+  const id = newId();
+  try { await saveChatFile(id, req.body, mime); } catch (e) { console.error('[gs file]', e.message); return res.status(500).json({ error: 'Could not save. Try again.' }); }
+  gsUploads.set(id, { by: req.user.id, mime, size: req.body.length, at: now() });
+  res.json({ id });
+});
+app.get('/api/gs/file/:id', (req, res) => {
+  let viewer = null;
+  try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* bad token */ }
+  if (!viewer) return res.status(401).end();
+  const id = req.params.id, k = ['photo', 'voice', 'solvedPhoto', 'solvedVoice'];
+  const c = db.gsComplaints.find((x) => k.some((f) => x[f] && x[f].id === id));
+  if (!c || !gsAccess(viewer, c)) return res.status(404).end();
+  const f = k.map((n) => c[n]).find((x) => x && x.id === id);
+  let start = 0, end = f.size - 1, code = 200; const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+  if (r) { start = r[1] ? Number(r[1]) : 0; end = r[2] ? Math.min(Number(r[2]), f.size - 1) : f.size - 1; if (start > end) return res.status(416).end(); code = 206; res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + f.size); }
+  res.status(code); res.setHeader('Content-Type', f.mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(id, start, end); st.on('error', () => res.destroy()); st.pipe(res);
+});
+// v358: sarpanch photo (seen by the people of the village, and by the Maata team)
+app.get('/api/gs/pphoto/:pid', (req, res) => {
+  const p = gsP(req.params.pid); if (!p || !p.photo) return res.status(404).end();
+  let viewer = null;
+  try { const h = req.headers.authorization || ''; viewer = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : String(req.query.t || '')); } catch { /* bad token */ }
+  if (!viewer) { try { const a = jwt.verify(String(req.query.token || ''), JWT_SECRET); if (a.typ === 'admin') viewer = { admin: true }; } catch { /* not admin */ } }
+  if (!viewer) return res.status(401).end();
+  res.setHeader('Content-Type', p.photo.mime); res.setHeader('Cache-Control', 'private, max-age=604800');
+  const st = chatFileStream(p.photo.id, 0, p.photo.size - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.post('/api/gs/panch/photo', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const u = req.user, p = db.gsPanch.find((x) => x.status !== 'rejected' && (x.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'));
+  if (!p) return res.status(403).json({ error: 'Only the sarpanch can change this photo.' });
+  const ph = gsFileOk(req.body?.photo, u, ['image/']); if (!ph) return res.status(400).json({ error: 'Choose a photo first.' });
+  p.photo = { ...ph, v: ((p.photo && p.photo.v) || 1) + 1 }; save();
+  res.json({ ok: true, panch: gsPub(p) });
+});
+// who am I in Grama Seva
+app.get('/api/gs/me', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const u = req.user, home = u.gs && gsP(u.gs.pid), off = gsOfficial(u);
+  const mine = db.gsPanch.filter((p) => (p.members || []).some((m) => m.userId === u.id && m.status !== 'removed'));
+  res.json({
+    home: home && home.status === 'approved' ? { ...gsPub(home), ward: u.gs.ward || '', house: u.gs.house || '', score: gsScore(home) } : null,
+    official: off ? { pid: off.p.id, name: off.p.name, role: off.m.role, ward: off.m.ward || '' } : null,
+    applications: mine.filter((p) => p.status !== 'approved' || (p.members || []).some((m) => m.userId === u.id && m.status === 'pending')).map((p) => ({ ...gsPub(p), myStatus: (p.members.find((m) => m.userId === u.id) || {}).status, why: p.why || '' })),
+    cats: GS_CATS,
+  });
+});
+app.get('/api/gs/search', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const list = db.gsPanch.filter((p) => p.status === 'approved' && (!q || [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q))));
+  res.json(list.slice(0, 40).map(gsPub));
+});
+app.post('/api/gs/join', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const p = gsP(String(req.body?.pid || '')); if (!p || p.status !== 'approved') return res.status(404).json({ error: 'Choose your village from the list.' });
+  const ward = String(req.body?.ward || '').trim().slice(0, 10), house = String(req.body?.house || '').trim().slice(0, 30);
+  if (!ward) return res.status(400).json({ error: 'Enter your ward number.' });
+  req.user.gs = { pid: p.id, ward, house, at: now() }; save();
+  res.json({ ok: true });
+});
+// sarpanch registers a new panchayat (Maata team checks before it goes live) · ward member asks to join one
+app.post('/api/gs/apply', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const b = req.body || {}, u = req.user;
+  if (b.pid) { // ward member / secretary asks to join an approved panchayat
+    const p = gsP(String(b.pid)); if (!p || p.status !== 'approved') return res.status(404).json({ error: 'Panchayat not found.' });
+    const role = b.role === 'secretary' ? 'secretary' : 'ward', ward = String(b.ward || '').trim().slice(0, 10);
+    if (role === 'ward' && !ward) return res.status(400).json({ error: 'Enter your ward number.' });
+    const ex = p.members.find((m) => m.userId === u.id && m.status !== 'removed'); if (ex) return res.status(409).json({ error: ex.status === 'active' ? 'You are already in this panchayat team.' : 'Your request is waiting for the sarpanch.' });
+    p.members.push({ userId: u.id, role, ward, status: 'pending', at: now() }); save();
+    const sp = p.members.find((m) => m.role === 'sarpanch' && m.status === 'active'); const su = sp && userById(sp.userId);
+    if (su) pushTo(su, { type: 'msg', title: '🏛️ Team request', body: (u.name || 'Someone') + ' wants to join as ' + (role === 'ward' ? 'ward ' + ward + ' member' : 'secretary'), tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
+    return res.json({ ok: true, pending: true });
+  }
+  const name = String(b.name || '').trim().replace(/\s+/g, ' ').slice(0, 60), mandal = String(b.mandal || '').trim().slice(0, 40), district = String(b.district || '').trim().slice(0, 40), state = String(b.state || '').trim().slice(0, 40);
+  if (name.length < 3 || !mandal || !district) return res.status(400).json({ error: 'Enter the panchayat name, mandal and district.' });
+  if (db.gsPanch.some((p) => p.status !== 'rejected' && (p.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'))) return res.status(409).json({ error: 'You already registered a panchayat.' });
+  const wards = Math.max(1, Math.min(60, Number(b.wards) || 1)), kind = b.kind === 'town' ? 'town' : 'village';
+  const photo = b.photo ? gsFileOk(b.photo, u, ['image/']) : null;
+  if (!photo) return res.status(400).json({ error: 'Add the sarpanch photo. People of the village will see it.' });
+  const p = { id: newId(), name, mandal, district, state, kind, wards, code: gsCode(String(b.code || name)), status: 'pending', note: String(b.note || '').slice(0, 300), counter: 0,
+    members: [{ userId: u.id, role: 'sarpanch', ward: '', status: 'active', at: now() }], createdAt: now(), by: u.id,
+    photo: { ...photo, v: 1 }, spName: String(b.spName || u.name || '').trim().slice(0, 60), spTitle: kind === 'town' ? 'Councillor' : 'Sarpanch' };
+  db.gsPanch.push(p); save();
+  if (typeof feed === 'function') try { feed('gs', '🏛️ New panchayat waiting for check: ' + name + ', ' + mandal + ' (' + (u.name || '') + ')'); } catch { /* optional */ }
+  res.json({ ok: true, pending: true, panch: gsPub(p) });
+});
+// citizen: new complaint
+app.post('/api/gs/complaints', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const u = req.user, b = req.body || {}, p = u.gs && gsP(u.gs.pid);
+  if (!p || p.status !== 'approved') return res.status(400).json({ error: 'First choose your village.' });
+  const cat = GS_CATS[b.cat] ? b.cat : '';
+  if (!cat) return res.status(400).json({ error: 'Choose what the problem is.' });
+  const text = String(b.text || '').trim().slice(0, 1000), photo = b.photo ? gsFileOk(b.photo, u, ['image/']) : null, voice = b.voice ? gsFileOk(b.voice, u, ['audio/']) : null;
+  if (!text && !voice && !photo) return res.status(400).json({ error: 'Write a few words, record your voice or add a photo.' });
+  const open = db.gsComplaints.filter((c) => c.userId === u.id && c.status !== 'solved').length;
+  if (open >= 5) return res.status(429).json({ error: 'You have 5 open complaints. Please wait for them to be solved.' });
+  if (db.gsComplaints.filter((c) => c.userId === u.id && now() - c.createdAt < 86400000).length >= 8) return res.status(429).json({ error: 'Too many complaints today. Try again tomorrow.' });
+  p.counter = (p.counter || 0) + 1;
+  const ward = String(b.ward || u.gs.ward || '').trim().slice(0, 10);
+  const loc = b.loc && isFinite(b.loc.lat) && isFinite(b.loc.lng) ? { lat: Math.round(Number(b.loc.lat) * 1e5) / 1e5, lng: Math.round(Number(b.loc.lng) * 1e5) / 1e5 } : null;
+  const c = { id: newId(), ref: 'GP-' + p.code + '-' + new Date().getFullYear() + '-' + String(p.counter).padStart(5, '0'), pid: p.id, userId: u.id, cat, text, ward, house: u.gs.house || '', loc,
+    ...(photo ? { photo } : {}), ...(voice ? { voice } : {}), status: 'new', createdAt: now(), updatedAt: now(), timeline: [{ s: 'new', at: now(), by: u.id }] };
+  db.gsComplaints.push(c); save();
+  const say = 'కొత్త ఫిర్యాదు. వార్డ్ ' + ward + '. ' + gsCatTe(cat), sayEn = 'New complaint. Ward ' + ward + '. ' + gsCatEn(cat);
+  gsTell(gsTeamFor(p, c), 'gs:new', { id: c.id, ref: c.ref, cat, ward, say, sayEn }, { title: '🔊 ' + say, body: c.ref + (text ? ' · ' + text.slice(0, 80) : '') });
+  res.json(gsView(c, 'citizen'));
+});
+app.get('/api/gs/complaints/mine', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  res.json(db.gsComplaints.filter((c) => c.userId === req.user.id).sort((a, b) => b.createdAt - a.createdAt).slice(0, 50).map((c) => gsView(c, 'citizen')));
+});
+app.get('/api/gs/complaints/:id', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const c = db.gsComplaints.find((x) => x.id === req.params.id), who = c && gsAccess(req.user, c);
+  if (!who) return res.status(404).json({ error: 'Complaint not found.' });
+  if (who === 'team' && c.status === 'new') { gsStep(c, 'seen', req.user.id); save(); gsCitizenNotice(c, 'seen'); }
+  res.json(gsView(c, who));
+});
+app.post('/api/gs/complaints/:id/rate', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const c = db.gsComplaints.find((x) => x.id === req.params.id && x.userId === req.user.id);
+  if (!c || c.status !== 'solved') return res.status(400).json({ error: 'You can answer after it is marked solved.' });
+  if (req.body?.ok) { c.rating = 'up'; c.updatedAt = now(); save(); return res.json(gsView(c, 'citizen')); }
+  c.rating = 'down'; c.reopenedAt = now(); gsStep(c, 'reopened', req.user.id); save();
+  const p = gsP(c.pid);
+  if (p) gsTell(gsTeamFor(p, c), 'gs:new', { id: c.id, ref: c.ref, cat: c.cat, ward: c.ward, say: 'ఫిర్యాదు మళ్లీ తెరుచుకుంది. సమస్య ఇంకా ఉందని చెప్పారు. ' + gsCatTe(c.cat), sayEn: 'Complaint reopened. The problem is still there.' }, { title: '🔁 Reopened · ' + c.ref, body: 'The person says the problem is not solved yet · ' + gsCatEn(c.cat) });
+  res.json(gsView(c, 'citizen'));
+});
+// team: dashboard
+app.get('/api/gs/team', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const off = gsOfficial(req.user); if (!off) return res.status(403).json({ error: 'Only the sarpanch and ward members of an approved panchayat can open this.' });
+  const { p, m } = off;
+  const mineAll = db.gsComplaints.filter((c) => c.pid === p.id && gsAccess(req.user, c) === 'team');
+  const ms = new Date(); ms.setDate(1); ms.setHours(0, 0, 0, 0);
+  const month = db.gsComplaints.filter((c) => c.pid === p.id && c.createdAt >= ms.getTime()), solvedM = month.filter((c) => c.status === 'solved');
+  const days = solvedM.map((c) => ((c.timeline || []).filter((t) => t.s === 'solved').pop()?.at || c.updatedAt) - c.createdAt);
+  const f = String(req.query.f || 'open');
+  const pick = mineAll.filter((c) => f === 'all' || (f === 'solved' ? c.status === 'solved' : f === 'overdue' ? gsOver(c) : f === 'new' ? ['new', 'reopened'].includes(c.status) : c.status !== 'solved'));
+  res.json({
+    panch: gsPub(p), me: { role: m.role, ward: m.ward || '' },
+    counts: { new: mineAll.filter((c) => ['new', 'reopened'].includes(c.status)).length, pending: mineAll.filter((c) => ['seen', 'accepted', 'working'].includes(c.status)).length, overdue: mineAll.filter(gsOver).length, solved: mineAll.filter((c) => c.status === 'solved').length },
+    month: { total: month.length, solved: solvedM.length, avgDays: days.length ? Math.round((days.reduce((a, b) => a + b, 0) / days.length / 86400000) * 10) / 10 : 0, happy: solvedM.filter((c) => c.rating === 'up').length },
+    list: pick.sort((a, b) => (gsOver(b) - gsOver(a)) || b.createdAt - a.createdAt).slice(0, 200).map((c) => gsView(c, 'team')),
+    members: m.role === 'sarpanch' || m.role === 'secretary' ? (p.members || []).filter((x) => x.status !== 'removed').map((x) => { const uu = userById(x.userId); return { userId: x.userId, name: uu ? uu.name : '', phone: uu ? uu.phone || '' : '', role: x.role, ward: x.ward || '', status: x.status }; }) : [],
+    residents: m.role === 'sarpanch' || m.role === 'secretary' ? db.users.filter((x) => x.gs && x.gs.pid === p.id).length : 0,
+  });
+});
+app.post('/api/gs/complaints/:id/act', auth, async (req, res) => {
+  if (!gsOn(res)) return;
+  const c = db.gsComplaints.find((x) => x.id === req.params.id); if (!c || gsAccess(req.user, c) !== 'team') return res.status(404).json({ error: 'Complaint not found.' });
+  const p = gsP(c.pid), me = gsMember(req.user, p), b = req.body || {}, act = String(b.act || '');
+  if (c.status === 'solved' && act !== 'note') return res.status(400).json({ error: 'This complaint is already solved.' });
+  if (act === 'assign' || (act === 'accept' && b.to)) {
+    if (me.role === 'ward') return res.status(403).json({ error: 'Only the sarpanch can give it to someone else.' });
+    const t = (p.members || []).find((x) => x.userId === String(b.to) && x.status === 'active'); if (!t) return res.status(400).json({ error: 'Choose a team member.' });
+    c.assignedTo = t.userId; const tu = userById(t.userId);
+    if (tu && tu.id !== req.user.id) gsTell([tu], 'gs:new', { id: c.id, ref: c.ref, cat: c.cat, ward: c.ward, say: 'మీకు ఒక ఫిర్యాదు ఇచ్చారు. వార్డ్ ' + c.ward + '. ' + gsCatTe(c.cat), sayEn: 'A complaint was given to you.' }, { title: '👤 Given to you · ' + c.ref, body: gsCatEn(c.cat) + ' · ward ' + c.ward });
+  }
+  if (act === 'accept') { if (!['new', 'seen', 'reopened'].includes(c.status)) return res.status(400).json({ error: 'Already accepted.' }); if (!c.assignedTo) c.assignedTo = req.user.id; gsStep(c, 'accepted', req.user.id); gsCitizenNotice(c, 'accepted'); }
+  else if (act === 'working') { if (!['accepted', 'seen', 'new', 'reopened'].includes(c.status)) return res.status(400).json({ error: 'Not possible now.' }); gsStep(c, 'working', req.user.id); gsCitizenNotice(c, 'working'); }
+  else if (act === 'solved') {
+    const ph = b.photo ? gsFileOk(b.photo, req.user, ['image/']) : null, vo = b.voice ? gsFileOk(b.voice, req.user, ['audio/']) : null;
+    if (ph) c.solvedPhoto = ph; if (vo) c.solvedVoice = vo; c.solvedNote = String(b.note || '').trim().slice(0, 500); c.rating = null;
+    gsStep(c, 'solved', req.user.id); gsCitizenNotice(c, 'solved');
+    // the person also gets it in chat, from the team member, with the voice note if one was recorded
+    const cu = userById(c.userId);
+    if (cu && cu.id !== req.user.id) {
+      try {
+        deliverMessage(req.user, cu, { type: 'text', text: '✅ మీ ఫిర్యాదు ' + c.ref + ' (' + gsCatTe(c.cat) + ') పరిష్కారమైంది.\nYour complaint ' + c.ref + ' is solved.' + (c.solvedNote ? '\n📝 ' + c.solvedNote : '') + '\n— ' + p.name + ' · Maata Grama Seva\n👍/👎: Maata → 🏛️ Grama Seva' });
+        if (vo) deliverMessage(req.user, cu, { type: 'audio', text: '', file: { id: vo.id, name: 'voice-' + c.ref + '.webm', mime: vo.mime, size: vo.size, voice: true } });
+      } catch (e) { console.error('[gs msg]', e.message); }
+    }
+  } else if (act !== 'assign') return res.status(400).json({ error: 'Unknown action.' });
+  save(); res.json(gsView(c, 'team'));
+});
+// sarpanch: team members
+app.post('/api/gs/members', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const off = gsOfficial(req.user); if (!off || off.m.role !== 'sarpanch') return res.status(403).json({ error: 'Only the sarpanch can change the team.' });
+  const p = off.p, b = req.body || {};
+  if (b.userId) { // approve / remove
+    const m = p.members.find((x) => x.userId === String(b.userId) && x.role !== 'sarpanch'); if (!m) return res.status(404).json({ error: 'Not found.' });
+    m.status = b.act === 'remove' ? 'removed' : 'active'; save();
+    const uu = userById(m.userId); if (uu && m.status === 'active') pushTo(uu, { type: 'msg', title: '🏛️ ' + p.name, body: 'You are now in the Grama Seva team' + (m.ward ? ' (ward ' + m.ward + ')' : ''), tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
+    return res.json({ ok: true });
+  }
+  const ph = cleanMobile(b.phone), uu = ph && findByMobile(ph);
+  if (!uu) return res.status(404).json({ error: 'This number is not on Maata yet. Ask them to install Maata first.' });
+  const role = b.role === 'secretary' ? 'secretary' : 'ward', ward = String(b.ward || '').trim().slice(0, 10);
+  if (role === 'ward' && !ward) return res.status(400).json({ error: 'Enter the ward number.' });
+  if (gsOfficial(uu) && gsOfficial(uu).p.id !== p.id) return res.status(409).json({ error: 'This person is in another panchayat team.' });
+  const ex = p.members.find((x) => x.userId === uu.id);
+  if (ex) Object.assign(ex, { role: ex.role === 'sarpanch' ? 'sarpanch' : role, ward, status: 'active' }); else p.members.push({ userId: uu.id, role, ward, status: 'active', at: now() });
+  save(); pushTo(uu, { type: 'msg', title: '🏛️ ' + p.name, body: 'You were added to the Grama Seva team' + (ward ? ' (ward ' + ward + ')' : ''), tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
+  res.json({ ok: true });
+});
+function gsScore(p) {
+  const ms = new Date(); ms.setDate(1); ms.setHours(0, 0, 0, 0);
+  const month = db.gsComplaints.filter((c) => c.pid === p.id && c.createdAt >= ms.getTime()), solved = month.filter((c) => c.status === 'solved');
+  return { total: month.length, solved: solved.length, open: month.length - solved.length, allSolved: db.gsComplaints.filter((c) => c.pid === p.id && c.status === 'solved').length, residents: db.users.filter((x) => x.gs && x.gs.pid === p.id).length };
+}
+// public monthly scorecard of a village (no names)
+app.get('/api/gs/score/:pid', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const p = gsP(req.params.pid); if (!p || p.status !== 'approved') return res.status(404).json({ error: 'Not found.' });
+  const ms = new Date(); ms.setDate(1); ms.setHours(0, 0, 0, 0);
+  const month = db.gsComplaints.filter((c) => c.pid === p.id && c.createdAt >= ms.getTime()), solved = month.filter((c) => c.status === 'solved');
+  res.json({ total: month.length, solved: solved.length, open: month.length - solved.length, allSolved: db.gsComplaints.filter((c) => c.pid === p.id && c.status === 'solved').length });
+});
+// Maata admin: check sarpanch registrations
+app.get('/admin/api/gs', adminAuth, (req, res) => {
+  res.json({ panch: db.gsPanch.slice().sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0) || b.createdAt - a.createdAt).map((p) => {
+    const sp = (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
+    return { ...gsPub(p), note: p.note || '', why: p.why || '', createdAt: p.createdAt, photoUrl: p.photo ? '/api/gs/pphoto/' + p.id : '', spName: p.spName || '', sarpanch: u ? { id: u.id, name: u.name, phone: u.phone || '' } : null, team: (p.members || []).filter((m) => m.status === 'active').length,
+      complaints: db.gsComplaints.filter((c) => c.pid === p.id).length, solved: db.gsComplaints.filter((c) => c.pid === p.id && c.status === 'solved').length, residents: db.users.filter((x) => x.gs && x.gs.pid === p.id).length };
+  }), stats: { pending: db.gsPanch.filter((p) => p.status === 'pending').length, live: db.gsPanch.filter((p) => p.status === 'approved').length, complaints: db.gsComplaints.length } });
+});
+app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
+  const p = gsP(req.params.id); if (!p) return res.status(404).json({ error: 'Not found.' });
+  const act = req.params.act;
+  if (act === 'approve') { p.status = 'approved'; p.why = ''; if (req.body?.code) p.code = gsCode(req.body.code); }
+  else if (act === 'reject') { p.status = 'rejected'; p.why = String(req.body?.why || '').slice(0, 200); }
+  else if (act === 'pause') p.status = 'paused';
+  else return res.status(400).json({ error: 'Unknown action.' });
+  save();
+  const sp = (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
+  if (u) pushTo(u, { type: 'msg', title: '🏛️ Grama Seva · ' + p.name, body: p.status === 'approved' ? '✅ Your panchayat is live. Add your ward members and tell your village.' : p.status === 'rejected' ? 'Not approved: ' + (p.why || 'please contact Maata support') : 'Paused by the Maata team', tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
+  res.json({ ok: true });
+});
+
 // ⚡ v347 quick icons on the Chats screen: who I am (shop / captain / service provider), a ride going on now, small counts
 app.get('/api/home/quick', auth, (req, res) => {
   const u = req.user, since = Number(req.query.since) || now() - 864e5;
@@ -4070,6 +4369,7 @@ app.get('/api/home/quick', auth, (req, res) => {
     captain: !!(drv && drv.status === 'approved'), online: !!(drv && drv.online),
     pro: !!(pro && pro.status === 'approved'),
     jobsNew: (db.jobs || []).filter((j) => j.status === 'open' && j.by !== u.id && j.createdAt > since).length,
+    gs: (() => { if (!featureFlags().gramaSeva) return null; const off = gsOfficial(u); return { joined: !!(u.gs && u.gs.pid), official: off ? off.m.role : '', newCount: off ? db.gsComplaints.filter((c) => c.pid === off.p.id && ['new', 'reopened'].includes(c.status) && gsAccess(u, c) === 'team').length : 0, mineOpen: db.gsComplaints.filter((c) => c.userId === u.id && c.status !== 'solved').length }; })(),
   });
 });
 app.get('/api/mr/rides', auth, (req, res) => res.json(db.mrRides.filter((r) => r.userId === req.user.id || r.driverId === req.user.id).slice(-60).reverse().map((r) => mrOut(r, req.user))));
