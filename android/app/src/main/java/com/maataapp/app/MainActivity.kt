@@ -50,6 +50,8 @@ class MainActivity : Activity() {
         private const val REQ_PERMS = 12
         private const val REQ_SCREEN = 13
         private const val REQ_SMS = 14
+        private const val REQ_CAM = 15
+        private const val REQ_CAMSHOT = 16
         const val ACTION_INSTALL_STATUS = "com.maataapp.app.INSTALL_STATUS"
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
     }
@@ -248,6 +250,8 @@ class MainActivity : Activity() {
             }
             override fun onShowFileChooser(view: WebView, cb: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
                 fileCallback?.onReceiveValue(null); fileCallback = cb
+                // 📷 v368: "take a photo" (capture) opens the phone's camera app — Android's default chooser only opened the gallery on many phones
+                if (params.isCaptureEnabled && params.acceptTypes.any { it.startsWith("image") }) { camPending = params; if (has(Manifest.permission.CAMERA)) openCameraApp() else requestPermissions(arrayOf(Manifest.permission.CAMERA), REQ_CAM); return true }
                 return try { startActivityForResult(params.createIntent().apply { if (params.mode == FileChooserParams.MODE_OPEN_MULTIPLE) putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }, REQ_FILE); true }
                 catch (e: ActivityNotFoundException) { fileCallback = null; false }
             }
@@ -331,6 +335,11 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(code, perms, results)
+        if (code == REQ_CAM) { // 📷 v368: camera allowed → open it; refused → Android's normal chooser (gallery)
+            if (has(Manifest.permission.CAMERA)) openCameraApp()
+            else { val p = camPending; camPending = null; try { if (p != null) startActivityForResult(p.createIntent(), REQ_FILE) } catch (_: Exception) { fileCallback?.onReceiveValue(null); fileCallback = null } }
+            return
+        }
         pendingWebPermission?.let { r ->
             val ok = r.resources.filter {
                 (it == PermissionRequest.RESOURCE_VIDEO_CAPTURE && has(Manifest.permission.CAMERA)) || (it == PermissionRequest.RESOURCE_AUDIO_CAPTURE && has(Manifest.permission.RECORD_AUDIO))
@@ -378,9 +387,33 @@ class MainActivity : Activity() {
         com.google.android.gms.auth.api.phone.SmsRetriever.getClient(this).startSmsUserConsent(null)
     }
 
+    // 📷 v368 phone camera for <input capture>: the photo goes to cache/share/ (FileProvider) and back to the page
+    private var camPending: WebChromeClient.FileChooserParams? = null
+    private var camUri: Uri? = null
+    private fun openCameraApp() {
+        val params = camPending
+        try {
+            val dir = java.io.File(cacheDir, "share").apply { mkdirs() }
+            val f = java.io.File(dir, "cam_" + System.currentTimeMillis() + ".jpg")
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", f); camUri = uri
+            val i = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
+                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivityForResult(i, REQ_CAMSHOT)
+        } catch (e: Exception) { // no camera app: fall back to Android's normal chooser
+            camUri = null
+            try { if (params != null) startActivityForResult(params.createIntent(), REQ_FILE) else { fileCallback?.onReceiveValue(null); fileCallback = null } } catch (_: Exception) { fileCallback?.onReceiveValue(null); fileCallback = null }
+        }
+        camPending = null
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_CAMSHOT) {
+            val u = camUri; camUri = null
+            fileCallback?.onReceiveValue(if (resultCode == RESULT_OK && u != null) arrayOf(u) else null); fileCallback = null
+            return
+        }
         if (requestCode == REQ_SMS) {
             val msg = if (resultCode == RESULT_OK) data?.getStringExtra(com.google.android.gms.auth.api.phone.SmsRetriever.EXTRA_SMS_MESSAGE) else null
             val code = msg?.let { Regex("(?<!\\d)\\d{4,8}(?!\\d)").find(it)?.value } ?: ""
