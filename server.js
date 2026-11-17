@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 360;
+const MAATA_VERSION = 361;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4066,14 +4066,14 @@ const gsP = (id) => db.gsPanch.find((p) => p.id === id);
 const gsMember = (u, p) => (p && p.status === 'approved' ? (p.members || []).find((m) => m.userId === u.id && m.status === 'active') || null : null);
 function gsOfficial(u) { for (const p of db.gsPanch) { const m = gsMember(u, p); if (m) return { p, m }; } return null; }
 function gsCode(name) { const w = String(name || '').toUpperCase().replace(/[^A-Z ]/g, ' ').trim().split(/\s+/).filter(Boolean); let c = w.length > 1 ? w.map((x) => x[0]).join('') : (w[0] || '').slice(0, 3); c = c.slice(0, 4); return c.length >= 2 ? c : 'GP'; }
-const gsPub = (p) => ({ id: p.id, name: p.name, mandal: p.mandal || '', district: p.district || '', state: p.state || '', kind: p.kind || 'village', wards: p.wards || 0, code: p.code, status: p.status, ...gsHead(p) });
+const gsPub = (p) => ({ id: p.id, name: p.name, mandal: p.mandal || '', district: p.district || '', state: p.state || '', kind: p.kind || 'village', wards: p.wards || 0, ward: p.kind === 'town' ? p.ward || '' : '', code: p.code, status: p.status, ...gsHead(p) });
 // v358: the sarpanch's name + photo, shown to the people of that village
 function gsHead(p) {
   const sp = (p.members || []).find((m) => m.role === 'sarpanch' && m.status === 'active'), u = sp && userById(sp.userId);
   return { sarpanch: u ? { name: p.spName || u.name || '', title: p.spTitle || (p.kind === 'town' ? 'Councillor' : 'Sarpanch'), photo: p.photo ? '/api/gs/pphoto/' + p.id + '?v=' + (p.photo.v || 1) : '' } : null };
 }
 // v359: a sarpanch / ward member who complains from their own phone still sees it on the desk (as team), and as a person in "My complaints"
-function gsIsTeam(u, c) { const m = gsMember(u, gsP(c.pid)); return !!m && (m.role !== 'ward' || String(m.ward) === String(c.ward) || c.assignedTo === u.id); }
+function gsIsTeam(u, c) { const m = gsMember(u, gsP(c.pid)); return !!m && (m.role !== 'ward' || (c.ward && String(m.ward) === String(c.ward)) || c.assignedTo === u.id); }
 function gsAccess(u, c, as) {
   const team = gsIsTeam(u, c);
   if (as === 'team' && team) return 'team';
@@ -4092,7 +4092,7 @@ function gsView(c, who) {
     ...(who === 'team' ? { citizen: cu ? { id: cu.id, name: cu.name, phone: cu.phone || '' } : null } : {}), who };
 }
 function gsTeamFor(p, c) { // sarpanch + secretary + the ward member of that ward + whoever it is assigned to
-  return (p.members || []).filter((m) => m.status === 'active' && (m.role !== 'ward' || String(m.ward) === String(c.ward) || m.userId === c.assignedTo)).map((m) => userById(m.userId)).filter(Boolean);
+  return (p.members || []).filter((m) => m.status === 'active' && (m.role !== 'ward' || (c.ward && String(m.ward) === String(c.ward)) || m.userId === c.assignedTo)).map((m) => userById(m.userId)).filter(Boolean);
 }
 function gsTell(users, ev, data, push) {
   for (const u of users) { io.to('user:' + u.id).emit(ev, data); if (push) pushTo(u, { type: 'msg', title: push.title, body: push.body, tag: 'gs-' + data.id, url: '/?gs=' + data.id }).catch(() => {}); }
@@ -4101,8 +4101,9 @@ function gsStep(c, s, by) { c.status = s; c.updatedAt = now(); (c.timeline = c.t
 const gsCatTe = (k) => (GS_CATS[k] || GS_CATS.other)[1], gsCatEn = (k) => (GS_CATS[k] || GS_CATS.other)[2];
 function gsCitizenNotice(c, s) {
   const u = userById(c.userId); if (!u) return;
-  const say = { seen: 'మీ ఫిర్యాదు సర్పంచ్ గారు చూశారు', accepted: 'మీ ఫిర్యాదు అంగీకరించారు. పని త్వరలో మొదలవుతుంది', working: 'మీ ఫిర్యాదు పై పని జరుగుతోంది', solved: 'మీ సమస్య పరిష్కారమైంది' }[s];
-  const sayEn = { seen: 'Your complaint was seen by the sarpanch', accepted: 'Your complaint was accepted', working: 'Work has started on your complaint', solved: 'Your problem is solved' }[s];
+  const town = (gsP(c.pid) || {}).kind === 'town';
+  const say = { seen: 'మీ ఫిర్యాదు ' + (town ? 'కౌన్సిలర్' : 'సర్పంచ్') + ' గారు చూశారు', accepted: 'మీ ఫిర్యాదు అంగీకరించారు. పని త్వరలో మొదలవుతుంది', working: 'మీ ఫిర్యాదు పై పని జరుగుతోంది', solved: 'మీ సమస్య పరిష్కారమైంది' }[s];
+  const sayEn = { seen: 'Your complaint was seen by the ' + (town ? 'councillor' : 'sarpanch'), accepted: 'Your complaint was accepted', working: 'Work has started on your complaint', solved: 'Your problem is solved' }[s];
   if (!say) return;
   gsTell([u], 'gs:update', { id: c.id, ref: c.ref, status: s, say, sayEn }, s === 'seen' ? null : { title: (s === 'solved' ? '✅ ' : '🏛️ ') + c.ref, body: say + ' · ' + gsCatTe(c.cat) });
 }
@@ -4162,7 +4163,7 @@ app.get('/api/gs/me', auth, (req, res) => {
   const mine = db.gsPanch.filter((p) => (p.members || []).some((m) => m.userId === u.id && m.status !== 'removed'));
   res.json({
     home: home && home.status === 'approved' ? { ...gsPub(home), ward: u.gs.ward || '', house: u.gs.house || '', score: gsScore(home) } : null,
-    official: off ? { pid: off.p.id, name: off.p.name, role: off.m.role, ward: off.m.ward || '' } : null,
+    official: off ? { pid: off.p.id, name: off.p.name + (off.p.kind === 'town' ? ' · W' + off.p.ward : ''), kind: off.p.kind || 'village', role: off.m.role, ward: off.m.ward || '' } : null,
     applications: mine.filter((p) => p.status !== 'approved' || (p.members || []).some((m) => m.userId === u.id && m.status === 'pending')).map((p) => ({ ...gsPub(p), myStatus: (p.members.find((m) => m.userId === u.id) || {}).status, why: p.why || '' })),
     cats: GS_CATS,
   });
@@ -4176,8 +4177,7 @@ app.get('/api/gs/search', auth, (req, res) => {
 app.post('/api/gs/join', auth, (req, res) => {
   if (!gsOn(res)) return;
   const p = gsP(String(req.body?.pid || '')); if (!p || p.status !== 'approved') return res.status(404).json({ error: 'Choose your village from the list.' });
-  const ward = String(req.body?.ward || '').trim().slice(0, 10), house = String(req.body?.house || '').trim().slice(0, 30);
-  if (!ward) return res.status(400).json({ error: 'Enter your ward number.' });
+  const house = String(req.body?.house || '').trim().slice(0, 30), ward = p.kind === 'town' ? String(p.ward || '') : ''; // v361: village → straight to the sarpanch, no ward list
   req.user.gs = { pid: p.id, ward, house, at: now() }; save();
   res.json({ ok: true });
 });
@@ -4187,6 +4187,7 @@ app.post('/api/gs/apply', auth, (req, res) => {
   const b = req.body || {}, u = req.user;
   if (b.pid) { // ward member / secretary asks to join an approved panchayat
     const p = gsP(String(b.pid)); if (!p || p.status !== 'approved') return res.status(404).json({ error: 'Panchayat not found.' });
+    if (p.kind === 'town') return res.status(400).json({ error: 'In a municipality every ward councillor registers separately: choose “I am a councillor”.' });
     const role = b.role === 'secretary' ? 'secretary' : 'ward', ward = String(b.ward || '').trim().slice(0, 10);
     if (role === 'ward' && !ward) return res.status(400).json({ error: 'Enter your ward number.' });
     const ex = p.members.find((m) => m.userId === u.id && m.status !== 'removed'); if (ex) return res.status(409).json({ error: ex.status === 'active' ? 'You are already in this panchayat team.' : 'Your request is waiting for the sarpanch.' });
@@ -4196,14 +4197,17 @@ app.post('/api/gs/apply', auth, (req, res) => {
     return res.json({ ok: true, pending: true });
   }
   const name = String(b.name || '').trim().replace(/\s+/g, ' ').slice(0, 60), mandal = String(b.mandal || '').trim().slice(0, 40), district = String(b.district || '').trim().slice(0, 40), state = String(b.state || '').trim().slice(0, 40);
-  if (name.length < 3 || !mandal || !district) return res.status(400).json({ error: 'Enter the panchayat name, mandal and district.' });
+  const town = b.as === 'councillor' || b.kind === 'town', cWard = String(b.ward || '').trim().replace(/[^0-9A-Za-z-]/g, '').slice(0, 6);
+  if (town ? name.length < 3 || !district : name.length < 3 || !mandal || !district) return res.status(400).json({ error: town ? 'Enter the municipality name and district.' : 'Enter the panchayat name, mandal and district.' });
+  if (town && !cWard) return res.status(400).json({ error: 'Enter your ward number.' });
+  if (town && db.gsPanch.some((x) => x.kind === 'town' && x.status !== 'rejected' && x.name.toLowerCase() === name.toLowerCase() && String(x.district || '').toLowerCase() === district.toLowerCase() && String(x.ward) === cWard)) return res.status(409).json({ error: 'Ward ' + cWard + ' of ' + name + ' is already registered.' });
   if (db.gsPanch.some((p) => p.status !== 'rejected' && (p.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'))) return res.status(409).json({ error: 'You already registered a panchayat.' });
-  const wards = Math.max(1, Math.min(60, Number(b.wards) || 1)), kind = b.kind === 'town' ? 'town' : 'village';
+  const wards = town ? 0 : Math.max(1, Math.min(60, Number(b.wards) || 1)), kind = town ? 'town' : 'village';
   const photo = b.photo ? gsFileOk(b.photo, u, ['image/']) : null;
-  if (!photo) return res.status(400).json({ error: 'Add the sarpanch photo. People of the village will see it.' });
+  if (!photo) return res.status(400).json({ error: town ? 'Add the councillor photo. People of the ward will see it.' : 'Add the sarpanch photo. People of the village will see it.' });
   const p = { id: newId(), name, mandal, district, state, kind, wards, code: gsCode(String(b.code || name)), status: 'pending', note: String(b.note || '').slice(0, 300), counter: 0,
     members: [{ userId: u.id, role: 'sarpanch', ward: '', status: 'active', at: now() }], createdAt: now(), by: u.id,
-    photo: { ...photo, v: 1 }, spName: String(b.spName || u.name || '').trim().slice(0, 60), spTitle: kind === 'town' ? 'Councillor' : 'Sarpanch' };
+    photo: { ...photo, v: 1 }, spName: String(b.spName || u.name || '').trim().slice(0, 60), spTitle: town ? 'Councillor' : 'Sarpanch', ...(town ? { ward: cWard } : {}) };
   db.gsPanch.push(p); save();
   if (typeof feed === 'function') try { feed('gs', '🏛️ New panchayat waiting for check: ' + name + ', ' + mandal + ' (' + (u.name || '') + ')'); } catch { /* optional */ }
   res.json({ ok: true, pending: true, panch: gsPub(p) });
@@ -4221,12 +4225,12 @@ app.post('/api/gs/complaints', auth, (req, res) => {
   if (open >= 5) return res.status(429).json({ error: 'You have 5 open complaints. Please wait for them to be solved.' });
   if (db.gsComplaints.filter((c) => c.userId === u.id && now() - c.createdAt < 86400000).length >= 8) return res.status(429).json({ error: 'Too many complaints today. Try again tomorrow.' });
   p.counter = (p.counter || 0) + 1;
-  const ward = String(b.ward || u.gs.ward || '').trim().slice(0, 10);
+  const ward = p.kind === 'town' ? String(p.ward || '') : '';
   const loc = b.loc && isFinite(b.loc.lat) && isFinite(b.loc.lng) ? { lat: Math.round(Number(b.loc.lat) * 1e5) / 1e5, lng: Math.round(Number(b.loc.lng) * 1e5) / 1e5 } : null;
-  const c = { id: newId(), ref: 'GP-' + p.code + '-' + new Date().getFullYear() + '-' + String(p.counter).padStart(5, '0'), pid: p.id, userId: u.id, cat, text, ward, house: u.gs.house || '', loc,
+  const c = { id: newId(), ref: (p.kind === 'town' ? 'MW-' + p.code + 'W' + p.ward : 'GP-' + p.code) + '-' + new Date().getFullYear() + '-' + String(p.counter).padStart(5, '0'), pid: p.id, userId: u.id, cat, text, ward, house: u.gs.house || '', loc,
     ...(photo ? { photo } : {}), ...(voice ? { voice } : {}), status: 'new', createdAt: now(), updatedAt: now(), timeline: [{ s: 'new', at: now(), by: u.id }] };
   db.gsComplaints.push(c); save();
-  const say = 'కొత్త ఫిర్యాదు. వార్డ్ ' + ward + '. ' + gsCatTe(cat), sayEn = 'New complaint. Ward ' + ward + '. ' + gsCatEn(cat);
+  const say = 'కొత్త ఫిర్యాదు. ' + (ward ? 'వార్డ్ ' + ward + '. ' : '') + gsCatTe(cat), sayEn = 'New complaint. ' + (ward ? 'Ward ' + ward + '. ' : '') + gsCatEn(cat);
   gsTell(gsTeamFor(p, c), 'gs:new', { id: c.id, ref: c.ref, cat, ward, say, sayEn }, { title: '🔊 ' + say, body: c.ref + (text ? ' · ' + text.slice(0, 80) : '') });
   res.json(gsView(c, 'citizen'));
 });
@@ -4280,7 +4284,7 @@ app.post('/api/gs/complaints/:id/act', auth, async (req, res) => {
     if (me.role === 'ward') return res.status(403).json({ error: 'Only the sarpanch can give it to someone else.' });
     const t = (p.members || []).find((x) => x.userId === String(b.to) && x.status === 'active'); if (!t) return res.status(400).json({ error: 'Choose a team member.' });
     c.assignedTo = t.userId; const tu = userById(t.userId);
-    if (tu && tu.id !== req.user.id) gsTell([tu], 'gs:new', { id: c.id, ref: c.ref, cat: c.cat, ward: c.ward, say: 'మీకు ఒక ఫిర్యాదు ఇచ్చారు. వార్డ్ ' + c.ward + '. ' + gsCatTe(c.cat), sayEn: 'A complaint was given to you.' }, { title: '👤 Given to you · ' + c.ref, body: gsCatEn(c.cat) + ' · ward ' + c.ward });
+    if (tu && tu.id !== req.user.id) gsTell([tu], 'gs:new', { id: c.id, ref: c.ref, cat: c.cat, ward: c.ward, say: 'మీకు ఒక ఫిర్యాదు ఇచ్చారు. ' + (c.ward ? 'వార్డ్ ' + c.ward + '. ' : '') + gsCatTe(c.cat), sayEn: 'A complaint was given to you.' }, { title: '👤 Given to you · ' + c.ref, body: gsCatEn(c.cat) + ' · ward ' + c.ward });
   }
   if (act === 'accept') { if (!['new', 'seen', 'reopened'].includes(c.status)) return res.status(400).json({ error: 'Already accepted.' }); if (!c.assignedTo) c.assignedTo = req.user.id; gsStep(c, 'accepted', req.user.id); gsCitizenNotice(c, 'accepted'); }
   else if (act === 'working') { if (!['accepted', 'seen', 'new', 'reopened'].includes(c.status)) return res.status(400).json({ error: 'Not possible now.' }); gsStep(c, 'working', req.user.id); gsCitizenNotice(c, 'working'); }
