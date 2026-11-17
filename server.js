@@ -461,7 +461,7 @@ app.get('/manifest.webmanifest', (req, res) => {
     shortcuts: [{ name: 'Maata AI', url: '/#chat=ai', icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192' }] }, { name: 'Status', url: '/#tab=status', icons: [{ src: '/icons/icon-192.png?v=5', sizes: '192x192' }] }],
   });
 });
-const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png', 'maata-logo.png', 'menu-icons.png', 'menu-auto.png', 'menu-settings.png', 'menu-secure.png', 'menu-communities.png'];
+const ICON_FILES = ['icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'badge-96.png', 'maata-logo.png', 'menu-icons.png', 'menu-auto.png', 'menu-settings.png', 'menu-secure.png', 'menu-communities.png', 'gs-lady.png'];
 app.get('/icons/:f', (req, res) => {
   if (!ICON_FILES.includes(req.params.f)) return res.status(404).end();
   const p1 = path.join(PAGES, 'icons', req.params.f), p2 = path.join(PAGES, req.params.f);
@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 361;
+const MAATA_VERSION = 362;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4155,6 +4155,20 @@ app.post('/api/gs/panch/photo', auth, (req, res) => {
   const ph = gsFileOk(req.body?.photo, u, ['image/']); if (!ph) return res.status(400).json({ error: 'Choose a photo first.' });
   p.photo = { ...ph, v: ((p.photo && p.photo.v) || 1) + 1 }; save();
   res.json({ ok: true, panch: gsPub(p) });
+});
+// v362: QR for the village brochure → maataapp.com/download
+let GS_QR = null;
+app.get('/api/gs/qr.svg', async (req, res) => {
+  try { if (!GS_QR) GS_QR = await QRCode.toString('https://maataapp.com/download', { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0B3B36', light: '#ffffff' } }); }
+  catch { return res.status(500).end(); }
+  res.setHeader('Content-Type', 'image/svg+xml'); res.setHeader('Cache-Control', 'public, max-age=86400'); res.send(GS_QR);
+});
+app.post('/api/gs/panch/name', auth, (req, res) => { // v362: the name people (and the brochure) see
+  if (!gsOn(res)) return;
+  const u = req.user, p = db.gsPanch.find((x) => x.status !== 'rejected' && (x.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'));
+  if (!p) return res.status(403).json({ error: 'Only the sarpanch / councillor can change this.' });
+  const n = String(req.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (n.length < 2) return res.status(400).json({ error: 'Enter your name.' });
+  p.spName = n; save(); res.json({ ok: true, panch: gsPub(p) });
 });
 // who am I in Grama Seva
 app.get('/api/gs/me', auth, (req, res) => {
