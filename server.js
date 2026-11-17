@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 365;
+const MAATA_VERSION = 366;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4188,11 +4188,28 @@ app.get('/api/gs/me', auth, (req, res) => {
     cats: GS_CATS,
   });
 });
+// v366: not the whole of India — only villages near the person (GPS), or the ones whose name they type (3+ letters)
+const gsKm = (a, b) => { const r = Math.PI / 180, x = Math.sin((b.lat - a.lat) * r / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin((b.lng - a.lng) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+const gsLocOf = (b) => { const lat = Number(b?.lat), lng = Number(b?.lng); return isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (lat || lng) ? { lat: Math.round(lat * 100) / 100, lng: Math.round(lng * 100) / 100 } : null; }; // ~1 km, never shown to anyone
+const GS_NEAR_KM = 40;
 app.get('/api/gs/search', auth, (req, res) => {
   if (!gsOn(res)) return;
-  const q = String(req.query.q || '').trim().toLowerCase();
-  const list = db.gsPanch.filter((p) => p.status === 'approved' && (!q || [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q))));
-  res.json(list.slice(0, 40).map(gsPub));
+  const q = String(req.query.q || '').trim().toLowerCase(), here = gsLocOf(req.query), live = db.gsPanch.filter((p) => p.status === 'approved');
+  const mine = new Set([req.user.gs && req.user.gs.pid, ...db.gsPanch.filter((p) => gsMember(req.user, p)).map((p) => p.id)].filter(Boolean));
+  let list;
+  if (q.length >= 3) list = live.filter((p) => [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q)));
+  else if (here) list = live.filter((p) => p.loc && gsKm(here, p.loc) <= GS_NEAR_KM).sort((a, b) => gsKm(here, a.loc) - gsKm(here, b.loc));
+  else list = [];
+  for (const id of mine) { const p = gsP(id); if (p && p.status === 'approved' && !list.includes(p)) list.unshift(p); } // always my own village
+  res.json(list.slice(0, 30).map((p) => ({ ...gsPub(p), ...(here && p.loc ? { km: Math.round(gsKm(here, p.loc)) } : {}) })));
+});
+// the village's place: taken once from the sarpanch's / councillor's phone (rounded to ~1 km)
+app.post('/api/gs/panch/loc', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const u = req.user, p = db.gsPanch.find((x) => x.status !== 'rejected' && (x.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'));
+  const loc = gsLocOf(req.body); if (!p || !loc) return res.json({ ok: false });
+  if (!p.loc || req.body?.force) { p.loc = loc; save(); }
+  res.json({ ok: true });
 });
 app.post('/api/gs/join', auth, (req, res) => {
   if (!gsOn(res)) return;
@@ -4227,7 +4244,7 @@ app.post('/api/gs/apply', auth, (req, res) => {
   if (!photo) return res.status(400).json({ error: town ? 'Add the councillor photo. People of the ward will see it.' : 'Add the sarpanch photo. People of the village will see it.' });
   const p = { id: newId(), name, mandal, district, state, kind, wards, code: gsCode(String(b.code || name)), status: 'pending', note: String(b.note || '').slice(0, 300), counter: 0,
     members: [{ userId: u.id, role: 'sarpanch', ward: '', status: 'active', at: now() }], createdAt: now(), by: u.id,
-    photo: { ...photo, v: 1 }, spName: String(b.spName || u.name || '').trim().slice(0, 60), spTitle: town ? 'Councillor' : 'Sarpanch', ...(town ? { ward: cWard } : {}) };
+    ...(gsLocOf(b.loc) ? { loc: gsLocOf(b.loc) } : {}), photo: { ...photo, v: 1 }, spName: String(b.spName || u.name || '').trim().slice(0, 60), spTitle: town ? 'Councillor' : 'Sarpanch', ...(town ? { ward: cWard } : {}) };
   db.gsPanch.push(p); save();
   if (typeof feed === 'function') try { feed('gs', '🏛️ New panchayat waiting for check: ' + name + ', ' + mandal + ' (' + (u.name || '') + ')'); } catch { /* optional */ }
   res.json({ ok: true, pending: true, panch: gsPub(p) });
