@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 363;
+const MAATA_VERSION = 364;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4322,6 +4322,35 @@ app.post('/api/gs/complaints/:id/act', auth, async (req, res) => {
     }
   } else if (act !== 'assign') return res.status(400).json({ error: 'Unknown action.' });
   save(); res.json(gsView(c, 'team'));
+});
+// 📊 v364 date-wise report for the sarpanch / councillor desk: how many came each day, how many of them are solved
+app.get('/api/gs/report', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const off = gsOfficial(req.user); if (!off) return res.status(403).json({ error: 'Only the panchayat team can open this.' });
+  const p = off.p, day = 86400000, to0 = istDayStart(now());
+  const range = String(req.query.r || 'month');
+  let from = to0 - 29 * day, to = to0 + day;
+  if (range === '7d') from = to0 - 6 * day;
+  else if (range === 'month') { const d = new Date(now() + 5.5 * 3600000); from = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 5.5 * 3600000; }
+  else if (range === 'last') { const d = new Date(now() + 5.5 * 3600000); to = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 5.5 * 3600000; from = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1) - 5.5 * 3600000; }
+  else if (range === 'all') from = Math.min(p.createdAt || now(), ...db.gsComplaints.filter((c) => c.pid === p.id).map((c) => c.createdAt)) ;
+  else if (range === 'custom') { const f = Date.parse(String(req.query.from || '') + 'T00:00:00+05:30'), t = Date.parse(String(req.query.to || '') + 'T00:00:00+05:30'); if (isFinite(f) && isFinite(t) && t >= f) { from = f; to = t + day; } }
+  from = istDayStart(from);
+  const solvedAt = (c) => ((c.timeline || []).filter((t) => t.s === 'solved').pop() || {}).at || 0;
+  const all = db.gsComplaints.filter((c) => c.pid === p.id && gsIsTeam(req.user, c));
+  const inR = all.filter((c) => c.createdAt >= from && c.createdAt < to).sort((a, b) => a.createdAt - b.createdAt);
+  const days = new Map();
+  for (let t = from; t < to; t += day) days.set(istDayKey(t), { day: istDayKey(t), got: 0, solved: 0, open: 0, solvedOnDay: 0 });
+  for (const c of inR) { const d = days.get(istDayKey(c.createdAt)); if (!d) continue; d.got++; if (c.status === 'solved') d.solved++; else d.open++; }
+  for (const c of all) { const sa = c.status === 'solved' && solvedAt(c); if (sa && sa >= from && sa < to) { const d = days.get(istDayKey(sa)); if (d) d.solvedOnDay++; } }
+  const cats = {}; for (const c of inR) { const k = c.cat; cats[k] = cats[k] || { cat: k, got: 0, solved: 0 }; cats[k].got++; if (c.status === 'solved') cats[k].solved++; }
+  const solvedL = inR.filter((c) => c.status === 'solved'), took = solvedL.map((c) => solvedAt(c) - c.createdAt).filter((x) => x > 0);
+  res.json({
+    panch: gsPub(p), range, from, to: to - 1, made: now(),
+    total: { got: inR.length, solved: solvedL.length, open: inR.length - solvedL.length, in48: took.filter((x) => x <= 48 * 3600000).length, avgHours: took.length ? Math.round(took.reduce((a, b) => a + b, 0) / took.length / 3600000) : 0, happy: solvedL.filter((c) => c.rating === 'up').length, unhappy: inR.filter((c) => c.rating === 'down').length },
+    days: [...days.values()].reverse(), cats: Object.values(cats).sort((a, b) => b.got - a.got),
+    list: inR.slice().reverse().slice(0, 500).map((c) => ({ ref: c.ref, at: c.createdAt, cat: c.cat, ward: c.ward || '', status: c.status, solvedAt: solvedAt(c) || null, rating: c.rating || null, text: String(c.text || '').slice(0, 80) })),
+  });
 });
 // sarpanch: team members
 app.post('/api/gs/members', auth, (req, res) => {
