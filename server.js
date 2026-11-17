@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 362;
+const MAATA_VERSION = 363;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4066,7 +4066,7 @@ const gsP = (id) => db.gsPanch.find((p) => p.id === id);
 const gsMember = (u, p) => (p && p.status === 'approved' ? (p.members || []).find((m) => m.userId === u.id && m.status === 'active') || null : null);
 function gsOfficial(u) { for (const p of db.gsPanch) { const m = gsMember(u, p); if (m) return { p, m }; } return null; }
 function gsCode(name) { const w = String(name || '').toUpperCase().replace(/[^A-Z ]/g, ' ').trim().split(/\s+/).filter(Boolean); let c = w.length > 1 ? w.map((x) => x[0]).join('') : (w[0] || '').slice(0, 3); c = c.slice(0, 4); return c.length >= 2 ? c : 'GP'; }
-const gsPub = (p) => ({ id: p.id, name: p.name, mandal: p.mandal || '', district: p.district || '', state: p.state || '', kind: p.kind || 'village', wards: p.wards || 0, ward: p.kind === 'town' ? p.ward || '' : '', code: p.code, status: p.status, ...gsHead(p) });
+const gsPub = (p) => ({ id: p.id, name: p.name, mandal: p.mandal || '', district: p.district || '', state: p.state || '', kind: p.kind || 'village', wards: p.wards || 0, ward: p.kind === 'town' ? p.ward || '' : '', code: p.code, status: p.status, broRole: p.broRole || '', ...gsHead(p) });
 // v358: the sarpanch's name + photo, shown to the people of that village
 function gsHead(p) {
   const sp = (p.members || []).find((m) => m.role === 'sarpanch' && m.status === 'active'), u = sp && userById(sp.userId);
@@ -4169,6 +4169,12 @@ app.post('/api/gs/panch/name', auth, (req, res) => { // v362: the name people (a
   if (!p) return res.status(403).json({ error: 'Only the sarpanch / councillor can change this.' });
   const n = String(req.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (n.length < 2) return res.status(400).json({ error: 'Enter your name.' });
   p.spName = n; save(); res.json({ ok: true, panch: gsPub(p) });
+});
+app.post('/api/gs/panch/bro', auth, (req, res) => { // v363: brochure title — "కాబోయే సర్పంచ్" (before the election) or the normal title
+  if (!gsOn(res)) return;
+  const u = req.user, p = db.gsPanch.find((x) => x.status !== 'rejected' && (x.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'));
+  if (!p) return res.status(403).json({ error: 'Only the sarpanch / councillor can change this.' });
+  p.broRole = req.body?.role === 'candidate' ? 'candidate' : ''; save(); res.json({ ok: true, panch: gsPub(p) });
 });
 // who am I in Grama Seva
 app.get('/api/gs/me', auth, (req, res) => {
