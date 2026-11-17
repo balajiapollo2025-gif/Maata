@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 359;
+const MAATA_VERSION = 360;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4344,11 +4344,21 @@ app.get('/admin/api/gs', adminAuth, (req, res) => {
 app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
   const p = gsP(req.params.id); if (!p) return res.status(404).json({ error: 'Not found.' });
   const act = req.params.act;
+  if (act === 'delete') { // v360: remove the panchayat, its complaints and files; people of that village choose again
+    const files = [p.photo, ...db.gsComplaints.filter((c) => c.pid === p.id).flatMap((c) => [c.photo, c.voice, c.solvedPhoto, c.solvedVoice])].filter(Boolean);
+    const n = db.gsComplaints.filter((c) => c.pid === p.id).length;
+    db.gsComplaints = db.gsComplaints.filter((c) => c.pid !== p.id);
+    for (const u of db.users) if (u.gs && u.gs.pid === p.id) delete u.gs;
+    db.gsPanch = db.gsPanch.filter((x) => x.id !== p.id);
+    save(); for (const f of files) deleteChatFile(f.id).catch?.(() => {});
+    try { audit(req.admin, 'gs-delete', p.id, p.name + ' · ' + n + ' complaints'); } catch { /* optional */ }
+    return res.json({ ok: true, deleted: true });
+  }
   if (act === 'approve') { p.status = 'approved'; p.why = ''; if (req.body?.code) p.code = gsCode(req.body.code); }
   else if (act === 'reject') { p.status = 'rejected'; p.why = String(req.body?.why || '').slice(0, 200); }
   else if (act === 'pause') p.status = 'paused';
   else return res.status(400).json({ error: 'Unknown action.' });
-  save();
+  save(); try { audit(req.admin, 'gs-' + act, p.id, p.name); } catch { /* optional */ }
   const sp = (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
   if (u) pushTo(u, { type: 'msg', title: '🏛️ Grama Seva · ' + p.name, body: p.status === 'approved' ? '✅ Your panchayat is live. Add your ward members and tell your village.' : p.status === 'rejected' ? 'Not approved: ' + (p.why || 'please contact Maata support') : 'Paused by the Maata team', tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
   res.json({ ok: true });
