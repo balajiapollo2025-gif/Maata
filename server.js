@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 373;
+const MAATA_VERSION = 374;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4447,10 +4447,10 @@ app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
 // The sarpanch / councillor / secretary records up to 60 s ("no water tomorrow", "power cut", "gram sabha on Sunday").
 // Everyone who joined that village gets it at once: the bell + the phone says "<village> sarpanch announcement…" (also when
 // Maata is closed, through the same spoken alert as new orders), and plays the voice in Grama Seva. The sender sees who heard it.
-// Rules: 3 a day per village · 60 s · not between 9 pm and 6 am (except 🚨 urgent) · no vote-asking / party campaign (people can
+// Rules: 5 a day per village (v374, was 3) · 60 s · not between 9 pm and 6 am (except 🚨 urgent) · no vote-asking / party campaign (people can
 // report, the Maata team can remove) · voice files are deleted after 30 days.
 const GS_BC_CATS = { water: ['💧', 'నీళ్లు', 'Water'], power: ['⚡', 'కరెంట్', 'Power'], meeting: ['🏛️', 'గ్రామ సభ', 'Gram sabha'], health: ['🏥', 'ఆరోగ్యం', 'Health'], scheme: ['📋', 'పథకాలు', 'Schemes'], urgent: ['🚨', 'అత్యవసరం', 'Urgent'], other: ['📢', 'సమాచారం', 'Notice'] };
-const GS_BC_DAY = 3, GS_BC_KEEP = 30 * 864e5;
+const GS_BC_DAY = 5, GS_BC_KEEP = 30 * 864e5;
 const gsBcCat = (k) => GS_BC_CATS[k] || GS_BC_CATS.other;
 function gsBcSender(u) { const o = gsOfficial(u); return o && (o.m.role === 'sarpanch' || o.m.role === 'secretary') ? o : null; } // villages have no ward lists for people, so whole-village senders only
 function gsBcCanSee(u, bc) { if (!u) return false; if (u.admin) return true; const p = gsP(bc.pid); return !!p && ((u.gs && u.gs.pid === p.id) || !!gsMember(u, p)); }
