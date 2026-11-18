@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 372;
+const MAATA_VERSION = 373;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4468,23 +4468,41 @@ function gsBcView(bc, u) {
     heard: !!(u && (bc.heard || []).includes(u.id)),
     ...(mine ? { stats: { to: (bc.to || []).length, pushed: bc.pushed || 0, heard: (bc.heard || []).length, reminded: !!bc.reminded, reports: (bc.reports || []).length } } : {}) };
 }
+const gsBcSig = (vid) => crypto.createHmac('sha256', JWT_SECRET).update('gsbc:' + vid).digest('hex').slice(0, 32);
+function gsBcSay(bc, p, again) { // v373: what the phone says out loud — the same Telugu sentence for everyone in the village
+  const c = gsBcCat(bc.cat), town = p.kind === 'town';
+  const who = town ? p.name + ' వార్డ్ ' + (p.ward || '') + ' కౌన్సిలర్ గారు' : p.name + ' గ్రామ ' + (bc.role === 'secretary' ? 'కార్యదర్శి గారు' : 'సర్పంచ్ గారు');
+  const whoEn = town ? 'The councillor of ' + p.name + ' ward ' + (p.ward || '') : 'The ' + (bc.role === 'secretary' ? 'secretary' : 'sarpanch') + ' of ' + p.name + ' village';
+  const say = (again ? 'గుర్తు చేస్తున్నాం. ' : '') + who + ' కొత్త నోటిఫికేషన్ పెట్టారు. విషయం: ' + c[1] + '. ' + (bc.text ? String(bc.text).slice(0, 140) + '. ' : '') + (bc.voice ? 'ఇప్పుడు ' + (town ? 'కౌన్సిలర్' : bc.role === 'secretary' ? 'కార్యదర్శి' : 'సర్పంచ్') + ' గారి మాట వినండి.' : '');
+  const sayEn = (again ? 'Reminder. ' : '') + whoEn + ' has posted a new announcement about ' + c[2].toLowerCase() + '.' + (bc.voice ? ' Listen to the message.' : '');
+  return { say, sayEn, town };
+}
 function gsBcSend(bc, p, ids, again) { // push in small batches so a big village does not block the server
-  const c = gsBcCat(bc.cat), town = p.kind === 'town', who = town ? 'కౌన్సిలర్' : bc.role === 'secretary' ? 'కార్యదర్శి' : 'సర్పంచ్', whoEn = town ? 'councillor' : bc.role === 'secretary' ? 'secretary' : 'sarpanch';
-  const title = (again ? '🔁 ' : bc.cat === 'urgent' ? '🚨 ' : '📢 ') + who + ' ప్రకటన' + ' · ' + p.name;
+  const c = gsBcCat(bc.cat), { say, sayEn, town } = gsBcSay(bc, p, again), who = town ? 'కౌన్సిలర్' : bc.role === 'secretary' ? 'కార్యదర్శి' : 'సర్పంచ్';
+  const title = (again ? '🔁 ' : bc.cat === 'urgent' ? '🚨 ' : '📢 ') + who + ' ప్రకటన · ' + p.name;
   const body = c[0] + ' ' + (bc.text || c[1]) + (bc.voice ? ' · ▶ ' + Math.max(1, bc.dur || 0) + 's ' + 'వాయిస్' : '');
+  // v373: the phone plays the sarpanch's own recorded voice after the spoken line (new app); a signed link, no login needed, gone with the file after 30 days
+  const audio = bc.voice ? PUB() + '/api/gs/bcv/' + bc.voice.id + '?s=' + gsBcSig(bc.voice.id) : '';
   const list = ids.map((id) => userById(id)).filter((x) => x && x.id !== bc.by);
   let i = 0;
   const step = () => {
     for (const u of list.slice(i, i + 40)) {
-      const te = (u.lang || 'te') === 'te', say = u.voiceAlerts === false ? '' : (again ? 'గుర్తు చేస్తున్నాం. ' : '') + p.name + ' ' + who + ' గారి ప్రకటన. ' + c[1] + '. ' + String(bc.text || '').slice(0, 140);
-      const sayEn = (again ? 'Reminder. ' : '') + 'Announcement from the ' + whoEn + ' of ' + p.name + '. ' + c[2] + '.';
-      io.to('user:' + u.id).emit('gs:bc', { ...gsBcView(bc, u), say: u.voiceAlerts === false ? '' : say, sayEn, again: !!again });
-      if (hasPush(u)) { bc.pushed = again ? bc.pushed : (bc.pushed || 0) + 1; pushTo(u, { type: 'order_alert', title, body, tag: 'gsbc-' + bc.id, url: '/?gsbc=' + bc.id, say: te ? say : '', sayEn: u.voiceAlerts === false ? '' : sayEn, lang: te ? 'te' : 'en' }, { urgency: 'high', ttl: 6 * 3600 }).catch(() => {}); }
+      const quiet = u.voiceAlerts === false;
+      io.to('user:' + u.id).emit('gs:bc', { ...gsBcView(bc, u), say: quiet ? '' : say, sayEn: quiet ? '' : sayEn, again: !!again });
+      // v373 fix: always send the Telugu line (before, phones set to English got only the bell); a phone without a Telugu voice says the English line
+      if (hasPush(u)) { if (!again) bc.pushed = (bc.pushed || 0) + 1; pushTo(u, { type: 'order_alert', kind: 'gsbc', title, body, tag: 'gsbc-' + bc.id, url: '/?gsbc=' + bc.id, say: quiet ? '' : say, sayEn: quiet ? '' : sayEn, lang: 'te', audio: quiet ? '' : audio }, { urgency: 'high', ttl: 6 * 3600 }).catch(() => {}); }
     }
     i += 40; if (i < list.length) setTimeout(step, 250); else save();
   };
   step();
 }
+app.get('/api/gs/bcv/:vid', (req, res) => { // v373: the recorded voice for the phone's alert player (signed link)
+  const vid = String(req.params.vid || ''), sig = String(req.query.s || '');
+  if (!sig || sig.length !== 32 || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(gsBcSig(vid)))) return res.status(404).end();
+  const bc = db.gsBc.find((x) => x.voice && x.voice.id === vid && !x.removed); if (!bc) return res.status(404).end();
+  const f = bc.voice; res.setHeader('Content-Type', f.mime); res.setHeader('Content-Length', f.size); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(f.id, 0, f.size - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
 app.post('/api/gs/bc', auth, (req, res) => {
   if (!gsOn(res)) return;
   const o = gsBcSender(req.user); if (!o) return res.status(403).json({ error: 'Only the sarpanch, councillor or secretary of an approved panchayat can send an announcement.' });
