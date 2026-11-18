@@ -377,6 +377,8 @@ textarea.input{min-height:110px;resize:vertical}
       </style>
       <p style="margin:0 0 12px;color:#475569">Before you approve: call the panchayat office or the sarpanch, and check the name and photo. Only approved villages are shown to people. The app never asks for Aadhaar / Voter ID.</p>
       <div class="gsS" id="gsStats"></div><div class="gsA" id="gsList"></div>
+      <h3 style="margin:22px 0 6px">📢 Sarpanch voice announcements <span class="hint" style="font-weight:500;color:#64748B;font-size:13px">reported ones first · rules: no vote-asking, no party campaign, no abuse</span></h3>
+      <div class="gsA" id="gsBcList"></div>
     </section>
     <section data-page="smail" hidden>
       <div class="top"><h2>📧 Support mail — support@maataapp.com</h2></div>
@@ -543,7 +545,7 @@ const loaders = { gs: loadGsAdmin, plans: loadPlans, sms: loadSms, smail: loadSu
 async function loadGsAdmin() {
   const d = await api('/admin/api/gs');
   $('#gsStats').innerHTML = `<div><b>${d.stats.pending}</b>Waiting for check</div><div><b>${d.stats.live}</b>Live villages</div><div><b>${d.stats.complaints}</b>Complaints</div>`;
-  $('#gsCount').textContent = d.stats.pending; $('#gsCount').hidden = !d.stats.pending;
+  $('#gsCount').textContent = d.stats.pending; $('#gsCount').hidden = !d.stats.pending; loadGsBcAdmin();
   $('#gsList').innerHTML = d.panch.length ? d.panch.map((p) => `<div class="c ${esc(p.status)}"><div class="h">${p.photoUrl ? `<span class="gsPh"><img src="${esc(p.photoUrl)}?token=${encodeURIComponent(token)}" alt="" onload="if(this.naturalHeight>this.naturalWidth*1.2)this.classList.add('tall')"></span>` : '<span class="gsPh"></span>'}<div><b>${esc(p.name)}</b><small>${p.kind === 'town' ? '🏙️ Municipality · <b style="font-size:13px">ward ' + esc(p.ward) + '</b>' : '🏛️ Gram Panchayat · ' + p.wards + ' wards'} · ${esc([p.mandal, p.district, p.state].filter(Boolean).join(', '))} · code ${esc(p.code)}</small><small>${p.kind === 'town' ? 'Councillor' : 'Sarpanch'}: <b style="font-size:13px">${esc(p.spName || (p.sarpanch && p.sarpanch.name) || '')}</b> · account: ${esc(p.sarpanch ? p.sarpanch.name + ' ' + p.sarpanch.phone : '—')}</small></div></div>
     ${p.note ? `<div style="font-size:13px;background:#F8FAFC;border-radius:8px;padding:8px">📝 ${esc(p.note)}</div>` : ''}
     <small>Status: <b style="font-size:13px">${esc(p.status)}</b>${p.why ? ' · ' + esc(p.why) : ''} · ${new Date(p.createdAt).toLocaleString('en-IN')} · team ${p.team} · people ${p.residents} · complaints ${p.complaints} (solved ${p.solved})</small>
@@ -555,6 +557,17 @@ async function loadGsAdmin() {
     if (act === 'delete') { if (!confirm('Delete "' + b.dataset.name + '" for ever?\n\nIts ' + b.dataset.n + ' complaints, photos and voice notes are deleted too, and the people of this village must choose their village again. This cannot be undone.')) return; }
     try { await api('/admin/api/gs/' + b.dataset.id + '/' + act, { method: 'POST', body: JSON.stringify(body) }); toast('Done'); loadGsAdmin(); } catch (e) { toast(e.message); }
   });
+}
+async function loadGsBcAdmin() { // 📢 v372
+  const l = await api('/admin/api/gs/bc').catch(() => []), box = $('#gsBcList'); if (!box) return;
+  const why = { campaign: '🗳️ campaign', abuse: '🤬 abuse', false: '❌ false', other: '➕ other' };
+  box.innerHTML = l.length ? l.map((x) => `<div class="c ${x.removed ? 'rejected' : x.reports.length ? 'pending' : 'approved'}">
+    <div><b>${esc(x.e)} ${esc(x.pname)}</b> · <small>${esc(x.role)} · ${esc(x.by)}</small></div>
+    ${x.text ? `<div style="font-size:14px">${esc(x.text)}</div>` : ''}
+    ${x.voice && !x.removed ? `<audio controls preload="none" style="width:100%" src="/admin/api/gs/bc/${esc(x.id)}/voice?token=${encodeURIComponent(token)}"></audio>` : ''}
+    <small>${new Date(x.at).toLocaleString('en-IN')} · ${x.dur}s · sent to ${x.to} · heard ${x.heard}${x.reports.length ? ` · <b style="color:#E11D48">🚩 ${x.reports.length}: ${esc(x.reports.map((r) => why[r] || r).join(', '))}</b>` : ''}${x.removed ? ` · <b style="color:#E11D48">removed by ${esc(x.removed.by)}</b>` : ''}</small>
+    ${x.removed ? '' : `<div class="act"><button data-gsbcrm="${esc(x.id)}" style="background:#FEE2E2;color:#B91C1C">🗑️ Remove</button></div>`}</div>`).join('') : '<p style="color:#64748B">No announcements yet.</p>';
+  $$('[data-gsbcrm]').forEach((b) => b.onclick = async () => { if (!confirm('Remove this announcement for everyone? The sender gets a notification.')) return; try { await api('/admin/api/gs/bc/' + b.dataset.gsbcrm + '/remove', { method: 'POST', body: '{}' }); toast('Removed'); loadGsBcAdmin(); } catch (e) { toast(e.message); } });
 }
 setTimeout(() => { if (token) api('/admin/api/gs').then((d) => { $('#gsCount').textContent = d.stats.pending; $('#gsCount').hidden = !d.stats.pending; }).catch(() => {}); }, 2500);
 function go(v) {

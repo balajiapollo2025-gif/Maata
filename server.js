@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs', 'gsPanch', 'gsComplaints'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt', gsPanch: 'createdAt', gsComplaints: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs', 'gsPanch', 'gsComplaints', 'gsBc'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt', gsPanch: 'createdAt', gsComplaints: 'createdAt', gsBc: 'createdAt' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2284,7 +2284,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 371;
+const MAATA_VERSION = 372;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4131,8 +4131,9 @@ app.get('/api/gs/file/:id', (req, res) => {
   if (!viewer) return res.status(401).end();
   const id = req.params.id, k = ['photo', 'voice', 'solvedPhoto', 'solvedVoice'];
   const c = db.gsComplaints.find((x) => k.some((f) => x[f] && x[f].id === id));
-  if (!c || !gsAccess(viewer, c)) return res.status(404).end();
-  const f = k.map((n) => c[n]).find((x) => x && x.id === id);
+  const bc = !c && db.gsBc.find((x) => x.voice && x.voice.id === id && !x.removed); // v372: a sarpanch's voice announcement — people of that village + the team
+  if (bc ? !gsBcCanSee(viewer, bc) : !c || !gsAccess(viewer, c)) return res.status(404).end();
+  const f = bc ? bc.voice : k.map((n) => c[n]).find((x) => x && x.id === id);
   let start = 0, end = f.size - 1, code = 200; const r = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
   if (r) { start = r[1] ? Number(r[1]) : 0; end = r[2] ? Math.min(Number(r[2]), f.size - 1) : f.size - 1; if (start > end) return res.status(416).end(); code = 206; res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + f.size); }
   res.status(code); res.setHeader('Content-Type', f.mime); res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('Content-Length', end - start + 1); res.setHeader('Cache-Control', 'private, max-age=86400');
@@ -4371,6 +4372,7 @@ app.get('/api/gs/report', auth, (req, res) => {
   res.json({
     panch: gsPub(p), range, from, to: to - 1, made: now(),
     total: { got: inR.length, solved: solvedL.length, open: inR.length - solvedL.length, in48: took.filter((x) => x <= 48 * 3600000).length, avgHours: took.length ? Math.round(took.reduce((a, b) => a + b, 0) / took.length / 3600000) : 0, happy: solvedL.filter((c) => c.rating === 'up').length, unhappy: inR.filter((c) => c.rating === 'down').length },
+    bc: db.gsBc.filter((x) => x.pid === p.id && !x.removed && x.createdAt >= from && x.createdAt < to).length, // v372: voice announcements sent in this period
     days: [...days.values()].reverse(), cats: Object.values(cats).sort((a, b) => b.got - a.got),
     list: inR.slice().reverse().slice(0, 500).map((c) => ({ ref: c.ref, at: c.createdAt, cat: c.cat, ward: c.ward || '', status: c.status, solvedAt: solvedAt(c) || null, rating: c.rating || null, text: String(c.text || '').slice(0, 80) })),
   });
@@ -4421,7 +4423,8 @@ app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
   const p = gsP(req.params.id); if (!p) return res.status(404).json({ error: 'Not found.' });
   const act = req.params.act;
   if (act === 'delete') { // v360: remove the panchayat, its complaints and files; people of that village choose again
-    const files = [p.photo, ...db.gsComplaints.filter((c) => c.pid === p.id).flatMap((c) => [c.photo, c.voice, c.solvedPhoto, c.solvedVoice])].filter(Boolean);
+    const files = [p.photo, ...db.gsComplaints.filter((c) => c.pid === p.id).flatMap((c) => [c.photo, c.voice, c.solvedPhoto, c.solvedVoice]), ...db.gsBc.filter((x) => x.pid === p.id).map((x) => x.voice)].filter(Boolean);
+    db.gsBc = db.gsBc.filter((x) => x.pid !== p.id);
     const n = db.gsComplaints.filter((c) => c.pid === p.id).length;
     db.gsComplaints = db.gsComplaints.filter((c) => c.pid !== p.id);
     for (const u of db.users) if (u.gs && u.gs.pid === p.id) delete u.gs;
@@ -4437,6 +4440,129 @@ app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
   save(); try { audit(req.admin, 'gs-' + act, p.id, p.name); } catch { /* optional */ }
   const sp = (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
   if (u) pushTo(u, { type: 'msg', title: '🏛️ Grama Seva · ' + p.name, body: p.status === 'approved' ? '✅ Your panchayat is live. Add your ward members and tell your village.' : p.status === 'rejected' ? 'Not approved: ' + (p.why || 'please contact Maata support') : 'Paused by the Maata team', tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
+  res.json({ ok: true });
+});
+
+// ==================== 📢 v372 SARPANCH VOICE ANNOUNCEMENT — one recording, the whole village hears it ====================
+// The sarpanch / councillor / secretary records up to 60 s ("no water tomorrow", "power cut", "gram sabha on Sunday").
+// Everyone who joined that village gets it at once: the bell + the phone says "<village> sarpanch announcement…" (also when
+// Maata is closed, through the same spoken alert as new orders), and plays the voice in Grama Seva. The sender sees who heard it.
+// Rules: 3 a day per village · 60 s · not between 9 pm and 6 am (except 🚨 urgent) · no vote-asking / party campaign (people can
+// report, the Maata team can remove) · voice files are deleted after 30 days.
+const GS_BC_CATS = { water: ['💧', 'నీళ్లు', 'Water'], power: ['⚡', 'కరెంట్', 'Power'], meeting: ['🏛️', 'గ్రామ సభ', 'Gram sabha'], health: ['🏥', 'ఆరోగ్యం', 'Health'], scheme: ['📋', 'పథకాలు', 'Schemes'], urgent: ['🚨', 'అత్యవసరం', 'Urgent'], other: ['📢', 'సమాచారం', 'Notice'] };
+const GS_BC_DAY = 3, GS_BC_KEEP = 30 * 864e5;
+const gsBcCat = (k) => GS_BC_CATS[k] || GS_BC_CATS.other;
+function gsBcSender(u) { const o = gsOfficial(u); return o && (o.m.role === 'sarpanch' || o.m.role === 'secretary') ? o : null; } // villages have no ward lists for people, so whole-village senders only
+function gsBcCanSee(u, bc) { if (!u) return false; if (u.admin) return true; const p = gsP(bc.pid); return !!p && ((u.gs && u.gs.pid === p.id) || !!gsMember(u, p)); }
+function gsBcAudience(p) { // everyone who joined the village + the team
+  const ids = new Set(db.users.filter((x) => x.gs && x.gs.pid === p.id && !x.banned && !x.deleted).map((x) => x.id));
+  for (const m of p.members || []) if (m.status === 'active') ids.add(m.userId);
+  return [...ids];
+}
+const gsIstHour = (t) => new Date(t + 5.5 * 3600000).getUTCHours();
+const gsIstDay0 = (t) => { const d = new Date(t + 5.5 * 3600000); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 5.5 * 3600000; };
+function gsBcView(bc, u) {
+  const p = gsP(bc.pid), c = gsBcCat(bc.cat), by = userById(bc.by), mine = !!(u && gsMember(u, p || {}));
+  return { id: bc.id, pid: bc.pid, pname: p ? p.name : '', kind: p ? p.kind || 'village' : 'village', cat: bc.cat, e: c[0], te: c[1], en: c[2], text: bc.text || '', dur: bc.dur || 0,
+    voice: bc.voice ? { id: bc.voice.id, mime: bc.voice.mime } : null, at: bc.createdAt, by: by ? (p && bc.role === 'sarpanch' && p.spName ? p.spName : by.name || '') : '', role: bc.role,
+    heard: !!(u && (bc.heard || []).includes(u.id)),
+    ...(mine ? { stats: { to: (bc.to || []).length, pushed: bc.pushed || 0, heard: (bc.heard || []).length, reminded: !!bc.reminded, reports: (bc.reports || []).length } } : {}) };
+}
+function gsBcSend(bc, p, ids, again) { // push in small batches so a big village does not block the server
+  const c = gsBcCat(bc.cat), town = p.kind === 'town', who = town ? 'కౌన్సిలర్' : bc.role === 'secretary' ? 'కార్యదర్శి' : 'సర్పంచ్', whoEn = town ? 'councillor' : bc.role === 'secretary' ? 'secretary' : 'sarpanch';
+  const title = (again ? '🔁 ' : bc.cat === 'urgent' ? '🚨 ' : '📢 ') + who + ' ప్రకటన' + ' · ' + p.name;
+  const body = c[0] + ' ' + (bc.text || c[1]) + (bc.voice ? ' · ▶ ' + Math.max(1, bc.dur || 0) + 's ' + 'వాయిస్' : '');
+  const list = ids.map((id) => userById(id)).filter((x) => x && x.id !== bc.by);
+  let i = 0;
+  const step = () => {
+    for (const u of list.slice(i, i + 40)) {
+      const te = (u.lang || 'te') === 'te', say = u.voiceAlerts === false ? '' : (again ? 'గుర్తు చేస్తున్నాం. ' : '') + p.name + ' ' + who + ' గారి ప్రకటన. ' + c[1] + '. ' + String(bc.text || '').slice(0, 140);
+      const sayEn = (again ? 'Reminder. ' : '') + 'Announcement from the ' + whoEn + ' of ' + p.name + '. ' + c[2] + '.';
+      io.to('user:' + u.id).emit('gs:bc', { ...gsBcView(bc, u), say: u.voiceAlerts === false ? '' : say, sayEn, again: !!again });
+      if (hasPush(u)) { bc.pushed = again ? bc.pushed : (bc.pushed || 0) + 1; pushTo(u, { type: 'order_alert', title, body, tag: 'gsbc-' + bc.id, url: '/?gsbc=' + bc.id, say: te ? say : '', sayEn: u.voiceAlerts === false ? '' : sayEn, lang: te ? 'te' : 'en' }, { urgency: 'high', ttl: 6 * 3600 }).catch(() => {}); }
+    }
+    i += 40; if (i < list.length) setTimeout(step, 250); else save();
+  };
+  step();
+}
+app.post('/api/gs/bc', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const o = gsBcSender(req.user); if (!o) return res.status(403).json({ error: 'Only the sarpanch, councillor or secretary of an approved panchayat can send an announcement.' });
+  const { p, m } = o, b = req.body || {}, cat = GS_BC_CATS[b.cat] ? b.cat : '';
+  if (!cat) return res.status(400).json({ error: 'Choose what it is about.' });
+  const text = String(b.text || '').trim().replace(/\s+/g, ' ').slice(0, 160), voice = b.voice ? gsFileOk(b.voice, req.user, ['audio/']) : null;
+  if (!voice && text.length < 3) return res.status(400).json({ error: 'Record your voice (or write a few words).' });
+  if (voice && voice.size > 2.5 * 1024 * 1024) return res.status(400).json({ error: 'The voice is too long. Up to 60 seconds.' });
+  const h = gsIstHour(now()); if (cat !== 'urgent' && (h >= 21 || h < 6)) { if (voice) gsUploads.set(voice.id, { by: req.user.id, mime: voice.mime, size: voice.size, at: now() }); return res.status(400).json({ error: 'Announcements are not sent between 9 pm and 6 am, so people can sleep. Send it in the morning (or choose 🚨 Urgent for a real emergency).' }); }
+  const today = db.gsBc.filter((x) => x.pid === p.id && x.createdAt >= gsIstDay0(now())).length;
+  if (today >= GS_BC_DAY) { if (voice) gsUploads.set(voice.id, { by: req.user.id, mime: voice.mime, size: voice.size, at: now() }); return res.status(429).json({ error: 'Up to ' + GS_BC_DAY + ' announcements a day. Try again tomorrow.' }); }
+  const to = gsBcAudience(p).filter((id) => id !== req.user.id);
+  const bc = { id: newId(), pid: p.id, by: req.user.id, role: m.role, cat, text, ...(voice ? { voice } : {}), dur: Math.max(0, Math.min(60, Math.round(Number(b.dur) || 0))), to, heard: [], pushed: 0, reports: [], createdAt: now() };
+  db.gsBc.push(bc); save();
+  gsBcSend(bc, p, to);
+  try { feed('gs', '📢 ' + p.name + ': ' + gsBcCat(cat)[2] + ' announcement to ' + to.length + ' people'); } catch { /* optional */ }
+  res.json(gsBcView(bc, req.user));
+});
+app.get('/api/gs/bc', auth, (req, res) => { // announcements of my village (people) or of my panchayat (team), last 30 days
+  if (!gsOn(res)) return;
+  const o = gsOfficial(req.user), pid = o ? o.p.id : req.user.gs && req.user.gs.pid;
+  if (!pid) return res.json({ list: [], canSend: false });
+  const list = db.gsBc.filter((x) => x.pid === pid && !x.removed && now() - x.createdAt < GS_BC_KEEP).sort((a, b) => b.createdAt - a.createdAt).slice(0, 40);
+  const p = gsP(pid), s = gsBcSender(req.user);
+  res.json({ list: list.map((x) => gsBcView(x, req.user)), canSend: !!s, audience: s ? gsBcAudience(p).length - 1 : 0, today: s ? db.gsBc.filter((x) => x.pid === pid && x.createdAt >= gsIstDay0(now())).length : 0, perDay: GS_BC_DAY, cats: GS_BC_CATS });
+});
+app.get('/api/gs/bc/:id', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const bc = db.gsBc.find((x) => x.id === req.params.id); if (!bc || bc.removed || !gsBcCanSee(req.user, bc)) return res.status(404).json({ error: 'This announcement was removed or is older than 30 days.' });
+  res.json(gsBcView(bc, req.user));
+});
+app.post('/api/gs/bc/:id/heard', auth, (req, res) => {
+  const bc = db.gsBc.find((x) => x.id === req.params.id); if (!bc || !gsBcCanSee(req.user, bc)) return res.status(404).json({ error: 'Not found.' });
+  if (!(bc.heard = bc.heard || []).includes(req.user.id) && bc.by !== req.user.id) { bc.heard.push(req.user.id); save(); const s = userById(bc.by); if (s) io.to('user:' + s.id).emit('gs:bcstat', { id: bc.id, heard: bc.heard.length }); }
+  res.json({ ok: true });
+});
+app.post('/api/gs/bc/:id/remind', auth, (req, res) => { // once: only to those who have not heard it yet
+  const bc = db.gsBc.find((x) => x.id === req.params.id && !x.removed), o = gsBcSender(req.user);
+  if (!bc || !o || o.p.id !== bc.pid) return res.status(404).json({ error: 'Not found.' });
+  if (bc.reminded) return res.status(409).json({ error: 'You already reminded them once.' });
+  if (now() - bc.createdAt < 30 * 60000) return res.status(400).json({ error: 'Wait 30 minutes after sending, then remind.' });
+  const h = gsIstHour(now()); if (bc.cat !== 'urgent' && (h >= 21 || h < 6)) return res.status(400).json({ error: 'Not between 9 pm and 6 am. Remind them in the morning.' });
+  const left = (bc.to || []).filter((id) => !(bc.heard || []).includes(id)); bc.reminded = now(); save();
+  gsBcSend(bc, o.p, left, true); res.json({ ok: true, n: left.length });
+});
+app.post('/api/gs/bc/:id/remove', auth, (req, res) => {
+  const bc = db.gsBc.find((x) => x.id === req.params.id), o = gsOfficial(req.user);
+  if (!bc || !o || o.p.id !== bc.pid || !(bc.by === req.user.id || o.m.role === 'sarpanch')) return res.status(404).json({ error: 'Not found.' });
+  bc.removed = { at: now(), by: 'team' }; save(); if (bc.voice) deleteChatFile(bc.voice.id).catch?.(() => {});
+  res.json({ ok: true });
+});
+app.post('/api/gs/bc/:id/report', auth, (req, res) => { // people: "this is party campaign / wrong / abusive"
+  const bc = db.gsBc.find((x) => x.id === req.params.id && !x.removed); if (!bc || !gsBcCanSee(req.user, bc)) return res.status(404).json({ error: 'Not found.' });
+  bc.reports = bc.reports || []; if (bc.reports.some((r) => r.by === req.user.id)) return res.json({ ok: true });
+  bc.reports.push({ by: req.user.id, why: String(req.body?.why || '').slice(0, 40), at: now() }); save();
+  try { feed('gs', '🚩 Announcement reported (' + bc.reports.length + '): ' + ((gsP(bc.pid) || {}).name || '') + ' · ' + String(req.body?.why || '')); } catch { /* optional */ }
+  res.json({ ok: true });
+});
+setInterval(() => { // 30 days: the voice file goes, the record stays only as a count for the report
+  let n = 0; for (const bc of db.gsBc) if (bc.voice && now() - bc.createdAt > GS_BC_KEEP) { deleteChatFile(bc.voice.id).catch?.(() => {}); delete bc.voice; n++; }
+  if (n) save();
+}, 6 * 3600000).unref?.();
+// Maata admin: every announcement, reported ones first; remove
+app.get('/admin/api/gs/bc', adminAuth, (req, res) => {
+  res.json(db.gsBc.slice().sort((a, b) => ((b.reports || []).length - (a.reports || []).length) || b.createdAt - a.createdAt).slice(0, 300).map((x) => {
+    const p = gsP(x.pid), u = userById(x.by);
+    return { id: x.id, pname: p ? p.name : '', cat: x.cat, e: gsBcCat(x.cat)[0], text: x.text || '', dur: x.dur || 0, voice: x.voice ? x.voice.id : '', by: u ? u.name + ' · ' + (u.phone || '') : '', role: x.role, at: x.createdAt, to: (x.to || []).length, heard: (x.heard || []).length, reports: (x.reports || []).map((r) => r.why || '🚩'), removed: x.removed || null };
+  }));
+});
+app.get('/admin/api/gs/bc/:id/voice', adminAuth, (req, res) => {
+  const bc = db.gsBc.find((x) => x.id === req.params.id); if (!bc || !bc.voice) return res.status(404).end();
+  res.setHeader('Content-Type', bc.voice.mime); const st = chatFileStream(bc.voice.id, 0, bc.voice.size - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.post('/admin/api/gs/bc/:id/remove', adminAuth, (req, res) => {
+  const bc = db.gsBc.find((x) => x.id === req.params.id); if (!bc) return res.status(404).json({ error: 'Not found.' });
+  bc.removed = { at: now(), by: 'admin' }; save(); if (bc.voice) deleteChatFile(bc.voice.id).catch?.(() => {});
+  try { audit(req.admin, 'gs-bc-remove', bc.id, ((gsP(bc.pid) || {}).name || '') + ' · ' + (bc.text || '')); } catch { /* optional */ }
+  const u = userById(bc.by); if (u) pushTo(u, { type: 'msg', title: '📢 Announcement removed', body: 'The Maata team removed one announcement (rules: no vote-asking, no party campaign, no abuse).', tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
   res.json({ ok: true });
 });
 
