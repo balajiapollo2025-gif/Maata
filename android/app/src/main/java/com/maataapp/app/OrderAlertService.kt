@@ -53,7 +53,7 @@ class OrderAlertService : Service() {
         /** true = the service took the alert; false = Android did not allow it (the caller speaks by itself) */
         fun start(ctx: Context, d: Map<String, String>): Boolean = try {
             val i = Intent(ctx, OrderAlertService::class.java)
-            for (k in listOf("title", "body", "tag", "url", "say", "sayEn", "lang")) i.putExtra(k, d[k] ?: "")
+            for (k in listOf("title", "body", "tag", "url", "say", "sayEn", "lang", "kind", "audio")) i.putExtra(k, d[k] ?: "")
             ContextCompat.startForegroundService(ctx, i); true
         } catch (e: Exception) { false }
     }
@@ -64,9 +64,10 @@ class OrderAlertService : Service() {
         val title = intent?.getStringExtra("title") ?: "Maata"; val body = intent?.getStringExtra("body") ?: ""
         val tag = intent?.getStringExtra("tag") ?: "order"; val url = intent?.getStringExtra("url") ?: "/"
         val say = intent?.getStringExtra("say") ?: ""; val sayEn = intent?.getStringExtra("sayEn") ?: ""; val lang = intent?.getStringExtra("lang") ?: "en"
+        val kind = intent?.getStringExtra("kind") ?: ""; val audio = intent?.getStringExtra("audio") ?: "" // v373: "gsbc" = sarpanch announcement + their recorded voice
         Notifier.createChannels(this)
         // while speaking, a quiet "Maata is reading the order" notification; the real order notification (with the bell) is posted separately
-        val fg = Notifier.orderSpeakingNotification(this, title)
+        val fg = Notifier.orderSpeakingNotification(this, title, if (kind == "gsbc") "Maata is playing the announcement" else "Maata is reading the order out loud")
         try {
             ServiceCompat.startForeground(this, FG_ID, fg, if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
         } catch (e: Exception) { }
@@ -74,10 +75,13 @@ class OrderAlertService : Service() {
         synchronized(OrderAlertService) { pending++ }
         val app = applicationContext
         queue.execute {
-            val wl = try { (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "maata:order").apply { acquire(60_000) } } catch (e: Exception) { null }
+            val wl = try { (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "maata:order").apply { acquire(if (kind == "gsbc") 150_000 else 60_000) } } catch (e: Exception) { null }
             try {
                 playBell(app) // 🔔 then the voice
-                if (say.isNotBlank()) OrderVoice.speakBlocking(app, say, lang, sayEn)
+                if (kind == "gsbc") { // 📢 "<village> sarpanch posted a new notification… listen", then the sarpanch's own voice
+                    if (say.isNotBlank() || sayEn.isNotBlank()) OrderVoice.speakBlocking(app, say.ifBlank { sayEn }, lang, sayEn, times = if (audio.isBlank()) 2 else 1)
+                    if (audio.isNotBlank()) OrderVoice.playUrlBlocking(app, audio)
+                } else if (say.isNotBlank()) OrderVoice.speakBlocking(app, say, lang, sayEn)
             } catch (_: Exception) {
             } finally {
                 try { wl?.release() } catch (_: Exception) { }

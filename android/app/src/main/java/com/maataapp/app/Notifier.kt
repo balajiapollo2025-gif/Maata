@@ -160,10 +160,10 @@ object Notifier {
             .build()
         try { NotificationManagerCompat.from(ctx).notify(tag, 2, n) } catch (_: SecurityException) {}
     }
-    fun orderSpeakingNotification(ctx: Context, title: String): Notification =
+    fun orderSpeakingNotification(ctx: Context, title: String, text: String = "Maata is reading the order out loud"): Notification =
         NotificationCompat.Builder(ctx, CH_ORDER_FG)
             .setSmallIcon(R.drawable.ic_notification).setColor(0xFF0F8A5F.toInt())
-            .setContentTitle("🔊 " + title).setContentText("Maata is reading the order out loud")
+            .setContentTitle("🔊 " + title).setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true).setOngoing(true)
             .setContentIntent(openAppIntent(ctx, "/", 4343)).build()
     /** Can Maata ring for calls? (notifications allowed and the Calls channel not turned off) */
