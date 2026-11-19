@@ -76,14 +76,20 @@ class OrderAlertService : Service() {
         val app = applicationContext
         queue.execute {
             val wl = try { (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "maata:order").apply { acquire(if (kind == "gsbc") 150_000 else 60_000) } } catch (e: Exception) { null }
+            val rep = org.json.JSONObject().put("tag", tag).put("kind", kind).put("v", BuildConfig.VERSION_NAME).put("dev", Build.MANUFACTURER + " " + Build.MODEL).put("sdk", Build.VERSION.SDK_INT)
+            try {
+                val am = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                rep.put("ringer", am.ringerMode).put("ringVol", am.getStreamVolume(AudioManager.STREAM_RING)).put("ringMax", am.getStreamMaxVolume(AudioManager.STREAM_RING)).put("voiceOn", OrderVoice.enabled(app)).put("hasSay", say.isNotBlank()).put("hasAudio", audio.isNotBlank())
+            } catch (_: Exception) { }
             try {
                 playBell(app) // 🔔 then the voice
                 if (kind == "gsbc") { // 📢 "<village> sarpanch posted a new notification… listen", then the sarpanch's own voice
-                    if (say.isNotBlank() || sayEn.isNotBlank()) OrderVoice.speakBlocking(app, say.ifBlank { sayEn }, lang, sayEn, times = if (audio.isBlank()) 2 else 1)
-                    if (audio.isNotBlank()) OrderVoice.playUrlBlocking(app, audio)
-                } else if (say.isNotBlank()) OrderVoice.speakBlocking(app, say, lang, sayEn)
-            } catch (_: Exception) {
+                    rep.put("speak", if (say.isNotBlank() || sayEn.isNotBlank()) OrderVoice.speakBlocking(app, say.ifBlank { sayEn }, lang, sayEn, times = if (audio.isBlank()) 2 else 1) else "blank")
+                    if (audio.isNotBlank()) rep.put("audio", OrderVoice.playUrlBlocking(app, audio))
+                } else rep.put("speak", if (say.isNotBlank()) OrderVoice.speakBlocking(app, say, lang, sayEn) else "blank")
+            } catch (e: Exception) { rep.put("exc", e.javaClass.simpleName)
             } finally {
+                try { OrderVoice.report(app, rep) } catch (_: Exception) { }
                 try { wl?.release() } catch (_: Exception) { }
                 val last = synchronized(OrderAlertService) { pending--; pending <= 0 }
                 if (last) { try { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) } catch (_: Exception) { }; stopSelf() }
