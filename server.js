@@ -2299,7 +2299,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 377;
+const MAATA_VERSION = 378;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4243,9 +4243,10 @@ app.get('/api/gs/search', auth, (req, res) => {
   let list;
   // v367: nothing is listed until 3+ letters are typed (no nearby list, no all-India list)
   const home = req.user.gs && gsP(req.user.gs.pid);
-  if (home && home.status === 'approved') return res.json([gsPub(home)]); // joined: only my own village, nothing else
+  if (home && home.status === 'approved' && !req.query.change) return res.json([gsPub(home)]); // joined: only my own village, nothing else (v378: unless changing village)
   list = q.length >= 3 ? live.filter((p) => [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q))) : [];
-  for (const id of mine) { const p = gsP(id); if (p && p.status === 'approved' && !list.includes(p)) list.unshift(p); } // always my own village
+  if (req.query.change) list = list.filter((p) => !mine.has(p.id)); // v378: changing village → only other villages
+  else for (const id of mine) { const p = gsP(id); if (p && p.status === 'approved' && !list.includes(p)) list.unshift(p); } // always my own village
   res.json(list.slice(0, 30).map((p) => ({ ...gsPub(p), ...(here && p.loc ? { km: Math.round(gsKm(here, p.loc)) } : {}) })));
 });
 // the village's place: taken once from the sarpanch's / councillor's phone (rounded to ~1 km)
