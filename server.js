@@ -2299,7 +2299,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 378;
+const MAATA_VERSION = 380;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4230,6 +4230,7 @@ app.get('/api/gs/me', auth, (req, res) => {
     official: off ? { pid: off.p.id, name: off.p.name + (off.p.kind === 'town' ? ' · W' + off.p.ward : ''), kind: off.p.kind || 'village', role: off.m.role, ward: off.m.ward || '' } : null,
     applications: mine.filter((p) => p.status !== 'approved' || (p.members || []).some((m) => m.userId === u.id && m.status === 'pending')).map((p) => ({ ...gsPub(p), myStatus: (p.members.find((m) => m.userId === u.id) || {}).status, why: p.why || '' })),
     cats: GS_CATS,
+    left: db.gsPanch.filter((p) => p.status !== 'rejected' && (p.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'removed' && m.leftAt) && !gsMember(u, p)).map((p) => ({ ...gsPub(p), status: p.status })), // v379: "come back as sarpanch"
   });
 });
 // v366: not the whole of India — only villages near the person (GPS), or the ones whose name they type (3+ letters)
@@ -4243,7 +4244,7 @@ app.get('/api/gs/search', auth, (req, res) => {
   let list;
   // v367: nothing is listed until 3+ letters are typed (no nearby list, no all-India list)
   const home = req.user.gs && gsP(req.user.gs.pid);
-  if (home && home.status === 'approved' && !req.query.change) return res.json([gsPub(home)]); // joined: only my own village, nothing else (v378: unless changing village)
+  if (home && home.status === 'approved' && !req.query.change && !req.query.all) return res.json([gsPub(home)]); // joined: only my own village, nothing else (v378: unless changing village · v380: or signing up as ward member / secretary)
   list = q.length >= 3 ? live.filter((p) => [p.name, p.mandal, p.district].some((x) => String(x || '').toLowerCase().includes(q))) : [];
   if (req.query.change) list = list.filter((p) => !mine.has(p.id)); // v378: changing village → only other villages
   else for (const id of mine) { const p = gsP(id); if (p && p.status === 'approved' && !list.includes(p)) list.unshift(p); } // always my own village
@@ -4270,6 +4271,24 @@ app.post('/api/gs/join', auth, (req, res) => {
   const left = gsExitOthers(req.user, p.id);
   req.user.gs = { pid: p.id, ward, house, at: now() }; save();
   res.json({ ok: true, left });
+});
+// v379: a sarpanch / councillor who moved away comes back to their own panchayat (no new sign-up, no new check)
+function gsRestoreHead(p, u) {
+  const m = (p.members || []).find((x) => x.userId === u.id && x.role === 'sarpanch'); if (!m) return false;
+  gsExitOthers(u, p.id);
+  m.status = 'active'; delete m.leftAt; m.at = now();
+  for (const x of p.members) if (x !== m && x.role === 'sarpanch' && x.status === 'active') x.status = 'removed'; // one head
+  if (p.status === 'paused' && /moved to another panchayat/.test(p.why || '')) { p.status = 'approved'; p.why = ''; }
+  u.gs = { pid: p.id, ward: p.kind === 'town' ? String(p.ward || '') : '', house: '', at: now() }; save(); return true;
+}
+app.post('/api/gs/rejoin', auth, (req, res) => {
+  if (!gsOn(res)) return;
+  const u = req.user, p = gsP(String(req.body?.pid || ''));
+  if (!p || p.status === 'rejected' || !(p.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'removed')) return res.status(404).json({ error: 'Not found.' });
+  if (!req.body?.move && gsOthersErr(res, u, p.id)) return;
+  gsRestoreHead(p, u);
+  try { feed('gs', '🏛️ ' + p.name + ': ' + (u.name || '') + ' came back as head → ' + p.status); } catch { /* optional */ }
+  res.json({ ok: true, status: p.status });
 });
 // sarpanch registers a new panchayat (Maata team checks before it goes live) · ward member asks to join one
 app.post('/api/gs/apply', auth, (req, res) => {
@@ -4463,8 +4482,8 @@ app.get('/api/gs/score/:pid', auth, (req, res) => {
 // Maata admin: check sarpanch registrations
 app.get('/admin/api/gs', adminAuth, (req, res) => {
   res.json({ panch: db.gsPanch.slice().sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0) || b.createdAt - a.createdAt).map((p) => {
-    const sp = (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
-    return { ...gsPub(p), note: p.note || '', why: p.why || '', createdAt: p.createdAt, photoUrl: p.photo ? '/api/gs/pphoto/' + p.id : '', spName: p.spName || '', sarpanch: u ? { id: u.id, name: u.name, phone: u.phone || '' } : null, team: (p.members || []).filter((m) => m.status === 'active').length,
+    const sp = (p.members || []).find((m) => m.role === 'sarpanch' && m.status === 'active') || (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
+    return { ...gsPub(p), headLeft: !!(sp && sp.status !== 'active'), note: p.note || '', why: p.why || '', createdAt: p.createdAt, photoUrl: p.photo ? '/api/gs/pphoto/' + p.id : '', spName: p.spName || '', sarpanch: u ? { id: u.id, name: u.name, phone: u.phone || '' } : null, team: (p.members || []).filter((m) => m.status === 'active').length,
       complaints: db.gsComplaints.filter((c) => c.pid === p.id).length, solved: db.gsComplaints.filter((c) => c.pid === p.id && c.status === 'solved').length, residents: db.users.filter((x) => x.gs && x.gs.pid === p.id).length };
   }), stats: { pending: db.gsPanch.filter((p) => p.status === 'pending').length, live: db.gsPanch.filter((p) => p.status === 'approved').length, complaints: db.gsComplaints.length } });
 });
@@ -4481,6 +4500,13 @@ app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
     save(); for (const f of files) deleteChatFile(f.id).catch?.(() => {});
     try { audit(req.admin, 'gs-delete', p.id, p.name + ' · ' + n + ' complaints'); } catch { /* optional */ }
     return res.json({ ok: true, deleted: true });
+  }
+  if (act === 'restore-head') { // v379: bring back the sarpanch / councillor who moved away (they leave the other village)
+    const sp = (p.members || []).filter((m) => m.role === 'sarpanch').pop(), u = sp && userById(sp.userId); if (!u) return res.status(404).json({ error: 'No sarpanch account.' });
+    gsRestoreHead(p, u); p.status = 'approved'; p.why = ''; save();
+    try { audit(req.admin, 'gs-restore-head', p.id, p.name + ' · ' + (u.name || '')); } catch { /* optional */ }
+    pushTo(u, { type: 'msg', title: '🏛️ Grama Seva · ' + p.name, body: '✅ You are the ' + (p.kind === 'town' ? 'councillor' : 'sarpanch') + ' of ' + p.name + ' again.', tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
+    return res.json({ ok: true });
   }
   if (act === 'approve') { p.status = 'approved'; p.why = ''; if (req.body?.code) p.code = gsCode(req.body.code); }
   else if (act === 'reject') { p.status = 'rejected'; p.why = String(req.body?.why || '').slice(0, 200); }
