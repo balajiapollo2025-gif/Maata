@@ -2299,7 +2299,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 376;
+const MAATA_VERSION = 377;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4080,6 +4080,33 @@ const gsUploads = new Map(); // id -> { by, mime, size, at } (files waiting to b
 const gsP = (id) => db.gsPanch.find((p) => p.id === id);
 const gsMember = (u, p) => (p && p.status === 'approved' ? (p.members || []).find((m) => m.userId === u.id && m.status === 'active') || null : null);
 function gsOfficial(u) { for (const p of db.gsPanch) { const m = gsMember(u, p); if (m) return { p, m }; } return null; }
+// v377: one panchayat at a time. Choosing a new one (joining as a resident, or registering as sarpanch / councillor / ward member /
+// secretary) leaves the old one by itself — it is no longer shown. A sarpanch who leaves: that panchayat is paused for the Maata team.
+function gsOthers(u, keepPid) { // what the person would leave
+  const out = []; if (u.gs && u.gs.pid && u.gs.pid !== keepPid) { const p = gsP(u.gs.pid); if (p) out.push({ p, role: 'resident' }); }
+  for (const p of db.gsPanch) { if (p.id === keepPid || p.status === 'rejected') continue; const m = (p.members || []).find((x) => x.userId === u.id && (x.status === 'active' || x.status === 'pending')); if (m) out.push({ p, role: m.role, m }); }
+  return out;
+}
+function gsExitOthers(u, keepPid) {
+  const left = gsOthers(u, keepPid); if (!left.length) return [];
+  for (const o of left) {
+    if (o.role === 'resident') { delete u.gs; continue; }
+    o.m.status = 'removed'; o.m.leftAt = now();
+    if (o.role === 'sarpanch') { // the head left: not live any more until the Maata team sorts it out
+      if (o.p.status === 'approved') { o.p.status = 'paused'; o.p.why = 'The sarpanch / councillor moved to another panchayat.'; }
+      else if (o.p.status === 'pending') { o.p.status = 'rejected'; o.p.why = 'Withdrawn: registered another panchayat.'; }
+      try { feed('gs', '🏛️ ' + o.p.name + ': head left for another panchayat (' + (u.name || '') + ') → ' + o.p.status); } catch { /* optional */ }
+    }
+  }
+  save(); return left.map((o) => o.p.name + (o.p.kind === 'town' ? ' · W' + o.p.ward : ''));
+}
+const gsOthersErr = (res, u, keepPid) => { const o = gsOthers(u, keepPid); if (!o.length) return false; const head = o.find((x) => x.role === 'sarpanch' && x.p.status === 'approved'); res.status(409).json({ code: 'gs-other', names: o.map((x) => x.p.name + (x.p.kind === 'town' ? ' · W' + x.p.ward : '')), head: head ? head.p.name : '', error: 'You are already in ' + o.map((x) => x.p.name).join(', ') + '. Choosing this one leaves it.' }); return true; };
+// older data (before v377) can have two: the newer choice wins
+function gsTidy(u) {
+  const off = gsOfficial(u); if (!off || !u.gs || u.gs.pid === off.p.id) return;
+  const resAt = u.gs.at || 0, offAt = off.m.at || 0;
+  if (resAt > offAt) gsExitOthers(u, u.gs.pid); else { delete u.gs; save(); }
+}
 function gsCode(name) { const w = String(name || '').toUpperCase().replace(/[^A-Z ]/g, ' ').trim().split(/\s+/).filter(Boolean); let c = w.length > 1 ? w.map((x) => x[0]).join('') : (w[0] || '').slice(0, 3); c = c.slice(0, 4); return c.length >= 2 ? c : 'GP'; }
 const gsPub = (p) => ({ id: p.id, name: p.name, mandal: p.mandal || '', district: p.district || '', state: p.state || '', kind: p.kind || 'village', wards: p.wards || 0, ward: p.kind === 'town' ? p.ward || '' : '', code: p.code, status: p.status, broRole: p.broRole || '', ...gsHead(p) });
 // v358: the sarpanch's name + photo, shown to the people of that village
@@ -4195,10 +4222,11 @@ app.post('/api/gs/panch/bro', auth, (req, res) => { // v363: brochure title — 
 // who am I in Grama Seva
 app.get('/api/gs/me', auth, (req, res) => {
   if (!gsOn(res)) return;
-  const u = req.user, home = u.gs && gsP(u.gs.pid), off = gsOfficial(u);
+  gsTidy(req.user);
+  const u = req.user, off0 = gsOfficial(u), home = u.gs ? gsP(u.gs.pid) : off0 && off0.p, off = off0; // v377: an official's home is their own panchayat
   const mine = db.gsPanch.filter((p) => (p.members || []).some((m) => m.userId === u.id && m.status !== 'removed'));
   res.json({
-    home: home && home.status === 'approved' ? { ...gsPub(home), ward: u.gs.ward || '', house: u.gs.house || '', score: gsScore(home) } : null,
+    home: home && home.status === 'approved' ? { ...gsPub(home), ward: (u.gs && u.gs.ward) || '', house: (u.gs && u.gs.house) || '', score: gsScore(home) } : null,
     official: off ? { pid: off.p.id, name: off.p.name + (off.p.kind === 'town' ? ' · W' + off.p.ward : ''), kind: off.p.kind || 'village', role: off.m.role, ward: off.m.ward || '' } : null,
     applications: mine.filter((p) => p.status !== 'approved' || (p.members || []).some((m) => m.userId === u.id && m.status === 'pending')).map((p) => ({ ...gsPub(p), myStatus: (p.members.find((m) => m.userId === u.id) || {}).status, why: p.why || '' })),
     cats: GS_CATS,
@@ -4237,8 +4265,10 @@ app.post('/api/gs/join', auth, (req, res) => {
   if (!gsOn(res)) return;
   const p = gsP(String(req.body?.pid || '')); if (!p || p.status !== 'approved') return res.status(404).json({ error: 'Choose your village from the list.' });
   const house = String(req.body?.house || '').trim().slice(0, 30), ward = p.kind === 'town' ? String(p.ward || '') : ''; // v361: village → straight to the sarpanch, no ward list
+  if (!req.body?.move && gsOthersErr(res, req.user, p.id)) return; // v377: in another panchayat → the app asks first
+  const left = gsExitOthers(req.user, p.id);
   req.user.gs = { pid: p.id, ward, house, at: now() }; save();
-  res.json({ ok: true });
+  res.json({ ok: true, left });
 });
 // sarpanch registers a new panchayat (Maata team checks before it goes live) · ward member asks to join one
 app.post('/api/gs/apply', auth, (req, res) => {
@@ -4250,6 +4280,8 @@ app.post('/api/gs/apply', auth, (req, res) => {
     const role = b.role === 'secretary' ? 'secretary' : 'ward', ward = String(b.ward || '').trim().slice(0, 10);
     if (role === 'ward' && !ward) return res.status(400).json({ error: 'Enter your ward number.' });
     const ex = p.members.find((m) => m.userId === u.id && m.status !== 'removed'); if (ex) return res.status(409).json({ error: ex.status === 'active' ? 'You are already in this panchayat team.' : 'Your request is waiting for the sarpanch.' });
+    if (!b.move && gsOthersErr(res, u, p.id)) return; // v377
+    gsExitOthers(u, p.id); u.gs = { pid: p.id, ward: '', house: '', at: now() };
     p.members.push({ userId: u.id, role, ward, status: 'pending', at: now() }); save();
     const sp = p.members.find((m) => m.role === 'sarpanch' && m.status === 'active'); const su = sp && userById(sp.userId);
     if (su) pushTo(su, { type: 'msg', title: '🏛️ Team request', body: (u.name || 'Someone') + ' wants to join as ' + (role === 'ward' ? 'ward ' + ward + ' member' : 'secretary'), tag: 'gs-team', url: '/?gsdesk=1' }).catch(() => {});
@@ -4260,13 +4292,14 @@ app.post('/api/gs/apply', auth, (req, res) => {
   if (town ? name.length < 3 || !district : name.length < 3 || !mandal || !district) return res.status(400).json({ error: town ? 'Enter the municipality name and district.' : 'Enter the panchayat name, mandal and district.' });
   if (town && !cWard) return res.status(400).json({ error: 'Enter your ward number.' });
   if (town && db.gsPanch.some((x) => x.kind === 'town' && x.status !== 'rejected' && x.name.toLowerCase() === name.toLowerCase() && String(x.district || '').toLowerCase() === district.toLowerCase() && String(x.ward) === cWard)) return res.status(409).json({ error: 'Ward ' + cWard + ' of ' + name + ' is already registered.' });
-  if (db.gsPanch.some((p) => p.status !== 'rejected' && (p.members || []).some((m) => m.userId === u.id && m.role === 'sarpanch' && m.status === 'active'))) return res.status(409).json({ error: 'You already registered a panchayat.' });
+  if (!b.move && gsOthersErr(res, u, '')) return; // v377: already in a panchayat → the app asks, then the old one is left
   const wards = town ? 0 : Math.max(1, Math.min(60, Number(b.wards) || 1)), kind = town ? 'town' : 'village';
   const photo = b.photo ? gsFileOk(b.photo, u, ['image/']) : null;
   if (!photo) return res.status(400).json({ error: town ? 'Add the councillor photo. People of the ward will see it.' : 'Add the sarpanch photo. People of the village will see it.' });
   const p = { id: newId(), name, mandal, district, state, kind, wards, code: gsCode(String(b.code || name)), status: 'pending', note: String(b.note || '').slice(0, 300), counter: 0,
     members: [{ userId: u.id, role: 'sarpanch', ward: '', status: 'active', at: now() }], createdAt: now(), by: u.id,
     ...(gsLocOf(b.loc) ? { loc: gsLocOf(b.loc) } : {}), photo: { ...photo, v: 1 }, spName: String(b.spName || u.name || '').trim().slice(0, 60), spTitle: town ? 'Councillor' : 'Sarpanch', ...(town ? { ward: cWard } : {}) };
+  gsExitOthers(u, ''); u.gs = { pid: p.id, ward: town ? cWard : '', house: '', at: now() };
   db.gsPanch.push(p); save();
   if (typeof feed === 'function') try { feed('gs', '🏛️ New panchayat waiting for check: ' + name + ', ' + mandal + ' (' + (u.name || '') + ')'); } catch { /* optional */ }
   res.json({ ok: true, pending: true, panch: gsPub(p) });
@@ -4538,7 +4571,7 @@ app.post('/api/gs/bc', auth, (req, res) => {
 });
 app.get('/api/gs/bc', auth, (req, res) => { // announcements of my village (people) or of my panchayat (team), last 30 days
   if (!gsOn(res)) return;
-  const o = gsOfficial(req.user), pid = o ? o.p.id : req.user.gs && req.user.gs.pid;
+  const o = gsOfficial(req.user), pid = req.query.home && req.user.gs ? req.user.gs.pid : o ? o.p.id : req.user.gs && req.user.gs.pid;
   if (!pid) return res.json({ list: [], canSend: false });
   const list = db.gsBc.filter((x) => x.pid === pid && !x.removed && now() - x.createdAt < GS_BC_KEEP).sort((a, b) => b.createdAt - a.createdAt).slice(0, 40);
   const p = gsP(pid), s = gsBcSender(req.user);
