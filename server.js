@@ -390,6 +390,20 @@ app.post('/api/push/fcm', auth, (req, res) => {
   req.user.fcmTokens = [...(req.user.fcmTokens || []).filter((t) => t.token !== token), { token, at: now(), model: clip(req.body?.model, 80) }].slice(-5);
   save(); res.json({ ok: true, fcm: !!FCM });
 });
+// 🔎 v376: the Android app (1.0.59+) reports what happened to a spoken alert on the phone — bell, the spoken line, the recorded voice —
+// so "only the bell came" has an answer (Telugu voice missing, voice alerts off, silent, speech engine failed…). Proves itself with its push token.
+const alertLogAt = new Map();
+app.post('/api/push/alert-log', (req, res) => {
+  const token = String(req.body?.fcm || ''), r = req.body?.r;
+  if (token.length < 20 || !r || typeof r !== 'object') return res.status(400).json({ error: 'Bad request.' });
+  if (now() - (alertLogAt.get(token) || 0) < 3000) return res.json({ ok: true }); alertLogAt.set(token, now());
+  const u = db.users.find((x) => (x.fcmTokens || []).some((t) => t.token === token)); if (!u) return res.json({ ok: true });
+  const keep = {}; for (const k of ['tag', 'kind', 'v', 'dev', 'sdk', 'ringer', 'ringVol', 'ringMax', 'voiceOn', 'hasSay', 'hasAudio', 'speak', 'audio', 'exc']) if (r[k] !== undefined) keep[k] = typeof r[k] === 'string' ? clip(r[k], 80) : typeof r[k] === 'number' || typeof r[k] === 'boolean' ? r[k] : undefined;
+  u.alertLog = [...(u.alertLog || []), { ...keep, at: now() }].slice(-10); save();
+  io.to('user:' + u.id).emit('alert:log', u.alertLog[u.alertLog.length - 1]);
+  res.json({ ok: true });
+});
+app.get('/api/me/alert-log', auth, (req, res) => res.json({ list: (req.user.alertLog || []).slice().reverse(), voiceAlerts: req.user.voiceAlerts !== false }));
 // "Decline" pressed on the full-screen call screen (the app is closed, so it proves itself with its push token)
 app.post('/api/push/decline', (req, res) => {
   const token = String(req.body?.fcm || ''), callId = String(req.body?.callId || '');
@@ -2285,7 +2299,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 375;
+const MAATA_VERSION = 376;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
