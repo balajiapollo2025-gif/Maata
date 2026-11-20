@@ -454,6 +454,9 @@ const pendingRings = new Map(); // userId -> { offer, ice: [], until, callId, fr
 const SEO_PAGES = [['/', 'daily', '1.0'], ['/about', 'monthly', '0.8'], ['/developers', 'monthly', '0.5'], ['/privacy', 'yearly', '0.3'], ['/terms', 'yearly', '0.3']];
 const SEO_PRIVATE = /^\/(admin|api\/|bill\/|r\/|ls\/t\/|v1\/|s\/|delete-data|delete-account|maata\.apk)/;
 app.use((req, res, next) => { if (SEO_PRIVATE.test(req.path)) res.setHeader('X-Robots-Tag', 'noindex, nofollow'); next(); });
+// v381: tell Google which address is the real one for each public page (Search Console: "Duplicate without user-selected canonical")
+const SEO_CANON = new Set(SEO_PAGES.map((x) => x[0]));
+app.use((req, res, next) => { if (req.method === 'GET' && SEO_CANON.has(req.path.replace(/\/+$/, '') || '/')) res.setHeader('Link', '<' + APP_ORIGIN + (req.path.replace(/\/+$/, '') || '/') + '>; rel="canonical"'); next(); });
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(['User-agent: *', 'Allow: /', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /bill/', 'Disallow: /r/', 'Disallow: /ls/t/', 'Disallow: /v1/', 'Disallow: /s/', '', 'Sitemap: ' + APP_ORIGIN + '/sitemap.xml', ''].join('\n'));
 });
@@ -2299,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 380;
+const MAATA_VERSION = 383;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
