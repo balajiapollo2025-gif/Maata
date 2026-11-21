@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 387;
+const MAATA_VERSION = 388;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4272,7 +4272,7 @@ app.post('/api/gs/join', auth, (req, res) => {
   const house = String(req.body?.house || '').trim().slice(0, 30), ward = p.kind === 'town' ? String(p.ward || '') : ''; // v361: village → straight to the sarpanch, no ward list
   if (!req.body?.move && gsOthersErr(res, req.user, p.id)) return; // v377: in another panchayat → the app asks first
   const left = gsExitOthers(req.user, p.id);
-  req.user.gs = { pid: p.id, ward, house, at: now() }; save();
+  req.user.gs = { pid: p.id, ward, house, at: now() }; save(); gsJoinPing(p);
   res.json({ ok: true, left });
 });
 // v379: a sarpanch / councillor who moved away comes back to their own panchayat (no new sign-up, no new check)
@@ -4532,6 +4532,11 @@ const GS_BC_DAY = 5, GS_BC_KEEP = 30 * 864e5;
 const gsBcCat = (k) => GS_BC_CATS[k] || GS_BC_CATS.other;
 function gsBcSender(u) { const o = gsOfficial(u); return o && (o.m.role === 'sarpanch' || o.m.role === 'secretary') ? o : null; } // villages have no ward lists for people, so whole-village senders only
 function gsBcCanSee(u, bc) { if (!u) return false; if (u.admin) return true; const p = gsP(bc.pid); return !!p && ((u.gs && u.gs.pid === p.id) || !!gsMember(u, p)); }
+function gsJoinStat(p) { // v388 desk ring: how many joined + how many joined in the last 7 days
+  const wk = now() - 7 * 864e5;
+  return { joined: gsBcAudience(p).length, week: db.users.filter((x) => x.gs && x.gs.pid === p.id && !x.banned && !x.deleted && (x.gs.at || 0) >= wk).length };
+}
+function gsJoinPing(p) { try { const d = { pid: p.id, ...gsJoinStat(p) }; for (const m of p.members || []) if (m.status === 'active') io.to('user:' + m.userId).emit('gs:joined', d); } catch { /* optional */ } }
 function gsBcAudience(p) { // everyone who joined the village + the team
   const ids = new Set(db.users.filter((x) => x.gs && x.gs.pid === p.id && !x.banned && !x.deleted).map((x) => x.id));
   for (const m of p.members || []) if (m.status === 'active') ids.add(m.userId);
@@ -4605,7 +4610,7 @@ app.get('/api/gs/bc', auth, (req, res) => { // announcements of my village (peop
   if (!pid) return res.json({ list: [], canSend: false });
   const list = db.gsBc.filter((x) => x.pid === pid && !x.removed && now() - x.createdAt < GS_BC_KEEP).sort((a, b) => b.createdAt - a.createdAt).slice(0, 40);
   const p = gsP(pid), s = gsBcSender(req.user);
-  res.json({ list: list.map((x) => gsBcView(x, req.user)), canSend: !!s, audience: s ? gsBcAudience(p).length - 1 : 0, today: s ? db.gsBc.filter((x) => x.pid === pid && x.createdAt >= gsIstDay0(now())).length : 0, perDay: GS_BC_DAY, cats: GS_BC_CATS });
+  res.json({ list: list.map((x) => gsBcView(x, req.user)), canSend: !!s, audience: s ? gsBcAudience(p).length - 1 : 0, ...(s ? { pid, ...gsJoinStat(p) } : {}), today: s ? db.gsBc.filter((x) => x.pid === pid && x.createdAt >= gsIstDay0(now())).length : 0, perDay: GS_BC_DAY, cats: GS_BC_CATS });
 });
 app.get('/api/gs/bc/:id', auth, (req, res) => {
   if (!gsOn(res)) return;
