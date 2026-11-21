@@ -56,6 +56,7 @@ class MainActivity : Activity() {
         private val OUR_HOSTS = setOf("maataapp.com", "www.maataapp.com", "maata-siut.onrender.com")
     }
     private lateinit var web: WebView
+    private lateinit var rootBox: android.widget.FrameLayout // v386: holds the WebView between the phone's top bar and the keyboard / bottom bar
     private fun bioReply(id: String, ok: Boolean, msg: String) = runOnUiThread {
         web.evaluateJavascript("window.maataBioResult && maataBioResult(" + org.json.JSONObject.quote(id) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")", null)
     }
@@ -199,6 +200,18 @@ class MainActivity : Activity() {
         return if (t.speak(text, TextToSpeech.QUEUE_ADD, null, id) == TextToSpeech.SUCCESS) "ok" else "error"
     }
 
+    /** v386: colour behind the phone's top and bottom bars, and dark or light icons on them (from the page's theme). */
+    @Suppress("DEPRECATION")
+    private fun setBars(color: Int, dark: Boolean) {
+        try {
+            rootBox.setBackgroundColor(color)
+            if (Build.VERSION.SDK_INT < 35) { window.statusBarColor = color; window.navigationBarColor = color } // older Android still paints the bars itself
+            val c = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+            c.isAppearanceLightStatusBars = !dark
+            c.isAppearanceLightNavigationBars = !dark
+        } catch (_: Exception) { }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -209,7 +222,21 @@ class MainActivity : Activity() {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { Notifier.saveToken(this, it) }
 
         web = WebView(this)
-        setContentView(web)
+        // v386 — like WhatsApp: Maata sits between the phone's top bar (time, signal, battery) and the keyboard / bottom bar.
+        // Newer Android draws apps under those bars and no longer shrinks the app for the keyboard by itself, so the chat
+        // header slid away when typing and the white top-bar icons were lost on a white page. Here the space is made for them.
+        rootBox = android.widget.FrameLayout(this)
+        rootBox.setBackgroundColor(0xFFFFFFFF.toInt())
+        rootBox.addView(web, android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
+        setContentView(rootBox)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(rootBox) { v, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.displayCutout())
+            val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+            androidx.core.view.WindowInsetsCompat.CONSUMED
+        }
+        setBars(0xFFFFFFFF.toInt(), false)
         with(web.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -540,6 +567,10 @@ class MainActivity : Activity() {
 
     /** Functions the Maata web app can call: window.MaataAndroid.getFcmToken() and so on. */
     inner class Bridge {
+        /** v386: the page's header colour → the phone's top / bottom bars (dark = light icons). */
+        @JavascriptInterface
+        fun setBarColors(color: String, dark: Boolean) { runOnUiThread { try { setBars(android.graphics.Color.parseColor(color.trim()), dark) } catch (_: Exception) { } } }
+
         @JavascriptInterface fun otpListen() { runOnUiThread { try { otpStart() } catch (_: Exception) { } } }
         @JavascriptInterface fun otpStopListen() { runOnUiThread { otpStop() } }
         @JavascriptInterface fun getFcmToken(): String = Notifier.token(this@MainActivity)
