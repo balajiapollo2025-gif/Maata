@@ -20,6 +20,7 @@
 }
 @media (prefers-color-scheme:dark){
   :root{--paper:#10161C;--panel:#18212A;--ink:#EEF1F4;--muted:#98A2B3;--line:#28323D;--peacock-soft:#1E3A42}
+  #lsTabs button,#hdTabs button,#smTabs button{background:var(--panel);border-color:var(--line);color:var(--ink)} /* v391: no white boxes with light text in dark mode */
 }
 *,*::before,*::after{box-sizing:inherit}
 html,body{height:100%;margin:0}
@@ -377,9 +378,9 @@ textarea.input{min-height:110px;resize:vertical}
       .gsJ .j{background:linear-gradient(135deg,#0F7A6E,#14B8A6);color:#fff;min-width:120px}.gsJ .j b{font-size:32px!important}.gsJ .w{background:#DCFCE7;color:#15803D}.gsJ .t{background:#EDE9FE;color:#5B21B6}.gsJ .k{background:#FFEDD5;color:#C2410C}
       @media (prefers-color-scheme:dark){.gsJ .w{background:#0F2E1C;color:#4ADE80}.gsJ .t{background:#2A2140;color:#DDD6FE}.gsJ .k{background:#33200D;color:#FDBA74}}
       .gsA .act{display:flex;gap:6px;flex-wrap:wrap}.gsA .act button{padding:8px 12px;border-radius:10px;border:0;font:inherit;font-weight:700;cursor:pointer}.gsA .act button:disabled{opacity:.35;cursor:default}
-      .gsS{display:flex;gap:10px;margin:0 0 14px;flex-wrap:wrap}.gsS div{background:#fff;border-radius:12px;padding:10px 16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}.gsS b{font-size:20px;display:block}
+      .gsS{display:flex;gap:10px;margin:0 0 14px;flex-wrap:wrap}.gsS div{border-radius:14px;padding:10px 16px;box-shadow:0 2px 8px rgba(0,0,0,.08);color:#fff!important;font-weight:700;min-width:110px}.gsS div:nth-child(1){background:linear-gradient(135deg,#F59E0B,#EA580C)!important}.gsS div:nth-child(2){background:linear-gradient(135deg,#16A34A,#0F7A6E)!important}.gsS div:nth-child(3){background:linear-gradient(135deg,#E11D48,#9333EA)!important}.gsS b{font-size:20px;display:block}
       </style>
-      <p style="margin:0 0 12px;color:#475569">Before you approve: call the panchayat office or the sarpanch, and check the name and photo. Only approved villages are shown to people. The app never asks for Aadhaar / Voter ID.</p>
+      <p style="margin:0 0 12px;color:var(--muted,#475569)">Before you approve: call the panchayat office or the sarpanch, and check the name and photo. Only approved villages are shown to people. The app never asks for Aadhaar / Voter ID.</p>
       <div class="gsS" id="gsStats"></div><div class="gsA" id="gsList"></div>
       <h3 style="margin:22px 0 6px">📢 Sarpanch voice announcements <span class="hint" style="font-weight:500;color:#64748B;font-size:13px">reported ones first · rules: no vote-asking, no party campaign, no abuse</span></h3>
       <div class="gsA" id="gsBcList"></div>
