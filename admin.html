@@ -399,19 +399,19 @@ textarea.input{min-height:110px;resize:vertical}
       .mcI .ph,.mcPh{aspect-ratio:1;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:40px;overflow:hidden;border:1px solid #EEF2F7}.mcI img,.mcPh img{width:100%;height:100%;object-fit:contain}
       .mcI b{font-size:13.5px;line-height:1.25}.mcI small{font-size:12px;color:var(--muted,#64748B)}.mcI .u{font-size:11.5px;color:#0F7A6E;font-weight:700}
       .mcM{position:fixed;inset:0;background:rgba(2,6,23,.55);z-index:999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 10px}
-      .mcBox{background:var(--panel,#fff);color:var(--ink,#1B2A33);border-radius:20px;padding:16px;width:min(760px,100%);box-shadow:0 20px 60px rgba(0,0,0,.3)}
-      .mcBox h3{margin:0 0 10px}.mcRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+      .mcBox{background:var(--panel,#fff);color:var(--ink,#1B2A33);border-radius:20px;padding:16px;width:min(760px,100%);box-sizing:border-box;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+      .mcBox h3{margin:0 0 10px}.mcRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:8px}
       .mcBox label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:700;color:var(--muted,#64748B)}
       .mcBox input::placeholder{color:#94A3B8;opacity:.55;font-style:italic}.mcBox input,.mcBox select{padding:9px 10px;border-radius:10px;border:1.5px solid var(--line,#CBD5E1);background:var(--paper,#fff);color:var(--ink,#111);font:inherit;font-size:14px}
       .mcAct{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.mcAct button{padding:10px 14px;border-radius:12px;font-weight:800;border:0}
-      .mcPg{display:grid;grid-template-columns:220px 1fr;gap:14px}@media(max-width:620px){.mcPg{grid-template-columns:1fr}}
+      .mcPg{display:grid;grid-template-columns:220px minmax(0,1fr);gap:14px}.mcPg>div,.mcB>div{min-width:0}.mcBox input,.mcBox select{width:100%;min-width:0;box-sizing:border-box}.mcRow>label{min-width:0}.mcL{margin-top:10px;border:1px dashed var(--line,#CBD5E1);border-radius:12px;padding:8px 10px}.mcL summary{font-weight:800;cursor:pointer}.mcL .mcRow{grid-template-columns:repeat(auto-fit,minmax(min(140px,45%),1fr))}.mcL summary small{font-weight:600;color:var(--muted,#64748B)}@media(max-width:620px){.mcPg{grid-template-columns:1fr}}
       .mcTg{display:flex;gap:4px;margin-top:6px}.mcTg button{flex:1;padding:6px;border-radius:9px;border:1px solid var(--line,#CBD5E1);font-size:12px;font-weight:700;background:var(--panel,#fff);color:var(--ink,#111)}.mcTg button.on{background:#0F7A6E;color:#fff}
       .mcSt{font-size:12.5px;font-weight:700;margin-top:6px;white-space:pre-line}
-      .mcB{display:grid;grid-template-columns:96px 1fr;gap:10px;border:1px solid var(--line,#E2E8F0);border-radius:14px;padding:8px;margin-bottom:8px}.mcB .mcPh{font-size:24px}
+      .mcB{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;border:1px solid var(--line,#E2E8F0);border-radius:14px;padding:8px;margin-bottom:8px}.mcB .mcPh{font-size:24px}
       .mcB .mcRow{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}.mcB.off{opacity:.45}
       .mcDup{color:#B45309;font-size:12px;font-weight:700}
       </style>
-      <p class="mcHint">Add a product once → every shop ticks it, types its own price and starts selling. A photo gets a <b>white background</b> and is <b>sharpened</b> automatically when you choose it (🤖 AI when the Gemini key can make pictures, otherwise the built-in cleaner — best on a plain table or wall). Use your own photos only (not from Google).</p>
+      <p class="mcHint">Add a product once → every shop ticks it, types its own price and starts selling. A photo gets a <b>white background</b> and is <b>sharpened</b> automatically when you choose it (🤖 AI when the Gemini key can make pictures, otherwise the built-in cleaner — best on a plain table or wall). Use your own photos only (not from Google). Type names in <b>English only</b> — each shop chooses to show English, its own language, or both (Maata AI writes the local names in the background).</p>
       <div class="mcS" id="mcStats"></div>
       <div class="mcBar"><button id="mcAdd" style="background:#DCFCE7;color:#166534">➕ Add one</button><button id="mcBulk" style="background:#E0F2FE;color:#075985">📷 Many photos (AI fills names)</button><button id="mcCsv" style="background:#FEF3C7;color:#92400E">📄 Excel / CSV</button><button id="mcSugB" style="background:#1F2937;color:#fff">💡 Shop suggestions <span id="mcSugN"></span></button></div>
       <input id="mcQ" type="search" placeholder="🔍 Search name, Telugu name or barcode">
@@ -613,7 +613,7 @@ async function loadMcat() {
   $('#mcSugN').textContent = d.sug ? '(' + d.sug + ')' : '';
   $('#mcCats').innerHTML = [`<button data-mc="" class="${MC.cat ? '' : 'on'}">All</button>`, ...d.cats.map((c) => `<button data-mc="${c.id}" class="${MC.cat === c.id ? 'on' : ''}">${esc(c.name)} <small>${c.n}</small></button>`)].join('');
   $$('#mcCats [data-mc]').forEach((b) => b.onclick = () => { MC.cat = b.dataset.mc; loadMcat().catch((e) => toast(e.message)); });
-  $('#mcList').innerHTML = d.items.length ? d.items.map((x) => `<button class="mcI" data-mcid="${esc(x.id)}"><span class="ph">${x.hasPhoto ? `<img loading="lazy" src="${mcImg(x)}" alt="">` : '📦'}</span><b>${esc(x.name)}${x.size ? ' · ' + esc(x.size) : ''}</b><small>${esc(x.te)}</small><span class="u">${esc(x.sub || '')}${x.uses ? ' · 🏪 ' + x.uses : ''}</span></button>`).join('') : '<p style="color:#64748B">No products yet. Tap ➕ Add one or 📷 Many photos.</p>';
+  $('#mcList').innerHTML = d.items.length ? d.items.map((x) => `<button class="mcI" data-mcid="${esc(x.id)}"><span class="ph">${x.hasPhoto ? `<img loading="lazy" src="${mcImg(x)}" alt="">` : '📦'}</span><b>${esc(x.name)}${x.size ? ' · ' + esc(x.size) : ''}</b><span class="u">${esc(x.sub || '')}${x.uses ? ' · 🏪 ' + x.uses : ''}</span></button>`).join('') : '<p style="color:#64748B">No products yet. Tap ➕ Add one or 📷 Many photos.</p>';
   $$('#mcList [data-mcid]').forEach((b) => b.onclick = () => mcEdit(d.items.find((x) => x.id === b.dataset.mcid)));
   if (!MC.wired) {
     MC.wired = true;
@@ -699,11 +699,16 @@ function mcModal(html) { const m = document.createElement('div'); m.className = 
 const mcOpts = (list, v) => list.map((o) => `<option value="${esc(o[0])}"${String(o[0]) === String(v) ? ' selected' : ''}>${esc(o[1])}</option>`).join('');
 function mcFields(x, pre = '') {
   const d = MC.d || { cats: [], units: ['pcs'], taxes: [0] };
-  return `<div class="mcRow"><label>Name (English)<input name="${pre}name" value="${esc(x.name || '')}" maxlength="60" placeholder="e.g. Toor Dal"></label><label>Telugu name<input name="${pre}te" value="${esc(x.te || '')}" maxlength="60" placeholder="ఉదా: కందిపప్పు"></label><label>Pack size<input name="${pre}size" value="${esc(x.size || '')}" maxlength="20" placeholder="e.g. 1kg"></label>
+  const nm = x.names || {}, langs = d.langs || [];
+  return `<div class="mcRow"><label>Product name (English)<input name="${pre}name" value="${esc(x.name || '')}" maxlength="60" placeholder="e.g. Toor Dal"></label><label>Pack size<input name="${pre}size" value="${esc(x.size || '')}" maxlength="20" placeholder="e.g. 1kg"></label>
   <label>Category<select name="${pre}cat">${mcOpts(d.cats.map((c) => [c.id, c.name]), x.cat || MC.cat || 'kirana')}</select></label><label>Shelf group<input name="${pre}sub" value="${esc(x.sub || '')}" maxlength="40" placeholder="e.g. Rice & dal"></label><label>Sold as<select name="${pre}unit">${mcOpts(d.units.map((u) => [u, u]), x.unit || 'pcs')}</select></label>
-  <label>Barcode<input name="${pre}barcode" value="${esc(x.barcode || '')}" inputmode="numeric" maxlength="14"></label><label>GST %<select name="${pre}tax">${mcOpts(d.taxes.map((t) => [t, t + '%']), x.tax || 0)}</select></label><label>MRP ₹ (optional)<input name="${pre}mrp" value="${x.mrp ?? ''}" inputmode="decimal"></label></div>`;
+  <label>Barcode<input name="${pre}barcode" value="${esc(x.barcode || '')}" inputmode="numeric" maxlength="14"></label><label>GST %<select name="${pre}tax">${mcOpts(d.taxes.map((t) => [t, t + '%']), x.tax || 0)}</select></label><label>MRP ₹ (optional)<input name="${pre}mrp" value="${x.mrp ?? ''}" inputmode="decimal"></label></div>
+`;
 }
-const mcVals = (box, pre = '') => { const o = {}; for (const f of ['name', 'te', 'size', 'cat', 'sub', 'unit', 'barcode', 'tax', 'mrp']) { const e = box.querySelector(`[name="${pre}${f}"]`); if (e) o[f] = e.value.trim(); } return o; };
+const mcVals = (box, pre = '') => { const o = { names: {} }; for (const f of ['name', 'size', 'cat', 'sub', 'unit', 'barcode', 'tax', 'mrp']) { const e = box.querySelector(`[name="${pre}${f}"]`); if (e) o[f] = e.value.trim(); } for (const l of (MC.d && MC.d.langs) || []) { const e = box.querySelector(`[name="${pre}L_${l[0]}"]`); if (e) o.names[l[0]] = e.value.trim(); } return o; };
+const mcSetNames = (box, pre, names, onlyEmpty) => { for (const [k, v] of Object.entries(names || {})) { const e = box.querySelector(`[name="${pre}L_${k}"]`); if (e && v && (!onlyEmpty || !e.value)) e.value = v; } };
+function mcWireAiN(box) { box.querySelectorAll('.mcAiN').forEach((b) => b.onclick = async () => { const pre = b.dataset.pre, v = mcVals(box, pre); if (!v.name) return toast('Type the English name first'); b.disabled = true; b.textContent = '⏳ AI is writing…';
+  try { mcSetNames(box, pre, await api('/admin/api/mcat/ai-names', { method: 'POST', body: JSON.stringify({ name: v.name, sub: v.sub }) }), false); b.textContent = '✅ Done — check and fix if needed'; } catch (e) { toast(e.message); b.textContent = '🤖 Fill all languages with AI'; } b.disabled = false; }); }
 function mcPhotoBox(m, st) { // before / after toggle
   const ph = m.querySelector('.mcPh'), show = () => { const b = st.view === 'orig' ? st.f.orig : st.f.fixed; ph.innerHTML = `<img src="${URL.createObjectURL(b)}" alt="">`; m.querySelectorAll('.mcTg button').forEach((x) => x.classList.toggle('on', x.dataset.v === st.view)); };
   m.querySelectorAll('.mcTg button').forEach((b) => b.onclick = () => { st.view = b.dataset.v; show(); }); show();
@@ -723,11 +728,11 @@ function mcEdit(x) {
     const read = !x ? mcUp('/admin/api/mcat/ai-read', base ? await mcBlob(base, 0.88) : file).catch((er) => ({ err: er.message })) : null;
     try { st.f = await mcFix(base, file); m.querySelector('.mcTg').hidden = false; mcPhotoBox(m, st); s.textContent = mcHowTxt(st.f); } catch (er) { s.textContent = '⚠️ ' + er.message; }
     sv.disabled = false; sv.textContent = '✅ Save';
-    const r = await read; if (r && r.err) m.querySelector('.mcDup').textContent = '⚠️ AI could not read the name: ' + r.err; else if (r) { for (const [k, v] of Object.entries(r)) { if (k === 'name' && v === 'Product') continue; const el = m.querySelector(`[name="${k}"]`); if (el && !el.value && v !== '' && v != null) el.value = v; } if (r.dup) m.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.dup.name; }
+    const r = await read; if (r && r.err) m.querySelector('.mcDup').textContent = '⚠️ AI could not read the name: ' + r.err; else if (r) { st.names = r.names; for (const [k, v] of Object.entries(r)) { if (k === 'name' && v === 'Product') continue; if (v && typeof v === 'object') continue; const el = m.querySelector(`[name="${k}"]`); if (el && !el.value && v !== '' && v != null) el.value = v; } if (r.dup) m.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.dup.name; }
   }; inp.click(); };
   m.querySelector('.mcSave').onclick = async (ev) => {
     const b = ev.target; b.disabled = true;
-    try { const y = await api('/admin/api/mcat', { method: 'POST', body: JSON.stringify({ ...(x ? { id: x.id } : {}), ...mcVals(m) }) });
+    try { const v = mcVals(m); if (st.names && !x) v.names = st.names; else delete v.names; const y = await api('/admin/api/mcat', { method: 'POST', body: JSON.stringify({ ...(x ? { id: x.id } : {}), ...v }) });
       if (st.f) await mcUp('/admin/api/mcat/' + y.id + '/photo', st.view === 'orig' ? st.f.orig : st.f.fixed);
       toast('Saved'); m.remove(); loadMcat(); } catch (e) { toast(e.message); b.disabled = false; }
   };
@@ -744,14 +749,14 @@ function mcBulk(files) {
   const work = async () => { while (k < rows.length) { const r = rows[k++]; const s = r.el.querySelector('.mcSt');
     try { s.textContent = '🤖 Reading the pack…'; const base = await mcFromFile(r.file), small = base ? await mcBlob(base, 0.88) : r.file;
       r.d = await mcUp('/admin/api/mcat/ai-read', small).catch((e) => ({ name: '', err: e.message }));
-      r.el.querySelector('.mcF').innerHTML = mcFields({ ...r.d, cat: r.d.cat || MC.cat || 'kirana' }, 'b' + r.i + '_'); if (r.d.dup) { r.el.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.d.dup.name; } if (r.d.err) r.el.querySelector('.mcDup').textContent = '⚠️ ' + r.d.err;
+      r.el.querySelector('.mcF').innerHTML = mcFields({ ...r.d, name: r.d.name === 'Product' ? '' : r.d.name, cat: r.d.cat || MC.cat || 'kirana' }, 'b' + r.i + '_');  if (r.d.dup) { r.el.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.d.dup.name; } if (r.d.err) r.el.querySelector('.mcDup').textContent = '⚠️ ' + r.d.err;
       s.textContent = '🪄 Cleaning the photo…'; r.f = await mcFix(base, r.file); r.el.querySelector('.mcPh').innerHTML = `<img src="${URL.createObjectURL(r.f.fixed)}" alt="">`; s.textContent = mcHowTxt(r.f);
     } catch (e) { s.textContent = '⚠️ ' + e.message; }
     done++; save.textContent = done < rows.length ? `⏳ ${done} / ${rows.length} ready…` : `✅ Save all (${rows.filter((x) => x.on).length})`; if (done === rows.length) save.disabled = false; } };
   Promise.all([work(), work()]);
   save.onclick = async () => { save.disabled = true; let ok = 0, bad = 0;
     for (const r of rows) { if (!r.on || !r.d) continue; save.textContent = `⏳ Saving ${ok + bad + 1}…`;
-      try { const y = await api('/admin/api/mcat', { method: 'POST', body: JSON.stringify(mcVals(r.el, 'b' + r.i + '_')) }); if (r.f) await mcUp('/admin/api/mcat/' + y.id + '/photo', r.f.fixed); ok++; r.el.remove(); } catch (e) { bad++; r.el.querySelector('.mcDup').textContent = '⚠️ ' + e.message; } }
+      try { const v = mcVals(r.el, 'b' + r.i + '_'); if (r.d && r.d.names && v.name === r.d.name) v.names = r.d.names; else delete v.names; const y = await api('/admin/api/mcat', { method: 'POST', body: JSON.stringify(v) }); if (r.f) await mcUp('/admin/api/mcat/' + y.id + '/photo', r.f.fixed); ok++; r.el.remove(); } catch (e) { bad++; r.el.querySelector('.mcDup').textContent = '⚠️ ' + e.message; } }
     toast(ok + ' saved' + (bad ? ' · ' + bad + ' need a fix' : '')); loadMcat(); if (!bad) m.remove(); else { save.disabled = false; save.textContent = '✅ Save the rest'; } };
 }
 // 📄 CSV (Excel → File → Save as → CSV)
@@ -760,15 +765,15 @@ function mcCsvParse(t) {
   for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { if (c === '"' && t[i + 1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; } else if (c === '"') q = true; else if (c === sep) { row.push(f); f = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; } else f += c; }
   if (f || row.length) { row.push(f); rows.push(row); }
   const head = (rows.shift() || []).map((h) => h.trim().toLowerCase().replace(/^﻿/, ''));
-  const map = { name: ['name', 'product', 'product name', 'english name', 'item'], te: ['te', 'telugu', 'telugu name'], size: ['size', 'pack', 'pack size', 'weight', 'qty'], unit: ['unit', 'sold as'], cat: ['cat', 'category'], sub: ['sub', 'group', 'shelf', 'shelf group', 'sub category'], barcode: ['barcode', 'ean', 'code'], tax: ['tax', 'gst', 'gst %'], mrp: ['mrp', 'price'], kw: ['keywords', 'kw', 'other names'] };
+  const map = { name: ['name', 'product', 'product name', 'english name', 'item'], hi: ['hi', 'hindi'], te: ['te', 'telugu', 'telugu name'], ta: ['ta', 'tamil'], kn: ['kn', 'kannada'], ml: ['ml', 'malayalam'], mr: ['mr', 'marathi'], gu: ['gu', 'gujarati'], bn: ['bn', 'bangla', 'bengali'], pa: ['pa', 'punjabi'], ur: ['ur', 'urdu'], size: ['size', 'pack', 'pack size', 'weight', 'qty'], unit: ['unit', 'sold as'], cat: ['cat', 'category'], sub: ['sub', 'group', 'shelf', 'shelf group', 'sub category'], barcode: ['barcode', 'ean', 'code'], tax: ['tax', 'gst', 'gst %'], mrp: ['mrp', 'price'], kw: ['keywords', 'kw', 'other names'] };
   const col = {}; for (const [k, names] of Object.entries(map)) { const i = head.findIndex((h) => names.includes(h)); if (i >= 0) col[k] = i; }
   return { col, rows: rows.filter((r) => r.some((x) => x.trim())).map((r) => { const o = {}; for (const [k, i] of Object.entries(col)) o[k] = (r[i] || '').trim(); return o; }) };
 }
 function mcCsvDlg() {
-  const m = mcModal(`<h3>📄 Add many products from Excel</h3><p class="mcHint">In Excel: <b>File → Save as → CSV</b>. First row = column names: <code>name, telugu, size, unit, category, group, barcode, gst, mrp</code>. Only <b>name</b> is needed. Same name+size or same barcode = updated, not doubled. Photos: add later (tap a product) or with 📷 Many photos.</p>
+  const m = mcModal(`<h3>📄 Add many products from Excel</h3><p class="mcHint">In Excel: <b>File → Save as → CSV</b>. First row = column names: <code>name, size, unit, category, group, barcode, gst, mrp</code>. Only <b>name</b> (English) is needed. Same name+size or same barcode = updated, not doubled. Photos: add later (tap a product) or with 📷 Many photos.</p>
     <div class="mcAct"><button class="mcPickC" style="background:#FEF3C7;color:#92400E">📄 Choose CSV file</button><button class="mcSample" style="background:#F1F5F9;color:#334155">⬇️ Sample file</button><button class="mcX" style="background:#F1F5F9;color:#334155">Close</button></div><div class="mcSt"></div>`);
   m.querySelector('.mcX').onclick = () => m.remove();
-  m.querySelector('.mcSample').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿name,telugu,size,unit,category,group,barcode,gst,mrp\nToor Dal,కందిపప్పు,1kg,pcs,kirana,Rice & dal,,5,\nSunflower Oil,పొద్దుతిరుగుడు నూనె,1L,pcs,kirana,Oils & ghee,,5,\nBath Soap,స్నానపు సబ్బు,100g,pcs,beauty,Soaps,,18,\n'], { type: 'text/csv' })); a.download = 'maata-catalogue-sample.csv'; a.click(); };
+  m.querySelector('.mcSample').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿name,size,unit,category,group,barcode,gst,mrp\nToor Dal,1kg,pcs,kirana,Rice & dal,,5,\nSunflower Oil,1L,pcs,kirana,Oils & ghee,,5,\nBath Soap,100g,pcs,beauty,Soaps,,18,\n'], { type: 'text/csv' })); a.download = 'maata-catalogue-sample.csv'; a.click(); };
   m.querySelector('.mcPickC').onclick = () => { const inp = $('#mcCsvF'); inp.onchange = async (e) => { const file = e.target.files[0]; e.target.value = ''; if (!file) return;
     const p = mcCsvParse(await file.text()), s = m.querySelector('.mcSt');
     if (p.col.name == null) { s.textContent = '⚠️ No "name" column in the first row.'; return; }

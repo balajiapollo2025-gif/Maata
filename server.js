@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 393;
+const MAATA_VERSION = 395;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5062,17 +5062,22 @@ app.post('/api/biz/:bizId/photo-lib/apply', auth, async (req, res) => {
 // catalogue photo is stored once and shown for every shop that uses it (better photo here → better photo everywhere).
 const MCAT_CATS = [['kirana', '🛒 Kirana & groceries'], ['dairy', '🥛 Dairy & eggs'], ['veg', '🥦 Vegetables & fruits'], ['bakery', '🍞 Bakery & sweets'], ['snacks', '🍪 Snacks & drinks'], ['beauty', '🧴 Personal care'], ['home', '🧹 Home & cleaning'], ['medical', '💊 Medical'], ['baby', '🍼 Baby care'], ['stationery', '✏️ Stationery'], ['mobile', '📱 Mobile & electronics'], ['hardware', '🔩 Hardware & paints'], ['pooja', '🪔 Pooja items'], ['other', '📦 Other']];
 const MCAT_CAT_IDS = MCAT_CATS.map((x) => x[0]);
+// 🌐 v394: one English name for all of India + the local name in every Maata app language (shops see theirs, search finds all)
+const MCAT_LANGS = [['hi', 'Hindi', 'Devanagari'], ['te', 'Telugu', 'Telugu'], ['ta', 'Tamil', 'Tamil'], ['kn', 'Kannada', 'Kannada'], ['ml', 'Malayalam', 'Malayalam'], ['mr', 'Marathi', 'Devanagari'], ['gu', 'Gujarati', 'Gujarati'], ['bn', 'Bangla', 'Bengali'], ['pa', 'Punjabi', 'Gurmukhi'], ['ur', 'Urdu', 'Urdu (Arabic)']];
+const MCAT_LANG_IDS = MCAT_LANGS.map((l) => l[0]);
+const mcatNames = (x) => { const n = { ...(x.names || {}) }; if (x.te && !n.te) n.te = x.te; return n; };
 const mcatCatName = (c) => (MCAT_CATS.find((x) => x[0] === c) || MCAT_CATS[MCAT_CATS.length - 1])[1].replace(/^\S+\s/, '');
 let mcatIdx = null;
 const mcatById = (id) => { if (!id) return null; if (!mcatIdx) mcatIdx = new Map(db.mcat.map((x) => [x.id, x])); return mcatIdx.get(String(id)) || null; };
 const mcatDirty = () => { mcatIdx = null; };
 function mcatPh(p) { if (!p || p.photo || !p.mcat || p.mcatNoPh) return null; const m = mcatById(p.mcat); return m && m.photo ? m : null; }
 const mcatFull = (x) => clip([x.name, x.size].filter(Boolean).join(' '), 80);
-const mcatOut = (x, haveSet) => ({ id: x.id, name: x.name, te: x.te || '', size: x.size || '', unit: x.unit || 'pcs', cat: x.cat, sub: x.sub || '', barcode: x.barcode || '', tax: x.tax || 0, mrp: x.mrp ?? null, hasPhoto: !!x.photo, v: x.photoV || 0, uses: x.uses || 0, ...(haveSet ? { have: haveSet.has(x.id) } : {}) });
+const mcatOut = (x, haveSet) => ({ id: x.id, name: x.name, names: mcatNames(x), te: mcatNames(x).te || '', size: x.size || '', unit: x.unit || 'pcs', cat: x.cat, sub: x.sub || '', barcode: x.barcode || '', tax: x.tax || 0, mrp: x.mrp ?? null, hasPhoto: !!x.photo, v: x.photoV || 0, uses: x.uses || 0, ...(haveSet ? { have: haveSet.has(x.id) } : {}) });
 const mcatKey = (s) => { const t = libTokens(s); return t.words.slice().sort().join(' ') + (t.sizes.length ? '|' + t.sizes.join(' ') : ''); };
 function mcatRead(b, x) { // fields an admin may set; returns an error text or null
   if (b.name !== undefined || !x.name) { const n = clip(b.name, 60); if (!n) return 'Enter the product name.'; x.name = n; }
-  if (b.te !== undefined) x.te = clip(b.te, 60);
+  if (b.names && typeof b.names === 'object') { const n = mcatNames(x); for (const l of MCAT_LANG_IDS) if (b.names[l] !== undefined) { const v = clip(b.names[l], 60); if (v) n[l] = v; else delete n[l]; } x.names = n; delete x.te; }
+  for (const l of MCAT_LANG_IDS) if (b[l] !== undefined && typeof b[l] === 'string') { const n = mcatNames(x), v = clip(b[l], 60); if (v) n[l] = v; else delete n[l]; x.names = n; delete x.te; } // te / hi / ta … as plain fields (CSV)
   if (b.size !== undefined) x.size = clip(b.size, 20);
   if (b.unit !== undefined) x.unit = BIZ_UNITS.includes(b.unit) ? b.unit : 'pcs';
   if (b.cat !== undefined || !x.cat) x.cat = MCAT_CAT_IDS.includes(b.cat) ? b.cat : 'other';
@@ -5092,7 +5097,7 @@ function mcatFind(q, cat, sub, barcode, limit = 300) {
   const qt = libTokens(q || '');
   if (!qt.words.length) return list.slice().sort((a, b) => (b.uses || 0) - (a.uses || 0) || a.name.localeCompare(b.name)).slice(0, limit);
   const scored = [];
-  for (const x of list) { const s = libScore(qt, { id: 'mcat:' + x.id, name: [x.name, x.te, x.size, x.kw].filter(Boolean).join(' '), category: x.sub || '' }); if (s > 0) scored.push([s, x]); }
+  for (const x of list) { const s = libScore(qt, { id: 'mcat:' + x.id, name: [x.name, ...Object.values(mcatNames(x)), x.size, x.kw].filter(Boolean).join(' '), category: x.sub || '' }); if (s > 0) scored.push([s, x]); }
   return scored.sort((a, b) => b[0] - a[0] || (b[1].uses || 0) - (a[1].uses || 0)).slice(0, limit).map((y) => y[1]);
 }
 function mcatPhotoReq(req) { // a shop user (?t=) or the admin (?token=)
@@ -5140,7 +5145,9 @@ app.post('/api/biz/:bizId/mcat-add', auth, (req, res) => {
     const x = mcatById(it && it.id); if (!x || have.has(x.id)) { skipped++; continue; }
     const p = { id: newId(), ownerId: c.bizId, available: true, createdAt: now(), stock: null, mcat: x.id };
     const price = it.price === '' || it.price == null ? null : it.price;
-    const err = readProductFields({ name: mcatFull(x), price, ...(x.mrp != null ? { mrp: x.mrp } : {}), unit: x.unit || 'pcs', category: x.sub || mcatCatName(x.cat), barcode: x.barcode && !bcs.has(x.barcode) ? x.barcode : '', taxRate: x.tax || 0, description: x.te || '' }, p, true);
+    const loc = mcatNames(x)[MCAT_LANG_IDS.includes(req.body.lang) ? req.body.lang : ''] || '', mode = loc ? req.body.mode : 'en'; // 🌐 v395: the shop chooses English / local / both
+    const nm = mode === 'loc' ? [loc, x.size].filter(Boolean).join(' ') : mode === 'both' ? [x.name + ' / ' + loc, x.size].filter(Boolean).join(' ') : mcatFull(x);
+    const err = readProductFields({ name: clip(nm, 80), price, ...(x.mrp != null ? { mrp: x.mrp } : {}), unit: x.unit || 'pcs', category: x.sub || mcatCatName(x.cat), barcode: x.barcode && !bcs.has(x.barcode) ? x.barcode : '', taxRate: x.tax || 0, description: '' }, p, true);
     if (err) { skipped++; continue; }
     db.products.push(p); have.add(x.id); if (p.barcode) bcs.add(p.barcode); x.uses = (x.uses || 0) + 1;
     const st = Number(it.stock); if (it.stock !== '' && it.stock != null && isFinite(st) && Math.abs(st) < 1e7) { p.stock = 0; stockMove(c, p, Math.round(st * 1000) / 1000, 'opening', ''); }
@@ -5154,16 +5161,17 @@ app.get('/admin/api/mcat', adminAuth, (req, res) => {
   const cat = MCAT_CAT_IDS.includes(req.query.cat) ? req.query.cat : '';
   const items = mcatFind(clip(req.query.q, 80), cat, '', req.query.barcode, 600);
   const counts = {}; for (const x of db.mcat) counts[x.cat] = (counts[x.cat] || 0) + 1;
-  res.json({ items: items.map((x) => mcatOut(x)), total: db.mcat.length, withPhoto: db.mcat.filter((x) => x.photo).length, uses: db.mcat.reduce((a, x) => a + (x.uses || 0), 0), cats: MCAT_CATS.map((k) => ({ id: k[0], name: k[1], n: counts[k[0]] || 0 })), units: BIZ_UNITS, taxes: BIZ_TAX, sug: mcatSugList().length, ai: !!GEMINI_KEY });
+  res.json({ items: items.map((x) => mcatOut(x)), langs: MCAT_LANGS.map((l) => [l[0], l[1]]), noLang: db.mcat.filter((x) => Object.keys(mcatNames(x)).length < MCAT_LANG_IDS.length).length, total: db.mcat.length, withPhoto: db.mcat.filter((x) => x.photo).length, uses: db.mcat.reduce((a, x) => a + (x.uses || 0), 0), cats: MCAT_CATS.map((k) => ({ id: k[0], name: k[1], n: counts[k[0]] || 0 })), units: BIZ_UNITS, taxes: BIZ_TAX, sug: mcatSugList().length, ai: !!GEMINI_KEY });
 });
 app.post('/admin/api/mcat', adminAuth, (req, res) => {
   const b = req.body || {}; let x = b.id ? mcatById(b.id) : null;
   if (b.id && !x) return res.status(404).json({ error: 'Not found.' });
   const isNew = !x; if (isNew) x = { id: newId(), at: now(), uses: 0 };
+  if (!isNew && b.name !== undefined && clip(b.name, 60) !== x.name) { x.names = {}; delete x.te; delete x.namesTried; } // new English name → local names are written again
   const err = mcatRead(b, x); if (err) return res.status(400).json({ error: err });
   if (x.barcode && db.mcat.some((y) => y !== x && y.barcode === x.barcode)) return res.status(400).json({ error: 'Another catalogue product has this barcode.' });
   if (isNew) { if (db.mcat.length >= 50000) return res.status(400).json({ error: 'The catalogue is full (50,000).' }); db.mcat.push(x); mcatDirty(); }
-  x.by = req.admin ? req.admin.username || 'admin' : 'admin'; x.upd = now(); save(); res.json(mcatOut(x));
+  x.by = req.admin ? req.admin.username || 'admin' : 'admin'; x.upd = now(); save(); mcatAutoNames(); res.json(mcatOut(x));
 });
 app.delete('/admin/api/mcat/:id', adminAuth, (req, res) => {
   const x = mcatById(req.params.id); if (!x) return res.status(404).json({ error: 'Not found.' });
@@ -5182,23 +5190,23 @@ app.post('/admin/api/mcat/import', adminAuth, (req, res) => { // 📄 Excel / CS
     const bc = String(r.barcode || '').replace(/\D/g, ''), k = mcatKey(String(r.name) + ' ' + (r.size || ''));
     let x = (bc && byBc.get(bc)) || byKey.get(k); const isNew = !x;
     if (isNew) x = { id: newId(), at: now(), uses: 0 };
-    const b = {}; for (const f of ['name', 'te', 'size', 'unit', 'cat', 'sub', 'barcode', 'tax', 'mrp', 'kw']) if (r[f] !== undefined && String(r[f]).trim() !== '') b[f] = String(r[f]).trim();
+    const b = {}; for (const f of ['name', 'size', 'unit', 'cat', 'sub', 'barcode', 'tax', 'mrp', 'kw', ...MCAT_LANG_IDS]) if (r[f] !== undefined && String(r[f]).trim() !== '') b[f] = String(r[f]).trim();
     if (b.cat) { const c = String(b.cat).toLowerCase(); b.cat = MCAT_CAT_IDS.includes(c) ? c : (MCAT_CATS.find((y) => y[1].toLowerCase().includes(c)) || ['other'])[0]; }
     if (b.unit) b.unit = String(b.unit).toLowerCase();
     if (mcatRead(b, x)) { bad.push(i + 2); return; }
     if (isNew) { db.mcat.push(x); added++; } else updated++;
     if (x.barcode) byBc.set(x.barcode, x); byKey.set(k, x);
   });
-  mcatDirty(); save(); res.json({ added, updated, bad: bad.slice(0, 50), badCount: bad.length });
+  mcatDirty(); save(); mcatAutoNames(); res.json({ added, updated, bad: bad.slice(0, 50), badCount: bad.length });
 });
 // 🤖 read a product photo → name, Telugu name, size, category, barcode
 app.post('/admin/api/mcat/ai-read', adminAuth, express.raw({ type: ['image/*'], limit: '6mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || req.body.length < 500) return res.status(400).json({ error: 'Choose a photo.' });
   const mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0];
   const r = await gemini('You read product packs and loose products for a shop catalogue in Andhra Pradesh / Telangana, India. Answer only with JSON.', [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text:
-    'Return JSON {"name","te","size","unit","cat","sub","barcode","tax"}.\n' +
+    'Return JSON {"name","names","size","unit","cat","sub","barcode","tax"}.\n' +
     'name: English product name as shoppers say it, with the brand only if it is clearly printed (e.g. "Aashirvaad Whole Wheat Atta", "Toor Dal"), WITHOUT the pack size, max 60 characters.\n' +
-    'te: the common Telugu name in Telugu script (e.g. "గోధుమ పిండి", "కందిపప్పు"); brand names stay in English letters.\n' +
+    'names: the name shoppers use in each Indian language, in that language\'s own script, as an object with keys ' + MCAT_LANGS.map((l) => l[0] + ' (' + l[1] + ')').join(', ') + '. ' + MCAT_NAME_RULE + '\n' +
     'size: pack size exactly as printed, short (e.g. "1kg", "500ml", "100g", "10 pcs"); "" if not visible.\n' +
     'unit: how it is sold, one of pcs, kg, g, l, ml, pack, box, dozen.\n' +
     'cat: one of ' + MCAT_CAT_IDS.join(', ') + '.\n' +
@@ -5208,9 +5216,48 @@ app.post('/admin/api/mcat/ai-read', adminAuth, express.raw({ type: ['image/*'], 
     'Never invent a brand, size or barcode that is not visible.' }] }], { json: true, maxTokens: 500, temperature: 0.1 });
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
   let d = {}; try { d = JSON.parse(String(r.text || '{}').replace(/^```json|```$/g, '').trim()); } catch { return res.status(502).json({ error: 'AI could not read this photo.' }); }
-  const x = {}; mcatRead({ name: d.name || 'Product', te: d.te, size: d.size, unit: String(d.unit || '').toLowerCase(), cat: d.cat, sub: d.sub, barcode: d.barcode, tax: d.tax }, x);
+  const x = {}; mcatRead({ name: d.name || 'Product', names: d.names && typeof d.names === 'object' ? d.names : {}, size: d.size, unit: String(d.unit || '').toLowerCase(), cat: d.cat, sub: d.sub, barcode: d.barcode, tax: d.tax }, x);
   const dup = (x.barcode && db.mcat.find((y) => y.barcode === x.barcode)) || db.mcat.find((y) => mcatKey(y.name + ' ' + (y.size || '')) === mcatKey(x.name + ' ' + (x.size || '')));
-  res.json({ ...x, dup: dup ? { id: dup.id, name: mcatFull(dup) } : null });
+  res.json({ ...x, names: mcatNames(x), dup: dup ? { id: dup.id, name: mcatFull(dup) } : null });
+});
+const MCAT_NAME_RULE = 'Generic words are TRANSLATED to the everyday local word (Toor Dal → Telugu "కందిపప్పు", Hindi "अरहर दाल", Tamil "துவரம் பருப்பு"; Sugar → "చక్కెర", "चीनी", "சர்க்கரை"). Brand names and invented product names are NOT translated: write them by SOUND in that script, the way people say them (Lotte Choco Pie → Telugu "లోట్టే చోకో పై", Hindi "लोटे चोको पाई"; Parle-G → "పార్లే-జి", "पारले-जी"). Keep it short, no pack size.';
+async function mcatAiNames(list) { // [{name, size, sub}] → [{hi, te, …}]
+  const r = await gemini('You write product names for Indian shops in every Indian language. Answer only with JSON.', [{ role: 'user', parts: [{ text:
+    'For each product give its name in these languages, each in its own script: ' + MCAT_LANGS.map((l) => l[0] + ' = ' + l[1]).join(', ') + '.\n' + MCAT_NAME_RULE +
+    '\nReturn JSON {"items":[{"i":index,"names":{"hi":"…","te":"…",…}}]}.\n' + list.map((x, i) => i + '. ' + x.name + (x.sub ? ' (' + x.sub + ')' : '')).join('\n') }] }], { json: true, maxTokens: 300 + list.length * 420, temperature: 0.2 });
+  if (r.error) throw new Error(AI_ERR[r.error] || 'AI is busy, try again.');
+  let d = {}; try { d = JSON.parse(String(r.text || '{}').replace(/^```json|```$/g, '').trim()); } catch { throw new Error('AI answer could not be read. Try again.'); }
+  const out = list.map(() => ({})); for (const it of d.items || []) if (out[it.i] && it.names) for (const l of MCAT_LANG_IDS) if (it.names[l]) out[it.i][l] = clip(it.names[l], 60);
+  return out;
+}
+// the Maata team types English only; the local names are written by AI in the background (a few seconds after each save)
+let mcatFillT = null, mcatFillBusy = false, mcatFillPauseTill = 0;
+function mcatAutoNames(ms = 4000) {
+  if (!GEMINI_KEY || mcatFillT) return;
+  mcatFillT = setTimeout(async () => {
+    mcatFillT = null; if (mcatFillBusy || now() < mcatFillPauseTill) return; mcatFillBusy = true;
+    try {
+      for (let round = 0; round < 200; round++) {
+        const todo = db.mcat.filter((x) => !x.namesTried && MCAT_LANG_IDS.some((l) => !mcatNames(x)[l])).slice(0, 15); if (!todo.length) break;
+        let got; try { got = await mcatAiNames(todo.map((x) => ({ name: x.name, sub: x.sub }))); } catch (e) { console.error('[mcat] names', e.message); mcatFillPauseTill = now() + 10 * 60000; setTimeout(() => mcatAutoNames(0), 10 * 60000 + 1000); break; }
+        todo.forEach((x, i) => { const n = mcatNames(x); for (const l of MCAT_LANG_IDS) if (!n[l] && got[i][l]) n[l] = got[i][l]; x.names = n; delete x.te; if (MCAT_LANG_IDS.some((l) => !n[l])) x.namesTried = now(); });
+        save(); await sleep(1500);
+      }
+    } finally { mcatFillBusy = false; }
+  }, ms);
+}
+setTimeout(() => mcatAutoNames(0), 90000); // after a restart: finish anything left
+app.post('/admin/api/mcat/ai-names', adminAuth, async (req, res) => {
+  const name = clip(req.body?.name, 60); if (!name) return res.status(400).json({ error: 'Enter the English name first.' });
+  try { res.json((await mcatAiNames([{ name, sub: clip(req.body.sub, 40) }]))[0]); } catch (e) { res.status(502).json({ error: e.message }); }
+});
+app.post('/admin/api/mcat/ai-fill', adminAuth, async (req, res) => { // fill missing languages for up to 15 products per call (the page calls again until done)
+  const todo = db.mcat.filter((x) => MCAT_LANG_IDS.some((l) => !mcatNames(x)[l])).slice(0, 15);
+  if (!todo.length) return res.json({ done: 0, left: 0 });
+  try { const got = await mcatAiNames(todo.map((x) => ({ name: x.name, sub: x.sub })));
+    todo.forEach((x, i) => { const n = mcatNames(x); for (const l of MCAT_LANG_IDS) if (!n[l] && got[i][l]) n[l] = got[i][l]; x.names = n; delete x.te; });
+    save(); res.json({ done: todo.length, left: db.mcat.filter((x) => MCAT_LANG_IDS.some((l) => !mcatNames(x)[l])).length });
+  } catch (e) { res.status(502).json({ error: e.message }); }
 });
 // 🪄 photo → product on pure white, sharp, square (Google Gemini image model; needs image access on the API key)
 let mcatImgModels = null, mcatImgAt = 0, mcatImgErr = '';
@@ -5287,7 +5334,7 @@ app.post('/admin/api/mcat/sug', adminAuth, async (req, res) => {
   const t = libTokens(s.name), size = (String(s.name).match(/\b\d+(\.\d+)?\s?(kg|g|gm|gms|ml|l|ltr|litre|pcs)\b/i) || [''])[0];
   mcatRead({ name: size ? s.name.replace(size, '').replace(/\s+/g, ' ').trim() || s.name : s.name, size, unit: s.unit, cat: MCAT_CAT_IDS.includes(req.body.cat) ? req.body.cat : 'kirana', sub: s.sub, barcode: s.barcode }, x);
   if (src && s.hasPhoto) { try { const chunks = []; await new Promise((ok, bad) => { const r = chatFileStream(src.photo, 0, src.photoSize - 1); r.on('data', (y) => chunks.push(y)); r.on('end', ok); r.on('error', bad); }); const id = newId(); await saveChatFile(id, Buffer.concat(chunks), src.photoMime); Object.assign(x, { photo: id, photoMime: src.photoMime, photoSize: src.photoSize, photoV: now() }); } catch (e) { console.error('[mcat] sug photo', e.message); } }
-  void t; db.mcat.push(x); mcatDirty(); save(); res.json(mcatOut(x));
+  void t; db.mcat.push(x); mcatDirty(); save(); mcatAutoNames(); res.json(mcatOut(x));
 });
 app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
