@@ -402,11 +402,11 @@ textarea.input{min-height:110px;resize:vertical}
       .mcBox{background:var(--panel,#fff);color:var(--ink,#1B2A33);border-radius:20px;padding:16px;width:min(760px,100%);box-shadow:0 20px 60px rgba(0,0,0,.3)}
       .mcBox h3{margin:0 0 10px}.mcRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
       .mcBox label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:700;color:var(--muted,#64748B)}
-      .mcBox input,.mcBox select{padding:9px 10px;border-radius:10px;border:1.5px solid var(--line,#CBD5E1);background:var(--paper,#fff);color:var(--ink,#111);font:inherit;font-size:14px}
+      .mcBox input::placeholder{color:#94A3B8;opacity:.55;font-style:italic}.mcBox input,.mcBox select{padding:9px 10px;border-radius:10px;border:1.5px solid var(--line,#CBD5E1);background:var(--paper,#fff);color:var(--ink,#111);font:inherit;font-size:14px}
       .mcAct{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.mcAct button{padding:10px 14px;border-radius:12px;font-weight:800;border:0}
       .mcPg{display:grid;grid-template-columns:220px 1fr;gap:14px}@media(max-width:620px){.mcPg{grid-template-columns:1fr}}
       .mcTg{display:flex;gap:4px;margin-top:6px}.mcTg button{flex:1;padding:6px;border-radius:9px;border:1px solid var(--line,#CBD5E1);font-size:12px;font-weight:700;background:var(--panel,#fff);color:var(--ink,#111)}.mcTg button.on{background:#0F7A6E;color:#fff}
-      .mcSt{font-size:12.5px;font-weight:700;margin-top:6px}
+      .mcSt{font-size:12.5px;font-weight:700;margin-top:6px;white-space:pre-line}
       .mcB{display:grid;grid-template-columns:96px 1fr;gap:10px;border:1px solid var(--line,#E2E8F0);border-radius:14px;padding:8px;margin-bottom:8px}.mcB .mcPh{font-size:24px}
       .mcB .mcRow{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}.mcB.off{opacity:.45}
       .mcDup{color:#B45309;font-size:12px;font-weight:700}
@@ -629,8 +629,13 @@ async function loadMcat() {
 const mcLoadImg = (src) => new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('Could not open this photo.')); i.src = src; });
 const mcCv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const mcBlob = (c, q = 0.9) => new Promise((r) => c.toBlob(r, 'image/jpeg', q));
-async function mcFromFile(file, max = 1600) {
-  const url = URL.createObjectURL(file); try { const im = await mcLoadImg(url); const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)); const c = mcCv(Math.round(im.naturalWidth * k), Math.round(im.naturalHeight * k)); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); return c; } finally { URL.revokeObjectURL(url); }
+async function mcFromFile(file, max = 1600) { // one decode, phone-camera safe (big photos, EXIF rotation); null = this browser cannot open it
+  const draw = (src, w0, h0) => { const k = Math.min(1, max / Math.max(w0, h0)), c = mcCv(Math.max(1, Math.round(w0 * k)), Math.max(1, Math.round(h0 * k))), g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, c.width, c.height); return c; };
+  const blank = (c) => { const t = mcCv(24, 24), g = t.getContext('2d'); g.drawImage(c, 0, 0, 24, 24); const d = g.getImageData(0, 0, 24, 24).data; let mn = 255, mx = 0; for (let i = 0; i < d.length; i += 4) { const v = d[i] + d[i + 1] + d[i + 2]; mn = Math.min(mn, v); mx = Math.max(mx, v); } return mx - mn < 6; };
+  if (window.createImageBitmap) { try { const bm = await createImageBitmap(file, { imageOrientation: 'from-image' }); const c = draw(bm, bm.width, bm.height); bm.close && bm.close(); if (!blank(c)) return c; } catch { /* try the other way */ } }
+  const url = URL.createObjectURL(file);
+  try { const im = await mcLoadImg(url); if (im.decode) await im.decode().catch(() => {}); const c = draw(im, im.naturalWidth, im.naturalHeight); if (!blank(c)) return c; } catch { /* cannot open */ } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  return null;
 }
 // built-in cleaner: the plain background is flood-filled from the edges and turned white, the product is cut out,
 // centred on a square, colours stretched, and sharpened. Works best on a plain table / wall / cloth.
@@ -677,8 +682,9 @@ function mcSquare(src, x, y, cw, ch, fill = 0.82, S = 1200) { // centre on a whi
   for (let yy = 1; yy < S - 1; yy++) for (let xx = 1; xx < S - 1; xx++) { const i = (yy * S + xx) * 4; for (let ch2 = 0; ch2 < 3; ch2++) { const j = i + ch2, bl = (c[j - 4] + c[j + 4] + c[j - S * 4] + c[j + S * 4] + c[j]) / 5; p[j] = c[j] + (c[j] - bl) * amt; } }
   g.putImageData(id, 0, 0); return out;
 }
-async function mcFix(file) { // → { orig: Blob, fixed: Blob, how: 'ai'|'white'|'enhance', note }
-  const base = await mcFromFile(file), orig = await mcBlob(base, 0.9);
+async function mcFix(base, file) { // base = canvas from mcFromFile (or null) → { orig, fixed, how, note }
+  if (!base) { if (file.size > 6e6) throw new Error('This photo could not be opened here and is too big to send as it is. Take it again with a lower camera size, or send it on WhatsApp to yourself and pick that copy.'); return { orig: file, fixed: file, how: 'raw' }; }
+  const orig = await mcBlob(base, 0.9);
   if (MC.d && MC.d.ai && MC.ai !== false) {
     try {
       const r = await mcUp('/admin/api/mcat/ai-photo', orig);
@@ -688,13 +694,13 @@ async function mcFix(file) { // → { orig: Blob, fixed: Blob, how: 'ai'|'white'
   }
   const cl = mcClean(base); return { orig, fixed: await mcBlob(cl.canvas, 0.92), how: cl.how, note: MC.aiWhy };
 }
-const mcHowTxt = (f) => f.how === 'ai' ? '🤖 AI: white background + HD' : f.how === 'white' ? '🪄 White background + sharpened (built-in)' : '✨ Sharpened (background not plain — try a plain table/wall for white)';
+const mcHowTxt = (f) => (f.how === 'ai' ? '🤖 AI: white background + HD' : f.how === 'white' ? '🪄 White background + sharpened (built-in)' : f.how === 'raw' ? '📷 Saved as it is (this browser could not open the photo to clean it)' : '✨ Sharpened (background not plain — try a plain table/wall for white)') + (f.how !== 'ai' && f.note ? '\n🤖 AI photo not used: ' + String(f.note).slice(0, 140) : '');
 function mcModal(html) { const m = document.createElement('div'); m.className = 'mcM'; m.innerHTML = `<div class="mcBox">${html}</div>`; m.onclick = (e) => { if (e.target === m) m.remove(); }; document.body.append(m); return m; }
 const mcOpts = (list, v) => list.map((o) => `<option value="${esc(o[0])}"${String(o[0]) === String(v) ? ' selected' : ''}>${esc(o[1])}</option>`).join('');
 function mcFields(x, pre = '') {
   const d = MC.d || { cats: [], units: ['pcs'], taxes: [0] };
-  return `<div class="mcRow"><label>Name (English)<input name="${pre}name" value="${esc(x.name || '')}" maxlength="60" placeholder="Toor Dal"></label><label>Telugu name<input name="${pre}te" value="${esc(x.te || '')}" maxlength="60" placeholder="కందిపప్పు"></label><label>Pack size<input name="${pre}size" value="${esc(x.size || '')}" maxlength="20" placeholder="1kg"></label>
-  <label>Category<select name="${pre}cat">${mcOpts(d.cats.map((c) => [c.id, c.name]), x.cat || MC.cat || 'kirana')}</select></label><label>Shelf group<input name="${pre}sub" value="${esc(x.sub || '')}" maxlength="40" placeholder="Rice & dal"></label><label>Sold as<select name="${pre}unit">${mcOpts(d.units.map((u) => [u, u]), x.unit || 'pcs')}</select></label>
+  return `<div class="mcRow"><label>Name (English)<input name="${pre}name" value="${esc(x.name || '')}" maxlength="60" placeholder="e.g. Toor Dal"></label><label>Telugu name<input name="${pre}te" value="${esc(x.te || '')}" maxlength="60" placeholder="ఉదా: కందిపప్పు"></label><label>Pack size<input name="${pre}size" value="${esc(x.size || '')}" maxlength="20" placeholder="e.g. 1kg"></label>
+  <label>Category<select name="${pre}cat">${mcOpts(d.cats.map((c) => [c.id, c.name]), x.cat || MC.cat || 'kirana')}</select></label><label>Shelf group<input name="${pre}sub" value="${esc(x.sub || '')}" maxlength="40" placeholder="e.g. Rice & dal"></label><label>Sold as<select name="${pre}unit">${mcOpts(d.units.map((u) => [u, u]), x.unit || 'pcs')}</select></label>
   <label>Barcode<input name="${pre}barcode" value="${esc(x.barcode || '')}" inputmode="numeric" maxlength="14"></label><label>GST %<select name="${pre}tax">${mcOpts(d.taxes.map((t) => [t, t + '%']), x.tax || 0)}</select></label><label>MRP ₹ (optional)<input name="${pre}mrp" value="${x.mrp ?? ''}" inputmode="decimal"></label></div>`;
 }
 const mcVals = (box, pre = '') => { const o = {}; for (const f of ['name', 'te', 'size', 'cat', 'sub', 'unit', 'barcode', 'tax', 'mrp']) { const e = box.querySelector(`[name="${pre}${f}"]`); if (e) o[f] = e.value.trim(); } return o; };
@@ -712,10 +718,12 @@ function mcEdit(x) {
   m.querySelector('.mcX').onclick = () => m.remove();
   m.querySelector('.mcPick').onclick = () => { const inp = $('#mcFile'); inp.onchange = async (e) => {
     const file = e.target.files[0]; e.target.value = ''; if (!file) return;
-    const s = m.querySelector('.mcSt'); s.textContent = '🪄 Cleaning the photo… (AI can take 10–20 seconds)';
-    const read = !x ? mcUp('/admin/api/mcat/ai-read', await mcBlob(await mcFromFile(file, 1400), 0.88)).catch(() => null) : null;
-    try { st.f = await mcFix(file); m.querySelector('.mcTg').hidden = false; mcPhotoBox(m, st); s.textContent = mcHowTxt(st.f); } catch (er) { s.textContent = '⚠️ ' + er.message; }
-    const r = await read; if (r) { for (const [k, v] of Object.entries(r)) { const el = m.querySelector(`[name="${k}"]`); if (el && !el.value && v !== '' && v != null) el.value = v; } if (r.dup) m.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.dup.name; }
+    const s = m.querySelector('.mcSt'), sv = m.querySelector('.mcSave'); s.textContent = '🪄 Cleaning the photo… (AI can take 10–40 seconds)'; sv.disabled = true; sv.textContent = '⏳ Photo getting ready…';
+    const base = await mcFromFile(file);
+    const read = !x ? mcUp('/admin/api/mcat/ai-read', base ? await mcBlob(base, 0.88) : file).catch((er) => ({ err: er.message })) : null;
+    try { st.f = await mcFix(base, file); m.querySelector('.mcTg').hidden = false; mcPhotoBox(m, st); s.textContent = mcHowTxt(st.f); } catch (er) { s.textContent = '⚠️ ' + er.message; }
+    sv.disabled = false; sv.textContent = '✅ Save';
+    const r = await read; if (r && r.err) m.querySelector('.mcDup').textContent = '⚠️ AI could not read the name: ' + r.err; else if (r) { for (const [k, v] of Object.entries(r)) { if (k === 'name' && v === 'Product') continue; const el = m.querySelector(`[name="${k}"]`); if (el && !el.value && v !== '' && v != null) el.value = v; } if (r.dup) m.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.dup.name; }
   }; inp.click(); };
   m.querySelector('.mcSave').onclick = async (ev) => {
     const b = ev.target; b.disabled = true;
@@ -734,10 +742,10 @@ function mcBulk(files) {
   for (const r of rows) { r.el = document.createElement('div'); r.el.className = 'mcB'; r.el.innerHTML = `<div><div class="mcPh">⏳</div><label style="font-size:12px;font-weight:700;display:flex;gap:4px;align-items:center;margin-top:4px"><input type="checkbox" checked> keep</label></div><div><div class="mcSt">🪄 Waiting…</div><div class="mcF"></div><div class="mcDup"></div></div>`; list.append(r.el); r.el.querySelector('input[type=checkbox]').onchange = (e) => { r.on = e.target.checked; r.el.classList.toggle('off', !r.on); }; }
   let k = 0, done = 0; const save = m.querySelector('.mcSaveAll');
   const work = async () => { while (k < rows.length) { const r = rows[k++]; const s = r.el.querySelector('.mcSt');
-    try { s.textContent = '🤖 Reading the pack…'; const small = await mcBlob(await mcFromFile(r.file, 1400), 0.88);
+    try { s.textContent = '🤖 Reading the pack…'; const base = await mcFromFile(r.file), small = base ? await mcBlob(base, 0.88) : r.file;
       r.d = await mcUp('/admin/api/mcat/ai-read', small).catch((e) => ({ name: '', err: e.message }));
       r.el.querySelector('.mcF').innerHTML = mcFields({ ...r.d, cat: r.d.cat || MC.cat || 'kirana' }, 'b' + r.i + '_'); if (r.d.dup) { r.el.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.d.dup.name; } if (r.d.err) r.el.querySelector('.mcDup').textContent = '⚠️ ' + r.d.err;
-      s.textContent = '🪄 Cleaning the photo…'; r.f = await mcFix(r.file); r.el.querySelector('.mcPh').innerHTML = `<img src="${URL.createObjectURL(r.f.fixed)}" alt="">`; s.textContent = mcHowTxt(r.f);
+      s.textContent = '🪄 Cleaning the photo…'; r.f = await mcFix(base, r.file); r.el.querySelector('.mcPh').innerHTML = `<img src="${URL.createObjectURL(r.f.fixed)}" alt="">`; s.textContent = mcHowTxt(r.f);
     } catch (e) { s.textContent = '⚠️ ' + e.message; }
     done++; save.textContent = done < rows.length ? `⏳ ${done} / ${rows.length} ready…` : `✅ Save all (${rows.filter((x) => x.on).length})`; if (done === rows.length) save.disabled = false; } };
   Promise.all([work(), work()]);

@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 392;
+const MAATA_VERSION = 393;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5239,11 +5239,12 @@ app.post('/admin/api/mcat/ai-photo', adminAuth, express.raw({ type: ['image/*'],
   const prompt = 'Edit this photo into a clean e-commerce catalogue photo of the SAME product. Keep the product exactly as it is: same pack, same shape, same colours, and every printed word, logo, number and picture on it unchanged and readable — do not redraw, translate, add or remove any text. ' +
     'Remove everything else (table, floor, hands, fingers, shelf, other items, shadows of people) and put the product on a pure white #FFFFFF background. Centre it, upright, filling about 80% of a square 1:1 frame, with a very soft natural shadow under it. ' +
     'Bright, even studio light, true colours, sharp focus and high detail (fix blur, noise and dark or yellow light). No watermark, no border, no text added.';
-  let last = mcatImgErr || 'no image model';
+  let last = mcatImgErr || 'no image model'; const until = now() + 55000; // the admin waits: give up after ~55 s
   for (const model of await mcatImageModels()) {
+    if (now() > until - 5000) { last += ' (time up)'; break; }
     for (const cfg of [{ responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' } }, { responseModalities: ['TEXT', 'IMAGE'] }]) {
       let r, d;
-      try { r = await mcatGFetch('models/' + model + ':generateContent', { contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text: prompt }] }], generationConfig: cfg }); d = await r.json().catch(() => ({})); }
+      try { r = await mcatGFetch('models/' + model + ':generateContent', { contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text: prompt }] }], generationConfig: cfg }, Math.max(5000, until - now())); d = await r.json().catch(() => ({})); }
       catch (e) { last = model + ': ' + e.message; break; }
       if (r.status === 404) { last = model + ': not available for this key'; break; }
       if (r.status === 400 && /imageConfig|aspect|modalit/i.test(JSON.stringify(d))) { last = model + ': ' + String(d.error?.message || '').slice(0, 120); continue; }
