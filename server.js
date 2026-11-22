@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 396;
+const MAATA_VERSION = 397;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5198,6 +5198,17 @@ app.post('/admin/api/mcat/import', adminAuth, (req, res) => { // 📄 Excel / CS
     if (x.barcode) byBc.set(x.barcode, x); byKey.set(k, x);
   });
   mcatDirty(); save(); mcatAutoNames(); res.json({ added, updated, bad: bad.slice(0, 50), badCount: bad.length });
+});
+// 📷 v397 admin scanned a barcode → already in the catalogue? else a name from Maata shops or the free product database
+app.get('/admin/api/mcat/barcode/:code', adminAuth, async (req, res) => {
+  const bc = String(req.params.code || '').replace(/\D/g, '').slice(0, 14); if (bc.length < 8) return res.status(400).json({ error: 'Barcode must have 8–14 digits.' });
+  const dup = db.mcat.find((x) => x.barcode === bc); if (dup) return res.json({ barcode: bc, dup: { id: dup.id, name: mcatFull(dup) } });
+  const shop = db.products.find((p) => p.barcode === bc && p.name);
+  if (shop) return res.json({ barcode: bc, product: { name: shop.name, unit: shop.unit || 'pcs', sub: shop.category || '', tax: shop.taxRate || 0, from: 'maata' } });
+  const d = await getJson('https://world.openfoodfacts.org/api/v2/product/' + bc + '.json?fields=product_name,product_name_en,brands,quantity,categories', 5000).catch(() => null);
+  const p = d && d.product; let product = null;
+  if (p) { const name = [p.brands && String(p.brands).split(',')[0], p.product_name_en || p.product_name].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim(); if (name) product = { name: name.slice(0, 60), size: String(p.quantity || '').replace(/\s+/g, '').slice(0, 20), from: 'off' }; }
+  res.json({ barcode: bc, product });
 });
 // 🤖 read a product photo → name, Telugu name, size, category, barcode
 app.post('/admin/api/mcat/ai-read', adminAuth, express.raw({ type: ['image/*'], limit: '6mb' }), async (req, res) => {

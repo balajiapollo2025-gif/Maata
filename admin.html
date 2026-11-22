@@ -409,7 +409,7 @@ textarea.input{min-height:110px;resize:vertical}
       .mcSt{font-size:12.5px;font-weight:700;margin-top:6px;white-space:pre-line}
       .mcB{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;border:1px solid var(--line,#E2E8F0);border-radius:14px;padding:8px;margin-bottom:8px}.mcB .mcPh{font-size:24px}
       .mcB .mcRow{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}.mcB.off{opacity:.45}
-      .mcDup{color:#B45309;font-size:12px;font-weight:700}
+      .mcDup{color:#B45309;font-size:12px;font-weight:700}.mcBc{display:flex;gap:6px}.mcBc input{flex:1}.mcScan{flex:none;border:0;border-radius:10px;padding:0 12px;background:#0F7A6E;color:#fff;font-weight:800;font-size:13px}.mcSc{position:fixed;inset:0;z-index:1200;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}.mcSc video{width:100%;max-width:520px;max-height:70vh;object-fit:cover}.mcSc .ln{position:absolute;left:12%;right:12%;top:50%;height:2px;background:#EF4444;box-shadow:0 0 12px #EF4444}.mcSc p{color:#fff;font-weight:700;margin:0;text-align:center;padding:0 16px}.mcSc button{padding:12px 22px;border-radius:12px;border:0;font-weight:800}
       </style>
       <p class="mcHint">Add a product once → every shop ticks it, types its own price and starts selling. A photo gets a <b>white background</b> and is <b>sharpened</b> automatically when you choose it (🤖 AI when the Gemini key can make pictures, otherwise the built-in cleaner — best on a plain table or wall). Use your own photos only (not from Google). Type names in <b>English only</b> — each shop chooses to show English, its own language, or both (Maata AI writes the local names in the background).</p>
       <div class="mcS" id="mcStats"></div>
@@ -702,7 +702,7 @@ function mcFields(x, pre = '') {
   const nm = x.names || {}, langs = d.langs || [];
   return `<div class="mcRow"><label>Product name (English)<input name="${pre}name" value="${esc(x.name || '')}" maxlength="60" placeholder="e.g. Toor Dal"></label><label>Pack size<input name="${pre}size" value="${esc(x.size || '')}" maxlength="20" placeholder="e.g. 1kg"></label>
   <label>Category<select name="${pre}cat">${mcOpts(d.cats.map((c) => [c.id, c.name]), x.cat || MC.cat || 'kirana')}</select></label><label>Shelf group<input name="${pre}sub" value="${esc(x.sub || '')}" maxlength="40" placeholder="e.g. Rice & dal"></label><label>Sold as<select name="${pre}unit">${mcOpts(d.units.map((u) => [u, u]), x.unit || 'pcs')}</select></label>
-  <label>Barcode<input name="${pre}barcode" value="${esc(x.barcode || '')}" inputmode="numeric" maxlength="14"></label><label>GST %<select name="${pre}tax">${mcOpts(d.taxes.map((t) => [t, t + '%']), x.tax || 0)}</select></label><label>MRP ₹ (optional)<input name="${pre}mrp" value="${x.mrp ?? ''}" inputmode="decimal"></label></div>
+  <label style="grid-column:1/-1">Barcode<span class="mcBc"><input name="${pre}barcode" value="${esc(x.barcode || '')}" inputmode="numeric" maxlength="14" placeholder="scan or type"><button type="button" class="mcScan" data-pre="${pre}" aria-label="Scan barcode">📷 Scan</button></span></label><label>GST %<select name="${pre}tax">${mcOpts(d.taxes.map((t) => [t, t + '%']), x.tax || 0)}</select></label><label>MRP ₹ (optional)<input name="${pre}mrp" value="${x.mrp ?? ''}" inputmode="decimal"></label></div>
 `;
 }
 const mcVals = (box, pre = '') => { const o = { names: {} }; for (const f of ['name', 'size', 'cat', 'sub', 'unit', 'barcode', 'tax', 'mrp']) { const e = box.querySelector(`[name="${pre}${f}"]`); if (e) o[f] = e.value.trim(); } for (const l of (MC.d && MC.d.langs) || []) { const e = box.querySelector(`[name="${pre}L_${l[0]}"]`); if (e) o.names[l[0]] = e.value.trim(); } return o; };
@@ -713,6 +713,32 @@ function mcPhotoBox(m, st) { // before / after toggle
   const ph = m.querySelector('.mcPh'), show = () => { const b = st.view === 'orig' ? st.f.orig : st.f.fixed; ph.innerHTML = `<img src="${URL.createObjectURL(b)}" alt="">`; m.querySelectorAll('.mcTg button').forEach((x) => x.classList.toggle('on', x.dataset.v === st.view)); };
   m.querySelectorAll('.mcTg button').forEach((b) => b.onclick = () => { st.view = b.dataset.v; show(); }); show();
 }
+// 📷 v397 barcode scanner (phone camera; Chrome on Android)
+async function mcScanCode() {
+  if (!('BarcodeDetector' in window)) { toast('This browser cannot scan. Open the admin page in Chrome on the phone, or type the number.'); return null; }
+  let det; try { const ok = await BarcodeDetector.getSupportedFormats(); det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'itf'].filter((f) => ok.includes(f)) }); } catch { det = new BarcodeDetector(); }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } }); } catch { toast('Allow the camera to scan barcodes.'); return null; }
+  return new Promise((done) => {
+    const o = document.createElement('div'); o.className = 'mcSc'; o.innerHTML = '<div style="position:relative;width:100%;max-width:520px"><video playsinline muted autoplay></video><div class="ln"></div></div><p>Point the camera at the barcode (the black lines)</p><button style="background:#fff;color:#111">Close</button>';
+    document.body.append(o); const v = o.querySelector('video'); v.srcObject = stream; v.play().catch(() => {});
+    let end = false; const stop = (code) => { if (end) return; end = true; stream.getTracks().forEach((t) => t.stop()); o.remove(); done(code); };
+    o.querySelector('button').onclick = () => stop(null);
+    const loop = async () => { if (end) return; try { const r = await det.detect(v); const c = r.find((x) => /^\d{8,14}$/.test(x.rawValue)); if (c) { try { navigator.vibrate && navigator.vibrate(80); } catch {} return stop(c.rawValue); } } catch {} setTimeout(loop, 200); };
+    v.onloadeddata = loop;
+  });
+}
+function mcWireScan(box) {
+  box.querySelectorAll('.mcScan').forEach((b) => b.onclick = async () => {
+    const pre = b.dataset.pre, code = await mcScanCode(); if (!code) return;
+    const inp = box.querySelector(`[name="${pre}barcode"]`); inp.value = code;
+    const msg = (b.closest('.mcB') || box).querySelector('.mcDup');
+    try { const r = await api('/admin/api/mcat/barcode/' + code);
+      if (r.dup) { if (msg) msg.textContent = '⚠️ This barcode is already in the catalogue: ' + r.dup.name; return; }
+      if (r.product) { for (const [k, val] of Object.entries(r.product)) { const e = box.querySelector(`[name="${pre}${k}"]`); if (e && !e.value && val !== '' && val != null) e.value = val; } if (msg) msg.textContent = '✅ ' + code + ' — name found (' + (r.product.from === 'maata' ? 'a Maata shop' : 'product database') + '), please check'; }
+      else if (msg) msg.textContent = '✅ Barcode ' + code + ' added (no name found — type it)';
+    } catch (e) { if (msg) msg.textContent = '✅ Barcode ' + code; }
+  });
+}
 function mcEdit(x) {
   const st = { f: null, view: 'fixed' };
   const m = mcModal(`<h3>${x ? '✏️ Edit product' : '➕ New catalogue product'}</h3><div class="mcPg"><div><div class="mcPh">${x && x.hasPhoto ? `<img src="${mcImg(x)}" alt="">` : '📷'}</div>
@@ -720,7 +746,7 @@ function mcEdit(x) {
     <div class="mcAct" style="margin-top:6px"><button class="mcPick" style="background:#E0F2FE;color:#075985">📷 ${x && x.hasPhoto ? 'Change photo' : 'Choose photo'}</button></div></div>
     <div>${mcFields(x || {})}<div class="mcDup"></div></div></div>
     <div class="mcAct"><button class="mcSave" style="background:#16A34A;color:#fff">✅ Save</button>${x ? `<button class="mcDel" style="background:#FEE2E2;color:#B91C1C">🗑 Delete</button>` : ''}<button class="mcX" style="background:#F1F5F9;color:#334155">Cancel</button></div>`);
-  m.querySelector('.mcX').onclick = () => m.remove();
+  m.querySelector('.mcX').onclick = () => m.remove(); mcWireScan(m);
   m.querySelector('.mcPick').onclick = () => { const inp = $('#mcFile'); inp.onchange = async (e) => {
     const file = e.target.files[0]; e.target.value = ''; if (!file) return;
     const s = m.querySelector('.mcSt'), sv = m.querySelector('.mcSave'); s.textContent = '🪄 Cleaning the photo… (AI can take 10–40 seconds)'; sv.disabled = true; sv.textContent = '⏳ Photo getting ready…';
@@ -749,7 +775,7 @@ function mcBulk(files) {
   const work = async () => { while (k < rows.length) { const r = rows[k++]; const s = r.el.querySelector('.mcSt');
     try { s.textContent = '🤖 Reading the pack…'; const base = await mcFromFile(r.file), small = base ? await mcBlob(base, 0.88) : r.file;
       r.d = await mcUp('/admin/api/mcat/ai-read', small).catch((e) => ({ name: '', err: e.message }));
-      r.el.querySelector('.mcF').innerHTML = mcFields({ ...r.d, name: r.d.name === 'Product' ? '' : r.d.name, cat: r.d.cat || MC.cat || 'kirana' }, 'b' + r.i + '_');  if (r.d.dup) { r.el.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.d.dup.name; } if (r.d.err) r.el.querySelector('.mcDup').textContent = '⚠️ ' + r.d.err;
+      r.el.querySelector('.mcF').innerHTML = mcFields({ ...r.d, name: r.d.name === 'Product' ? '' : r.d.name, cat: r.d.cat || MC.cat || 'kirana' }, 'b' + r.i + '_'); mcWireScan(r.el); if (r.d.dup) { r.el.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.d.dup.name; } if (r.d.err) r.el.querySelector('.mcDup').textContent = '⚠️ ' + r.d.err;
       s.textContent = '🪄 Cleaning the photo…'; r.f = await mcFix(base, r.file); r.el.querySelector('.mcPh').innerHTML = `<img src="${URL.createObjectURL(r.f.fixed)}" alt="">`; s.textContent = mcHowTxt(r.f);
     } catch (e) { s.textContent = '⚠️ ' + e.message; }
     done++; save.textContent = done < rows.length ? `⏳ ${done} / ${rows.length} ready…` : `✅ Save all (${rows.filter((x) => x.on).length})`; if (done === rows.length) save.disabled = false; } };
