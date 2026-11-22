@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 395;
+const MAATA_VERSION = 396;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5204,21 +5204,22 @@ app.post('/admin/api/mcat/ai-read', adminAuth, express.raw({ type: ['image/*'], 
   if (!Buffer.isBuffer(req.body) || req.body.length < 500) return res.status(400).json({ error: 'Choose a photo.' });
   const mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0];
   const r = await gemini('You read product packs and loose products for a shop catalogue in Andhra Pradesh / Telangana, India. Answer only with JSON.', [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text:
-    'Return JSON {"name","names","size","unit","cat","sub","barcode","tax"}.\n' +
+    'Return JSON {"name","size","unit","cat","sub","barcode","tax"}.\n' +
     'name: English product name as shoppers say it, with the brand only if it is clearly printed (e.g. "Aashirvaad Whole Wheat Atta", "Toor Dal"), WITHOUT the pack size, max 60 characters.\n' +
-    'names: the name shoppers use in each Indian language, in that language\'s own script, as an object with keys ' + MCAT_LANGS.map((l) => l[0] + ' (' + l[1] + ')').join(', ') + '. ' + MCAT_NAME_RULE + '\n' +
+
     'size: pack size exactly as printed, short (e.g. "1kg", "500ml", "100g", "10 pcs"); "" if not visible.\n' +
     'unit: how it is sold, one of pcs, kg, g, l, ml, pack, box, dozen.\n' +
     'cat: one of ' + MCAT_CAT_IDS.join(', ') + '.\n' +
     'sub: a short shelf group in English (e.g. "Rice & dal", "Oils & ghee", "Spices & masala", "Biscuits", "Soaps", "Tablets").\n' +
     'barcode: the digits under the barcode if you can read ALL of them clearly, else "".\n' +
     'tax: usual GST % in India for this product: 0, 5, 12 or 18 (0 if unsure).\n' +
-    'Never invent a brand, size or barcode that is not visible.' }] }], { json: true, maxTokens: 500, temperature: 0.1 });
+    'Never invent a brand, size or barcode that is not visible.' }] }], { json: true, maxTokens: 1500, temperature: 0.1, fast: true });
   if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
-  let d = {}; try { d = JSON.parse(String(r.text || '{}').replace(/^```json|```$/g, '').trim()); } catch { return res.status(502).json({ error: 'AI could not read this photo.' }); }
-  const x = {}; mcatRead({ name: d.name || 'Product', names: d.names && typeof d.names === 'object' ? d.names : {}, size: d.size, unit: String(d.unit || '').toLowerCase(), cat: d.cat, sub: d.sub, barcode: d.barcode, tax: d.tax }, x);
+  let d = null; const raw = String(r.text || ''); try { d = JSON.parse(raw.replace(/^```json|```$/g, '').trim()); } catch { const m = raw.match(/\{[\s\S]*\}/); try { d = m ? JSON.parse(m[0]) : null; } catch { d = null; } }
+  if (!d || !d.name) { console.error('[mcat] ai-read could not parse:', raw.slice(0, 200)); return res.status(502).json({ error: 'AI could not read the name on this photo. Type it, or try a clearer photo of the front of the pack.' }); }
+  const x = {}; mcatRead({ name: d.name, size: d.size, unit: String(d.unit || '').toLowerCase(), cat: d.cat, sub: d.sub, barcode: d.barcode, tax: d.tax }, x);
   const dup = (x.barcode && db.mcat.find((y) => y.barcode === x.barcode)) || db.mcat.find((y) => mcatKey(y.name + ' ' + (y.size || '')) === mcatKey(x.name + ' ' + (x.size || '')));
-  res.json({ ...x, names: mcatNames(x), dup: dup ? { id: dup.id, name: mcatFull(dup) } : null });
+  res.json({ ...x, dup: dup ? { id: dup.id, name: mcatFull(dup) } : null });
 });
 const MCAT_NAME_RULE = 'Generic words are TRANSLATED to the everyday local word (Toor Dal → Telugu "కందిపప్పు", Hindi "अरहर दाल", Tamil "துவரம் பருப்பு"; Sugar → "చక్కెర", "चीनी", "சர்க்கரை"). Brand names and invented product names are NOT translated: write them by SOUND in that script, the way people say them (Lotte Choco Pie → Telugu "లోట్టే చోకో పై", Hindi "लोटे चोको पाई"; Parle-G → "పార్లే-జి", "पारले-जी"). Keep it short, no pack size.';
 async function mcatAiNames(list) { // [{name, size, sub}] → [{hi, te, …}]

@@ -728,7 +728,7 @@ function mcEdit(x) {
     const read = !x ? mcUp('/admin/api/mcat/ai-read', base ? await mcBlob(base, 0.88) : file).catch((er) => ({ err: er.message })) : null;
     try { st.f = await mcFix(base, file); m.querySelector('.mcTg').hidden = false; mcPhotoBox(m, st); s.textContent = mcHowTxt(st.f); } catch (er) { s.textContent = '⚠️ ' + er.message; }
     sv.disabled = false; sv.textContent = '✅ Save';
-    const r = await read; if (r && r.err) m.querySelector('.mcDup').textContent = '⚠️ AI could not read the name: ' + r.err; else if (r) { st.names = r.names; for (const [k, v] of Object.entries(r)) { if (k === 'name' && v === 'Product') continue; if (v && typeof v === 'object') continue; const el = m.querySelector(`[name="${k}"]`); if (el && !el.value && v !== '' && v != null) el.value = v; } if (r.dup) m.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.dup.name; }
+    const r = await read; if (r && r.err) { s.textContent += '\n⚠️ Name: ' + r.err; m.querySelector('[name="name"]').focus(); } else if (r) { s.textContent += '\n🤖 Name filled by AI — please check'; for (const [k, v] of Object.entries(r)) { if (k === 'name' && v === 'Product') continue; if (v && typeof v === 'object') continue; const el = m.querySelector(`[name="${k}"]`); if (el && !el.value && v !== '' && v != null) el.value = v; } if (r.dup) m.querySelector('.mcDup').textContent = '⚠️ Maybe already in the catalogue: ' + r.dup.name; }
   }; inp.click(); };
   m.querySelector('.mcSave').onclick = async (ev) => {
     const b = ev.target; b.disabled = true;
