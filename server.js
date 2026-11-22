@@ -27,8 +27,8 @@ if (!ADMIN_HASH) console.warn('[warn] ADMIN_PASSWORD is not set. Admin panel is 
 // Without it, data goes to data/db.json (fine for testing only).
 const { MongoClient, GridFSBucket } = require('mongodb');
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs', 'gsPanch', 'gsComplaints', 'gsBc'];
-const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt', gsPanch: 'createdAt', gsComplaints: 'createdAt', gsBc: 'createdAt' };
+const COLLS = ['users', 'messages', 'logins', 'calls', 'reports', 'announcements', 'audit', 'statuses', 'groups', 'aichats', 'i18n', 'products', 'ads', 'communities', 'channels', 'channelPosts', 'meta', 'reels', 'reelComments', 'activity', 'tickets', 'mapPlaces', 'mapReports', 'mapRoads', 'invoices', 'stockMoves', 'bizLog', 'orders', 'teams', 'teamTracks', 'teamEvents', 'bmKeys', 'bmTemplates', 'bmMsgs', 'bmPrefs', 'bmJobs', 'adminFiles', 'ratings', 'providers', 'lsBookings', 'lsFiles', 'jobs', 'workers', 'jobApps', 'employers', 'jobAlerts', 'aiAsks', 'reminders', 'mrDrivers', 'mrRides', 'supportMail', 'subs', 'gsPanch', 'gsComplaints', 'gsBc', 'mcat', 'mcatDis'];
+const SORT_BY = { users: 'createdAt', messages: 'ts', logins: 'ts', calls: 'startedAt', reports: 'ts', announcements: 'ts', audit: 'ts', statuses: 'createdAt', groups: 'createdAt', aichats: 'ts', products: 'createdAt', ads: 'createdAt', communities: 'createdAt', channels: 'createdAt', channelPosts: 'ts', meta: 'createdAt', reels: 'createdAt', reelComments: 'ts', activity: 'ts', tickets: 'createdAt', mapPlaces: 'createdAt', mapReports: 'createdAt', mapRoads: 'createdAt' , invoices: 'createdAt', stockMoves: 'at', bizLog: 'at', orders: 'createdAt', teams: 'createdAt', teamTracks: 'createdAt', teamEvents: 'at', bmKeys: 'createdAt', bmTemplates: 'createdAt', bmMsgs: 'createdAt', bmPrefs: 'createdAt', bmJobs: 'createdAt', adminFiles: 'createdAt', ratings: 'at', providers: 'createdAt', lsBookings: 'createdAt', lsFiles: 'createdAt', jobs: 'createdAt', workers: 'createdAt', jobApps: 'createdAt', employers: 'createdAt', jobAlerts: 'at' , aiAsks: 'at', reminders: 'createdAt' , mrDrivers: 'createdAt', mrRides: 'createdAt', supportMail: 'at', subs: 'createdAt', gsPanch: 'createdAt', gsComplaints: 'createdAt', gsBc: 'createdAt', mcat: 'at', mcatDis: 'at' };
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 let db = {};
@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 391;
+const MAATA_VERSION = 392;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3674,7 +3674,7 @@ app.put('/api/business', auth, (req, res) => {
 });
 
 // Catalogue
-const productOut = (p) => ({ id: p.id, ownerId: p.ownerId, name: p.name, price: p.price, description: p.description, available: p.available, hasPhoto: !!p.photo, photoV: p.photoV || 0, createdAt: p.createdAt });
+const productOut = (p) => ({ id: p.id, ownerId: p.ownerId, name: p.name, price: p.price, description: p.description, available: p.available, hasPhoto: !!(p.photo || mcatPh(p)), photoV: p.photo ? p.photoV || 0 : (mcatPh(p) || p).photoV || 0, createdAt: p.createdAt });
 app.get('/api/catalogue/:ownerId', auth, (req, res) => {
   const u = userById(req.params.ownerId);
   if (!u || u.status === 'blocked' || blockedOf(u).includes(req.user.id)) return res.status(404).json({ error: 'Not found.' });
@@ -3715,6 +3715,7 @@ app.post('/api/catalogue/:id/photo', auth, express.raw({ type: ['image/*'], limi
   if (await savePhotoInto(p, req, res)) res.json(productOut(p));
 });
 function streamPhoto(obj, req, res) {
+  const cm = mcatPh(obj); if (cm) obj = cm; // 📚 v392: no own photo → the Maata catalogue photo
   let viewer = null; try { viewer = findUserByToken(String(req.query.t || '')); } catch { /* bad token */ }
   if (!viewer || !obj || !obj.photo) return res.status(404).end();
   res.setHeader('Content-Type', obj.photoMime); res.setHeader('Cache-Control', 'private, max-age=86400');
@@ -3756,7 +3757,7 @@ function bizLog(ctx, action, ref, detail = '') {
   if (db.bizLog.length > 60000) db.bizLog.splice(0, db.bizLog.length - 60000);
 }
 const bizProducts = (bizId) => db.products.filter((p) => p.ownerId === bizId);
-const bizProdOut = (p) => ({ ...productOut(p), sku: p.sku || '', barcode: p.barcode || '', unit: p.unit || 'pcs', category: p.category || '', taxRate: p.taxRate ?? 0, stock: p.stock ?? null, lowAt: p.lowAt ?? null, cost: p.cost ?? null, mrp: p.mrp ?? null });
+const bizProdOut = (p) => ({ ...productOut(p), mcat: p.mcat || '', sku: p.sku || '', barcode: p.barcode || '', unit: p.unit || 'pcs', category: p.category || '', taxRate: p.taxRate ?? 0, stock: p.stock ?? null, lowAt: p.lowAt ?? null, cost: p.cost ?? null, mrp: p.mrp ?? null });
 function stockMove(ctx, p, delta, reason, ref) {
   if (p.stock == null) return; // stock not tracked for this product
   p.stock = Math.round((Number(p.stock) + delta) * 1000) / 1000;
@@ -5054,6 +5055,239 @@ app.post('/api/biz/:bizId/photo-lib/apply', auth, async (req, res) => {
   if (done) { bizLog(c, 'product-photo', '', done + ' photos from Maata library'); save(); }
   res.json({ done });
 });
+
+// ==================== 📚 v392 MAATA MASTER CATALOGUE ====================
+// The Maata team adds products once (name, Telugu name, pack size, photo on white) → every shop ticks what it sells,
+// types its own price and the product is ready. A shop's own photo always wins over the catalogue photo; the
+// catalogue photo is stored once and shown for every shop that uses it (better photo here → better photo everywhere).
+const MCAT_CATS = [['kirana', '🛒 Kirana & groceries'], ['dairy', '🥛 Dairy & eggs'], ['veg', '🥦 Vegetables & fruits'], ['bakery', '🍞 Bakery & sweets'], ['snacks', '🍪 Snacks & drinks'], ['beauty', '🧴 Personal care'], ['home', '🧹 Home & cleaning'], ['medical', '💊 Medical'], ['baby', '🍼 Baby care'], ['stationery', '✏️ Stationery'], ['mobile', '📱 Mobile & electronics'], ['hardware', '🔩 Hardware & paints'], ['pooja', '🪔 Pooja items'], ['other', '📦 Other']];
+const MCAT_CAT_IDS = MCAT_CATS.map((x) => x[0]);
+const mcatCatName = (c) => (MCAT_CATS.find((x) => x[0] === c) || MCAT_CATS[MCAT_CATS.length - 1])[1].replace(/^\S+\s/, '');
+let mcatIdx = null;
+const mcatById = (id) => { if (!id) return null; if (!mcatIdx) mcatIdx = new Map(db.mcat.map((x) => [x.id, x])); return mcatIdx.get(String(id)) || null; };
+const mcatDirty = () => { mcatIdx = null; };
+function mcatPh(p) { if (!p || p.photo || !p.mcat || p.mcatNoPh) return null; const m = mcatById(p.mcat); return m && m.photo ? m : null; }
+const mcatFull = (x) => clip([x.name, x.size].filter(Boolean).join(' '), 80);
+const mcatOut = (x, haveSet) => ({ id: x.id, name: x.name, te: x.te || '', size: x.size || '', unit: x.unit || 'pcs', cat: x.cat, sub: x.sub || '', barcode: x.barcode || '', tax: x.tax || 0, mrp: x.mrp ?? null, hasPhoto: !!x.photo, v: x.photoV || 0, uses: x.uses || 0, ...(haveSet ? { have: haveSet.has(x.id) } : {}) });
+const mcatKey = (s) => { const t = libTokens(s); return t.words.slice().sort().join(' ') + (t.sizes.length ? '|' + t.sizes.join(' ') : ''); };
+function mcatRead(b, x) { // fields an admin may set; returns an error text or null
+  if (b.name !== undefined || !x.name) { const n = clip(b.name, 60); if (!n) return 'Enter the product name.'; x.name = n; }
+  if (b.te !== undefined) x.te = clip(b.te, 60);
+  if (b.size !== undefined) x.size = clip(b.size, 20);
+  if (b.unit !== undefined) x.unit = BIZ_UNITS.includes(b.unit) ? b.unit : 'pcs';
+  if (b.cat !== undefined || !x.cat) x.cat = MCAT_CAT_IDS.includes(b.cat) ? b.cat : 'other';
+  if (b.sub !== undefined) x.sub = clip(b.sub, 40);
+  if (b.barcode !== undefined) x.barcode = String(b.barcode || '').replace(/\D/g, '').slice(0, 14);
+  if (b.tax !== undefined) { const r = Number(b.tax); x.tax = BIZ_TAX.includes(r) ? r : 0; }
+  if (b.mrp !== undefined) { const v = b.mrp === '' || b.mrp == null ? null : Math.round(Number(b.mrp) * 100) / 100; x.mrp = v != null && v >= 0 && v < 1e7 ? v : null; }
+  if (b.kw !== undefined) x.kw = clip(b.kw, 120);
+  return null;
+}
+function mcatFind(q, cat, sub, barcode, limit = 300) {
+  let list = db.mcat;
+  if (cat) list = list.filter((x) => x.cat === cat);
+  if (sub) list = list.filter((x) => (x.sub || '') === sub);
+  const bc = String(barcode || '').replace(/\D/g, '');
+  if (bc.length >= 8) { const hit = list.filter((x) => x.barcode === bc); if (hit.length) return hit; }
+  const qt = libTokens(q || '');
+  if (!qt.words.length) return list.slice().sort((a, b) => (b.uses || 0) - (a.uses || 0) || a.name.localeCompare(b.name)).slice(0, limit);
+  const scored = [];
+  for (const x of list) { const s = libScore(qt, { id: 'mcat:' + x.id, name: [x.name, x.te, x.size, x.kw].filter(Boolean).join(' '), category: x.sub || '' }); if (s > 0) scored.push([s, x]); }
+  return scored.sort((a, b) => b[0] - a[0] || (b[1].uses || 0) - (a[1].uses || 0)).slice(0, limit).map((y) => y[1]);
+}
+function mcatPhotoReq(req) { // a shop user (?t=) or the admin (?token=)
+  try { if (findUserByToken(String(req.query.t || ''))) return true; } catch { /* bad token */ }
+  try { return jwt.verify(String(req.query.token || ''), JWT_SECRET).typ === 'admin'; } catch { return false; }
+}
+app.get('/api/mcat/photo/:id', (req, res) => {
+  const x = mcatById(req.params.id); if (!x || !x.photo || !mcatPhotoReq(req)) return res.status(404).end();
+  res.setHeader('Content-Type', x.photoMime); res.setHeader('Cache-Control', 'private, max-age=604800');
+  const st = chatFileStream(x.photo, 0, x.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+// ---- shops ----
+app.get('/api/biz/:bizId/mcat', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const cat = MCAT_CAT_IDS.includes(req.query.cat) ? req.query.cat : '', sub = clip(req.query.sub, 40);
+  const have = new Set(bizProducts(c.bizId).map((p) => p.mcat).filter(Boolean));
+  const items = mcatFind(clip(req.query.q, 80), cat, sub, req.query.barcode, Math.min(600, Number(req.query.limit) || 300));
+  const counts = {}; for (const x of db.mcat) counts[x.cat] = (counts[x.cat] || 0) + 1;
+  const subs = cat ? [...new Set(db.mcat.filter((x) => x.cat === cat && x.sub).map((x) => x.sub))].sort() : [];
+  res.json({ items: items.map((x) => mcatOut(x, have)), cats: MCAT_CATS.filter((k) => counts[k[0]]).map((k) => ({ id: k[0], name: k[1], n: counts[k[0]] })), subs, total: db.mcat.length });
+});
+const kmBetween = (a, b) => { const R = 6371, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r; const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+// 💡 what other shops NEAR me ask for these products: an average only when 3+ other shops sell it (no shop names, no single price)
+app.get('/api/biz/:bizId/mcat-avg', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const ids = new Set(String(req.query.ids || '').split(',').slice(0, 200).filter(Boolean)), me = (c.biz.store || {});
+  const out = {}; if (!ids.size || me.lat == null) return res.json(out);
+  const near = new Map(), by = new Map();
+  for (const p of db.products) {
+    if (!p.mcat || !ids.has(p.mcat) || p.ownerId === c.bizId || !(p.price > 0)) continue;
+    if (!near.has(p.ownerId)) { const s = userById(p.ownerId)?.business?.store; near.set(p.ownerId, !!(s && s.lat != null && kmBetween(me, s) <= 20)); }
+    if (!near.get(p.ownerId)) continue;
+    if (!by.has(p.mcat)) by.set(p.mcat, new Map()); by.get(p.mcat).set(p.ownerId, p.price);
+  }
+  for (const [id, m] of by) { if (m.size < 3) continue; const v = [...m.values()]; out[id] = { avg: Math.round(v.reduce((a, b) => a + b, 0) / v.length), shops: v.length }; }
+  res.json(out);
+});
+app.post('/api/biz/:bizId/mcat-add', auth, (req, res) => {
+  const c = bizCtx(req, res, 'stock'); if (!c) return;
+  const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 500) : [];
+  const mine = bizProducts(c.bizId), have = new Set(mine.map((p) => p.mcat).filter(Boolean)), bcs = new Set(mine.map((p) => p.barcode).filter(Boolean));
+  if (mine.length + items.length > 3000) return res.status(400).json({ error: 'You can have up to 3,000 products. You have ' + mine.length + '.' });
+  let added = 0, skipped = 0;
+  for (const it of items) {
+    const x = mcatById(it && it.id); if (!x || have.has(x.id)) { skipped++; continue; }
+    const p = { id: newId(), ownerId: c.bizId, available: true, createdAt: now(), stock: null, mcat: x.id };
+    const price = it.price === '' || it.price == null ? null : it.price;
+    const err = readProductFields({ name: mcatFull(x), price, ...(x.mrp != null ? { mrp: x.mrp } : {}), unit: x.unit || 'pcs', category: x.sub || mcatCatName(x.cat), barcode: x.barcode && !bcs.has(x.barcode) ? x.barcode : '', taxRate: x.tax || 0, description: x.te || '' }, p, true);
+    if (err) { skipped++; continue; }
+    db.products.push(p); have.add(x.id); if (p.barcode) bcs.add(p.barcode); x.uses = (x.uses || 0) + 1;
+    const st = Number(it.stock); if (it.stock !== '' && it.stock != null && isFinite(st) && Math.abs(st) < 1e7) { p.stock = 0; stockMove(c, p, Math.round(st * 1000) / 1000, 'opening', ''); }
+    added++;
+  }
+  if (added) bizLog(c, 'product-add', '', added + ' products from the Maata catalogue');
+  save(); res.json({ added, skipped });
+});
+// ---- admin ----
+app.get('/admin/api/mcat', adminAuth, (req, res) => {
+  const cat = MCAT_CAT_IDS.includes(req.query.cat) ? req.query.cat : '';
+  const items = mcatFind(clip(req.query.q, 80), cat, '', req.query.barcode, 600);
+  const counts = {}; for (const x of db.mcat) counts[x.cat] = (counts[x.cat] || 0) + 1;
+  res.json({ items: items.map((x) => mcatOut(x)), total: db.mcat.length, withPhoto: db.mcat.filter((x) => x.photo).length, uses: db.mcat.reduce((a, x) => a + (x.uses || 0), 0), cats: MCAT_CATS.map((k) => ({ id: k[0], name: k[1], n: counts[k[0]] || 0 })), units: BIZ_UNITS, taxes: BIZ_TAX, sug: mcatSugList().length, ai: !!GEMINI_KEY });
+});
+app.post('/admin/api/mcat', adminAuth, (req, res) => {
+  const b = req.body || {}; let x = b.id ? mcatById(b.id) : null;
+  if (b.id && !x) return res.status(404).json({ error: 'Not found.' });
+  const isNew = !x; if (isNew) x = { id: newId(), at: now(), uses: 0 };
+  const err = mcatRead(b, x); if (err) return res.status(400).json({ error: err });
+  if (x.barcode && db.mcat.some((y) => y !== x && y.barcode === x.barcode)) return res.status(400).json({ error: 'Another catalogue product has this barcode.' });
+  if (isNew) { if (db.mcat.length >= 50000) return res.status(400).json({ error: 'The catalogue is full (50,000).' }); db.mcat.push(x); mcatDirty(); }
+  x.by = req.admin ? req.admin.username || 'admin' : 'admin'; x.upd = now(); save(); res.json(mcatOut(x));
+});
+app.delete('/admin/api/mcat/:id', adminAuth, (req, res) => {
+  const x = mcatById(req.params.id); if (!x) return res.status(404).json({ error: 'Not found.' });
+  if (x.photo) deleteChatFile(x.photo);
+  db.mcat = db.mcat.filter((y) => y !== x); mcatDirty(); save(); res.json({ ok: true }); // shops keep their products (name, price); only the shared photo goes
+});
+app.post('/admin/api/mcat/:id/photo', adminAuth, express.raw({ type: ['image/*'], limit: '6mb' }), async (req, res) => {
+  const x = mcatById(req.params.id); if (!x) return res.status(404).json({ error: 'Not found.' });
+  if (await savePhotoInto(x, req, res)) res.json(mcatOut(x));
+});
+app.post('/admin/api/mcat/import', adminAuth, (req, res) => { // 📄 Excel / CSV rows
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 5000) : []; let added = 0, updated = 0; const bad = [];
+  const byBc = new Map(db.mcat.filter((x) => x.barcode).map((x) => [x.barcode, x])), byKey = new Map(db.mcat.map((x) => [mcatKey(x.name + ' ' + (x.size || '')), x]));
+  rows.forEach((r, i) => {
+    if (!r || !String(r.name || '').trim()) { bad.push(i + 2); return; }
+    const bc = String(r.barcode || '').replace(/\D/g, ''), k = mcatKey(String(r.name) + ' ' + (r.size || ''));
+    let x = (bc && byBc.get(bc)) || byKey.get(k); const isNew = !x;
+    if (isNew) x = { id: newId(), at: now(), uses: 0 };
+    const b = {}; for (const f of ['name', 'te', 'size', 'unit', 'cat', 'sub', 'barcode', 'tax', 'mrp', 'kw']) if (r[f] !== undefined && String(r[f]).trim() !== '') b[f] = String(r[f]).trim();
+    if (b.cat) { const c = String(b.cat).toLowerCase(); b.cat = MCAT_CAT_IDS.includes(c) ? c : (MCAT_CATS.find((y) => y[1].toLowerCase().includes(c)) || ['other'])[0]; }
+    if (b.unit) b.unit = String(b.unit).toLowerCase();
+    if (mcatRead(b, x)) { bad.push(i + 2); return; }
+    if (isNew) { db.mcat.push(x); added++; } else updated++;
+    if (x.barcode) byBc.set(x.barcode, x); byKey.set(k, x);
+  });
+  mcatDirty(); save(); res.json({ added, updated, bad: bad.slice(0, 50), badCount: bad.length });
+});
+// 🤖 read a product photo → name, Telugu name, size, category, barcode
+app.post('/admin/api/mcat/ai-read', adminAuth, express.raw({ type: ['image/*'], limit: '6mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || req.body.length < 500) return res.status(400).json({ error: 'Choose a photo.' });
+  const mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0];
+  const r = await gemini('You read product packs and loose products for a shop catalogue in Andhra Pradesh / Telangana, India. Answer only with JSON.', [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text:
+    'Return JSON {"name","te","size","unit","cat","sub","barcode","tax"}.\n' +
+    'name: English product name as shoppers say it, with the brand only if it is clearly printed (e.g. "Aashirvaad Whole Wheat Atta", "Toor Dal"), WITHOUT the pack size, max 60 characters.\n' +
+    'te: the common Telugu name in Telugu script (e.g. "గోధుమ పిండి", "కందిపప్పు"); brand names stay in English letters.\n' +
+    'size: pack size exactly as printed, short (e.g. "1kg", "500ml", "100g", "10 pcs"); "" if not visible.\n' +
+    'unit: how it is sold, one of pcs, kg, g, l, ml, pack, box, dozen.\n' +
+    'cat: one of ' + MCAT_CAT_IDS.join(', ') + '.\n' +
+    'sub: a short shelf group in English (e.g. "Rice & dal", "Oils & ghee", "Spices & masala", "Biscuits", "Soaps", "Tablets").\n' +
+    'barcode: the digits under the barcode if you can read ALL of them clearly, else "".\n' +
+    'tax: usual GST % in India for this product: 0, 5, 12 or 18 (0 if unsure).\n' +
+    'Never invent a brand, size or barcode that is not visible.' }] }], { json: true, maxTokens: 500, temperature: 0.1 });
+  if (r.error) return res.status(r.error === 'limit' ? 429 : 502).json({ error: AI_ERR[r.error] || 'AI is busy, try again.' });
+  let d = {}; try { d = JSON.parse(String(r.text || '{}').replace(/^```json|```$/g, '').trim()); } catch { return res.status(502).json({ error: 'AI could not read this photo.' }); }
+  const x = {}; mcatRead({ name: d.name || 'Product', te: d.te, size: d.size, unit: String(d.unit || '').toLowerCase(), cat: d.cat, sub: d.sub, barcode: d.barcode, tax: d.tax }, x);
+  const dup = (x.barcode && db.mcat.find((y) => y.barcode === x.barcode)) || db.mcat.find((y) => mcatKey(y.name + ' ' + (y.size || '')) === mcatKey(x.name + ' ' + (x.size || '')));
+  res.json({ ...x, dup: dup ? { id: dup.id, name: mcatFull(dup) } : null });
+});
+// 🪄 photo → product on pure white, sharp, square (Google Gemini image model; needs image access on the API key)
+let mcatImgModels = null, mcatImgAt = 0, mcatImgErr = '';
+async function mcatImageModels() {
+  if (mcatImgModels && now() - mcatImgAt < 3600e3) return mcatImgModels;
+  mcatImgAt = now(); const out = [process.env.GEMINI_IMAGE_MODEL].filter(Boolean);
+  try {
+    await discoverModels();
+    const r = await mcatGFetch('models?pageSize=200', null, 20000); const d = await r.json();
+    const names = (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => String(m.name).replace(/^models\//, '')).filter((n) => /image/.test(n) && !/imagen|embed/.test(n));
+    const sc = (n) => (/flash/.test(n) ? 10 : 0) - (/preview|exp/.test(n) ? 3 : 0) + (parseFloat((n.match(/(\d+(\.\d+)?)/) || [0, 0])[1]) || 0);
+    out.push(...names.sort((a, b) => sc(b) - sc(a)));
+  } catch (e) { mcatImgErr = 'list: ' + e.message; }
+  out.push('gemini-2.5-flash-image');
+  return (mcatImgModels = [...new Set(out)].slice(0, 4));
+}
+function mcatGFetch(p, body, ms = 90000) {
+  const way = geminiAuthOk || 'header', headers = { 'Content-Type': 'application/json' }; let url = GEMINI_BASE + p;
+  if (way === 'header') headers['x-goog-api-key'] = GEMINI_KEY; else if (way === 'query') url += (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(GEMINI_KEY); else headers.Authorization = 'Bearer ' + GEMINI_KEY;
+  return fetch(url, { method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(ms) });
+}
+app.post('/admin/api/mcat/ai-photo', adminAuth, express.raw({ type: ['image/*'], limit: '6mb' }), async (req, res) => {
+  if (!GEMINI_KEY) return res.json({ error: 'Maata AI key is not set.', fallback: true });
+  if (!Buffer.isBuffer(req.body) || req.body.length < 500) return res.status(400).json({ error: 'Choose a photo.' });
+  const mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0];
+  const prompt = 'Edit this photo into a clean e-commerce catalogue photo of the SAME product. Keep the product exactly as it is: same pack, same shape, same colours, and every printed word, logo, number and picture on it unchanged and readable — do not redraw, translate, add or remove any text. ' +
+    'Remove everything else (table, floor, hands, fingers, shelf, other items, shadows of people) and put the product on a pure white #FFFFFF background. Centre it, upright, filling about 80% of a square 1:1 frame, with a very soft natural shadow under it. ' +
+    'Bright, even studio light, true colours, sharp focus and high detail (fix blur, noise and dark or yellow light). No watermark, no border, no text added.';
+  let last = mcatImgErr || 'no image model';
+  for (const model of await mcatImageModels()) {
+    for (const cfg of [{ responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' } }, { responseModalities: ['TEXT', 'IMAGE'] }]) {
+      let r, d;
+      try { r = await mcatGFetch('models/' + model + ':generateContent', { contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: req.body.toString('base64') } }, { text: prompt }] }], generationConfig: cfg }); d = await r.json().catch(() => ({})); }
+      catch (e) { last = model + ': ' + e.message; break; }
+      if (r.status === 404) { last = model + ': not available for this key'; break; }
+      if (r.status === 400 && /imageConfig|aspect|modalit/i.test(JSON.stringify(d))) { last = model + ': ' + String(d.error?.message || '').slice(0, 120); continue; }
+      if (!r.ok) { last = model + ': ' + r.status + ' ' + String(d.error?.message || '').slice(0, 160); break; }
+      const part = (d.candidates?.[0]?.content?.parts || []).find((p) => p.inlineData || p.inline_data);
+      if (part) { const x = part.inlineData || part.inline_data; return res.json({ image: x.data, mime: x.mimeType || x.mime_type || 'image/png', model }); }
+      last = model + ': no picture in the answer (' + String(d.candidates?.[0]?.finishReason || d.promptFeedback?.blockReason || 'empty') + ')';
+    }
+  }
+  console.error('[mcat] ai-photo', last);
+  res.json({ error: last, fallback: true });
+});
+// 💡 products many shops typed themselves that the catalogue does not have yet → the Maata team adds them with one tap
+function mcatSugList() {
+  const haveKey = new Set(db.mcat.map((x) => mcatKey(x.name + ' ' + (x.size || '')))), haveBc = new Set(db.mcat.map((x) => x.barcode).filter(Boolean)), dis = new Set(db.mcatDis.map((x) => x.id));
+  const isShop = new Map(), g = new Map();
+  for (const p of db.products) {
+    if (p.mcat || !p.name) continue;
+    if (!isShop.has(p.ownerId)) { const u = userById(p.ownerId); isShop.set(p.ownerId, !!(u && u.business && u.status !== 'blocked')); }
+    if (!isShop.get(p.ownerId) || (p.barcode && haveBc.has(p.barcode))) continue;
+    const k = mcatKey(p.name); if (!k || k.length < 3 || haveKey.has(k) || dis.has(k)) continue;
+    let e = g.get(k); if (!e) g.set(k, (e = { key: k, shops: new Set(), rep: p }));
+    e.shops.add(p.ownerId); if (p.photo && !e.rep.photo && libShares(userById(p.ownerId))) e.rep = p;
+  }
+  return [...g.values()].filter((e) => e.shops.size >= 2).sort((a, b) => b.shops.size - a.shops.size).slice(0, 200)
+    .map((e) => ({ key: e.key, name: e.rep.name, shops: e.shops.size, pid: e.rep.id, hasPhoto: !!(e.rep.photo && libShares(userById(e.rep.ownerId))), v: e.rep.photoV || 0, unit: e.rep.unit || 'pcs', sub: e.rep.category || '', barcode: e.rep.barcode || '' }));
+}
+app.get('/admin/api/mcat/sug', adminAuth, (req, res) => res.json(mcatSugList()));
+app.get('/admin/api/mcat/sugphoto/:pid', (req, res) => {
+  let ok = false; try { ok = jwt.verify(String(req.query.token || ''), JWT_SECRET).typ === 'admin'; } catch { /* no */ }
+  const p = db.products.find((x) => x.id === req.params.pid); if (!ok || !p || !p.photo || !libShares(userById(p.ownerId))) return res.status(404).end();
+  res.setHeader('Content-Type', p.photoMime); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(p.photo, 0, p.photoSize - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.post('/admin/api/mcat/sug', adminAuth, async (req, res) => {
+  const key = clip(req.body?.key, 200); if (!key) return res.status(400).json({ error: 'Missing.' });
+  if (req.body.action === 'dismiss') { if (!db.mcatDis.some((x) => x.id === key)) db.mcatDis.push({ id: key, at: now() }); save(); return res.json({ ok: true }); }
+  const s = mcatSugList().find((x) => x.key === key); if (!s) return res.status(404).json({ error: 'Already added or gone.' });
+  const src = db.products.find((p) => p.id === s.pid), x = { id: newId(), at: now(), uses: 0 };
+  const t = libTokens(s.name), size = (String(s.name).match(/\b\d+(\.\d+)?\s?(kg|g|gm|gms|ml|l|ltr|litre|pcs)\b/i) || [''])[0];
+  mcatRead({ name: size ? s.name.replace(size, '').replace(/\s+/g, ' ').trim() || s.name : s.name, size, unit: s.unit, cat: MCAT_CAT_IDS.includes(req.body.cat) ? req.body.cat : 'kirana', sub: s.sub, barcode: s.barcode }, x);
+  if (src && s.hasPhoto) { try { const chunks = []; await new Promise((ok, bad) => { const r = chatFileStream(src.photo, 0, src.photoSize - 1); r.on('data', (y) => chunks.push(y)); r.on('end', ok); r.on('error', bad); }); const id = newId(); await saveChatFile(id, Buffer.concat(chunks), src.photoMime); Object.assign(x, { photo: id, photoMime: src.photoMime, photoSize: src.photoSize, photoV: now() }); } catch (e) { console.error('[mcat] sug photo', e.message); } }
+  void t; db.mcat.push(x); mcatDirty(); save(); res.json(mcatOut(x));
+});
 app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
   const src = req.query.from ? db.products.find((y) => y.id === String(req.query.from) && y.photo) : null; // picked from the Maata photo library
@@ -5061,7 +5295,7 @@ app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image
 });
 app.delete('/api/biz/:bizId/products/:id/photo', auth, (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
-  if (p.photo) deleteChatFile(p.photo); delete p.photo; delete p.photoMime; delete p.photoSize; delete p.libFrom; p.photoV = now(); save(); res.json(bizProdOut(p));
+  if (p.photo) deleteChatFile(p.photo); delete p.photo; delete p.photoMime; delete p.photoSize; delete p.libFrom; if (p.mcat) p.mcatNoPh = true; p.photoV = now(); save(); res.json(bizProdOut(p));
 });
 // 🗑️ delete a product (old bills keep its name and price; only the product list forgets it)
 app.delete('/api/biz/:bizId/products/:id', auth, (req, res) => {
