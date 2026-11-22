@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 397;
+const MAATA_VERSION = 398;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5209,6 +5209,41 @@ app.get('/admin/api/mcat/barcode/:code', adminAuth, async (req, res) => {
   const p = d && d.product; let product = null;
   if (p) { const name = [p.brands && String(p.brands).split(',')[0], p.product_name_en || p.product_name].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim(); if (name) product = { name: name.slice(0, 60), size: String(p.quantity || '').replace(/\s+/g, '').slice(0, 20), from: 'off' }; }
   res.json({ barcode: bc, product });
+});
+// 🔎 v398 name + pack size → barcode. Never trusted blindly: only real sources (Maata shops, Open Food Facts,
+// Google Search via Gemini) and every number must pass the EAN/UPC check digit. The admin confirms (best: scan the pack).
+function eanOk(code) {
+  const c = String(code || ''); if (!/^(\d{8}|\d{12}|\d{13}|\d{14})$/.test(c)) return false;
+  const d = c.split('').map(Number), chk = d.pop(); let sum = 0;
+  for (let i = d.length - 1, w = 3; i >= 0; i--, w = w === 3 ? 1 : 3) sum += d[i] * w;
+  return (10 - (sum % 10)) % 10 === chk;
+}
+const sizeNorm = (s) => { const m = String(s || '').toLowerCase().replace(/\s+/g, '').match(/(\d+(?:\.\d+)?)(kg|g|gm|gms|gram|grams|ml|l|ltr|litre|liter|pcs|pc)?/); if (!m) return ''; let v = parseFloat(m[1]), u = (m[2] || '').replace(/^(gm|gms|gram|grams)$/, 'g').replace(/^(ltr|litre|liter)$/, 'l').replace(/^pc$/, 'pcs'); if (u === 'kg') { v *= 1000; u = 'g'; } if (u === 'l') { v *= 1000; u = 'ml'; } return v + u; };
+app.get('/admin/api/mcat/find-barcode', adminAuth, async (req, res) => {
+  const name = clip(req.query.name, 60), size = clip(req.query.size, 20), sz = sizeNorm(size);
+  if (name.length < 3) return res.status(400).json({ error: 'Type the product name first.' });
+  const found = new Map(); // code → { code, name, from, score }
+  const add = (code, nm, from, score) => { code = String(code || '').replace(/\D/g, ''); if (!eanOk(code)) return; const o = found.get(code); if (o) { o.score += score; if (!o.from.includes(from)) o.from.push(from); } else found.set(code, { code, name: clip(nm, 80), from: [from], score }); };
+  const want = libTokens(name);
+  // 1) Maata shops that sell the same name + size with a barcode
+  for (const p of db.products) { if (!p.barcode || !p.name) continue; const sc = libScore(want, { id: 'fb:' + p.id, name: p.name, category: '' }); if (sc < 0.7) continue; const ps = sizeNorm(p.name.match(/\d+(\.\d+)?\s?(kg|g|gm|gms|ml|l|ltr|pcs)\b/i)?.[0] || ''); if (sz && ps && ps !== sz) continue; add(p.barcode, p.name, 'maata', 2); }
+  const inDb = db.mcat.find((x) => x.barcode && mcatKey(x.name + ' ' + (x.size || '')) === mcatKey(name + ' ' + size));
+  // 2) Open Food Facts (free public product database)
+  const off = getJson('https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&json=1&page_size=20&fields=code,product_name,product_name_en,brands,quantity,countries_tags&search_terms=' + encodeURIComponent(name), 6000).then((d) => {
+    for (const p of (d && d.products) || []) { const nm = [p.brands && String(p.brands).split(',')[0], p.product_name_en || p.product_name].filter(Boolean).join(' '); const sc = libScore(want, { id: 'off:' + p.code, name: nm, category: '' }); if (sc < 0.6) continue; const q = sizeNorm(p.quantity); if (sz && q && q !== sz) continue;
+      add(p.code, nm + (p.quantity ? ' ' + p.quantity : ''), 'off', 1 + (sz && q === sz ? 1 : 0) + ((p.countries_tags || []).includes('en:india') ? 1 : 0) + (String(p.code).startsWith('890') ? 0.5 : 0)); }
+  }).catch(() => {});
+  // 3) Google Search through Gemini (grounded — it reads web pages, it does not guess)
+  const ggl = (async () => {
+    if (!GEMINI_KEY) return; await discoverModels();
+    const model = geminiModelOk || GEMINI_MODELS[0]; if (!model) return;
+    const r = await mcatGFetch('models/' + model + ':generateContent', { contents: [{ role: 'user', parts: [{ text: 'Search the web for the EAN-13 barcode number printed on the pack of "' + name + (size ? ' ' + size : '') + '" sold in India. Answer with lines "BARCODE: <13 digits> | <exact product name and pack size from the source>" for each barcode you actually found on a web page (max 3), most likely first. If you did not find one, answer "NONE". Never make up a number.' }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0, maxOutputTokens: 400 } }, 20000);
+    const d = await r.json().catch(() => ({})); const txt = (d.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('\n');
+    let k = 0; for (const m of txt.matchAll(/BARCODE:\s*(\d{8,14})\s*\|?\s*([^\n]*)/g)) add(m[1], m[2] || name, 'google', 1.5 - k++ * 0.3);
+  })().catch((e) => console.error('[mcat] find-barcode google', e.message));
+  await Promise.all([off, ggl]);
+  const list = [...found.values()].sort((a, b) => b.score - a.score).slice(0, 4);
+  res.json({ list, dup: inDb ? { id: inDb.id, name: mcatFull(inDb), barcode: inDb.barcode } : null, taken: list.filter((x) => db.mcat.some((y) => y.barcode === x.code)).map((x) => x.code) });
 });
 // 🤖 read a product photo → name, Telugu name, size, category, barcode
 app.post('/admin/api/mcat/ai-read', adminAuth, express.raw({ type: ['image/*'], limit: '6mb' }), async (req, res) => {
