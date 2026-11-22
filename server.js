@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 389;
+const MAATA_VERSION = 390;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -4487,7 +4487,7 @@ app.get('/admin/api/gs', adminAuth, (req, res) => {
   res.json({ panch: db.gsPanch.slice().sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0) || b.createdAt - a.createdAt).map((p) => {
     const sp = (p.members || []).find((m) => m.role === 'sarpanch' && m.status === 'active') || (p.members || []).find((m) => m.role === 'sarpanch'), u = sp && userById(sp.userId);
     return { ...gsPub(p), headLeft: !!(sp && sp.status !== 'active'), note: p.note || '', why: p.why || '', createdAt: p.createdAt, photoUrl: p.photo ? '/api/gs/pphoto/' + p.id : '', spName: p.spName || '', sarpanch: u ? { id: u.id, name: u.name, phone: u.phone || '' } : null, team: (p.members || []).filter((m) => m.status === 'active').length,
-      complaints: db.gsComplaints.filter((c) => c.pid === p.id).length, solved: db.gsComplaints.filter((c) => c.pid === p.id && c.status === 'solved').length, residents: db.users.filter((x) => x.gs && x.gs.pid === p.id).length };
+      complaints: db.gsComplaints.filter((c) => c.pid === p.id).length, solved: db.gsComplaints.filter((c) => c.pid === p.id && c.status === 'solved').length, residents: db.users.filter((x) => x.gs && x.gs.pid === p.id).length, ...gsJoinStat(p) }; // v390 joined + joined this week
   }), stats: { pending: db.gsPanch.filter((p) => p.status === 'pending').length, live: db.gsPanch.filter((p) => p.status === 'approved').length, complaints: db.gsComplaints.length } });
 });
 app.post('/admin/api/gs/:id/:act', adminAuth, (req, res) => {
