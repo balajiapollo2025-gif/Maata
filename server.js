@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 401;
+const MAATA_VERSION = 402;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5023,6 +5023,11 @@ app.get('/api/biz/:bizId/photo-lib', auth, async (req, res) => {
     groups = [...have.values()].sort((a, b) => b.s - a.s || b.shops.size - a.shops.size).slice(0, 40);
   }
   const out = { items: groups.map((g) => libItem(g, c.bizId)), price: libPrice(groups, c.bizId), ai, product: null };
+  // 📚 v402: the Maata master catalogue comes FIRST (clean white photos the Maata team added) — also when shops have none yet
+  const cat = [...mcatFind(q, '', '', bc, 12), ...ai.flatMap((a) => mcatFind(a, '', '', '', 4))].filter((x, i, a) => x.photo && a.indexOf(x) === i).slice(0, 12);
+  if (cat.length) out.items = [...cat.map((x) => ({ id: 'mcat:' + x.id, mcat: x.id, v: x.photoV || 0, name: mcatFull(x), unit: x.unit || 'pcs', category: x.sub || mcatCatName(x.cat), taxRate: x.tax || 0, barcode: x.barcode || '', uses: x.uses || 0, own: false, maata: true, exact: true })), ...out.items];
+  const bcat = bc.length >= 8 ? cat.find((x) => x.barcode === bc) : null;
+  if (bcat) { out.product = { name: mcatFull(bcat), unit: bcat.unit || 'pcs', category: bcat.sub || mcatCatName(bcat.cat), taxRate: bcat.tax || 0, from: 'maata' }; return res.json(out); }
   const b0 = bc.length >= 8 && groups[0] && groups[0].rep.barcode === bc ? groups[0].rep : null;
   if (b0) out.product = { name: b0.name, unit: b0.unit || 'pcs', category: b0.category || '', taxRate: b0.taxRate || 0, from: 'maata' };
   else if (bc.length >= 8) { // not on Maata yet: the free product database still gives the name
@@ -5386,7 +5391,8 @@ app.post('/admin/api/mcat/sug', adminAuth, async (req, res) => {
 app.post('/api/biz/:bizId/products/:id/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' }), async (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
   const src = req.query.from ? db.products.find((y) => y.id === String(req.query.from) && y.photo) : null; // picked from the Maata photo library
-  if (await savePhotoInto(p, req, res)) { if (src && (src.ownerId === c.bizId || libShares(userById(src.ownerId)))) p.libFrom = libRoot(src); else delete p.libFrom; save(); bizLog(c, 'product-photo', p.id, p.name); res.json(bizProdOut(p)); }
+  const mc = String(req.query.from || '').startsWith('mcat:') ? mcatById(String(req.query.from).slice(5)) : null; // picked from the Maata catalogue
+  if (await savePhotoInto(p, req, res)) { if (src && (src.ownerId === c.bizId || libShares(userById(src.ownerId)))) p.libFrom = libRoot(src); else delete p.libFrom; if (mc) { p.mcat = mc.id; delete p.mcatNoPh; } save(); bizLog(c, 'product-photo', p.id, p.name); res.json(bizProdOut(p)); }
 });
 app.delete('/api/biz/:bizId/products/:id/photo', auth, (req, res) => {
   const c = bizCtx(req, res, 'stock'); if (!c) return; const p = db.products.find((x) => x.id === req.params.id && x.ownerId === c.bizId); if (!p) return res.status(404).json({ error: 'Product not found.' });
