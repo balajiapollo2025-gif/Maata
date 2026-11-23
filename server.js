@@ -2302,7 +2302,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 402;
+const MAATA_VERSION = 403;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -5025,7 +5025,7 @@ app.get('/api/biz/:bizId/photo-lib', auth, async (req, res) => {
   const out = { items: groups.map((g) => libItem(g, c.bizId)), price: libPrice(groups, c.bizId), ai, product: null };
   // 📚 v402: the Maata master catalogue comes FIRST (clean white photos the Maata team added) — also when shops have none yet
   const cat = [...mcatFind(q, '', '', bc, 12), ...ai.flatMap((a) => mcatFind(a, '', '', '', 4))].filter((x, i, a) => x.photo && a.indexOf(x) === i).slice(0, 12);
-  if (cat.length) out.items = [...cat.map((x) => ({ id: 'mcat:' + x.id, mcat: x.id, v: x.photoV || 0, name: mcatFull(x), unit: x.unit || 'pcs', category: x.sub || mcatCatName(x.cat), taxRate: x.tax || 0, barcode: x.barcode || '', uses: x.uses || 0, own: false, maata: true, exact: true })), ...out.items];
+  if (cat.length) out.items = [...cat.map((x) => ({ id: 'mcat:' + x.id, mcat: x.id, v: x.photoV || 0, name: mcatFull(x), unit: x.unit || 'pcs', category: x.sub || mcatCatName(x.cat), taxRate: x.tax || 0, barcode: x.barcode || '', mrp: x.mrp ?? null, uses: x.uses || 0, own: false, maata: true, exact: true })), ...out.items];
   const bcat = bc.length >= 8 ? cat.find((x) => x.barcode === bc) : null;
   if (bcat) { out.product = { name: mcatFull(bcat), unit: bcat.unit || 'pcs', category: bcat.sub || mcatCatName(bcat.cat), taxRate: bcat.tax || 0, from: 'maata' }; return res.json(out); }
   const b0 = bc.length >= 8 && groups[0] && groups[0].rep.barcode === bc ? groups[0].rep : null;
