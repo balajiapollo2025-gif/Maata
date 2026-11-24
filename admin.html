@@ -201,6 +201,7 @@ textarea.input{min-height:110px;resize:vertical}
     <button data-view="mr"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M3 17V9l4-4h8l4 6v6"/></svg>🛺 Maata Ride <span class="count" id="mrCount" hidden></span></button>
     <button data-view="ls"><svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>🛠️ Local Services &amp; 💼 Jobs <span class="count" id="lsCount" hidden></span></button>
     <button data-view="mcat"><svg class="ico" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>📚 Catalogue</button>
+    <button data-view="tunes">🎵 Caller tunes</button>
     <button data-view="gs"><svg class="ico" viewBox="0 0 24 24"><path d="M3 21h18M4 10h16M12 3l9 7H3z"/><path d="M6 10v8M10 10v8M14 10v8M18 10v8"/></svg>🏛️ Grama Seva <span class="count" id="gsCount" hidden></span></button>
     <button data-view="plans"><svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>Plans &amp; payments <span class="count" id="plCount" hidden></span></button>
     <button data-view="sms"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></svg>SMS &amp; OTP</button>
@@ -419,6 +420,11 @@ textarea.input{min-height:110px;resize:vertical}
       <div class="mcG" id="mcList"></div>
       <input type="file" id="mcFile" accept="image/*" hidden><input type="file" id="mcFiles" accept="image/*" multiple hidden><input type="file" id="mcCsvF" accept=".csv,.tsv,.txt,text/csv" hidden>
     </section>
+    <section data-page="tunes" hidden>
+      <div class="top"><h2>🎵 Caller tunes</h2></div>
+      <p style="color:var(--muted,#475569)">Audio people uploaded as their caller tune (heard by everyone who calls them). Most-reported first. Listen and remove anything copyrighted (film songs without permission) or abusive.</p>
+      <div id="tuneList"></div>
+    </section>
     <section data-page="smail" hidden>
       <div class="top"><h2>📧 Support mail — support@maataapp.com</h2></div>
       <style>
@@ -578,7 +584,7 @@ function boot() {
 }
 
 // ---------- navigation ----------
-const loaders = { mcat: loadMcat, gs: loadGsAdmin, plans: loadPlans, sms: loadSms, smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
+const loaders = { tunes: loadTunes, mcat: loadMcat, gs: loadGsAdmin, plans: loadPlans, sms: loadSms, smail: loadSupportMail, mr: loadMr, ls: loadLs, files: loadFiles, bm: loadBmAdmin, coins: loadReferrals, features: loadFeaturesAdmin, helpdesk: loadHelpdesk, reels: loadReelsAdmin, channels: loadChannelsAdmin, ads: loadAds, dash: loadDash, customers: loadCustomers, calls: loadCalls, messages: loadMessages, logins: loadLogins, reports: loadReports, announce: loadAnnouncements, audit: loadAudit };
 
 // ---------- 🏛️ v358 Grama Seva: check sarpanch sign-ups ----------
 async function loadGsAdmin() {
@@ -836,6 +842,11 @@ async function mcSug() {
   m.querySelectorAll('[data-k]').forEach((r) => { const k = r.dataset.k;
     r.querySelector('.mcOk').onclick = async () => { try { await api('/admin/api/mcat/sug', { method: 'POST', body: JSON.stringify({ key: k, cat: r.querySelector('.mcC').value }) }); r.remove(); toast('Added'); } catch (e) { toast(e.message); } };
     r.querySelector('.mcNo').onclick = async () => { try { await api('/admin/api/mcat/sug', { method: 'POST', body: JSON.stringify({ key: k, action: 'dismiss' }) }); r.remove(); } catch (e) { toast(e.message); } }; });
+}
+async function loadTunes() {
+  const l = await api('/admin/api/tunes');
+  $('#tuneList').innerHTML = l.length ? l.map((x) => `<div class="c" style="padding:12px;margin-bottom:10px;border-radius:14px;background:var(--panel,#fff);border:1px solid var(--line,#E2E8F0)"><b>${esc(x.tune)}</b> ${x.kind === 'voice' ? '🎤 voice' : '🎵 file'} ${x.reports ? `<span style="color:#B91C1C;font-weight:800">🚩 ${x.reports} reports</span>` : ''}<br><small>${esc(x.name)} · ${esc(x.phone)} · ${new Date(x.at).toLocaleString('en-IN')}</small><br><audio controls preload="none" src="/admin/api/tunes/${x.id}/audio?token=${encodeURIComponent(token)}" style="width:100%;margin:6px 0"></audio><button data-rm="${x.id}" style="background:#FEE2E2;color:#B91C1C;border:0;border-radius:10px;padding:8px 12px;font-weight:800">🗑 Remove tune</button></div>`).join('') : '<p>No uploaded caller tunes yet.</p>';
+  $$('#tuneList [data-rm]').forEach((b) => b.onclick = async () => { if (!confirm('Remove this caller tune? The person goes back to the normal ring.')) return; await api('/admin/api/tunes/' + b.dataset.rm, { method: 'DELETE' }); loadTunes(); });
 }
 async function loadGsBcAdmin() { // 📢 v372
   const l = await api('/admin/api/gs/bc').catch(() => []), box = $('#gsBcList'); if (!box) return;

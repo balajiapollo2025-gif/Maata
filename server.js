@@ -422,7 +422,7 @@ app.post('/api/push/ringing', (req, res) => {
   const u = token && db.users.find((x) => (x.fcmTokens || []).some((t) => t.token === token));
   const pr = u && pendingRings.get(u.id);
   if (!pr || pr.callId !== callId) return res.json({ ok: false, live: false });
-  if (!pr.rang) { pr.rang = true; io.to('user:' + pr.from).emit('call:ringing', { callId }); }
+  if (!pr.rang) { pr.rang = true; io.to('user:' + pr.from).emit('call:ringing', { callId, ...tuneOf(u) }); }
   res.json({ ok: true, live: true });
 });
 // Message notifications for people who are not online right now
@@ -1173,6 +1173,44 @@ app.post('/api/me/photo', auth, express.raw({ type: ['image/*'], limit: '3mb' })
   save();
   for (const w of watchersOf(req.user.id)) io.to('user:' + w).emit('user:profile', { id: req.user.id });
   res.json(publicUser(req.user));
+});
+// 🎵 v406 CALLER TUNE (like Jio/Airtel Hello Tune): what people hear while MY phone rings. Built-in Maata tunes,
+// my own voice greeting, or an audio file I have the right to share (max 30 s · 1.5 MB). Reported tunes can be removed by Maata.
+const TUNE_BUILTIN = ['veena', 'flute', 'bells', 'sitar'];
+function tuneOf(u) {
+  const t = u && u.tune; if (!t || u.status === 'blocked') return {};
+  if (t.b) return TUNE_BUILTIN.includes(t.b) ? { tune: { b: t.b } } : {};
+  return t.id ? { tune: { u: u.id, v: t.at || 0, n: t.name || '' } } : {};
+}
+app.get('/api/me/tune', auth, (req, res) => { const t = req.user.tune || null; res.json(t ? { b: t.b || '', name: t.name || '', kind: t.kind || '', at: t.at || 0, file: !!t.id } : null); });
+app.post('/api/me/tune', auth, express.raw({ type: ['audio/*', 'video/webm', 'video/mp4', 'application/octet-stream'], limit: '1600kb' }), async (req, res) => {
+  const b = String(req.query.builtin || '');
+  if (b) { if (!TUNE_BUILTIN.includes(b)) return res.status(400).json({ error: 'Unknown tune.' }); if (req.user.tune && req.user.tune.id) deleteChatFile(req.user.tune.id); req.user.tune = { b, at: now() }; save(); return res.json({ ok: true }); }
+  if (req.query.rights !== '1') return res.status(400).json({ error: 'Please confirm that you have the right to use this audio.' });
+  if (!Buffer.isBuffer(req.body) || req.body.length < 2000) return res.status(400).json({ error: 'Choose an audio file.' });
+  const mime = String(req.headers['content-type'] || 'audio/mpeg').split(';')[0], id = newId();
+  try { await saveChatFile(id, req.body, mime); } catch { return res.status(500).json({ error: 'Could not save the tune.' }); }
+  if (req.user.tune && req.user.tune.id) deleteChatFile(req.user.tune.id);
+  req.user.tune = { id, mime, size: req.body.length, name: clip(req.query.name, 60) || 'My tune', kind: req.query.kind === 'voice' ? 'voice' : 'file', at: now(), rights: now() };
+  save(); res.json({ ok: true });
+});
+app.delete('/api/me/tune', auth, (req, res) => { if (req.user.tune && req.user.tune.id) deleteChatFile(req.user.tune.id); delete req.user.tune; save(); res.json({ ok: true }); });
+app.get('/api/tune/:uid', (req, res) => { // the caller plays it while it rings (any signed-in Maata user)
+  let ok = false; try { ok = !!findUserByToken(String(req.query.t || '')); } catch { /* bad token */ }
+  const u = userById(req.params.uid), t = u && u.tune; if (!ok || !t || !t.id || u.status === 'blocked') return res.status(404).end();
+  res.setHeader('Content-Type', t.mime); res.setHeader('Cache-Control', 'private, max-age=86400');
+  const st = chatFileStream(t.id, 0, t.size - 1); st.on('error', () => res.destroy()); st.pipe(res);
+});
+app.post('/api/tune/:uid/report', auth, (req, res) => {
+  const u = userById(req.params.uid); if (!u || !u.tune || !u.tune.id) return res.json({ ok: true });
+  u.tune.reports = [...new Set([...(u.tune.reports || []), req.user.id])].slice(-50); save(); res.json({ ok: true });
+});
+app.get('/admin/api/tunes', adminAuth, (req, res) => res.json(db.users.filter((u) => u.tune && u.tune.id).map((u) => ({ id: u.id, name: u.name || '', phone: u.phone || '', tune: u.tune.name, kind: u.tune.kind, at: u.tune.at, reports: (u.tune.reports || []).length })).sort((a, b) => b.reports - a.reports || b.at - a.at).slice(0, 500)));
+app.delete('/admin/api/tunes/:uid', adminAuth, (req, res) => { const u = userById(req.params.uid); if (u && u.tune) { if (u.tune.id) deleteChatFile(u.tune.id); delete u.tune; save(); } res.json({ ok: true }); });
+app.get('/admin/api/tunes/:uid/audio', (req, res) => {
+  let ok = false; try { ok = jwt.verify(String(req.query.token || ''), JWT_SECRET).typ === 'admin'; } catch { /* no */ }
+  const u = userById(req.params.uid), t = u && u.tune; if (!ok || !t || !t.id) return res.status(404).end();
+  res.setHeader('Content-Type', t.mime); const st = chatFileStream(t.id, 0, t.size - 1); st.on('error', () => res.destroy()); st.pipe(res);
 });
 app.delete('/api/me/photo', auth, (req, res) => {
   if (req.user.photo) deleteChatFile(req.user.photo);
@@ -2302,7 +2340,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 405;
+const MAATA_VERSION = 406;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -9674,7 +9712,7 @@ io.on('connection', (socket) => {
   // when the Android page shows it, the phone's own ring stops so it does not ring twice
   socket.on('call:got', (p) => {
     const callId = String(p?.callId || '').slice(0, 64), pr = pendingRings.get(me); if (!pr || pr.callId !== callId) return;
-    if (!pr.rang) { pr.rang = true; io.to(room(pr.from)).emit('call:ringing', { callId }); }
+    if (!pr.rang) { pr.rang = true; io.to(room(pr.from)).emit('call:ringing', { callId, ...tuneOf(socket.user) }); }
     if (p.shown) {
       pr.shown = true;
       if (socket.native && !pr.nativeStopped) { pr.nativeStopped = true; const stop = () => fcmTo(socket.user, { type: 'call_end', callId, answered: '1' }, 30).catch(() => {}); stop(); setTimeout(() => { const c = pendingRings.get(me); if (c && c.callId === callId) stop(); }, 3000); }
