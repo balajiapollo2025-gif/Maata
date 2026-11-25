@@ -61,4 +61,5 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("com.google.android.gms:play-services-auth-api-phone:18.1.0") // v346 OTP auto-fill (SMS User Consent)
+    implementation("androidx.fragment:fragment-ktx:1.8.9") // Play warning: the old androidx.fragment 1.1.0 (pulled in by play-services) is outdated → use a current one
 }
