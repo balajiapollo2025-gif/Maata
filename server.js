@@ -637,8 +637,24 @@ const IOS_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><me
 <div class="st"><span class="n">3</span><span class="i">➕</span><p>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</p></div>
 <div class="st"><span class="n">4</span><span class="i">🦜</span><p>Open <b>Maata</b> from your home screen, log in and tap <b>Turn on</b> notifications.</p></div>
 <a class="btn" href="/">Open Maata</a><p class="note">Notifications on iPhone need iOS 16.4 or newer.<br>Android phone? <a href="/download?android=1">Download the Android app</a></p></main></body></html>`;
+// ▶ v408 Google Play: Maata is live on Play. People who open /download (posters, QR codes) or an invite link in an Android
+// or computer browser go to the Play Store page. The APK stays for the Maata app's own updater (DownloadManager /
+// MaataAndroid user agent) and for ?apk=1.
+const PLAY_URL = (process.env.PLAY_URL || 'https://play.google.com/store/apps/details?id=com.maataapp.app').trim();
+const isBrowserUA = (ua) => /Mozilla/i.test(ua) && !/MaataAndroid/i.test(ua);
+const pendingInv = new Map(); // ip → { code, at } — someone opened an invite link and went to Play; their signup in the app is credited
+function playLink(ref) { return ref ? PLAY_URL + (PLAY_URL.includes('?') ? '&' : '?') + 'referrer=' + encodeURIComponent('utm_source=invite&utm_medium=maata&ref=' + ref) : PLAY_URL; }
+app.get(['/i/:code', '/join/:code'], (req, res) => {
+  const code = String(req.params.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10), ua = String(req.headers['user-agent'] || '');
+  res.setHeader('Cache-Control', 'no-cache');
+  if (/iPhone|iPad|iPod/.test(ua) || !isBrowserUA(ua)) return res.redirect(302, '/?ref=' + code); // iPhone / inside the app: web sign-up keeps the invite
+  if (code) { pendingInv.set(req.ip, { code, at: now() }); if (pendingInv.size > 20000) pendingInv.delete(pendingInv.keys().next().value); }
+  res.redirect(302, playLink(code));
+});
+app.get(['/play', '/playstore'], (req, res) => res.redirect(302, PLAY_URL));
 app.get(['/download', '/app'], (req, res, next) => {
   const ua = String(req.headers['user-agent'] || '');
+  if (req.query.apk !== '1' && req.query.local !== '1' && !/iPhone|iPad|iPod/.test(ua) && req.query.ios !== '1' && isBrowserUA(ua)) { res.setHeader('Cache-Control', 'no-cache'); return res.redirect(302, PLAY_URL); }
   if (req.query.android !== '1' && (/iPhone|iPad|iPod/.test(ua) || req.query.ios === '1')) { res.setHeader('Cache-Control', 'no-cache'); return res.type('html').send(IOS_PAGE); }
   next();
 });
@@ -1068,6 +1084,7 @@ async function makeAccount(req, res, d) {
   if (d.emailVerified) u.emailVerified = now();
   if (d.phoneVerified) u.phoneVerified = now();
   // joined from a friend's invite link: remember who invited, and save each other as contacts
+  if (!d.ref && req && req.ip) { const pi = pendingInv.get(req.ip); if (pi && now() - pi.at < 48 * 3600e3) { d.ref = pi.code; pendingInv.delete(req.ip); } } // v408: invite link → Play Store → signed up in the app
   const inviter = d.ref ? db.users.find((x) => x.inviteCode && x.inviteCode === String(d.ref).trim().toUpperCase() && x.status !== 'blocked') : null;
   if (inviter) {
     u.referredBy = inviter.id;
@@ -1965,8 +1982,8 @@ function inviteCodeOf(u) {
 app.get('/api/invite', auth, async (req, res) => {
   const code = inviteCodeOf(req.user), base = (process.env.APP_ORIGIN || ('https://' + req.headers.host)).replace(/\/$/, '');
   const joined = db.users.filter((x) => x.referredBy === req.user.id).sort((a, b) => b.createdAt - a.createdAt);
-  let qr = ''; try { qr = await QRCode.toDataURL(base + '/?ref=' + code, { margin: 2, width: 360, color: { dark: '#0A2E36', light: '#FFFFFF' } }); } catch {}
-  res.json({ code, link: base + '/?ref=' + code, site: base, qr, joined: joined.length, recent: joined.slice(0, 10).map((x) => ({ name: x.name, at: x.createdAt })) });
+  let qr = ''; try { qr = await QRCode.toDataURL(base + '/i/' + code, { margin: 2, width: 360, color: { dark: '#0A2E36', light: '#FFFFFF' } }); } catch {}
+  res.json({ code, link: base + '/i/' + code, play: PLAY_URL, site: base, qr, joined: joined.length, recent: joined.slice(0, 10).map((x) => ({ name: x.name, at: x.createdAt })) });
 });
 app.get('/api/invite/:code', (req, res) => { const u = db.users.find((x) => x.inviteCode === String(req.params.code).toUpperCase()); res.json(u ? { name: u.name } : {}); });
 
@@ -2340,7 +2357,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 407;
+const MAATA_VERSION = 408;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
