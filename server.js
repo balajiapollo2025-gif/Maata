@@ -216,12 +216,54 @@ async function translate(text, from, to) {
 }
 const userById = (id) => db.users.find((u) => u.id === id);
 const nameOf = (id) => (typeof id === 'string' && id.startsWith('g:') ? '👥 ' + (db.groups.find((g) => g.id === id.slice(2))?.name || 'Group') : userById(id)?.name || 'Deleted user');
-const sign = (u) => jwt.sign({ sub: u.id, tv: u.tokenVersion || 0 }, JWT_SECRET, { expiresIn: '30d' });
+// v411 🔐 Logged-in devices: every login is a "session" the owner can see and log out from any device
+function sign(u, req, via) {
+  let sid = req && req.sid && (u.sessions || []).some((x) => x.id === req.sid) ? req.sid : null;
+  if (!sid && req) sid = sessNew(u, req, via || 'login').id;
+  return jwt.sign({ sub: u.id, tv: u.tokenVersion || 0, ...(sid ? { sid } : {}) }, JWT_SECRET, { expiresIn: '30d' });
+}
+function sessKind(ua) { return /MaataAndroid/i.test(ua) ? 'app' : /Android|iPhone|iPad|Mobile/i.test(ua) ? 'phone' : 'computer'; }
+function sessName(ua) {
+  ua = String(ua || '');
+  if (/MaataAndroid/i.test(ua)) { const m = /Android [\d.]+;\s*([^;)]+?)(?:\s+Build|\))/.exec(ua); const model = m && !/^(K|wv)$/i.test(m[1].trim()) ? m[1].trim() : 'Android phone'; return 'Maata app · ' + model; }
+  return deviceName(ua);
+}
+function sessNew(u, req, via) {
+  const ua = String((req.headers && req.headers['user-agent']) || '');
+  const s = { id: newId(), name: sessName(ua), kind: sessKind(ua), via, ip: String(req.ip || ''), ua: ua.slice(0, 200), createdAt: now(), lastAt: now() };
+  const others = (u.sessions || []).length + (u.devices || []).length;
+  u.sessions = [...(u.sessions || []), s].slice(-25);
+  if (via !== 'signup' && via !== 'old' && others) { // tell the owner's other devices at once (and their phone, even if Maata is closed)
+    try { io.to('user:' + u.id).emit('session:new', { id: s.id, name: s.name, kind: s.kind, at: s.createdAt }); } catch {}
+    try { pushTo(u, { type: 'msg', title: '🔐 New login to your Maata', body: s.name + ' just logged in to your account. Not you? Open Maata → ⋮ → Logged-in devices and log it out.', tag: 'maata-login-' + s.id, url: '/?devices=1' }).catch(() => {}); } catch {}
+  }
+  return s;
+}
+// remove one session: its login stops at once, its notifications stop, its open screens are closed
+function sessDrop(u, sid) {
+  u.sessions = (u.sessions || []).filter((x) => x.id !== sid);
+  u.pushSubs = (u.pushSubs || []).filter((x) => x.sid !== sid);
+  u.fcmTokens = (u.fcmTokens || []).filter((x) => x.sid !== sid);
+  try { io.in('user:' + u.id).fetchSockets().then((ss) => { for (const so of ss) if (so.sid === sid) { so.emit('force-logout', { reason: 'This device was logged out from your Maata account.' }); so.disconnect(true); } }).catch(() => {}); } catch {}
+}
+function sessKeepOnly(u, sid) {
+  const keep = (u.sessions || []).filter((x) => x.id === sid);
+  for (const x of u.sessions || []) if (x.id !== sid) { u.pushSubs = (u.pushSubs || []).filter((y) => y.sid !== x.id); u.fcmTokens = (u.fcmTokens || []).filter((y) => y.sid !== x.id); }
+  u.sessions = keep;
+}
+const SESS_IDLE_DAYS = [1, 3, 7, 14, 30];
+const tokenSid = (token) => { try { return jwt.decode(token)?.sid || null; } catch { return null; } };
 function findUserByToken(token) {
   const p = jwt.verify(token, JWT_SECRET);
   if (!p.sub) return null;
   const u = userById(p.sub);
   if (!u || u.status === 'blocked' || (u.tokenVersion || 0) !== (p.tv || 0)) return null;
+  if (p.sid) { // v411: a login session — works only while it is still in "Logged-in devices"
+    const s = (u.sessions || []).find((x) => x.id === p.sid); if (!s) return null;
+    const idle = u.sessIdle || 30;
+    if (s.kind !== 'app' && now() - (s.lastAt || 0) > idle * 86400000) { sessDrop(u, s.id); save(); return null; } // idle computer / browser: logged out by itself
+    s.lastAt = now();
+  }
   if (p.did) { // a linked computer: works only while the phone keeps it in "Linked devices"
     const d = (u.devices || []).find((x) => x.id === p.did); if (!d) return null;
     if (now() - (d.lastAt || 0) > 600000) { d.lastAt = now(); save(); }
@@ -302,7 +344,7 @@ app.post('/api/push/subscribe', auth, (req, res) => {
   const s = req.body?.subscription;
   if (!s || typeof s.endpoint !== 'string' || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return res.status(400).json({ error: 'Bad subscription.' });
   const list = (req.user.pushSubs || []).filter((x) => x.endpoint !== s.endpoint);
-  list.push({ endpoint: s.endpoint.slice(0, 1000), keys: { p256dh: String(s.keys.p256dh).slice(0, 200), auth: String(s.keys.auth).slice(0, 100) }, ua: clip(req.headers['user-agent'], 120), at: now() });
+  list.push({ endpoint: s.endpoint.slice(0, 1000), keys: { p256dh: String(s.keys.p256dh).slice(0, 200), auth: String(s.keys.auth).slice(0, 100) }, ua: clip(req.headers['user-agent'], 120), at: now(), ...(req.sid ? { sid: req.sid } : {}) });
   req.user.pushSubs = list.slice(-5); save(); res.json({ ok: true });
 });
 app.post('/api/push/unsubscribe', auth, (req, res) => { req.user.pushSubs = (req.user.pushSubs || []).filter((x) => x.endpoint !== String(req.body?.endpoint || '')); save(); res.json({ ok: true }); });
@@ -311,6 +353,7 @@ app.post('/api/logout', auth, (req, res) => {
   const ep = String(req.body?.endpoint || ''), ft = String(req.body?.fcm || '');
   if (ep) req.user.pushSubs = (req.user.pushSubs || []).filter((x) => x.endpoint !== ep);
   if (ft) req.user.fcmTokens = (req.user.fcmTokens || []).filter((x) => x.token !== ft);
+  if (req.sid) req.user.sessions = (req.user.sessions || []).filter((x) => x.id !== req.sid); // v411: this login is over
   save(); res.json({ ok: true });
 });
 // 🔔 "Test with Maata closed": a sample order alert 10 seconds later, so the person can close Maata and hear it
@@ -387,7 +430,8 @@ app.post('/api/push/fcm', auth, (req, res) => {
   const token = String(req.body?.token || '').trim();
   if (token.length < 20 || token.length > 4096) return res.status(400).json({ error: 'Bad token.' });
   for (const u of db.users) if (u.id !== req.user.id && (u.fcmTokens || []).some((t) => t.token === token)) u.fcmTokens = u.fcmTokens.filter((t) => t.token !== token); // phone changed account
-  req.user.fcmTokens = [...(req.user.fcmTokens || []).filter((t) => t.token !== token), { token, at: now(), model: clip(req.body?.model, 80) }].slice(-5);
+  req.user.fcmTokens = [...(req.user.fcmTokens || []).filter((t) => t.token !== token), { token, at: now(), model: clip(req.body?.model, 80), ...(req.sid ? { sid: req.sid } : {}) }].slice(-5);
+  if (req.sid && req.body?.model) { const se = (req.user.sessions || []).find((x) => x.id === req.sid); if (se && se.kind === 'app') se.name = 'Maata app · ' + clip(req.body.model, 60); } // v411: real phone model
   save(); res.json({ ok: true, fcm: !!FCM });
 });
 // 🔎 v376: the Android app (1.0.59+) reports what happened to a spoken alert on the phone — bell, the spoken line, the recorded voice —
@@ -714,7 +758,7 @@ function auth(req, res, next) {
   try {
     const u = findUserByToken(h.startsWith('Bearer ') ? h.slice(7) : '');
     if (!u) throw new Error('no user');
-    req.user = u; next();
+    req.user = u; req.sid = tokenSid(h.slice(7)); next();
   } catch { res.status(401).json({ error: 'Session expired. Log in again.' }); }
 }
 
@@ -998,11 +1042,11 @@ app.post('/api/password/reset', rateLimit, async (req, res) => {
   if (!good) { r.tries++; return res.status(400).json({ error: 'Wrong code. ' + (5 - r.tries) + ' tries left.' }); }
   if (pw.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   resetCodes.delete(u.id);
-  u.passHash = await bcrypt.hash(pw, 10); u.tokenVersion = (u.tokenVersion || 0) + 1; // logs out every other device
+  u.passHash = await bcrypt.hash(pw, 10); u.tokenVersion = (u.tokenVersion || 0) + 1; sessKeepOnly(u, null); u.devices = []; // logs out every other device
   kick(u.id, 'Your password was changed. Please log in again.');
   recordLogin(u, req, 'password-reset'); save();
   audit('customer:' + u.phone, 'password-reset', u.name);
-  res.json({ token: sign(u), user: publicUser(u) });
+  res.json({ token: sign(u, req, 'reset'), user: publicUser(u) });
 });
 app.put('/api/me/email', auth, async (req, res) => {
   if (req.user.passHash && !(await bcrypt.compare(String(req.body?.password || ''), req.user.passHash))) return res.status(400).json({ error: 'Wrong password.' });
@@ -1015,9 +1059,9 @@ app.put('/api/me/email', auth, async (req, res) => {
 app.post('/api/me/password', auth, rateLimit, async (req, res) => {
   if (req.user.passHash && !(await bcrypt.compare(String(req.body?.current || ''), req.user.passHash))) return res.status(400).json({ error: 'Your current password is wrong.' });
   const pw = String(req.body?.password || ''); if (pw.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
-  req.user.passHash = await bcrypt.hash(pw, 10); req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+  req.user.passHash = await bcrypt.hash(pw, 10); req.user.tokenVersion = (req.user.tokenVersion || 0) + 1; sessKeepOnly(req.user, req.sid); req.user.devices = [];
   kick(req.user.id, 'Your password was changed. Please log in again.'); save();
-  res.json({ token: sign(req.user), user: publicUser(req.user) });
+  res.json({ token: sign(req.user, req, 'login'), user: publicUser(req.user) });
 });
 
 // New account: 1) check name, number, email (one account per mobile number and per email), 2) send a 6-digit code to the
@@ -1093,9 +1137,10 @@ async function makeAccount(req, res, d) {
   }
   db.users.push(u);
   recordLogin(u, req, 'signup'); u.activeDays = [istDay()];
+  const tok = sign(u, req, 'signup');
   save();
   if (inviter) { io.to('user:' + inviter.id).emit('invite:joined', { name: u.name }); try { pushTo(inviter, { type: 'msg', title: '🎉 ' + u.name + ' joined Maata', body: 'Your friend joined from your invite. Say hi!', tag: 'joined-' + u.id }); } catch {} }
-  res.json({ token: sign(u), user: publicUser(u) });
+  res.json({ token: tok, user: publicUser(u) });
   } finally { signingUp.delete('p' + phone); if (email) signingUp.delete('e' + emailKey(email)); }
 }
 
@@ -1105,10 +1150,10 @@ setInterval(() => { for (const [k, v] of otpTickets) if (v.until < now()) otpTic
 app.get('/api/auth/mode', (req, res) => res.json({ otp: SMS_ON }));
 function loginOk(u, req, res, how) {
   if (u.twoStep) { const ticket = crypto.randomBytes(18).toString('base64url'); pinTickets.set(ticket, { uid: u.id, t: now(), tries: 0 }); return res.json({ needPin: true, ticket, hint: u.twoStep.hint || '' }); }
-  recordLogin(u, req, how);
+  recordLogin(u, req, how); const tok = sign(u, req, how === 'otp' ? 'otp' : 'login');
   if (u.secure && u.secure.on) { secEvent(u, 'login', 'New login on ' + deviceName(req.headers['user-agent']) + '.'); pushTo(u, { type: 'msg', title: '🛡️ New login to Maata', body: 'Your account was just opened on ' + deviceName(req.headers['user-agent']) + '. Not you? Open Maata Secure and log out other devices.', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {}); }
   save();
-  res.json({ token: sign(u), user: publicUser(u) });
+  res.json({ token: tok, user: publicUser(u) });
 }
 app.post('/api/otp/send', rateLimit, async (req, res) => {
   if (!SMS_ON) return res.status(503).json({ error: 'SMS codes are off right now. Log in with your password.', noSms: true });
@@ -1159,10 +1204,10 @@ app.post('/api/login', rateLimit, async (req, res) => {
   }
   if (u.status === 'blocked') return res.status(403).json({ error: 'This account is blocked. Contact Maata support.' });
   if (u.twoStep) { const ticket = crypto.randomBytes(18).toString('base64url'); pinTickets.set(ticket, { uid: u.id, t: now(), tries: 0 }); return res.json({ needPin: true, ticket, hint: u.twoStep.hint || '' }); }
-  recordLogin(u, req, 'login');
+  recordLogin(u, req, 'login'); const tok = sign(u, req, 'password');
   if (u.secure && u.secure.on) { secEvent(u, 'login', 'New login on ' + deviceName(req.headers['user-agent']) + '.'); pushTo(u, { type: 'msg', title: '🛡️ New login to Maata', body: 'Your account was just opened on ' + deviceName(req.headers['user-agent']) + '. Not you? Open Maata Secure and log out other devices.', tag: 'maata-secure', url: '/?secure=1' }).catch(() => {}); }
   save();
-  res.json({ token: sign(u), user: publicUser(u) });
+  res.json({ token: tok, user: publicUser(u) });
 });
 
 app.get('/api/me', auth, (req, res) => res.json({ ...publicUser(req.user), email: req.user.email || '', hasPw: !!req.user.passHash }));
@@ -1335,7 +1380,7 @@ function deviceName(ua) {
 setInterval(() => { for (const [k, q] of qrSessions) if (q.until < now() - 60000) qrSessions.delete(k); }, 60000);
 app.post('/api/qr/new', rateLimit, async (req, res) => {
   const id = newId(), secret = crypto.randomBytes(18).toString('hex');
-  qrSessions.set(id, { secret, ua: String(req.headers['user-agent'] || ''), until: now() + 120000, status: 'waiting' });
+  qrSessions.set(id, { secret, ua: String(req.headers['user-agent'] || ''), ip: String(req.ip || ''), until: now() + 120000, status: 'waiting' });
   // a picture (PNG), so no page styling can change the squares; dark on white scans best
   const png = await QRCode.toDataURL('maata-link:' + id + ':' + secret, { margin: 2, width: 480, errorCorrectionLevel: 'M', color: { dark: '#0A2E36', light: '#FFFFFF' } });
   res.json({ id, secret, png, expiresIn: 120 });
@@ -1355,14 +1400,70 @@ app.post('/api/qr/peek', auth, (req, res) => { const f = qrFromCode(req.body?.co
 app.post('/api/qr/approve', auth, (req, res) => {
   const f = qrFromCode(req.body?.code); if (!f) return res.status(400).json({ error: 'This QR code expired. Reload it on the computer and scan again.' });
   const [id, q] = f, u = req.user;
-  u.devices = (u.devices || []).slice(-4); // up to 5 linked devices
-  const d = { id: newId(), name: deviceName(q.ua), linkedAt: now(), lastAt: now() };
-  u.devices.push(d); save();
-  Object.assign(q, { status: 'approved', token: jwt.sign({ sub: u.id, tv: u.tokenVersion || 0, did: d.id }, JWT_SECRET, { expiresIn: '30d' }), user: publicUser(u) });
+  const d = sessNew(u, { headers: { 'user-agent': q.ua }, ip: q.ip || '' }, 'qr'); save(); // v411: a QR computer is a session too
+  Object.assign(q, { status: 'approved', token: jwt.sign({ sub: u.id, tv: u.tokenVersion || 0, sid: d.id }, JWT_SECRET, { expiresIn: '30d' }), user: publicUser(u) });
   audit('customer:' + u.phone, 'device-linked', d.name);
   res.json({ ok: true, device: d });
 });
 app.get('/api/devices', auth, (req, res) => res.json((req.user.devices || []).map((d) => ({ ...d, online: [...io.sockets.sockets.values()].some((s) => s.did === d.id) }))));
+// ================= v411 🔐 Logged-in devices (every phone, app and computer where this account is open) =================
+const maskIp = (ip) => { ip = String(ip || '').replace(/^::ffff:/, ''); if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) { const a = ip.split('.'); return a[0] + '.' + a[1] + '.•.•'; } return ip ? ip.split(':').slice(0, 2).join(':') + ':•' : ''; };
+// safety: a login that is less than 24 h old cannot throw out an OLDER login (a thief with a fresh login cannot lock the owner out)
+const SESS_TRUST_MS = 24 * 3600e3;
+function sessCanEnd(u, req, target) {
+  const me2 = (u.sessions || []).find((x) => x.id === req.sid);
+  if (!me2) return true; // an old login from before v411: trusted
+  if (now() - me2.createdAt >= SESS_TRUST_MS) return true;
+  return !target || (target.createdAt || target.linkedAt || 0) > me2.createdAt;
+}
+async function sessOnline(uid) { const set = new Set(); try { for (const so of await io.in('user:' + uid).fetchSockets()) { if (so.sid) set.add(so.sid); if (so.did) set.add('d:' + so.did); } } catch {} return set; }
+app.get('/api/sessions', auth, async (req, res) => {
+  const u = req.user, on = await sessOnline(u.id);
+  const list = (u.sessions || []).map((x) => ({ id: x.id, name: x.name, kind: x.kind, via: x.via, ip: maskIp(x.ip), createdAt: x.createdAt, lastAt: x.lastAt, current: x.id === req.sid, online: on.has(x.id) || x.id === req.sid }));
+  for (const d of u.devices || []) list.push({ id: 'd:' + d.id, name: d.name, kind: 'computer', via: 'qr', ip: '', createdAt: d.linkedAt, lastAt: d.lastAt, current: false, online: on.has('d:' + d.id) });
+  list.sort((a, b) => (b.current - a.current) || (b.online - a.online) || (b.lastAt || 0) - (a.lastAt || 0));
+  const mine = (u.sessions || []).find((x) => x.id === req.sid);
+  res.json({ list, legacy: !req.sid, idle: u.sessIdle || 30, idleChoices: SESS_IDLE_DAYS, trustIn: mine ? Math.max(0, mine.createdAt + SESS_TRUST_MS - now()) : 0 });
+});
+// a phone logged in before v411 gets its own session (so it shows in the list and can be logged out)
+app.post('/api/sessions/upgrade', auth, (req, res) => {
+  if (req.sid && (req.user.sessions || []).some((x) => x.id === req.sid)) return res.json({ ok: true });
+  const x = sessNew(req.user, req, 'old'); x.createdAt = Math.min(x.createdAt, req.user.lastLoginAt || x.createdAt);
+  save(); res.json({ ok: true, token: jwt.sign({ sub: req.user.id, tv: req.user.tokenVersion || 0, sid: x.id }, JWT_SECRET, { expiresIn: '30d' }) });
+});
+app.delete('/api/sessions/:id', auth, (req, res) => {
+  const u = req.user, id = String(req.params.id);
+  if (id === req.sid) return res.status(400).json({ error: 'This is the device you are using. Use ⋮ → Log out instead.' });
+  if (id.startsWith('d:')) {
+    const d = (u.devices || []).find((x) => 'd:' + x.id === id); if (!d) return res.status(404).json({ error: 'Already logged out.' });
+    if (!sessCanEnd(u, req, d)) return res.status(403).json({ error: 'For your safety, a new login can log out older devices only after 24 hours. Use your main phone, or Maata Secure with your password.', young: true });
+    u.devices = u.devices.filter((x) => x !== d); save();
+    io.in('user:' + u.id).fetchSockets().then((ss) => { for (const so of ss) if (so.did === d.id) { so.emit('force-logout', { reason: 'This device was logged out from your Maata account.' }); so.disconnect(true); } }).catch(() => {});
+    audit('customer:' + u.phone, 'device-logout', d.name); return res.json({ ok: true });
+  }
+  const x = (u.sessions || []).find((y) => y.id === id); if (!x) return res.status(404).json({ error: 'Already logged out.' });
+  if (!sessCanEnd(u, req, x)) return res.status(403).json({ error: 'For your safety, a new login can log out older devices only after 24 hours. Use your main phone, or Maata Secure with your password.', young: true });
+  sessDrop(u, id); save();
+  audit('customer:' + u.phone, 'device-logout', x.name);
+  res.json({ ok: true });
+});
+app.post('/api/sessions/logout-others', auth, async (req, res) => {
+  const u = req.user, mine = (u.sessions || []).find((x) => x.id === req.sid);
+  if (mine && now() - mine.createdAt < SESS_TRUST_MS && ((u.sessions || []).some((x) => x.createdAt < mine.createdAt) || (u.devices || []).length)) return res.status(403).json({ error: 'For your safety, a new login can log out older devices only after 24 hours. Use your main phone, or Maata Secure with your password.', young: true });
+  const n = (u.sessions || []).length - (mine ? 1 : 0) + (u.devices || []).length;
+  u.tokenVersion = (u.tokenVersion || 0) + 1; u.devices = []; sessKeepOnly(u, req.sid); // the version bump also ends very old logins that are not in the list
+  const keepSock = String(req.body?.socket || ''), ep = String(req.body?.endpoint || ''), ft = String(req.body?.fcm || '');
+  if (!req.sid) { u.pushSubs = (u.pushSubs || []).filter((x) => x.endpoint === ep); u.fcmTokens = (u.fcmTokens || []).filter((x) => x.token === ft); }
+  else { u.pushSubs = (u.pushSubs || []).filter((x) => x.sid === req.sid || x.endpoint === ep); u.fcmTokens = (u.fcmTokens || []).filter((x) => x.sid === req.sid || x.token === ft); }
+  save();
+  for (const so of await io.in('user:' + u.id).fetchSockets()) if (so.id !== keepSock) { so.emit('force-logout', { reason: 'You were logged out from your Maata account by the owner.' }); so.disconnect(true); }
+  audit('customer:' + u.phone, 'logout-others', n + ' devices');
+  res.json({ ok: true, count: n, token: sign(u, req, 'login') });
+});
+app.post('/api/sessions/idle', auth, (req, res) => {
+  const d = Number(req.body?.days); if (!SESS_IDLE_DAYS.includes(d)) return res.status(400).json({ error: 'Choose 1, 3, 7, 14 or 30 days.' });
+  req.user.sessIdle = d; save(); res.json({ ok: true, idle: d });
+});
 app.delete('/api/devices/:id', auth, async (req, res) => {
   const u = req.user; u.devices = (u.devices || []).filter((d) => d.id !== req.params.id); save();
   for (const s of await io.in('user:' + u.id).fetchSockets()) if (s.did === req.params.id) { s.emit('force-logout', { reason: 'This device was logged out from your phone.' }); s.disconnect(true); }
@@ -1547,12 +1648,12 @@ app.post('/api/secure/logout-others', auth, async (req, res) => {
   if (!secLimit(req, res, 40)) return;
   const u = req.user;
   if (!(await pwCheck(u, req.body?.password))) return res.status(403).json({ error: u.passHash ? 'Wrong Maata password.' : NO_PW });
-  u.tokenVersion = (u.tokenVersion || 0) + 1; u.devices = [];
+  u.tokenVersion = (u.tokenVersion || 0) + 1; u.devices = []; sessKeepOnly(u, req.sid);
   secEvent(u, 'logout', 'All other devices were logged out.'); save();
   const keep = String(req.body?.socket || '');
   for (const s of await io.in('user:' + u.id).fetchSockets()) if (s.id !== keep) { s.emit('force-logout', { reason: 'You were logged out by the account owner (Maata Secure).' }); s.disconnect(true); }
   audit('customer:' + u.phone, 'secure-logout-others', '');
-  res.json({ token: sign(u), user: publicUser(u) });
+  res.json({ token: sign(u, req, 'login'), user: publicUser(u) });
 });
 // events the phone reports: wrong app-lock tries
 app.post('/api/secure/event', auth, async (req, res) => {
@@ -2357,7 +2458,7 @@ function geoLimit(req, res) {
   return true;
 }
 // ---------- Version: the same number is written in index.html, so the app can tell when both files are updated ----------
-const MAATA_VERSION = 410;
+const MAATA_VERSION = 411;
 // remembers which Maata Android app version each person last opened, so the app can say "Update successful" after an update
 app.post('/api/app-seen', auth, (req, res) => {
   const ver = String(req.body?.ver || '').slice(0, 20); if (!/^\d+\.\d+\.\d+$/.test(ver)) return res.json({ prev: '' });
@@ -3593,8 +3694,8 @@ app.post('/api/login/pin', rateLimit, async (req, res) => {
   const u = userById(tk.uid); if (!u || !u.twoStep) return res.status(401).json({ error: 'Please log in again.' });
   if (++tk.tries > 5) { pinTickets.delete(req.body.ticket); return res.status(429).json({ error: 'Too many wrong PINs. Log in again later.' }); }
   if (!(await bcrypt.compare(String(req.body?.pin || ''), u.twoStep.hash))) return res.status(401).json({ error: 'Wrong PIN. ' + (5 - tk.tries) + ' tries left.' });
-  pinTickets.delete(req.body.ticket); recordLogin(u, req, 'login'); save();
-  res.json({ token: sign(u), user: publicUser(u) });
+  pinTickets.delete(req.body.ticket); recordLogin(u, req, 'login'); const tok = sign(u, req, 'pin'); save();
+  res.json({ token: tok, user: publicUser(u) });
 });
 
 // Status privacy: my contacts / my contacts except… / only share with…
@@ -7345,7 +7446,7 @@ app.post('/admin/api/users/:id/block', adminAuth, (req, res) => {
   if (!u) return res.status(404).json({ error: 'Customer not found.' });
   const block = !!req.body?.blocked;
   u.status = block ? 'blocked' : 'active';
-  if (block) { u.tokenVersion = (u.tokenVersion || 0) + 1; kick(u.id, 'This account is blocked. Contact Maata support.'); }
+  if (block) { u.tokenVersion = (u.tokenVersion || 0) + 1; u.sessions = []; kick(u.id, 'This account is blocked. Contact Maata support.'); }
   audit(req.admin, block ? 'block' : 'unblock', u.name + ' (' + u.phone + ')', String(req.body?.note || ''));
   save(); pushLive();
   res.json({ ok: true, status: u.status });
@@ -7354,7 +7455,7 @@ app.post('/admin/api/users/:id/block', adminAuth, (req, res) => {
 app.post('/admin/api/users/:id/reset-password', adminAuth, async (req, res) => {
   const u = userById(req.params.id); if (!u) return res.status(404).json({ error: 'Customer not found.' });
   const temp = 'maata' + crypto.randomInt(1000, 10000);
-  u.passHash = await bcrypt.hash(temp, 10); u.tokenVersion = (u.tokenVersion || 0) + 1;
+  u.passHash = await bcrypt.hash(temp, 10); u.tokenVersion = (u.tokenVersion || 0) + 1; u.sessions = [];
   kick(u.id, 'Your password was reset by Maata support. Log in with the new password.'); save();
   audit(req.admin, 'reset-password', u.name + ' (' + u.phone + ')');
   res.json({ ok: true, tempPassword: temp });
@@ -7362,7 +7463,7 @@ app.post('/admin/api/users/:id/reset-password', adminAuth, async (req, res) => {
 app.post('/admin/api/users/:id/logout', adminAuth, (req, res) => {
   const u = userById(req.params.id);
   if (!u) return res.status(404).json({ error: 'Customer not found.' });
-  u.tokenVersion = (u.tokenVersion || 0) + 1;
+  u.tokenVersion = (u.tokenVersion || 0) + 1; u.sessions = []; u.devices = [];
   kick(u.id, 'You were logged out. Please log in again.');
   audit(req.admin, 'force-logout', u.name + ' (' + u.phone + ')');
   save();
@@ -8408,7 +8509,7 @@ io.use((socket, next) => {
       if (p.typ !== 'admin') throw new Error('not admin');
       socket.isAdmin = true; return next();
     }
-    const u = findUserByToken(a.token || ''); socket.did = tokenDevice(a.token || '');
+    const u = findUserByToken(a.token || ''); socket.did = tokenDevice(a.token || ''); socket.sid = tokenSid(a.token || '');
     if (!u) return next(new Error('unauthorized'));
     socket.user = u; next();
   } catch { next(new Error('unauthorized')); }
